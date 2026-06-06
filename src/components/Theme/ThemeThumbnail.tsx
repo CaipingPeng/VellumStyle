@@ -44,7 +44,8 @@ export default function ThemeThumbnail({themeId, css}: Props) {
       <div
         className={scopeClass}
         style={{
-          width: 600,
+          // 内容放大到卡片宽度的 1/scale，再 scale 缩回，使缩放后正好填满卡片宽度（不溢出裁切）。
+          width: "238%",
           transform: "scale(0.42)",
           transformOrigin: "top left",
           padding: 12,
