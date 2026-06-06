@@ -27,8 +27,18 @@ export default function ThemePickerDialog({onClose}: Props) {
   const [page, setPage] = useState(0);
   const ref = useClickOutside(onClose);
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   const totalPages = Math.max(1, Math.ceil(themes.length / PAGE_SIZE));
-  const pageThemes = themes.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+  // themes 重新扫描后可能变少，page 越界则夹回最后一页，避免空白页。
+  const safePage = Math.min(page, totalPages - 1);
+  const pageThemes = themes.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
 
   function pick(id: string) {
     setMarkdownTheme(id);
@@ -36,7 +46,12 @@ export default function ThemePickerDialog({onClose}: Props) {
   }
 
   async function openFolder() {
-    await openThemesDir();
+    // 非 Tauri（web 调试）下 openThemesDir 会 reject，吞掉错误仍尝试重新扫描。
+    try {
+      await openThemesDir();
+    } catch {
+      // 无 Tauri 环境，忽略
+    }
     setThemes(await loadAllThemes());
   }
 
@@ -154,8 +169,8 @@ export default function ThemePickerDialog({onClose}: Props) {
           <div style={{display: "flex", alignItems: "center", gap: 6}}>
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              style={pageBtn(page === 0)}
+              disabled={safePage === 0}
+              style={pageBtn(safePage === 0)}
             >
               ‹
             </button>
@@ -165,8 +180,8 @@ export default function ThemePickerDialog({onClose}: Props) {
                 onClick={() => setPage(idx)}
                 style={{
                   ...pageBtn(false),
-                  background: idx === page ? "#1e6bb8" : "#fff",
-                  color: idx === page ? "#fff" : "#333",
+                  background: idx === safePage ? "#1e6bb8" : "#fff",
+                  color: idx === safePage ? "#fff" : "#333",
                 }}
               >
                 {idx + 1}
@@ -174,8 +189,8 @@ export default function ThemePickerDialog({onClose}: Props) {
             ))}
             <button
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page === totalPages - 1}
-              style={pageBtn(page === totalPages - 1)}
+              disabled={safePage === totalPages - 1}
+              style={pageBtn(safePage === totalPages - 1)}
             >
               ›
             </button>
