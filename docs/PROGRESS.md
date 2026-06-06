@@ -497,3 +497,38 @@ npx tsc --noEmit         # 类型检查
 - **codeCss 并入单文件**：原 markdown 主题与 code 主题两层独立，现合并——既然都是 CSS，一文件自包含最直观，也消除了"哪个 markdown 配哪个 code"的关联维护。
 - **open_themes_dir 用系统命令**（`explorer`/`open`/`xdg-open`）而非引入 tauri-plugin-opener，符合不增依赖的精简偏好。
 
+## 增补功能 — 主题选择器对话框（带缩略图预览，✅ 完成并运行时验证，2026-06-07）
+
+> 目标：把文字下拉式主题切换换成**不带遮罩的居中浮层**——网格卡片，每张卡片显示主题名 + 该主题**真实渲染**的效果缩略图 +「使用」按钮，底部分页。参考截图 `Snipaste_2026-06-07_00-14-50.png`。
+
+### 核心难点与方案
+
+主题 CSS + basic 层都用 `#nice` 命名空间，整页只有一个 `#nice` 和一个生效的全局主题 `<style>`。要在同一弹窗里同时渲染多个不同主题的缩略图，必须把每个缩略图的 CSS 改写到该卡片唯一 scope class。
+
+- **方案：真实渲染（选择器改写）**，不用静态截图。`scopeCss.ts` 把 `#nice X`→`.scope X`，裸选择器 `.hljs`→`.scope .hljs`；at-rule 仅 `@media`/`@supports` 递归改写，`@font-face`/`@keyframes` 等整块原样透传。
+- **Why 不用截图**：截图方案对「用户丢进文件夹的 CSS 主题」失效（没截图），而用户可扩展主题是桌面成品核心价值。真实渲染对内置+用户主题一视同仁，改样式后缩略图自动更新，零维护。
+- **范围隔离**：scopeCss 只活在对话框内。复制管线 converter.ts 仍读全局四层 `<style>`，零改动。
+
+### 执行结果（subagent-driven，每任务两段 review）
+
+| # | 任务 | 状态 | 产出 |
+|---|------|------|------|
+| 1 | scopeCss 选择器改写（TDD） | ✅ | `src/components/Theme/scopeCss.ts`(+`.test.ts` 9 测试)；`package.json` 加 `test` script |
+| 2 | 固定示例 Markdown | ✅ | `src/components/Theme/sampleContent.ts` |
+| 3 | ThemeThumbnail 单卡缩略图 | ✅ | `src/components/Theme/ThemeThumbnail.tsx`（注入局部 scoped `<style>` + scale 缩放） |
+| 4 | ThemePickerDialog 浮层 | ✅ | `src/components/Theme/ThemePickerDialog.tsx`（无遮罩居中 + 4 列网格 + 分页 + 打开文件夹 + Esc 关闭） |
+| 5 | ThemeMenu 接线 | ✅ | `src/components/Theme/ThemeMenu.tsx`（点按钮开浮层，移除旧文字下拉） |
+| 6 | 运行时验证 + 回写进度 | ✅ | Playwright 验证 + `docs/PROGRESS.md` |
+
+### 验证状态
+
+- ✅ `npm test` 9/9 通过（Node 内置 node:test + tsx，无新依赖），`npx tsc -b --noEmit` 零错误。
+- ✅ Playwright 运行时验证：浮层无遮罩（无全屏背景层）；3 张卡片缩略图字体各异（Optima/Georgia/sans-serif，证明 scope 隔离生效）；点「使用」预览主题切换（Optima→Georgia）且浮层关闭；Esc 可关闭。
+- ✅ 截图确认布局：缩略图填满卡片宽度不溢出（内容 `width:238%` + `scale(0.42)` 缩回 ≈ 卡片宽），与目标截图设计一致。
+
+### 设计决策
+
+- **缩略图填宽**：内容放大到卡片宽度的 1/scale（238%）再 scale 缩回，使缩放结果正好填满卡片，不随卡片像素宽变化而裁切。
+- **去重旧 useClickOutside**：Task 5 用新 ThemeMenu 整体替换旧版（旧版自带 `useClickOutside`），避免父子两个 click-outside 同时生效误关浮层；开 `onClick`（click）+ 关 `mousedown` 事件类型错位，开浮层那一下不会自关。
+- **openFolder 容错**：非 Tauri（web 调试）`openThemesDir` 会 reject，try/catch 吞掉仍重扫；分页 page 越界夹回最后一页避免空白页。
+
