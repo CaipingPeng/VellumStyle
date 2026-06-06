@@ -1,0 +1,119 @@
+/* 优雅杂志：大留白、衬线标题、淡色引用。配 GitHub 代码高亮。 */
+#nice {
+  font-family: Georgia, "Songti SC", serif;
+  line-height: 1.9;
+  color: #3a3a3a;
+}
+#nice h1, #nice h2, #nice h3 {
+  font-family: Georgia, "Songti SC", serif;
+  font-weight: 700;
+  color: #222;
+}
+#nice h1 { font-size: 26px; text-align: center; margin: 1.6em 0 0.8em; }
+#nice h2 { font-size: 22px; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+#nice h3 { font-size: 18px; }
+#nice p { margin: 1.2em 0; letter-spacing: 0.3px; }
+#nice blockquote {
+  border-left: 3px solid #d8c7a0;
+  background: #faf8f3;
+  color: #6b6b6b;
+  font-style: italic;
+  padding: 0.6em 1em;
+}
+#nice a { color: #9a7b4f; border-bottom: 1px solid #d8c7a0; }
+#nice strong { color: #222; }
+
+/* ===== 代码高亮：GitHub ===== */
+.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 16px;
+  color: #333;
+  background: #f8f8f8;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: #998;
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-subst {
+  color: #333;
+  font-weight: bold;
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag .hljs-attr {
+  color: #008080;
+}
+
+.hljs-string,
+.hljs-doctag {
+  color: #d14;
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-selector-id {
+  color: #900;
+  font-weight: bold;
+}
+
+.hljs-subst {
+  font-weight: normal;
+}
+
+.hljs-type,
+.hljs-class .hljs-title {
+  color: #458;
+  font-weight: bold;
+}
+
+.hljs-tag,
+.hljs-name,
+.hljs-attribute {
+  color: #000080;
+  font-weight: normal;
+}
+
+.hljs-regexp,
+.hljs-link {
+  color: #009926;
+}
+
+.hljs-symbol,
+.hljs-bullet {
+  color: #990073;
+}
+
+.hljs-built_in,
+.hljs-builtin-name {
+  color: #0086b3;
+}
+
+.hljs-meta {
+  color: #999;
+  font-weight: bold;
+}
+
+.hljs-deletion {
+  background: #fdd;
+}
+
+.hljs-addition {
+  background: #dfd;
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: bold;
+}

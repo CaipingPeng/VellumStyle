@@ -1,6 +1,6 @@
 import {useState, useRef, useEffect} from "react";
-import {markdownThemes} from "../../themes/index.ts";
 import {useStore} from "../../store/index.ts";
+import {loadAllThemes, openThemesDir} from "../../themes/loader.ts";
 
 function useClickOutside(onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null);
@@ -46,8 +46,28 @@ const itemStyle: React.CSSProperties = {
   alignItems: "center",
 };
 
+const groupTitleStyle: React.CSSProperties = {
+  padding: "6px 12px 4px",
+  fontSize: 12,
+  color: "#999",
+};
+
+function renderThemeItem(id: string, name: string, activeId: string, onPick: (id: string) => void) {
+  const active = id === activeId;
+  return (
+    <div
+      key={id}
+      style={{...itemStyle, background: active ? "#f0f6ff" : "#fff"}}
+      onClick={() => onPick(id)}
+    >
+      <span>{name}</span>
+      {active && <span style={{color: "#1e6eee"}}>✓</span>}
+    </div>
+  );
+}
+
 export default function ThemeMenu() {
-  const {markdownThemeId, setMarkdownTheme} = useStore();
+  const {markdownThemeId, setMarkdownTheme, themes, setThemes} = useStore();
   const [open, setOpen] = useState(false);
   const ref = useClickOutside(() => setOpen(false));
 
@@ -56,28 +76,33 @@ export default function ThemeMenu() {
     setOpen(false);
   }
 
+  // 打开主题文件夹后重新扫描，方便用户丢入新 CSS 后立即看到。
+  async function openFolder() {
+    await openThemesDir();
+    setThemes(await loadAllThemes());
+  }
+
   return (
-    <div ref={ref} style={{position: "relative"}}>
-      <button style={btnStyle} onClick={() => setOpen(!open)}>
-        主题 ▾
-      </button>
-      {open && (
-        <div style={panelStyle}>
-          {markdownThemes.map((t) => {
-            const active = t.id === markdownThemeId;
-            return (
+    <>
+      <div ref={ref} style={{position: "relative"}}>
+        <button style={btnStyle} onClick={() => setOpen(!open)}>
+          主题 ▾
+        </button>
+        {open && (
+          <div style={panelStyle}>
+            <div style={groupTitleStyle}>主题</div>
+            {themes.map((t) => renderThemeItem(t.id, t.name, markdownThemeId, pickTheme))}
+            <div style={{borderTop: "1px solid #f0f0f0", marginTop: 4, paddingTop: 4}}>
               <div
-                key={t.id}
-                style={{...itemStyle, background: active ? "#f0f6ff" : "#fff"}}
-                onClick={() => pickTheme(t.id)}
+                style={{...itemStyle, color: "#1e6eee"}}
+                onClick={openFolder}
               >
-                <span>{t.name}</span>
-                {active && <span style={{color: "#1e6eee"}}>✓</span>}
+                <span>＋ 打开主题文件夹</span>
               </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

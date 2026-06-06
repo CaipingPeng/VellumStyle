@@ -5,12 +5,14 @@ interface Props {
   onClose: () => void;
 }
 
-interface WechatConfig {
-  app_id: string;
-  app_secret: string;
+interface AppConfig {
+  wechat: {
+    app_id: string;
+    app_secret: string;
+  };
 }
 
-// 微信图床凭证设置弹窗：读 get_config 回显，保存调 save_config（写 config.local.yaml + 清 token 缓存，立即生效）。
+// 设置弹窗：读 get_config 回显，保存调 save_config（写 config.local.yaml；微信凭证变更会清 token 缓存）。
 export default function SettingsDialog({onClose}: Props) {
   const [appId, setAppId] = useState("");
   const [appSecret, setAppSecret] = useState("");
@@ -18,10 +20,10 @@ export default function SettingsDialog({onClose}: Props) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    invoke<WechatConfig>("get_config")
+    invoke<AppConfig>("get_config")
       .then((cfg) => {
-        setAppId(cfg.app_id || "");
-        setAppSecret(cfg.app_secret || "");
+        setAppId(cfg.wechat?.app_id || "");
+        setAppSecret(cfg.wechat?.app_secret || "");
       })
       .catch(() => {})
       .finally(() => setLoaded(true));
@@ -30,7 +32,10 @@ export default function SettingsDialog({onClose}: Props) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await invoke("save_config", {appId: appId.trim(), appSecret: appSecret.trim()});
+      await invoke("save_config", {
+        appId: appId.trim(),
+        appSecret: appSecret.trim(),
+      });
       onClose();
     } catch (e) {
       const msg = typeof e === "string" ? e : (e as Error)?.message || "保存失败";
@@ -76,7 +81,7 @@ export default function SettingsDialog({onClose}: Props) {
             color: "#333",
           }}
         >
-          <span>微信图床设置</span>
+          <span>设置</span>
           <button
             onClick={onClose}
             style={{border: "none", background: "transparent", cursor: "pointer", fontSize: 18, color: "#999"}}
@@ -86,31 +91,34 @@ export default function SettingsDialog({onClose}: Props) {
           </button>
         </div>
 
-        <div style={{padding: 16, display: "flex", flexDirection: "column", gap: 12}}>
-          <label style={{display: "flex", flexDirection: "column", gap: 4, fontSize: 13, color: "#555"}}>
-            AppID
-            <input
-              value={appId}
-              onChange={(e) => setAppId(e.target.value)}
-              placeholder="公众号 AppID（wx 开头）"
-              disabled={!loaded}
-              style={inputStyle}
-            />
-          </label>
-          <label style={{display: "flex", flexDirection: "column", gap: 4, fontSize: 13, color: "#555"}}>
-            AppSecret
-            <input
-              value={appSecret}
-              onChange={(e) => setAppSecret(e.target.value)}
-              placeholder="公众号 AppSecret"
-              type="password"
-              disabled={!loaded}
-              style={inputStyle}
-            />
-          </label>
-          <p style={{margin: 0, fontSize: 12, color: "#999", lineHeight: 1.6}}>
-            在「微信公众平台 → 设置与开发 → 基本配置」获取。凭证仅保存在本机，用于上传图片到你公众号的素材库。
-          </p>
+        <div style={{padding: 16, display: "flex", flexDirection: "column", gap: 18}}>
+          <section style={sectionStyle}>
+            <div style={sectionTitleStyle}>微信图床设置</div>
+            <label style={labelStyle}>
+              AppID
+              <input
+                value={appId}
+                onChange={(e) => setAppId(e.target.value)}
+                placeholder="公众号 AppID（wx 开头）"
+                disabled={!loaded}
+                style={inputStyle}
+              />
+            </label>
+            <label style={labelStyle}>
+              AppSecret
+              <input
+                value={appSecret}
+                onChange={(e) => setAppSecret(e.target.value)}
+                placeholder="公众号 AppSecret"
+                type="password"
+                disabled={!loaded}
+                style={inputStyle}
+              />
+            </label>
+            <p style={hintStyle}>
+              在「微信公众平台 → 设置与开发 → 基本配置」获取。凭证仅保存在本机，用于上传图片到你公众号的素材库。
+            </p>
+          </section>
         </div>
 
         <div style={{display: "flex", justifyContent: "flex-end", gap: 8, padding: "0 16px 16px"}}>
@@ -125,6 +133,33 @@ export default function SettingsDialog({onClose}: Props) {
     </div>
   );
 }
+
+const sectionStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 12,
+};
+
+const sectionTitleStyle: React.CSSProperties = {
+  fontSize: 14,
+  fontWeight: 600,
+  color: "#333",
+};
+
+const labelStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 4,
+  fontSize: 13,
+  color: "#555",
+};
+
+const hintStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 12,
+  color: "#999",
+  lineHeight: 1.6,
+};
 
 const inputStyle: React.CSSProperties = {
   height: 34,

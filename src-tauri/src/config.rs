@@ -16,9 +16,9 @@ pub struct WechatConfig {
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
-struct RawConfig {
+pub struct AppConfig {
     #[serde(default)]
-    wechat: WechatConfig,
+    pub wechat: WechatConfig,
 }
 
 impl WechatConfig {
@@ -27,30 +27,34 @@ impl WechatConfig {
     }
 }
 
-/// 读取凭证。无配置时返回空 WechatConfig（不报错）。
-pub fn load_wechat_config(app: &AppHandle) -> WechatConfig {
+fn load_config(app: &AppHandle) -> AppConfig {
     let dir = match app.path().app_data_dir() {
         Ok(d) => d,
-        Err(_) => return WechatConfig::default(),
+        Err(_) => return AppConfig::default(),
     };
     for name in ["config.local.yaml", "config.yaml"] {
         let path: PathBuf = dir.join(name);
         if let Ok(text) = std::fs::read_to_string(&path) {
-            if let Ok(raw) = serde_yaml::from_str::<RawConfig>(&text) {
-                return raw.wechat;
+            if let Ok(raw) = serde_yaml::from_str::<AppConfig>(&text) {
+                return raw;
             }
         }
     }
-    WechatConfig::default()
+    AppConfig::default()
 }
 
-/// 设置页回显当前凭证（含 secret，供用户确认/修改）。无配置返回空串。
+/// 读取微信凭证。无配置时返回空 WechatConfig（不报错）。
+pub fn load_wechat_config(app: &AppHandle) -> WechatConfig {
+    load_config(app).wechat
+}
+
+/// 设置页回显当前配置（含 secret，供用户确认/修改）。无配置返回空串。
 #[tauri::command]
-pub fn get_config(app: AppHandle) -> WechatConfig {
-    load_wechat_config(&app)
+pub fn get_config(app: AppHandle) -> AppConfig {
+    load_config(&app)
 }
 
-/// 设置页保存凭证：写 config.local.yaml 到 app_data_dir，并清 token 缓存使新凭证立即生效。
+/// 设置页保存配置：写 config.local.yaml 到 app_data_dir，并清 token 缓存使新微信凭证立即生效。
 #[tauri::command]
 pub fn save_config(app: AppHandle, app_id: String, app_secret: String) -> Result<(), String> {
     let dir = app
@@ -59,7 +63,7 @@ pub fn save_config(app: AppHandle, app_id: String, app_secret: String) -> Result
         .map_err(|e| format!("无法定位数据目录：{e}"))?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("创建数据目录失败：{e}"))?;
 
-    let raw = RawConfig {
+    let raw = AppConfig {
         wechat: WechatConfig {
             app_id: app_id.trim().to_string(),
             app_secret: app_secret.trim().to_string(),
@@ -69,7 +73,7 @@ pub fn save_config(app: AppHandle, app_id: String, app_secret: String) -> Result
     std::fs::write(dir.join("config.local.yaml"), yaml)
         .map_err(|e| format!("写入配置失败：{e}"))?;
 
-    // 凭证变了，旧 access_token 作废，清缓存下次重取。
+    // 微信凭证可能变了，旧 access_token 作废，清缓存下次重取。
     crate::wechat::clear_token_blocking();
     Ok(())
 }

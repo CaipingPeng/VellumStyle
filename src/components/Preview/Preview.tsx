@@ -1,6 +1,7 @@
 import {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
 import {render} from "../../markdown/parser.ts";
-import {basic, getMarkdownCss, getCodeCss} from "../../themes/index.ts";
+import {basic} from "../../themes/index.ts";
+import {useStore, getThemeById} from "../../store/index.ts";
 import {replaceStyle, STYLE_IDS} from "../../utils/style.ts";
 import {toProxyHtml} from "../../utils/imageProxy.ts";
 
@@ -22,6 +23,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
     const [html, setHtml] = useState("");
     const timer = useRef<number | undefined>(undefined);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const themes = useStore((s) => s.themes);
 
     useImperativeHandle(ref, () => ({
       getScroller: () => scrollRef.current,
@@ -32,11 +34,13 @@ const Preview = forwardRef<PreviewHandle, Props>(
       replaceStyle(STYLE_IDS.basic, basic);
     }, []);
 
-    // 主题层 + 代码层随主题切换（代码高亮跟随当前 markdown 主题）
+    // 主题层随主题切换。主题 CSS 已自包含代码高亮（.hljs），统一注入 markdown 层；
+    // code 层置空，避免与复制管线（converter 拼接四层）冲突。
     useEffect(() => {
-      replaceStyle(STYLE_IDS.markdown, getMarkdownCss(markdownThemeId));
-      replaceStyle(STYLE_IDS.code, getCodeCss(markdownThemeId));
-    }, [markdownThemeId]);
+      const css = getThemeById(themes, markdownThemeId).css;
+      replaceStyle(STYLE_IDS.markdown, css);
+      replaceStyle(STYLE_IDS.code, "");
+    }, [markdownThemeId, themes]);
 
     // 内容渲染，100ms 节流
     useEffect(() => {

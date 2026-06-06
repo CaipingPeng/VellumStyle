@@ -446,3 +446,54 @@ npx tsc --noEmit         # 类型检查
   - `src-tauri/target/release/bundle/nsis/WeChat MD Editor_0.1.0_x64-setup.exe`
 - ⏳ 待人工运行时手测：选择 Markdown 文件、选择 Obsidian 资源目录、本地图片替换、在线图片替换、失败项报告、导入后复制到微信。
 
+## 增补功能 — 公众号文章风格生成主题（已废弃并移除，2026-06-06）
+
+> 结论：自动从公众号文章生成可复用主题无法稳定满足高保真复刻预期。产品方向改为只保留静态主题文件；新增主题应通过 `src/themes/markdown/*.ts` 本地主题文件人工沉淀。
+
+### 移除范围
+
+- 移除“从公众号文章生成主题”前端入口和弹窗。
+- 移除本地生成主题列表、持久化加载和 Zustand 状态。
+- 移除 AI/LLM 主题生成配置。
+- 移除 Tauri 主题生成 command 和后端模块。
+
+### 保留方向
+
+- 保留静态主题切换能力。
+- 保留 Markdown 导入、图片上传、预览和复制到微信链路。
+- 后续新增主题只通过静态主题文件注册。
+
+## 增补功能 — 主题系统改为 CSS 文件自动扫描（✅ 完成，2026-06-07）
+
+> 目标：把主题从「静态 `.ts` 数组注册」改为「CSS 文件即主题」。痛点：原方案新增一个主题要写 `.ts` 文件 + 在 `index.ts` 加 import + 往 `markdownThemes` 数组追加一条（手填 id/name/codeCss）三处，且终端用户完全无法扩展（要改源码重打包）。
+
+### 最终架构（用户确认）
+
+- **内置主题（编译期扫描）**：`src/themes/markdown/*.css`，`index.ts` 用 Vite `import.meta.glob("./markdown/*.css", {query:"?raw", import:"default", eager:true})` 把 CSS 内联进包，**文件名即 id/name**（`elegant.css` → "elegant"）。新增内置主题只丢 `.css`，不改任何数组/import。
+- **用户主题（运行期扫描）**：Rust `src-tauri/src/themes.rs` 扫 `app_data_dir/themes/*.css`。command：`list_user_themes`（返回 `[{id,css}]`）、`ensure_themes_dir`、`open_themes_dir`（系统命令打开文件夹，无新依赖）。
+- **codeCss 合并进同一 CSS**：一个 `.css` 自包含 `#nice{}` markdown 样式 + `.hljs{}` 代码高亮，真正一文件一主题。删掉整个 `src/themes/code/` 目录。
+- **合并 + 删除保护**：`loader.ts` 合并内置+用户，同名时用户主题被过滤（内置不可覆盖/删除）；无 Tauri 环境回退仅内置。
+- **复制管线零改动**：主题 CSS 注入 `markdown-theme` 单层，`code-theme` 层置空；`converter.ts` 仍拼接四层，code 层空串无影响。
+
+### 执行结果
+
+| # | 任务 | 状态 | 产出 |
+|---|------|------|------|
+| 1 | 主题 CSS 文件化（合并 codeCss） | ✅ | `src/themes/markdown/{default,elegant,tech}.css`；删 `markdown/*.ts` + `code/` 目录 |
+| 2 | index.ts 改 import.meta.glob 扫描 | ✅ | `src/themes/index.ts`（导出 builtinThemes/defaultMarkdownTheme/basic/ThemeOption） |
+| 3 | Rust 后端扫描用户目录 | ✅ | `src-tauri/src/themes.rs` + `lib.rs` 注册三 command |
+| 4 | loader + store + App 启动加载 | ✅ | `src/themes/loader.ts` `src/store/index.ts`(themes 进状态+getThemeById) `src/App.tsx`(启动 loadAllThemes) |
+| 5 | Preview 单层注入 + ThemeMenu 来自 store | ✅ | `src/components/Preview/Preview.tsx` `src/components/Theme/ThemeMenu.tsx`(加「打开主题文件夹」) |
+
+### 验证状态
+
+- ✅ `npm run build`（`tsc -b && vite build`）通过，655 模块编译无类型错误。
+- ✅ `npm run tauri dev` 启动通过：Rust 后端编译成功（验证 `themes.rs` 三 command + `lib.rs` 注册），桌面窗口正常运行。
+
+### 设计决策
+
+- **内置编译进包 + 用户目录叠加**（用户拍板）：内置主题随包分发不可误删，用户主题运行期热扫描可自由增删。
+- **文件名即主题名**：放弃中文显示名（原「优雅杂志」），换取"丢文件即注册"的极简扩展性。
+- **codeCss 并入单文件**：原 markdown 主题与 code 主题两层独立，现合并——既然都是 CSS，一文件自包含最直观，也消除了"哪个 markdown 配哪个 code"的关联维护。
+- **open_themes_dir 用系统命令**（`explorer`/`open`/`xdg-open`）而非引入 tauri-plugin-opener，符合不增依赖的精简偏好。
+

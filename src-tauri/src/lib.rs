@@ -1,5 +1,6 @@
 mod config;
 mod import;
+mod themes;
 mod wechat;
 
 use tauri::http::{Response, StatusCode};
@@ -67,7 +68,10 @@ pub fn run() {
             import::read_markdown_file,
             import::resolve_import_media,
             config::get_config,
-            config::save_config
+            config::save_config,
+            themes::list_user_themes,
+            themes::ensure_themes_dir,
+            themes::open_themes_dir
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

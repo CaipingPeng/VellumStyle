@@ -1,37 +1,27 @@
 import {basic} from "./basic.ts";
-import {defaultTheme} from "./markdown/default.ts";
-import {elegant} from "./markdown/elegant.ts";
-import {tech} from "./markdown/tech.ts";
-import {atomOneDark} from "./code/atom-one-dark.ts";
-import {github} from "./code/github.ts";
 
 export interface ThemeOption {
-  id: string;
-  name: string;
-  css: string;
-  // 该主题搭配的代码块高亮 CSS，随主题一起切换。
-  codeCss: string;
+  id: string; // 文件名（不含扩展名），如 "elegant"
+  name: string; // 展示名，当前 = id（文件名即主题名）
+  css: string; // 自包含：markdown 样式 + 代码高亮样式
 }
 
-// 基础层：永远不变
+// 基础层：永远不变，单独注入
 export {basic};
 
-export const markdownThemes: ThemeOption[] = [
-  {id: "default", name: "默认主题", css: defaultTheme, codeCss: atomOneDark},
-  {id: "elegant", name: "优雅杂志", css: elegant, codeCss: github},
-  {id: "tech", name: "科技蓝", css: tech, codeCss: atomOneDark},
-];
+// 编译期扫描 ./markdown/*.css，把内置主题 CSS 内联进包。新增内置主题只需丢 .css 文件。
+const modules = import.meta.glob("./markdown/*.css", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 
-export const defaultMarkdownTheme = markdownThemes[0];
+export const builtinThemes: ThemeOption[] = Object.entries(modules)
+  .map(([path, css]) => {
+    const id = path.replace(/^\.\/markdown\//, "").replace(/\.css$/, "");
+    return {id, name: id, css};
+  })
+  .sort((a, b) => a.id.localeCompare(b.id));
 
-export function getMarkdownTheme(id: string): ThemeOption {
-  return markdownThemes.find((t) => t.id === id) ?? defaultMarkdownTheme;
-}
-
-export function getMarkdownCss(id: string): string {
-  return getMarkdownTheme(id).css;
-}
-
-export function getCodeCss(id: string): string {
-  return getMarkdownTheme(id).codeCss;
-}
+export const defaultMarkdownTheme: ThemeOption =
+  builtinThemes.find((t) => t.id === "default") ?? builtinThemes[0];

@@ -6,14 +6,14 @@ import ThemeMenu from "./components/Theme/ThemeMenu.tsx";
 import UploadButton from "./components/Upload/UploadButton.tsx";
 import ImportButton from "./components/Import/ImportButton.tsx";
 import SettingsDialog from "./components/Settings/SettingsDialog.tsx";
-import {useStore} from "./store/index.ts";
-import {getMarkdownTheme} from "./themes/index.ts";
+import {useStore, getThemeById} from "./store/index.ts";
+import {loadAllThemes} from "./themes/loader.ts";
 import {uploadImage, type UploadError} from "./utils/upload.ts";
 import {createScrollSync} from "./utils/syncScroll.ts";
 import defaultContent from "./content.md?raw";
 
 export default function App() {
-  const {content, markdownThemeId, setContent} = useStore();
+  const {content, markdownThemeId, themes, setContent, setThemes} = useStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
@@ -33,6 +33,11 @@ export default function App() {
       }
     }
   };
+
+  // 启动扫描主题：内置（编译进包）+ 用户目录 app_data_dir/themes/*.css 合并。
+  useEffect(() => {
+    loadAllThemes().then(setThemes);
+  }, [setThemes]);
 
   // 首次加载默认教程内容（仅当无草稿时，避免覆盖 persist 恢复的内容）。
   // content.md 在打包时以 ?raw 内联，桌面端无需运行时 fetch。
@@ -148,7 +153,7 @@ export default function App() {
       >
         <span>行数 {lineCount}</span>
         <span>字数 {charCount}</span>
-        <span>主题 {getMarkdownTheme(markdownThemeId).name}</span>
+        <span>主题 {getThemeById(themes, markdownThemeId).name}</span>
       </footer>
 
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
