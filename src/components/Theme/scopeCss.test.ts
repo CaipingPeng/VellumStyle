@@ -38,3 +38,17 @@ test("空块/注释不报错", () => {
   const out = scopeCss("/* c */\n#nice p {}", "tp-x");
   assert.ok(out.includes(".tp-x p"));
 });
+
+test("@font-face 原样透传，body 不被清空", () => {
+  const out = scopeCss('@font-face { font-family: "X"; src: url(x.woff); }', "tp-x");
+  assert.ok(out.includes("font-family"));
+  assert.ok(out.includes("src: url(x.woff)"));
+  assert.ok(!out.includes(".tp-x font-family"));
+});
+
+test("@keyframes 原样透传，关键帧不被加 scope", () => {
+  const out = scopeCss("@keyframes spin { 0% { opacity: 0; } 100% { opacity: 1; } }", "tp-x");
+  assert.ok(out.includes("@keyframes spin"));
+  assert.ok(!out.includes(".tp-x 0%"));
+  assert.ok(!out.includes(".tp-x 100%"));
+});

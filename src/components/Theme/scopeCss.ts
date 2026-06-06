@@ -32,11 +32,17 @@ export function scopeCss(css: string, scopeClass: string): string {
     }
     const prelude = noComment.slice(i, braceOpen).trim();
 
-    // at-rule（@media/@supports 等）：保留 prelude，递归处理其内部块。
+    // at-rule：仅 @media/@supports 内部是嵌套规则，递归改写；其余（@font-face/@keyframes 等
+    // 内部是声明而非规则）整块原样透传，避免 body 被误当规则解析而清空。
     if (prelude.startsWith("@")) {
       const blockEnd = matchBrace(noComment, braceOpen);
       const inner = noComment.slice(braceOpen + 1, blockEnd);
-      out += `${prelude} { ${scopeCss(inner, scopeClass)} }\n`;
+      const atName = prelude.match(/^@([a-zA-Z-]+)/)?.[1].toLowerCase();
+      if (atName === "media" || atName === "supports") {
+        out += `${prelude} { ${scopeCss(inner, scopeClass)} }\n`;
+      } else {
+        out += `${prelude} {${inner}}\n`;
+      }
       i = blockEnd + 1;
       continue;
     }
