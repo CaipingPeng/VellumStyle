@@ -580,3 +580,29 @@ npx tsc --noEmit         # 类型检查
 - **读写路径不对称导致编辑静默失效**（核心 bug，绕了很久）：`getThemeById`（显示）有 fallback、`updateStyleValue`（编辑）严格 `t.id===markdownThemeId` 无 fallback。localStorage 残留改造前的旧主题 id（如 `elegant`/`tech`）时，显示因回退正常、编辑因全不命中而静默失效，表现为受控 input「打不进字」。修复：写路径改用 `getThemeById(...).id` 解析有效 id + App 启动把不存在的 id 自愈为 default。教训：同一份数据读写必须用相同解析逻辑。
 - **调试方法**：受控 input「打不进字」先分清 onChange 没触发 vs 触发了但 state 没回流——临时换非受控 `defaultValue` 版对比（能打字=回流问题，不能打字=事件问题）。别先归因环境（HMR/端口/进程）。
 
+## 增补 — 收录 mdnice 全部主题 + 中文显示名 + GitHub 风默认主题（✅ 完成，2026-06-07）
+
+> 把 mdnice 线上全部主题爬下来内置进包，开箱即用；default 改为 GitHub markdown 极简风。
+
+### 爬取 mdnice 主题
+
+- **两个 API**：`GET /themes?pageSize=12&currentPage=N` 翻页拿全部主题元信息（`themeId`/`name`，css 为 null，无 total 字段，翻到空页为止）；`PUT /articles/styles` body `{outId, themeId}` 取单主题完整 `{styleModelList, style, dataVersion}`（与抓包 `草原绿.json` 同构）。需 `authorization: Bearer <token>` + `referer: https://editor.mdnice.com/`。
+- **共 30 个主题**，脚本 `crawl_mdnice_themes.py`（桌面，一次性工具，token 会过期）翻页 + 逐个取 model + 存 `{name, model}` JSON，0.3s 间隔。付费主题（如奇点 price=100）也一并收录（用户自担版权风险）。
+- 产物存 `src/themes/presets/mdnice-{themeId}.json`，文件名作 id、`name` 字段存中文名。
+
+### 中文显示名支持
+
+- 用户主题文件支持两种形态：裸数组 `[...]`（name 取文件名）/ `{name, model}`（name 取字段）。`themes.rs` 的 `parse_theme_content` 兼容解析，`UserTheme` 加 `name` 字段；`import_mdnice_theme` 存成 `{name, model}` 保留原始名（含中文）；`loader.ts` 用 `u.name`。
+
+### 内置预置主题
+
+- `index.ts` 用 `import.meta.glob("./presets/*.json", {eager:true})` 编译期内联 30 个主题进 `builtinThemes`，default 排第一、其余按中文名排序。新增预置主题只需丢 `.json` 文件。
+- **仓库跟踪 = 开箱即用 + 可下载导入**：preset 文件进 git，用户装完即有 30 主题，高级用户也能从仓库取文件手动导入。
+- 包体积：主 chunk 6.3MB（gzip 1.07MB），主要是 30 个 model JSON。桌面应用本地加载，不做 code-split（不过度工程化）。
+
+### GitHub 风默认主题
+
+- default.json 由脚本 `_github_default.mjs`（已删）基于现有骨架改值：正文 `#24292f`、字体 system-ui 栈、行距 1.6；标题加粗深黑字号阶梯（h1 30px…）；引用左 4px 灰边 `#d0d7de` + 灰字 `#656d76` 无背景；链接 `#0969da` 蓝不加粗；行内代码浅灰底 `rgba(175,184,193,0.2)`；代码块 `#f6f8fa`；表格表头/斑马 `#f6f8fa`。
+- **清掉骨架残留**：h3 的 mdnice 网图背景（`url(files.mdnice.com...)`→none）、strong em 老蓝、草原绿绿值，统一中性。`default.test.ts` 断言更新为 GitHub 值 + 校验无 `files.mdnice.com`/绿色残留。
+- 验证：`npm test` 25/25、`npx tsc -b --noEmit` 零错、`npm run build` 通过。
+

@@ -228,7 +228,7 @@
       },
       {
         "id": "fontFamily",
-        "value": "Optima-Regular, Optima, PingFangSC-light, PingFangTC-light, 'PingFang SC', Cambria, Cochin, Georgia, Times, 'Times New Roman', serif",
+        "value": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"Noto Sans\", Helvetica, Arial, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\"",
         "keys": [
           {
             "selector": "#nice",
@@ -255,7 +255,7 @@
     "styles": [
       {
         "id": "fontColor",
-        "value": "rgba(0,0,0,1)",
+        "value": "rgba(36, 41, 47, 1)",
         "keys": [
           {
             "selector": "#nice p",
@@ -279,7 +279,7 @@
       },
       {
         "id": "lineHeight",
-        "value": "26px",
+        "value": "1.6em",
         "keys": [
           {
             "selector": "#nice p",
@@ -343,7 +343,7 @@
           },
           {
             "id": "marginBottom",
-            "value": "0px",
+            "value": "16px",
             "keys": [
               {
                 "selector": "#nice p",
@@ -376,7 +376,7 @@
           },
           {
             "id": "paddingTop",
-            "value": "8px",
+            "value": "0px",
             "keys": [
               {
                 "selector": "#nice p",
@@ -387,7 +387,7 @@
           },
           {
             "id": "paddingBottom",
-            "value": "8px",
+            "value": "0px",
             "keys": [
               {
                 "selector": "#nice p",
@@ -431,7 +431,7 @@
     "styles": [
       {
         "id": "fontSize",
-        "value": "24px",
+        "value": "30px",
         "keys": [
           {
             "selector": "#nice h1 .content",
@@ -443,7 +443,7 @@
       },
       {
         "id": "fontColor",
-        "value": "rgba(0,0,0,1)",
+        "value": "rgba(36, 41, 47, 1)",
         "keys": [
           {
             "selector": "#nice h1 .content",
@@ -508,7 +508,7 @@
         "children": [
           {
             "id": "marginTop",
-            "value": "30px",
+            "value": "24px",
             "keys": [
               {
                 "selector": "#nice h1",
@@ -519,7 +519,7 @@
           },
           {
             "id": "marginBottom",
-            "value": "15px",
+            "value": "16px",
             "keys": [
               {
                 "selector": "#nice h1",
@@ -563,7 +563,7 @@
           },
           {
             "id": "paddingBottom",
-            "value": "0px",
+            "value": "8px",
             "keys": [
               {
                 "selector": "#nice h1",
@@ -624,7 +624,7 @@
     "styles": [
       {
         "id": "fontSize",
-        "value": "22px",
+        "value": "24px",
         "keys": [
           {
             "selector": "#nice h2 .content",
@@ -636,7 +636,7 @@
       },
       {
         "id": "primaryColor",
-        "value": "rgba(0,0,0,1)",
+        "value": "rgba(36, 41, 47, 1)",
         "keys": [
           {
             "selector": "#nice h2 .content",
@@ -736,7 +736,7 @@
       },
       {
         "id": "fontColor",
-        "value": "rgba(0,0,0,1)",
+        "value": "rgba(36, 41, 47, 1)",
         "keys": [
           {
             "selector": "#nice h3 .content",
@@ -748,7 +748,7 @@
       },
       {
         "id": "lineHeight",
-        "value": "2.4em",
+        "value": "1.5em",
         "keys": [
           {
             "selector": "#nice h3 .content",
@@ -777,7 +777,7 @@
         "children": [
           {
             "id": "marginTop",
-            "value": "30px",
+            "value": "24px",
             "keys": [
               {
                 "selector": "#nice h3",
@@ -788,7 +788,7 @@
           },
           {
             "id": "marginBottom",
-            "value": "15px",
+            "value": "16px",
             "keys": [
               {
                 "selector": "#nice h3",
@@ -821,7 +821,7 @@
           },
           {
             "id": "paddingTop",
-            "value": "38px",
+            "value": "0px",
             "keys": [
               {
                 "selector": "#nice h3 .content",
@@ -832,7 +832,7 @@
           },
           {
             "id": "paddingBottom",
-            "value": "10px",
+            "value": "0px",
             "keys": [
               {
                 "selector": "#nice h3 .content",
@@ -1088,7 +1088,7 @@
           },
           {
             "id": "backgroundImage",
-            "value": "url(https://files.mdnice.com/test/user/7752/d135e05d-1e40-49c7-9cbd-e34f9615c15b.png)",
+            "value": "none",
             "keys": [
               {
                 "selector": "#nice h3",
@@ -1143,7 +1143,7 @@
           },
           {
             "id": "backgroundSize",
-            "value": "30px auto",
+            "value": "auto",
             "keys": [
               {
                 "selector": "#nice h3",
@@ -1201,7 +1201,7 @@
     "styles": [
       {
         "id": "fontSize",
-        "value": "18px",
+        "value": "16px",
         "keys": [
           {
             "selector": "#nice h4 .content",
@@ -1213,7 +1213,7 @@
       },
       {
         "id": "fontColor",
-        "value": "rgba(0,0,0,1)",
+        "value": "rgba(36, 41, 47, 1)",
         "keys": [
           {
             "selector": "#nice h4 .content",
@@ -1278,7 +1278,7 @@
         "children": [
           {
             "id": "marginTop",
-            "value": "30px",
+            "value": "24px",
             "keys": [
               {
                 "selector": "#nice h4",
@@ -1289,7 +1289,7 @@
           },
           {
             "id": "marginBottom",
-            "value": "15px",
+            "value": "16px",
             "keys": [
               {
                 "selector": "#nice h4",
@@ -1394,7 +1394,7 @@
     "styles": [
       {
         "id": "fontSize",
-        "value": "16px",
+        "value": "14px",
         "keys": [
           {
             "selector": "#nice h5 .content",
@@ -1406,7 +1406,7 @@
       },
       {
         "id": "fontColor",
-        "value": "rgba(0,0,0,1)",
+        "value": "rgba(36, 41, 47, 1)",
         "keys": [
           {
             "selector": "#nice h5 .content",
@@ -1471,7 +1471,7 @@
         "children": [
           {
             "id": "marginTop",
-            "value": "30px",
+            "value": "24px",
             "keys": [
               {
                 "selector": "#nice h5",
@@ -1482,7 +1482,7 @@
           },
           {
             "id": "marginBottom",
-            "value": "15px",
+            "value": "16px",
             "keys": [
               {
                 "selector": "#nice h5",
@@ -1587,7 +1587,7 @@
     "styles": [
       {
         "id": "fontSize",
-        "value": "16px",
+        "value": "13px",
         "keys": [
           {
             "selector": "#nice h6 .content",
@@ -1599,7 +1599,7 @@
       },
       {
         "id": "fontColor",
-        "value": "rgba(0,0,0,1)",
+        "value": "rgba(36, 41, 47, 1)",
         "keys": [
           {
             "selector": "#nice h6 .content",
@@ -1664,7 +1664,7 @@
         "children": [
           {
             "id": "marginTop",
-            "value": "30px",
+            "value": "24px",
             "keys": [
               {
                 "selector": "#nice h6",
@@ -1675,7 +1675,7 @@
           },
           {
             "id": "marginBottom",
-            "value": "15px",
+            "value": "16px",
             "keys": [
               {
                 "selector": "#nice h6",
@@ -1780,7 +1780,7 @@
     "styles": [
       {
         "id": "fontColor",
-        "value": "rgba(0,0,0,1)",
+        "value": "rgba(36, 41, 47, 1)",
         "keys": [
           {
             "selector": "#nice ul li section",
@@ -1804,7 +1804,7 @@
       },
       {
         "id": "lineHeight",
-        "value": "1.8em",
+        "value": "1.6em",
         "keys": [
           {
             "selector": "#nice ul li section",
@@ -1869,7 +1869,7 @@
         "children": [
           {
             "id": "marginTop",
-            "value": "8px",
+            "value": "0px",
             "keys": [
               {
                 "selector": "#nice ul",
@@ -1880,7 +1880,7 @@
           },
           {
             "id": "marginBottom",
-            "value": "8px",
+            "value": "16px",
             "keys": [
               {
                 "selector": "#nice ul",
@@ -1935,7 +1935,7 @@
           },
           {
             "id": "paddingLeft",
-            "value": "25px",
+            "value": "28px",
             "keys": [
               {
                 "selector": "#nice ul",
@@ -1976,7 +1976,7 @@
     "styles": [
       {
         "id": "fontColor",
-        "value": "rgba(0,0,0,1)",
+        "value": "rgba(36, 41, 47, 1)",
         "keys": [
           {
             "selector": "#nice ol li section",
@@ -2000,7 +2000,7 @@
       },
       {
         "id": "lineHeight",
-        "value": "1.8em",
+        "value": "1.6em",
         "keys": [
           {
             "selector": "#nice ol li section",
@@ -2065,7 +2065,7 @@
         "children": [
           {
             "id": "marginTop",
-            "value": "8px",
+            "value": "0px",
             "keys": [
               {
                 "selector": "#nice ol",
@@ -2076,7 +2076,7 @@
           },
           {
             "id": "marginBottom",
-            "value": "8px",
+            "value": "16px",
             "keys": [
               {
                 "selector": "#nice ol",
@@ -2131,7 +2131,7 @@
           },
           {
             "id": "paddingLeft",
-            "value": "25px",
+            "value": "28px",
             "keys": [
               {
                 "selector": "#nice ol",
@@ -2172,7 +2172,7 @@
     "styles": [
       {
         "id": "fontColor",
-        "value": "rgba(0,0,0,1)",
+        "value": "rgba(101, 109, 118, 1)",
         "keys": [
           {
             "selector": "#nice blockquote p",
@@ -2279,7 +2279,7 @@
         "children": [
           {
             "id": "marginTop",
-            "value": "20px",
+            "value": "0px",
             "keys": [
               {
                 "selector": "#nice blockquote",
@@ -2295,7 +2295,7 @@
           },
           {
             "id": "marginBottom",
-            "value": "20px",
+            "value": "16px",
             "keys": [
               {
                 "selector": "#nice blockquote",
@@ -2343,7 +2343,7 @@
           },
           {
             "id": "paddingTop",
-            "value": "10px",
+            "value": "0px",
             "keys": [
               {
                 "selector": "#nice blockquote",
@@ -2359,7 +2359,7 @@
           },
           {
             "id": "paddingBottom",
-            "value": "10px",
+            "value": "0px",
             "keys": [
               {
                 "selector": "#nice blockquote",
@@ -2375,7 +2375,7 @@
           },
           {
             "id": "paddingLeft",
-            "value": "20px",
+            "value": "16px",
             "keys": [
               {
                 "selector": "#nice blockquote",
@@ -2391,7 +2391,7 @@
           },
           {
             "id": "paddingRight",
-            "value": "10px",
+            "value": "0px",
             "keys": [
               {
                 "selector": "#nice blockquote",
@@ -2510,7 +2510,7 @@
           },
           {
             "id": "borderLeftWidth",
-            "value": "1px",
+            "value": "4px",
             "keys": [
               {
                 "selector": "#nice blockquote",
@@ -2574,7 +2574,7 @@
           },
           {
             "id": "borderLeftColor",
-            "value": "rgba(0,0,0,1)",
+            "value": "rgba(208, 215, 222, 1)",
             "keys": [
               {
                 "selector": "#nice blockquote",
@@ -3042,7 +3042,7 @@
     "styles": [
       {
         "id": "fontColor",
-        "value": "#1e6bb8",
+        "value": "rgba(9, 105, 218, 1)",
         "keys": [
           {
             "selector": "#nice a",
@@ -3054,7 +3054,7 @@
       },
       {
         "id": "fontWeight",
-        "value": "bold",
+        "value": "normal",
         "keys": [
           {
             "selector": "#nice a",
@@ -3126,7 +3126,7 @@
           },
           {
             "id": "borderBottomWidth",
-            "value": "1px",
+            "value": "0px",
             "keys": [
               {
                 "selector": "#nice a",
@@ -3159,7 +3159,7 @@
           },
           {
             "id": "borderTopColor",
-            "value": "rgba(30,107,184,1)",
+            "value": "rgba(9, 105, 218, 1)",
             "keys": [
               {
                 "selector": "#nice a",
@@ -3170,7 +3170,7 @@
           },
           {
             "id": "borderBottomColor",
-            "value": "#1e6bb8",
+            "value": "rgba(9, 105, 218, 1)",
             "keys": [
               {
                 "selector": "#nice a",
@@ -3181,7 +3181,7 @@
           },
           {
             "id": "borderLeftColor",
-            "value": "rgba(30,107,184,1)",
+            "value": "rgba(9, 105, 218, 1)",
             "keys": [
               {
                 "selector": "#nice a",
@@ -3192,7 +3192,7 @@
           },
           {
             "id": "borderRightColor",
-            "value": "rgba(30,107,184,1)",
+            "value": "rgba(9, 105, 218, 1)",
             "keys": [
               {
                 "selector": "#nice a",
@@ -3359,7 +3359,7 @@
     "styles": [
       {
         "id": "fontColor",
-        "value": "rgba(0,0,0,1)",
+        "value": "rgba(36, 41, 47, 1)",
         "keys": [
           {
             "selector": "#nice strong",
@@ -3798,7 +3798,7 @@
     "styles": [
       {
         "id": "fontColor",
-        "value": "rgba(0,0,0,1)",
+        "value": "rgba(36, 41, 47, 1)",
         "keys": [
           {
             "selector": "#nice em",
@@ -4237,7 +4237,7 @@
     "styles": [
       {
         "id": "fontColor",
-        "value": "rgba(30,107,184,1)",
+        "value": "rgba(36, 41, 47, 1)",
         "keys": [
           {
             "selector": "#nice strong em",
@@ -4688,7 +4688,7 @@
     "styles": [
       {
         "id": "fontColor",
-        "value": "rgba(0,0,0,1)",
+        "value": "rgba(36, 41, 47, 1)",
         "keys": [
           {
             "selector": "#nice s",
@@ -4909,7 +4909,7 @@
           },
           {
             "id": "borderTopColor",
-            "value": "rgba(30,107,184,1)",
+            "value": "rgba(9, 105, 218, 1)",
             "keys": [
               {
                 "selector": "#nice hr",
@@ -5254,7 +5254,7 @@
     "styles": [
       {
         "id": "fontColor",
-        "value": "#1e6bb8",
+        "value": "rgba(36, 41, 47, 1)",
         "keys": [
           {
             "selector": "#nice p code",
@@ -5271,7 +5271,7 @@
       },
       {
         "id": "fontSize",
-        "value": "14px",
+        "value": "85%",
         "keys": [
           {
             "selector": "#nice p code",
@@ -5349,7 +5349,7 @@
           },
           {
             "id": "backgroundColor",
-            "value": "rgba(0,0,0,0.05)",
+            "value": "rgba(175, 184, 193, 0.2)",
             "keys": [
               {
                 "selector": "#nice p code",
@@ -6231,7 +6231,7 @@
     "styles": [
       {
         "id": "fontColor",
-        "value": "#888",
+        "value": "rgba(101, 109, 118, 1)",
         "keys": [
           {
             "selector": "#nice figure figcaption",
@@ -6243,7 +6243,7 @@
       },
       {
         "id": "fontSize",
-        "value": "14px",
+        "value": "13px",
         "keys": [
           {
             "selector": "#nice figure figcaption",
@@ -6617,7 +6617,7 @@
           },
           {
             "id": "backgroundColor",
-            "value": "rgba(240,240,240,1)",
+            "value": "rgba(246, 248, 250, 1)",
             "keys": [
               {
                 "selector": "#nice .table-container table thead tr th",
@@ -7366,7 +7366,7 @@
           },
           {
             "id": "backgroundColor",
-            "value": "rgba(248,248,248,1)",
+            "value": "rgba(246, 248, 250, 1)",
             "keys": [
               {
                 "selector": "#nice .table-container table tbody tr:nth-of-type(2n)",
@@ -7660,7 +7660,7 @@
     "styles": [
       {
         "id": "fontColor",
-        "value": "rgba(30,107,184,1)",
+        "value": "rgba(9, 105, 218, 1)",
         "keys": [
           {
             "selector": "#nice p .footnote-word",
@@ -7693,7 +7693,7 @@
     "styles": [
       {
         "id": "fontColor",
-        "value": "rgba(30,107,184,1)",
+        "value": "rgba(9, 105, 218, 1)",
         "keys": [
           {
             "selector": "#nice p .footnote-ref",
@@ -8020,7 +8020,7 @@
           },
           {
             "id": "borderBottomColor",
-            "value": "rgba(30,107,184,1)",
+            "value": "rgba(9, 105, 218, 1)",
             "keys": [
               {
                 "selector": "#nice .footnotes-sep",
@@ -8476,7 +8476,7 @@
           },
           {
             "id": "borderTopColor",
-            "value": "rgba(30,107,184,1)",
+            "value": "rgba(9, 105, 218, 1)",
             "keys": [
               {
                 "selector": "#nice .footnotes",
@@ -8487,7 +8487,7 @@
           },
           {
             "id": "borderBottomColor",
-            "value": "rgba(30,107,184,1)",
+            "value": "rgba(9, 105, 218, 1)",
             "keys": [
               {
                 "selector": "#nice .footnotes",
@@ -8498,7 +8498,7 @@
           },
           {
             "id": "borderLeftColor",
-            "value": "rgba(30,107,184,1)",
+            "value": "rgba(9, 105, 218, 1)",
             "keys": [
               {
                 "selector": "#nice .footnotes",
@@ -8509,7 +8509,7 @@
           },
           {
             "id": "borderRightColor",
-            "value": "rgba(30,107,184,1)",
+            "value": "rgba(9, 105, 218, 1)",
             "keys": [
               {
                 "selector": "#nice .footnotes",
