@@ -632,3 +632,27 @@ npx tsc --noEmit         # 类型检查
 
 - **运行时新建 `<style>`/`<script>` 在 Tauri 打包后会被 CSP nonce 拦截**：凡是带 CSP，注入样式/脚本一律写进 `index.html` 预置的标签，别 `createElement`。dev（Vite 不改 CSP）测不出来，只有打包后才暴露。
 
+## 功能 — 语法快捷工具栏（✅ 完成，2026-06-08）
+
+> navbar 加一组 Markdown 语法快捷按钮（加粗/斜体/删除线/行内代码/链接/标题下拉 H1-H4/无序列表/有序列表/引用/代码块/分割线），点击插入/包裹对应语法。设计/计划见 `docs/superpowers/specs/2026-06-07-syntax-toolbar-design.md` 和 `docs/superpowers/plans/2026-06-07-syntax-toolbar.md`。
+
+### 架构
+
+- **纯函数 `src/components/Editor/editing.ts`**：`wrapSelection`/`insertLink`/`prefixLines`/`insertCodeBlock`，输入 doc+选区→输出插入文本片段+新选区，不碰 CodeMirror，单测在 `editing.test.ts`（34 用例）。
+- **`MarkdownEditor` 暴露 4 个方法**：薄薄包一层 `view.dispatch`（changes + selection），复用现有 `cmRef.current?.view` 守卫。
+- **`src/components/Toolbar/SyntaxToolbar.tsx`**：图标用 `lucide-react`（tree-shakeable，零运行时体积影响），标题做点击展开的 H1-H4 下拉（点空白关闭）。接入 `App.tsx` navbar 左侧（左语法/右全局分段），标题缩短为「排版工具」。
+
+### 语义关键点（踩坑）
+
+- **行内包裹（wrap）**：有选区包裹选区文字并保持选中；无选区插占位符并选中占位符（方便直接替换）。
+- **行级前缀（prefixLines）/代码块光标定位**：初版让 `prefixLines` 选中整块（含 `## ` 语法符号），用户继续打字会覆盖前缀；代码块光标落在围栏后面而非中间。**已修**：prefixLines 光标折叠到块末尾不选中；`insertCodeBlock` 光标落中间空行（有选区则选区进围栏并选中）。见 [[feedback-read-write-symmetry]] 同类"读写语义要符合用户心智"。
+- 行内/链接走 `wrapSelection`/`insertLink`（替换原选区）；行级走 `prefixLines`（替换扩展到整行的区间，故 `PrefixResult` 多 `replaceFrom/replaceTo`）。
+
+### 顺带修复（预存问题）
+
+- **`@types/node` 补回 devDependency**：6 个测试文件 import `node:test`/`node:assert`，但 `@types/node` 从不在 `package.json`（靠传递依赖偶然存在）。装 lucide-react 时 npm `removed 122 packages` 把它 prune 掉，暴露出 `tsc -b` 报 `Cannot find module 'node:test'`，导致 `npm run build`（即 `npx tauri build` 的 `beforeBuildCommand`）失败。补成显式 devDep 修复，纯类型零运行时体积影响。
+
+### 验证
+
+- `npm test` 34/34、`npx tsc -b --noEmit` 零错（除预存 test 文件已修）、`npm run build` 通过、浏览器实操逐项验证（含光标定位修复后复测）。
+
