@@ -70,6 +70,8 @@ pub fn run() {
             config::get_config,
             config::save_config,
             themes::list_user_themes,
+            themes::save_user_theme,
+            themes::import_mdnice_theme,
             themes::ensure_themes_dir,
             themes::open_themes_dir
         ])

@@ -38,7 +38,6 @@ export function solveHtml(): string {
   html = html.replace(/<mjx-assistive-mml.+?<\/mjx-assistive-mml>/g, "");
 
   const allCss =
-    readStyle(STYLE_IDS.basic) +
     readStyle(STYLE_IDS.markdown) +
     readStyle(STYLE_IDS.code) +
     readStyle(STYLE_IDS.font);

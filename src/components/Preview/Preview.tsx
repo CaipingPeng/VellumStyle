@@ -1,9 +1,9 @@
 import {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
 import {render} from "../../markdown/parser.ts";
-import {basic} from "../../themes/index.ts";
 import {useStore, getThemeById} from "../../store/index.ts";
 import {replaceStyle, STYLE_IDS} from "../../utils/style.ts";
 import {toProxyHtml} from "../../utils/imageProxy.ts";
+import {modelIdFromElement} from "../StylePanel/elementMap.ts";
 
 interface Props {
   content: string;
@@ -17,25 +17,22 @@ export interface PreviewHandle {
 
 const RENDER_THROTTLE_MS = 100;
 
-// 实时预览：注入四层样式 + 渲染 HTML 到 #nice，自适应占满预览区宽度。
+// 实时预览：注入主题层样式 + 渲染 HTML 到 #nice，自适应占满预览区宽度。
+// 点击预览元素 → 识别 model id → 打开样式面板。
 const Preview = forwardRef<PreviewHandle, Props>(
   ({content, markdownThemeId}, ref) => {
     const [html, setHtml] = useState("");
     const timer = useRef<number | undefined>(undefined);
     const scrollRef = useRef<HTMLDivElement>(null);
     const themes = useStore((s) => s.themes);
+    const setSelectedModel = useStore((s) => s.setSelectedModel);
 
     useImperativeHandle(ref, () => ({
       getScroller: () => scrollRef.current,
     }));
 
-    // 基础层只注入一次
-    useEffect(() => {
-      replaceStyle(STYLE_IDS.basic, basic);
-    }, []);
-
-    // 主题层随主题切换。主题 CSS 已自包含代码高亮（.hljs），统一注入 markdown 层；
-    // code 层置空，避免与复制管线（converter 拼接四层）冲突。
+    // 主题层：model 编译出的 css 自包含全部样式。basic 层已废弃，不再注入。
+    // code 层置空，避免与复制管线（converter 拼接）冲突。
     useEffect(() => {
       const css = getThemeById(themes, markdownThemeId).css;
       replaceStyle(STYLE_IDS.markdown, css);
@@ -58,9 +55,20 @@ const Preview = forwardRef<PreviewHandle, Props>(
       };
     }, [content]);
 
+    // 点击预览元素 → 识别 model id → 打开面板
+    function onClick(e: React.MouseEvent) {
+      const target = e.target as Element;
+      const id = modelIdFromElement(target);
+      if (id) setSelectedModel(id);
+    }
+
     return (
       <div ref={scrollRef} style={{height: "100%", overflowY: "auto", background: "#fff"}}>
-        <div id="nice-rich-text-box" style={{padding: "24px 32px", minHeight: "100%"}}>
+        <div
+          id="nice-rich-text-box"
+          style={{padding: "24px 32px", minHeight: "100%"}}
+          onClick={onClick}
+        >
           <section id="nice" dangerouslySetInnerHTML={{__html: html}} />
         </div>
       </div>

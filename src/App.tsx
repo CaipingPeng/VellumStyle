@@ -6,6 +6,7 @@ import ThemeMenu from "./components/Theme/ThemeMenu.tsx";
 import UploadButton from "./components/Upload/UploadButton.tsx";
 import ImportButton from "./components/Import/ImportButton.tsx";
 import SettingsDialog from "./components/Settings/SettingsDialog.tsx";
+import StylePanel from "./components/StylePanel/StylePanel.tsx";
 import {useStore, getThemeById} from "./store/index.ts";
 import {loadAllThemes} from "./themes/loader.ts";
 import {uploadImage, type UploadError} from "./utils/upload.ts";
@@ -127,12 +128,15 @@ export default function App() {
             onPasteImage={handleUploadFile}
           />
         </div>
-        <div style={{flex: 1, minWidth: 0}}>
-          <Preview
-            ref={previewRef}
-            content={content}
-            markdownThemeId={markdownThemeId}
-          />
+        <div style={{flex: 1, minWidth: 0, display: "flex"}}>
+          <div style={{flex: 1, minWidth: 0}}>
+            <Preview
+              ref={previewRef}
+              content={content}
+              markdownThemeId={markdownThemeId}
+            />
+          </div>
+          <StylePanel />
         </div>
       </main>
 

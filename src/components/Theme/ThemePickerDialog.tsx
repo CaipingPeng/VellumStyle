@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from "react";
 import {useStore} from "../../store/index.ts";
-import {loadAllThemes, openThemesDir} from "../../themes/loader.ts";
+import {loadAllThemes, openThemesDir, importMdniceTheme} from "../../themes/loader.ts";
 import ThemeThumbnail from "./ThemeThumbnail.tsx";
 
 const PAGE_SIZE = 8;
@@ -53,6 +53,25 @@ export default function ThemePickerDialog({onClose}: Props) {
       // 无 Tauri 环境，忽略
     }
     setThemes(await loadAllThemes());
+  }
+
+  function importTheme() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const raw = await file.text();
+      const name = file.name.replace(/\.json$/i, "");
+      try {
+        await importMdniceTheme(name, raw);
+        setThemes(await loadAllThemes());
+      } catch (e) {
+        window.alert("导入失败：" + (e as Error).message);
+      }
+    };
+    input.click();
   }
 
   return (
@@ -163,6 +182,23 @@ export default function ThemePickerDialog({onClose}: Props) {
           }}
         >
           ＋ 打开主题文件夹
+        </button>
+
+        <button
+          onClick={importTheme}
+          style={{
+            height: 28,
+            padding: "0 12px",
+            fontSize: 12,
+            border: "1px solid #d9d9d9",
+            borderRadius: 4,
+            background: "#fff",
+            color: "#1e6bb8",
+            cursor: "pointer",
+            marginLeft: 8,
+          }}
+        >
+          ↑ 导入 mdnice 主题
         </button>
 
         {totalPages > 1 && (
