@@ -3,6 +3,7 @@ import CodeMirror, {type ReactCodeMirrorRef} from "@uiw/react-codemirror";
 import {markdown, markdownLanguage} from "@codemirror/lang-markdown";
 import {languages} from "@codemirror/language-data";
 import {EditorView} from "@codemirror/view";
+import {undo, redo} from "@codemirror/commands";
 import {wrapSelection as wrapSel, insertLink as insLink, prefixLines as prefixLn, insertCodeBlock as insCode} from "./editing.ts";
 
 export interface MarkdownEditorHandle {
@@ -16,6 +17,9 @@ export interface MarkdownEditorHandle {
   prefixLines: (prefix: string) => void;
   // 插入代码块围栏：有选区进围栏，无选区光标落中间空行。
   insertCodeBlock: () => void;
+  // 撤销/重做（CodeMirror history）。
+  undo: () => void;
+  redo: () => void;
   // 编辑器滚动容器（.cm-scroller），供同步滚动监听
   getScroller: () => HTMLElement | null;
   // 顶部可视行号（0-based，与渲染 data-line 同基准）
@@ -91,6 +95,18 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
           changes: {from, to, insert: r.insert},
           selection: {anchor: r.selFrom, head: r.selTo},
         });
+        view.focus();
+      },
+      undo: () => {
+        const view = cmRef.current?.view;
+        if (!view) return;
+        undo(view);
+        view.focus();
+      },
+      redo: () => {
+        const view = cmRef.current?.view;
+        if (!view) return;
+        redo(view);
         view.focus();
       },
       getScroller: () => cmRef.current?.view?.scrollDOM ?? null,
