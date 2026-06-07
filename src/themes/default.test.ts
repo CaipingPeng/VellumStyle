@@ -11,9 +11,9 @@ test("default.json 通过 model 校验", () => {
 test("default 编译出 GitHub 风格关键视觉值", () => {
   const css = compileModel(defaultModel as never);
   assert.match(css, /#nice p \{[^}]*font-size: 16px/);
-  assert.match(css, /#nice h1 \.content \{[^}]*font-size: 30px/);
-  assert.match(css, /#nice h1 \.content \{[^}]*color: rgba\(36, 41, 47, 1\)/);
-  assert.match(css, /#nice a \{[^}]*color: rgba\(9, 105, 218, 1\)/);
+  assert.match(css, /#nice h1 \.content \{[^}]*font-size: 36px/);
+  assert.match(css, /#nice h1 \.content \{[^}]*color: rgba\(51, 51, 51, 1\)/);
+  assert.match(css, /#nice a \{[^}]*color: rgba\(65, 131, 196, 1\)/);
 });
 
 test("default 不含 mdnice 主题残留（绿色/网图背景）", () => {

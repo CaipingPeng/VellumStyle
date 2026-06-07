@@ -602,7 +602,13 @@ npx tsc --noEmit         # 类型检查
 
 ### GitHub 风默认主题
 
-- default.json 由脚本 `_github_default.mjs`（已删）基于现有骨架改值：正文 `#24292f`、字体 system-ui 栈、行距 1.6；标题加粗深黑字号阶梯（h1 30px…）；引用左 4px 灰边 `#d0d7de` + 灰字 `#656d76` 无背景；链接 `#0969da` 蓝不加粗；行内代码浅灰底 `rgba(175,184,193,0.2)`；代码块 `#f6f8fa`；表格表头/斑马 `#f6f8fa`。
-- **清掉骨架残留**：h3 的 mdnice 网图背景（`url(files.mdnice.com...)`→none）、strong em 老蓝、草原绿绿值，统一中性。`default.test.ts` 断言更新为 GitHub 值 + 校验无 `files.mdnice.com`/绿色残留。
+- default.json **从零生成**（不基于 mdnice 骨架，避免圆角/阴影/网图等污染），精确编码 Typora 官方 `github.css` 的取值：正文 `rgb(51,51,51)`、Open Sans 字体栈、行距 1.6；标题加粗字号阶梯（h1 36px/h2 28px/h3 24px/h4 20px/h5,h6 16px，h6 灰 `#777`），h1/h2 带 `1px solid #eee` 下边框；引用左 4px `#dfe2e5` 灰边 + 灰字 `#777` 无背景；链接 `#4183C4` 不加粗无下划线；行内代码 `#f3f4f4` 底 + `#e7eaed` 边框 + 圆角 monospace；代码块 `#f8f8f8`；表格 `#dfe2e5` 边框 + 表头/斑马 `#f8f8f8`。
+- 精简为 22 个 model（仅含 github.css 真正设置的属性），用 `common` 块写自由 CSS。点击识别覆盖常用元素；未建 model 的花哨元素点击不弹面板（不报错）。
+- **图片**：figure 容器 flex 居中 + `max-width:100%` + `box-sizing:border-box`，避免图片溢出/截断预览区（精简初版漏了 figure 容器规则导致溢出，已补）。
+- 生成器脚本 `_gen_default.mjs`（throwaway，已删）。`default.test.ts` 断言更新为 h1 36px / 链接 `rgba(65,131,196,1)` / 无 `files.mdnice.com` 残留。
 - 验证：`npm test` 25/25、`npx tsc -b --noEmit` 零错、`npm run build` 通过。
+
+### 爬虫脚本归档
+
+- `scripts/crawl_mdnice_themes.py`：token/outId 改为读环境变量 `MDNICE_TOKEN`/`MDNICE_OUT_ID`（不提交密钥）。token 过期后重抓即可重爬。
 
