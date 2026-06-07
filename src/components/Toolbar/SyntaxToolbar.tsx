@@ -122,7 +122,7 @@ export default function SyntaxToolbar({editorRef}: Props) {
       <button type="button" title="引用" style={btnStyle} onClick={prefix("> ")}>
         <Quote size={ICON} />
       </button>
-      <button type="button" title="代码块" style={btnStyle} onClick={() => ed()?.insertAtCursor("\n```\n\n```\n")}>
+      <button type="button" title="代码块" style={btnStyle} onClick={() => ed()?.insertCodeBlock()}>
         <SquareCode size={ICON} />
       </button>
       <button type="button" title="分割线" style={btnStyle} onClick={() => ed()?.insertAtCursor("\n---\n")}>

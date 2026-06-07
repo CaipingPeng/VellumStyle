@@ -3,7 +3,7 @@ import CodeMirror, {type ReactCodeMirrorRef} from "@uiw/react-codemirror";
 import {markdown, markdownLanguage} from "@codemirror/lang-markdown";
 import {languages} from "@codemirror/language-data";
 import {EditorView} from "@codemirror/view";
-import {wrapSelection as wrapSel, insertLink as insLink, prefixLines as prefixLn} from "./editing.ts";
+import {wrapSelection as wrapSel, insertLink as insLink, prefixLines as prefixLn, insertCodeBlock as insCode} from "./editing.ts";
 
 export interface MarkdownEditorHandle {
   // 在当前光标处插入文本（替换选区）。供工具栏上传按钮调用。
@@ -14,6 +14,8 @@ export interface MarkdownEditorHandle {
   insertLink: () => void;
   // 行级前缀：选区涉及的每行行首加 prefix。
   prefixLines: (prefix: string) => void;
+  // 插入代码块围栏：有选区进围栏，无选区光标落中间空行。
+  insertCodeBlock: () => void;
   // 编辑器滚动容器（.cm-scroller），供同步滚动监听
   getScroller: () => HTMLElement | null;
   // 顶部可视行号（0-based，与渲染 data-line 同基准）
@@ -75,6 +77,18 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         const r = prefixLn(doc, from, to, prefix);
         view.dispatch({
           changes: {from: r.replaceFrom, to: r.replaceTo, insert: r.insert},
+          selection: {anchor: r.selFrom, head: r.selTo},
+        });
+        view.focus();
+      },
+      insertCodeBlock: () => {
+        const view = cmRef.current?.view;
+        if (!view) return;
+        const {from, to} = view.state.selection.main;
+        const doc = view.state.doc.toString();
+        const r = insCode(doc, from, to);
+        view.dispatch({
+          changes: {from, to, insert: r.insert},
           selection: {anchor: r.selFrom, head: r.selTo},
         });
         view.focus();

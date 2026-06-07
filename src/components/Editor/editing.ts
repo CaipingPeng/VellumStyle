@@ -43,12 +43,23 @@ export interface PrefixResult {
   selTo: number;
 }
 
-// 行级前缀：把选区扩到涉及的整行，每行行首加 prefix。
+// 行级前缀：把选区扩到涉及的整行，每行行首加 prefix。光标折叠到块末尾，
+// 不选中（否则会连语法符号一起选中，继续打字会覆盖掉前缀）。
 export function prefixLines(doc: string, from: number, to: number, prefix: string): PrefixResult {
   const lineStart = doc.lastIndexOf("\n", from - 1) + 1;
   const nlAfter = doc.indexOf("\n", to);
   const lineEnd = nlAfter === -1 ? doc.length : nlAfter;
   const block = doc.slice(lineStart, lineEnd);
   const insert = block.split("\n").map((ln) => prefix + ln).join("\n");
-  return {replaceFrom: lineStart, replaceTo: lineEnd, insert, selFrom: lineStart, selTo: lineStart + insert.length};
+  const end = lineStart + insert.length;
+  return {replaceFrom: lineStart, replaceTo: lineEnd, insert, selFrom: end, selTo: end};
+}
+
+// 代码块：插入围栏。有选区→选区进围栏并选中；无选区→光标落在中间空行可直接打字。
+export function insertCodeBlock(doc: string, from: number, to: number): EditResult {
+  const hasSel = to > from;
+  const inner = hasSel ? doc.slice(from, to) : "";
+  const insert = `\n\`\`\`\n${inner}\n\`\`\`\n`;
+  const start = from + "\n```\n".length;
+  return {insert, selFrom: start, selTo: start + inner.length};
 }
