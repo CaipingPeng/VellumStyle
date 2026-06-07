@@ -532,3 +532,51 @@ npx tsc --noEmit         # 类型检查
 - **去重旧 useClickOutside**：Task 5 用新 ThemeMenu 整体替换旧版（旧版自带 `useClickOutside`），避免父子两个 click-outside 同时生效误关浮层；开 `onClick`（click）+ 关 `mousedown` 事件类型错位，开浮层那一下不会自关。
 - **openFolder 容错**：非 Tauri（web 调试）`openThemesDir` 会 reject，try/catch 吞掉仍重扫；分页 page 越界夹回最后一页避免空白页。
 
+## 增补功能 — 可视化样式面板 + 主题系统改为 model-only（✅ 完成并运行时验证，2026-06-07）
+
+> 目标：实现 mdnice 商业版那样的「点击预览元素 → 右侧面板可视化逐项调样式（字号/颜色/对齐/间距…）→ 实时预览 → 存为可再编辑的主题」。并支持直接导入 mdnice 抓包的主题 JSON。
+
+设计文档 `docs/superpowers/specs/2026-06-07-visual-style-panel-design.md`，实现计划 `docs/superpowers/plans/2026-06-07-visual-style-panel.md`。
+
+### 架构决策（取代了上面的 CSS-file 主题方案）
+
+纯 CSS 文本主题无法把样式值回填到面板控件（控件不知道「h1 当前 font-size 是多少」），所以**统一改为结构化 model 主题**（mdnice `styleModelList` schema），并废弃 basic 层与 CSS 主题形态。
+
+- **主题 = mdnice model**（44 个 StyleModel，`styles/keys/children/format`）。`model` 是真相源，`css` 是编译产物。
+- **model → CSS 编译器**（纯函数）注入到原有 `STYLE_IDS.markdown` 层 → 实时预览、juice 复制管线**零改动**。
+- **点击识别**：预览 HTML 已有 `<h1><span class="content">` 等结构（heading-span 插件），mdnice 选择器直接可用；`elementMap` 用 closest + 优先级表把 DOM 映射到 model id。
+- **统一形态**（用户拍板 model-only）：删 `basic.ts` + `markdown/{default,elegant,tech}.css`；default 改为 `default.json`（mdnice 骨架 + basic.ts 视觉值迁入，B+i）；`themes.rs` 改扫 `*.json`。
+
+### 执行结果（subagent-driven，TDD，15 任务）
+
+| # | 任务 | 状态 | 产出 |
+|---|------|------|------|
+| 1 | model schema 类型 + 校验 | ✅ | `src/themes/themeModel.ts`(+test) |
+| 2 | compileModel 编译器 | ✅ | `src/themes/compileModel.ts`(+test) |
+| 3 | 编译器 oracle 验证 | ✅ | `__fixtures__/caoyuanlv.json` 对照 `data.style`，揪出 3 处编译 bug |
+| 4 | default model 构造 | ✅ | `src/themes/default.json`（44 models，basic.ts 视觉值） |
+| 5 | index.ts 改 model-only | ✅ | 删 basic.ts + 3 css，`ThemeOption.model` 必有 |
+| 6 | store model 编辑状态 | ✅ | `selectedModelId`/`setSelectedModel`/`updateStyleValue` |
+| 7 | elementMap 点击识别 | ✅ | `src/components/StylePanel/elementMap.ts`(+test) |
+| 8 | 控件组件 | ✅ | `controls.tsx`（导出 `StyleControl` 组件） |
+| 9 | StylePanel 面板容器 | ✅ | `StylePanel.tsx`（遍历 model.styles 递归渲染） |
+| 10 | Preview 接入点击 + 移除 basic | ✅ | `Preview.tsx` |
+| 11 | converter 移除 basic 拼接 | ✅ | `converter.ts` |
+| 12 | App 挂载面板 | ✅ | `App.tsx`（面板并列预览右侧） |
+| 13 | themes.rs JSON 存储 + 导入 | ✅ | `save_user_theme`/`import_mdnice_theme` + lib.rs 注册 |
+| 14 | loader 改写 + 导入入口 | ✅ | `loader.ts` 编译 model→css；ThemePickerDialog 加导入按钮 |
+| 15 | 全量验证 + 兼容 | ✅ | ThemeThumbnail 去 basic；tsc + 25 测试通过；UI 手验 |
+
+### 验证状态
+
+- ✅ `npx tsc -b --noEmit` 零错误；`npm test` 25/25 通过（含编译器 oracle：1465 条声明与 mdnice `data.style` 等价）。
+- ✅ UI 运行时验证（dev:web）：点击段落/标题/引用 → 面板切换；改 fontSize → 预览实时变；导入 `草原绿.json` → 主题切绿可编辑。
+- ✅ Rust `cargo build` 通过（新命令编译 + 注册）。
+
+### 关键踩坑（避免重复）
+
+- **编译器值归一化**（Task 3 oracle 揪出）：model 原始值与浏览器 CSSOM 序列化形态不同——逗号要补空格（`rgba(0,0,0,1)`→`rgba(0, 0, 0, 1)`、字体列表同理）、`content` 单引号转双引号、`common` 块要剥 CSS 注释（注释紧贴选择器会污染解析）。否则编译产物对不上 `data.style`。用 `草原绿.json` 自带的 `data.style` 当 oracle 是验证编译器的关键。
+- **Vite Fast Refresh 失效**：`controls.tsx` 原导出 `renderControl(item,onChange)` 函数（返回 JSX 但带参数），Vite 判为「incompatible component export」→ HMR 不更新页面，伪装成「改了没生效/输入卡住」。改为导出真正的组件 `<StyleControl item onChange/>` 解决。
+- **读写路径不对称导致编辑静默失效**（核心 bug，绕了很久）：`getThemeById`（显示）有 fallback、`updateStyleValue`（编辑）严格 `t.id===markdownThemeId` 无 fallback。localStorage 残留改造前的旧主题 id（如 `elegant`/`tech`）时，显示因回退正常、编辑因全不命中而静默失效，表现为受控 input「打不进字」。修复：写路径改用 `getThemeById(...).id` 解析有效 id + App 启动把不存在的 id 自愈为 default。教训：同一份数据读写必须用相同解析逻辑。
+- **调试方法**：受控 input「打不进字」先分清 onChange 没触发 vs 触发了但 state 没回流——临时换非受控 `defaultValue` 版对比（能打字=回流问题，不能打字=事件问题）。别先归因环境（HMR/端口/进程）。
+
