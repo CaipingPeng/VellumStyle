@@ -93,17 +93,24 @@ export default function TreeNode({
           paddingRight: 6,
           cursor: "pointer",
           fontSize: 13,
+          // VSCode 风格层级：
+          // - 文档选中：实蓝条，白字（最强）
+          // - 拖拽悬停文件夹：虚线框 + 浅蓝底（临时态）
+          // - 文件夹选中：浅灰底 + 左侧 2px 蓝色指示条（弱于文档，不抢视觉）
+          // - hover：极浅灰
           background: selectedDoc
             ? "#1e6bb8"
             : dropTarget
               ? "#cfe3f7"
               : selectedDir
-                ? "#e6f0fa"
+                ? "#eaeef2"
                 : hover
                   ? "#f0f2f5"
                   : "transparent",
           color: selectedDoc ? "#fff" : "#333",
+          boxShadow: selectedDir && !selectedDoc ? "inset 2px 0 0 #1e6bb8" : "none",
           outline: dropTarget ? "1px dashed #1e6bb8" : "none",
+          outlineOffset: -1,
         }}
       >
         {node.isDir ? (
