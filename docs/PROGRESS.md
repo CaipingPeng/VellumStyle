@@ -640,7 +640,7 @@ npx tsc --noEmit         # 类型检查
 
 - **纯函数 `src/components/Editor/editing.ts`**：`wrapSelection`/`insertLink`/`prefixLines`/`insertCodeBlock`，输入 doc+选区→输出插入文本片段+新选区，不碰 CodeMirror，单测在 `editing.test.ts`（34 用例）。
 - **`MarkdownEditor` 暴露 4 个方法**：薄薄包一层 `view.dispatch`（changes + selection），复用现有 `cmRef.current?.view` 守卫。
-- **`src/components/Toolbar/SyntaxToolbar.tsx`**：图标用 `lucide-react`（tree-shakeable，零运行时体积影响），标题做点击展开的 H1-H4 下拉（点空白关闭）。接入 `App.tsx` navbar 左侧（左语法/右全局分段），标题缩短为「排版工具」。
+- **`src/components/Toolbar/SyntaxToolbar.tsx`**：图标用 `lucide-react`（tree-shakeable，零运行时体积影响），标题做点击展开的 H1-H4 下拉（点空白关闭）。接入 `App.tsx` navbar 左侧（左语法/右全局分段）。navbar 不再放标题文字（窗口标题/页面 title 已体现「微信公众号排版工具」）。
 
 ### 语义关键点（踩坑）
 

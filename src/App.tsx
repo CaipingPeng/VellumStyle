@@ -104,7 +104,6 @@ export default function App() {
         }}
       >
         <div style={{display: "flex", alignItems: "center", gap: 12}}>
-          <span style={{fontWeight: 600, color: "#1e6bb8", whiteSpace: "nowrap"}}>排版工具</span>
           <SyntaxToolbar editorRef={editorRef} />
         </div>
         <div style={{display: "flex", alignItems: "center", gap: 12}}>
