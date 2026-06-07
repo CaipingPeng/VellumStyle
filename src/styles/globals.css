@@ -14,11 +14,7 @@ body {
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
-/* 编辑器：去掉聚焦时的默认 outline 边框，给文字留内边距，避免贴边显示不全。 */
-.cm-editor.cm-focused {
-  outline: none;
-}
-
+/* 编辑器：给文字留内边距，避免贴边显示不全。聚焦边框与内容高度见组件内 theme。 */
 .cm-editor .cm-content {
   padding: 12px 16px;
 }

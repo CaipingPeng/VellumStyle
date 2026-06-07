@@ -723,3 +723,15 @@ npx tsc --noEmit         # 类型检查
 ### 编辑区聚焦贴边
 
 - CodeMirror 默认 `.cm-editor.cm-focused` 有蓝色 outline，且 `.cm-content` 内边距很小，文字贴边显示不全。`globals.css` 加 `.cm-focused { outline: none }` + `.cm-content { padding: 12px 16px }`。
+
+## 修复 — 编辑区聚焦边框 + 空白区点击不聚焦（✅ 运行时验证通过，2026-06-08）
+
+### 聚焦边框去不掉
+
+- `globals.css` 里的 `.cm-editor.cm-focused { outline: none }` 没生效：它与 CodeMirror **默认主题注入的 outline 规则特异性相同**，谁后加载谁赢，结果输给了 CM 默认样式。
+- **修复**：改用组件内 `EditorView.theme({"&.cm-focused": {outline: "none"}})`。theme 扩展由 CodeMirror 以更高优先级注入，必定胜出。同时删掉 `globals.css` 里那条多余规则，样式统一收口到组件。
+
+### 新建空文档时只有第一行能点出光标
+
+- **根因**：`.cm-content`（可编辑区）高度只随文本撑开，第一行以下的空白其实是不可编辑的 `.cm-scroller` 区域，点击落不到 `.cm-content` 上，自然不定位光标。
+- **修复**：同一个 theme 扩展里加 `".cm-content": {minHeight: "100%"}`，把内容区撑满滚动容器高度，空白区点击即落在 `.cm-content`，光标落到文末。

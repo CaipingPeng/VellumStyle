@@ -135,6 +135,11 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       () => [
         markdown({base: markdownLanguage, codeLanguages: languages}),
         EditorView.lineWrapping,
+        // 聚焦时不加任何边框；让内容区撑满高度，使空白区域点击也能定位光标。
+        EditorView.theme({
+          "&.cm-focused": {outline: "none"},
+          ".cm-content": {minHeight: "100%"},
+        }),
         EditorView.domEventHandlers({
           paste(event) {
             if (!onPasteImage) {
