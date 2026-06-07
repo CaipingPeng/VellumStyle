@@ -3,16 +3,27 @@ import {persist} from "zustand/middleware";
 import {compileModel} from "../themes/compileModel.ts";
 import {builtinThemes, defaultMarkdownTheme, type ThemeOption, type StyleModel} from "../themes/index.ts";
 import type {StyleItem} from "../themes/themeModel.ts";
+import {listDocuments, readDocument, writeDocument, type DocNode} from "../utils/documents.ts";
+import {createDebouncedSaver} from "../utils/autosave.ts";
 
 export interface EditorState {
   content: string;
   markdownThemeId: string;
   themes: ThemeOption[];
   selectedModelId: string | null; // 当前面板编辑的元素 model id
+  tree: DocNode[]; // 整棵文档树（运行期，不 persist）
+  currentDocPath: string | null; // 当前在编辑器打开的文档，persist（记住上次打开）
+  selectedPath: string | null; // 树里当前高亮项（文件或文件夹），统一选中源，运行期不 persist
+  sidebarOpen: boolean; // 文档侧栏显隐，运行期不 persist，默认隐藏
   setContent: (content: string) => void;
   setMarkdownTheme: (id: string) => void;
   setThemes: (themes: ThemeOption[]) => void;
   setSelectedModel: (modelId: string | null) => void;
+  setCurrentDocPath: (path: string | null) => void;
+  setSelectedPath: (path: string | null) => void;
+  toggleSidebar: () => void;
+  loadTree: () => Promise<void>;
+  openDocument: (path: string) => Promise<void>;
   // 改当前主题某个 style 项的值（按 model id + style 路径），重编译 css
   updateStyleValue: (modelId: string, stylePath: string[], value: string) => void;
 }
@@ -31,6 +42,21 @@ function setValueByPath(styles: StyleItem[], path: string[], value: string): Sty
   });
 }
 
+// 自动保存器：写当前文档到磁盘。debounce 800ms；切换/关窗前调 flushSave。
+// 声明在 useStore 之前——回调延迟执行（debounce 到点才跑），届时 useStore 已就绪。
+const saver = createDebouncedSaver(async (text) => {
+  const path = useStore.getState().currentDocPath;
+  if (path) await writeDocument(path, text);
+}, 800);
+
+export function scheduleSave(text: string) {
+  saver.schedule(text);
+}
+
+export function flushSave(): Promise<void> {
+  return saver.flushNow();
+}
+
 export const useStore = create<EditorState>()(
   persist(
     (set) => ({
@@ -39,10 +65,30 @@ export const useStore = create<EditorState>()(
       // 初始为内置主题；启动后 loadAllThemes() 合并用户主题覆盖
       themes: builtinThemes,
       selectedModelId: null,
-      setContent: (content) => set({content}),
+      tree: [],
+      currentDocPath: null,
+      selectedPath: null,
+      sidebarOpen: false,
+      setContent: (content) => {
+        set({content});
+        scheduleSave(content);
+      },
       setMarkdownTheme: (markdownThemeId) => set({markdownThemeId}),
       setThemes: (themes) => set({themes}),
       setSelectedModel: (selectedModelId) => set({selectedModelId}),
+      setCurrentDocPath: (currentDocPath) => set({currentDocPath}),
+      setSelectedPath: (selectedPath) => set({selectedPath}),
+      toggleSidebar: () => set((s) => ({sidebarOpen: !s.sidebarOpen})),
+      loadTree: async () => {
+        const tree = await listDocuments();
+        set({tree});
+      },
+      openDocument: async (path) => {
+        // 先把当前篇落盘（必须 await，否则旧文档未保存编辑会丢）。
+        await flushSave();
+        const text = await readDocument(path);
+        set({currentDocPath: path, selectedPath: path, content: text, selectedModelId: null});
+      },
       updateStyleValue: (modelId, stylePath, value) =>
         set((s) => {
           // 用与显示一致的「有效主题」解析：若 markdownThemeId 在 themes 中找不到
@@ -63,9 +109,9 @@ export const useStore = create<EditorState>()(
     }),
     {
       name: "wechat-md-editor",
-      // themes 是运行期扫描结果，不持久化
+      // themes 是运行期扫描结果，不持久化；content 改由文件持久化，只记住打开哪篇
       partialize: (s) => ({
-        content: s.content,
+        currentDocPath: s.currentDocPath,
         markdownThemeId: s.markdownThemeId,
       }),
     },

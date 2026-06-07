@@ -8,15 +8,40 @@ import ImportButton from "./components/Import/ImportButton.tsx";
 import SettingsDialog from "./components/Settings/SettingsDialog.tsx";
 import StylePanel from "./components/StylePanel/StylePanel.tsx";
 import SyntaxToolbar from "./components/Toolbar/SyntaxToolbar.tsx";
-import {useStore, getThemeById} from "./store/index.ts";
+import DocTree from "./components/DocTree/DocTree.tsx";
+import PublishButton from "./components/Publish/PublishButton.tsx";
+import Toaster from "./components/Toast/Toaster.tsx";
+import {toast} from "./components/Toast/toast.ts";
+import {useStore, getThemeById, flushSave} from "./store/index.ts";
 import {loadAllThemes} from "./themes/loader.ts";
 import {defaultMarkdownTheme} from "./themes/index.ts";
 import {uploadImage, type UploadError} from "./utils/upload.ts";
 import {createScrollSync} from "./utils/syncScroll.ts";
+import {createDocument, writeDocument, type DocNode} from "./utils/documents.ts";
+import {getCurrentWindow} from "@tauri-apps/api/window";
+import {PanelLeft} from "lucide-react";
 import defaultContent from "./content.md?raw";
 
+// 取树里第一篇文档路径（深度优先）。
+function flattenFirst(nodes: DocNode[]): string | null {
+  for (const n of nodes) {
+    if (!n.isDir) return n.path;
+    const c = flattenFirst(n.children);
+    if (c) return c;
+  }
+  return null;
+}
+
+function existsInTree(nodes: DocNode[], path: string): boolean {
+  for (const n of nodes) {
+    if (!n.isDir && n.path === path) return true;
+    if (n.isDir && existsInTree(n.children, path)) return true;
+  }
+  return false;
+}
+
 export default function App() {
-  const {content, markdownThemeId, themes, setContent, setThemes, setMarkdownTheme} = useStore();
+  const {content, markdownThemeId, themes, currentDocPath, sidebarOpen, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar} = useStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
@@ -29,10 +54,10 @@ export default function App() {
     } catch (e) {
       const err = e as UploadError;
       if (err.code === "NOT_CONFIGURED") {
-        window.alert("尚未配置微信图床：请点右上角「设置」填写公众号 AppID/AppSecret。");
+        toast.show("尚未配置微信图床：请点右上角「设置」填写公众号 AppID/AppSecret。", "error");
         setSettingsOpen(true);
       } else {
-        window.alert(err.message || "图片上传失败");
+        toast.show(err.message || "图片上传失败", "error");
       }
     }
   };
@@ -50,13 +75,53 @@ export default function App() {
     });
   }, [setThemes, setMarkdownTheme]);
 
-  // 首次加载默认教程内容（仅当无草稿时，避免覆盖 persist 恢复的内容）。
-  // content.md 在打包时以 ?raw 内联，桌面端无需运行时 fetch。
+  // 启动：加载文档树；迁移旧 localStorage 草稿；决定打开哪篇。
   useEffect(() => {
-    if (!useStore.getState().content && defaultContent) {
-      setContent(defaultContent);
-    }
-  }, [setContent]);
+    (async () => {
+      await loadTree();
+      const tree = useStore.getState().tree;
+      const persistedPath = useStore.getState().currentDocPath;
+      const legacyContent = useStore.getState().content;
+
+      // 迁移：documents/ 为空 且有旧 content → 存成 草稿.md。
+      if (tree.length === 0 && legacyContent) {
+        const path = await createDocument("", "草稿");
+        await writeDocument(path, legacyContent);
+        await loadTree();
+        await openDocument(path);
+        return;
+      }
+      // 首次空仓库且无旧内容：写一篇默认教程。
+      if (tree.length === 0 && !legacyContent && defaultContent) {
+        const path = await createDocument("", "示例");
+        await writeDocument(path, defaultContent);
+        await loadTree();
+        await openDocument(path);
+        return;
+      }
+      // 已有文档：打开上次的，否则打开第一篇。
+      if (persistedPath && existsInTree(tree, persistedPath)) {
+        await openDocument(persistedPath);
+      } else {
+        const first = flattenFirst(tree);
+        if (first) await openDocument(first);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 关窗前把当前文档落盘，防丢最后 800ms 编辑。
+  useEffect(() => {
+    const win = getCurrentWindow();
+    const unlisten = win.onCloseRequested(async (event) => {
+      event.preventDefault();
+      await flushSave();
+      await win.destroy();
+    });
+    return () => {
+      void unlisten.then((f) => f());
+    };
+  }, []);
 
   // 编辑器 ↔ 预览 双向同步滚动。CodeMirror 的 .cm-scroller 首帧可能未挂载，rAF 重试到拿到为止。
   useEffect(() => {
@@ -104,6 +169,26 @@ export default function App() {
         }}
       >
         <div style={{display: "flex", alignItems: "center", gap: 12}}>
+          <button
+            type="button"
+            title="文档"
+            onClick={toggleSidebar}
+            style={{
+              width: 30,
+              height: 30,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "1px solid #d9d9d9",
+              borderRadius: 4,
+              background: sidebarOpen ? "#e6f0fa" : "#fff",
+              color: sidebarOpen ? "#1e6bb8" : "#333",
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            <PanelLeft size={16} />
+          </button>
           <SyntaxToolbar editorRef={editorRef} />
         </div>
         <div style={{display: "flex", alignItems: "center", gap: 12}}>
@@ -126,12 +211,14 @@ export default function App() {
           >
             设置
           </button>
+          <PublishButton onNeedSettings={() => setSettingsOpen(true)} />
           <CopyButton />
         </div>
       </header>
 
-      {/* 主体：编辑器 + 预览 */}
+      {/* 主体：文档树 + 编辑器 + 预览 */}
       <main style={{flex: 1, display: "flex", minHeight: 0, position: "relative"}}>
+        {sidebarOpen && <DocTree />}
         <div style={{flex: 1, borderRight: "1px solid #e8e8e8", minWidth: 0, overflow: "hidden"}}>
           <MarkdownEditor
             ref={editorRef}
@@ -170,9 +257,11 @@ export default function App() {
         <span>行数 {lineCount}</span>
         <span>字数 {charCount}</span>
         <span>主题 {getThemeById(themes, markdownThemeId).name}</span>
+        {currentDocPath && <span>文档 {currentDocPath.split("/").pop()}</span>}
       </footer>
 
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
+      <Toaster />
     </div>
   );
 }

@@ -36,6 +36,7 @@ struct TokenResp {
 #[derive(Deserialize)]
 struct UploadResp {
     url: Option<String>,
+    media_id: Option<String>,
     errcode: Option<i64>,
     errmsg: Option<String>,
 }
@@ -380,4 +381,137 @@ pub async fn fetch_proxied_image(raw_url: &str) -> Result<(String, Vec<u8>), Str
         .map_err(|e| format!("read error: {e}"))?
         .to_vec();
     Ok((content_type, bytes))
+}
+
+#[derive(Deserialize)]
+struct DraftResp {
+    media_id: Option<String>,
+    errcode: Option<i64>,
+    errmsg: Option<String>,
+}
+
+// 上传封面图，走 add_material(type=image)，取 media_id（区别于 upload_image 取 url）。
+async fn upload_thumb_inner(
+    token: &str,
+    bytes: Vec<u8>,
+    filename: &str,
+    mime: &str,
+) -> Result<String, (Option<i64>, String)> {
+    let part = reqwest::multipart::Part::bytes(bytes)
+        .file_name(filename.to_string())
+        .mime_str(mime)
+        .map_err(|e| (None, format!("构造表单失败：{e}")))?;
+    let form = reqwest::multipart::Form::new().part("media", part);
+    let url = format!(
+        "https://api.weixin.qq.com/cgi-bin/material/add_material?access_token={token}&type=image"
+    );
+    let resp = reqwest::Client::new()
+        .post(&url)
+        .multipart(form)
+        .send()
+        .await
+        .map_err(|e| (None, format!("上传请求失败：{e}")))?;
+    let data: UploadResp = resp
+        .json()
+        .await
+        .map_err(|e| (None, format!("解析上传响应失败：{e}")))?;
+    match data.media_id {
+        Some(id) => Ok(id),
+        None => Err((data.errcode, data.errmsg.unwrap_or_else(|| "微信上传失败".into()))),
+    }
+}
+
+/// 上传封面图到微信永久素材，返回 media_id（供 add_draft 用）。未配置返回 "NOT_CONFIGURED"。
+#[tauri::command]
+pub async fn upload_thumb(
+    app: AppHandle,
+    bytes: Vec<u8>,
+    filename: String,
+    mime: String,
+) -> Result<String, String> {
+    let cfg = load_wechat_config(&app);
+    if !cfg.is_configured() {
+        return Err("NOT_CONFIGURED".into());
+    }
+    if !ALLOWED_TYPES.contains(&mime.as_str()) {
+        return Err("仅支持 jpg/png/gif 图片".into());
+    }
+    if bytes.len() > MAX_SIZE {
+        return Err("图片不能超过 10MB".into());
+    }
+    let name = if filename.is_empty() { "thumb".to_string() } else { filename };
+    let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
+    match upload_thumb_inner(&token, bytes.clone(), &name, &mime).await {
+        Ok(id) => Ok(id),
+        Err((errcode, msg)) => {
+            if matches!(errcode, Some(40001) | Some(42001) | Some(40014)) {
+                clear_token_blocking();
+                let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
+                upload_thumb_inner(&token, bytes, &name, &mime).await.map_err(|(_, m)| m)
+            } else {
+                Err(msg)
+            }
+        }
+    }
+}
+
+async fn add_draft_inner(
+    token: &str,
+    title: &str,
+    content: &str,
+    thumb_media_id: &str,
+) -> Result<String, (Option<i64>, String)> {
+    let body = serde_json::json!({
+        "articles": [{
+            "title": title,
+            "content": content,
+            "thumb_media_id": thumb_media_id,
+            "author": "",
+            "digest": "",
+            "content_source_url": ""
+        }]
+    });
+    let url = format!("https://api.weixin.qq.com/cgi-bin/draft/add?access_token={token}");
+    let resp = reqwest::Client::new()
+        .post(&url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| (None, format!("发布请求失败：{e}")))?;
+    let data: DraftResp = resp
+        .json()
+        .await
+        .map_err(|e| (None, format!("解析发布响应失败：{e}")))?;
+    match data.media_id {
+        Some(id) => Ok(id),
+        None => Err((data.errcode, data.errmsg.unwrap_or_else(|| "微信发布失败".into()))),
+    }
+}
+
+/// 发布到公众号草稿箱（draft/add）。author/digest/content_source_url 暂空。
+/// 返回草稿 media_id。未配置返回 "NOT_CONFIGURED"。
+#[tauri::command]
+pub async fn add_draft(
+    app: AppHandle,
+    title: String,
+    content: String,
+    thumb_media_id: String,
+) -> Result<String, String> {
+    let cfg = load_wechat_config(&app);
+    if !cfg.is_configured() {
+        return Err("NOT_CONFIGURED".into());
+    }
+    let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
+    match add_draft_inner(&token, &title, &content, &thumb_media_id).await {
+        Ok(id) => Ok(id),
+        Err((errcode, msg)) => {
+            if matches!(errcode, Some(40001) | Some(42001) | Some(40014)) {
+                clear_token_blocking();
+                let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
+                add_draft_inner(&token, &title, &content, &thumb_media_id).await.map_err(|(_, m)| m)
+            } else {
+                Err(msg)
+            }
+        }
+    }
 }

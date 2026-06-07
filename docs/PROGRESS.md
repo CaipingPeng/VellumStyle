@@ -656,3 +656,57 @@ npx tsc --noEmit         # 类型检查
 
 - `npm test` 34/34、`npx tsc -b --noEmit` 零错（除预存 test 文件已修）、`npm run build` 通过、浏览器实操逐项验证（含光标定位修复后复测）。
 
+
+## 功能 — 多文档管理（文件系统树）+ 一键发布草稿箱 + 撤销重做 + toast（✅ 代码完成，待运行时手验，2026-06-08）
+
+> 设计 `docs/superpowers/specs/2026-06-08-multi-doc-and-publish-design.md`，计划 `docs/superpowers/plans/2026-06-08-multi-doc-and-publish.md`（15 任务，subagent-driven + TDD）。
+
+### 架构决策
+
+- **文档内容真相源 = 文件系统**：`app_data_dir/documents/` 真实目录树（文件夹=树节点，`.md`=文档）。store 只缓存当前一篇 `content` + 整棵树 `tree`。`content` 不再 persist 到 localStorage，改 persist `currentDocPath`（记住上次打开）。与主题"丢文件就行"哲学一致，杜绝索引/文件不同步。
+- **Rust `documents.rs`**：7 个命令（list/read/write/create_document/create_folder/rename_entry/delete_entry）。路径沙箱 `resolve_in_documents` 逐段拼接拒绝 `..`/`.` + canonicalize 二次校验防逃逸；`is_valid_name` 过滤 Windows 非法字符。非空文件夹禁删。
+- **debounce 自动保存**：`src/utils/autosave.ts` 纯函数 `createDebouncedSaver`（schedule/flushNow，可单测），store 里 saver 声明在 useStore 之前（回调延迟执行届时 getState 已就绪）。`setContent` 触发 800ms debounce 写盘；`openDocument` 切换前 `await flushSave()`（防旧文档未保存编辑丢失——读写对称）；App `onCloseRequested` 关窗前 flush。
+- **启动迁移**：documents/ 为空且 localStorage 有旧 content → 存成 `草稿.md`；空仓库无旧内容 → 写 `示例.md`（默认教程）；否则打开 persist 的 path 或树第一篇。
+- **发布草稿箱**：`wechat.rs` 加 `upload_thumb`（走 add_material 取 media_id，区别于 upload_image 取 url；UploadResp 加 media_id 字段）+ `add_draft`（draft/add，author/digest/source_url 暂空，token 失效重试）。前端 `publish.ts` 的 `findUnuploadedImages` 复用 markdownMediaScanner 校验正文无非 mmbiz 外链图。PublishDialog 仅标题+封面，只进草稿箱不群发。
+- **撤销/重做**：MarkdownEditor 暴露 undo()/redo()（@codemirror/commands），SyntaxToolbar 最左加按钮（Ctrl+Z/Y 本就可用，仅补可见按钮）。
+- **轻量 toast**：`Toast/toast.ts` 模块单例 + Toaster.tsx 右下角堆叠，替换 App 两处 window.alert。
+
+### 验证状态
+
+- ✅ `npx tsc -b --noEmit` 零错；`npm test` 37/37（含 autosave 3）；`npm run build` 通过；`cargo build` + `cargo test`（documents 沙箱单测）通过。
+- ⏳ **运行时手验未做**：文档增删改重命名、切换不丢编辑、关窗 flush、迁移、发布草稿箱（需真实微信凭证）需 `npx tauri dev` 实操逐项确认。
+
+### 关键踩坑（避免重复）
+
+- **lucide-react ^1.17.0 图标名**：旧版仍有 `Undo2`/`Redo2`（kebab `undo-2.mjs`→PascalCase），但确认前先 `ls node_modules/lucide-react/dist/esm/icons/` 核对，别凭记忆 import 不存在的图标。
+- **删最后一篇文档时 setContent("")**：会触发 saver，但此前 currentDocPath 已设 null，saver 回调 `if (path)` 守卫跳过写盘——安全。顺序很关键。
+
+## 完善 — 多文档树交互（侧栏切换 / 统一选中 / 拖拽移动 / inline 新建，✅ 运行时验证通过，2026-06-08）
+
+> 在多文档基础功能上按用户实操反馈迭代了四轮。
+
+### 侧栏可切换
+
+- navbar 左侧加「文档」按钮（lucide `PanelLeft`），`store.sidebarOpen`（运行期不 persist，默认 false）控制；App `{sidebarOpen && <DocTree/>}` 条件渲染。默认隐藏避免影响编辑视觉。
+
+### 统一选中模型（文件/文件夹一视同仁）
+
+- 废弃原本两套独立状态（`currentDocPath` 高亮文档 + `selectedFolderPath` 高亮文件夹同时存在、互不取消）。改为单一 `store.selectedPath`（文件或文件夹，唯一高亮源）。
+- 点文档 = 设 selectedPath + `openDocument`（打开到编辑器）；点文件夹 = 仅设 selectedPath + 展开/收起，**不打开任何文件**。`currentDocPath` 仍驱动编辑器内容，与高亮解耦。
+- 活跃/失焦配色（VSCode 风）：侧栏聚焦时选中项实蓝白字，失焦（焦点进编辑器）变浅灰深字。`DocTree` 用 `tabIndex=-1` + onFocus/onBlur 追踪 `focused` 传给 TreeNode。
+- 新建落点 `targetDir`：选中文件夹→其下；选中文件→同级目录；无选中→根。
+
+### 拖拽移动（HTML5 DnD）
+
+- Rust `documents.rs` 加 `move_entry(src, dest_dir)`：沙箱校验 + 目标重名拒绝 + 防成环（canonicalize 后 dest 不能 starts_with src）；同位置移动 no-op。
+- TreeNode 用原生 DnD：拖到文件夹=移进、拖到文档=移到其同级、拖到根空白=移到根。move 当前文档或其所在文件夹后同步 `currentDocPath` 新前缀。
+
+### inline 新建占位
+
+- 新建输入框从「侧栏顶部固定表单」改为「树中目标位置 inline 占位」（`DraftInput` 组件，文件/文件夹共用，按 depth 缩进 + 对应图标）。`creating={mode,dir,value}` 注入递归：TreeNode 在 children 开头按 `creating.dir===node.path` 渲染草稿行，DocTree 处理根级（dir===""）。新建到子文件夹前先展开它。Enter 保存（文档打开/文件夹不打开），Esc/空失焦取消。
+
+### 关键踩坑（避免重复）
+
+- **WebView2 默认吞掉 HTML5 拖放**（核心坑，绕了两轮）：Tauri/wry 窗口默认 `dragDropEnabled: true`，会在窗口级拦截 OS 拖放手势，**直接吃掉 WebView 内的 HTML5 drag-and-drop**——表现为「一开始拖拽光标就是禁止符 🚫、drop 永不触发」。在 React 事件层怎么改都没用（setData/preventDefault 都到不了）。修复 = `tauri.conf.json` 窗口加 `"dragDropEnabled": false`。改这个**必须完全重启 `tauri dev`**（配置启动时读，热重载无效）。确认本项目图片上传走 paste/按钮、不依赖 Tauri 原生拖放，故关闭无副作用。
+- **HTML5 DnD 必须在 dragstart 写 dataTransfer**：`e.dataTransfer.setData(...)` + `effectAllowed="move"`，否则即便 webview 放行拖放，浏览器仍判无效拖拽（禁止符）。`dragover` 要对**所有**落点 `preventDefault` 才允许 drop（只对文件夹 preventDefault 会让光标经过文档时变禁止符）。
+- **点击冒泡清空选中**：TreeNode 行 onClick 必须 `e.stopPropagation()`，否则冒泡到根容器的 `onClick={setSelectedPath(null)}` 把刚设的选中立即清空——表现为「点文件夹没反应/选不中」。

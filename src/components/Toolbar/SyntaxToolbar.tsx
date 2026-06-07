@@ -1,7 +1,7 @@
 import {useState, useRef, useEffect, type CSSProperties, type RefObject} from "react";
 import {
   Bold, Italic, Strikethrough, Code, Link, Heading,
-  List, ListOrdered, Quote, SquareCode, Minus,
+  List, ListOrdered, Quote, SquareCode, Minus, Undo2, Redo2,
 } from "lucide-react";
 import type {MarkdownEditorHandle} from "../Editor/MarkdownEditor.tsx";
 
@@ -55,6 +55,12 @@ export default function SyntaxToolbar({editorRef}: Props) {
 
   return (
     <div style={{display: "flex", alignItems: "center", gap: 4}}>
+      <button type="button" title="撤销 (Ctrl+Z)" style={btnStyle} onClick={() => ed()?.undo()}>
+        <Undo2 size={ICON} />
+      </button>
+      <button type="button" title="重做 (Ctrl+Y)" style={btnStyle} onClick={() => ed()?.redo()}>
+        <Redo2 size={ICON} />
+      </button>
       <button type="button" title="加粗" style={btnStyle} onClick={wrap("**", "**", "加粗文本")}>
         <Bold size={ICON} />
       </button>

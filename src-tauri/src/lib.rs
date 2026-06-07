@@ -1,4 +1,5 @@
 mod config;
+mod documents;
 mod import;
 mod themes;
 mod wechat;
@@ -73,7 +74,17 @@ pub fn run() {
             themes::save_user_theme,
             themes::import_mdnice_theme,
             themes::ensure_themes_dir,
-            themes::open_themes_dir
+            themes::open_themes_dir,
+            documents::list_documents,
+            documents::read_document,
+            documents::write_document,
+            documents::create_document,
+            documents::create_folder,
+            documents::rename_entry,
+            documents::delete_entry,
+            documents::move_entry,
+            wechat::upload_thumb,
+            wechat::add_draft
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
