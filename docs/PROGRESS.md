@@ -2,7 +2,7 @@
 
 > 项目：微信公众号排版工具（基于 DESIGN.md，mdnice 重写）
 > 本轮范围：**Phase 1 — 项目初始化 + 渲染管线 + 编辑器 + 实时预览 + 复制到微信**
-> 开始：2026-05-29 ｜ 最后更新：2026-05-29
+> 开始：2026-05-29 ｜ 最后更新：2026-06-08
 
 ## 关键决策（已和用户确认）
 
@@ -710,3 +710,16 @@ npx tsc --noEmit         # 类型检查
 - **WebView2 默认吞掉 HTML5 拖放**（核心坑，绕了两轮）：Tauri/wry 窗口默认 `dragDropEnabled: true`，会在窗口级拦截 OS 拖放手势，**直接吃掉 WebView 内的 HTML5 drag-and-drop**——表现为「一开始拖拽光标就是禁止符 🚫、drop 永不触发」。在 React 事件层怎么改都没用（setData/preventDefault 都到不了）。修复 = `tauri.conf.json` 窗口加 `"dragDropEnabled": false`。改这个**必须完全重启 `tauri dev`**（配置启动时读，热重载无效）。确认本项目图片上传走 paste/按钮、不依赖 Tauri 原生拖放，故关闭无副作用。
 - **HTML5 DnD 必须在 dragstart 写 dataTransfer**：`e.dataTransfer.setData(...)` + `effectAllowed="move"`，否则即便 webview 放行拖放，浏览器仍判无效拖拽（禁止符）。`dragover` 要对**所有**落点 `preventDefault` 才允许 drop（只对文件夹 preventDefault 会让光标经过文档时变禁止符）。
 - **点击冒泡清空选中**：TreeNode 行 onClick 必须 `e.stopPropagation()`，否则冒泡到根容器的 `onClick={setSelectedPath(null)}` 把刚设的选中立即清空——表现为「点文件夹没反应/选不中」。
+
+## 修复 — 窗口关不掉 + 编辑区贴边（✅ 运行时验证通过，2026-06-08）
+
+### 窗口完全关不掉（叉叉 / Alt+F4 都无反应）
+
+- **根因 = 缺 `core:window:allow-destroy` 权限**（核心坑）：App `onCloseRequested` 回调里 `event.preventDefault()` 先阻止默认关闭，再 `await flushSave()`、`await win.destroy()`。但 `capabilities/default.json` 只授予了 `core:default`，而 `core:default` 聚合的 `core:window:default` 权限集**只含查询类权限（get-size / is-focused 等），不含 `allow-destroy`**（可在 `src-tauri/gen/schemas/acl-manifests.json` 逐条核对）。于是 `win.destroy()` 被 Tauri ACL 拒绝并 reject —— 窗口已被 preventDefault 阻止、却又没销毁成功 → **永远关不掉**，且开发 / 打包表现一致。
+- **排查弯路**：先怀疑 `flushSave()` 抛错中断流程，包了 try/catch —— 无效，因为 flushSave 根本没报错，reject 发生在 `win.destroy()`。教训：preventDefault 之后的关闭链路里**任何一环 reject 都会让窗口卡死**，要逐环验证而非假设第一环。
+- **修复**：`capabilities/default.json` 的 permissions 加 `core:window:allow-destroy`；并把 flush 包进 `try/finally`，保证保存失败也不阻断 `win.destroy()`。
+- **改 capabilities 必须完全重启 `tauri dev`**：权限属 Rust 侧、启动时读，前端热重载不会重新加载 capabilities（与 `dragDropEnabled` 同坑）。
+
+### 编辑区聚焦贴边
+
+- CodeMirror 默认 `.cm-editor.cm-focused` 有蓝色 outline，且 `.cm-content` 内边距很小，文字贴边显示不全。`globals.css` 加 `.cm-focused { outline: none }` + `.cm-content { padding: 12px 16px }`。
