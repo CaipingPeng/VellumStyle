@@ -1,6 +1,6 @@
 import {useStore, getThemeById} from "../../store/index.ts";
 import type {StyleItem} from "../../themes/themeModel.ts";
-import {renderControl} from "./controls.tsx";
+import {StyleControl} from "./controls.tsx";
 
 export default function StylePanel() {
   const {selectedModelId, setSelectedModel, themes, markdownThemeId, updateStyleValue} = useStore();
@@ -23,7 +23,7 @@ export default function StylePanel() {
     return (
       <div key={item.id} style={{marginBottom: 10}}>
         <div style={{fontSize: 12, color: "#666", marginBottom: 4}}>{item.id}</div>
-        {renderControl(item, (value) => updateStyleValue(selectedModelId!, path, value))}
+        <StyleControl item={item} onChange={(value) => updateStyleValue(selectedModelId!, path, value)} />
       </div>
     );
   }

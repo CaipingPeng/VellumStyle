@@ -95,8 +95,8 @@ function CommonControl({item, onChange}: CtrlProps) {
   );
 }
 
-// 按 style.id 选控件
-export function renderControl(item: StyleItem, onChange: (value: string) => void) {
+// 按 style.id 选控件。作为真正的组件导出，保证 Fast Refresh 正常。
+export function StyleControl({item, onChange}: CtrlProps) {
   const id = item.id;
   if (/Color$/i.test(id) || id === "fontColor") return <ColorControl item={item} onChange={onChange} />;
   if (id === "textAlign") return <AlignControl item={item} onChange={onChange} />;

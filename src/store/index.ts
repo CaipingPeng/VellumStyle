@@ -44,16 +44,22 @@ export const useStore = create<EditorState>()(
       setThemes: (themes) => set({themes}),
       setSelectedModel: (selectedModelId) => set({selectedModelId}),
       updateStyleValue: (modelId, stylePath, value) =>
-        set((s) => ({
-          themes: s.themes.map((t) => {
-            if (t.id !== s.markdownThemeId) return t;
-            const model = t.model.map((m) => {
-              if (m.id !== modelId) return m;
-              return {...m, styles: setValueByPath(m.styles, stylePath, value)};
-            });
-            return recompile({...t, model});
-          }),
-        })),
+        set((s) => {
+          // 用与显示一致的「有效主题」解析：若 markdownThemeId 在 themes 中找不到
+          // （如 localStorage 残留了旧主题 id），getThemeById 回退到 default。
+          // 必须按这个有效 id 来改，否则严格 id 匹配会全不命中 → 编辑静默失效。
+          const effectiveId = getThemeById(s.themes, s.markdownThemeId).id;
+          return {
+            themes: s.themes.map((t) => {
+              if (t.id !== effectiveId) return t;
+              const model = t.model.map((m) => {
+                if (m.id !== modelId) return m;
+                return {...m, styles: setValueByPath(m.styles, stylePath, value)};
+              });
+              return recompile({...t, model});
+            }),
+          };
+        }),
     }),
     {
       name: "wechat-md-editor",

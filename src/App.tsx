@@ -9,12 +9,13 @@ import SettingsDialog from "./components/Settings/SettingsDialog.tsx";
 import StylePanel from "./components/StylePanel/StylePanel.tsx";
 import {useStore, getThemeById} from "./store/index.ts";
 import {loadAllThemes} from "./themes/loader.ts";
+import {defaultMarkdownTheme} from "./themes/index.ts";
 import {uploadImage, type UploadError} from "./utils/upload.ts";
 import {createScrollSync} from "./utils/syncScroll.ts";
 import defaultContent from "./content.md?raw";
 
 export default function App() {
-  const {content, markdownThemeId, themes, setContent, setThemes} = useStore();
+  const {content, markdownThemeId, themes, setContent, setThemes, setMarkdownTheme} = useStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
@@ -35,10 +36,18 @@ export default function App() {
     }
   };
 
-  // 启动扫描主题：内置（编译进包）+ 用户目录 app_data_dir/themes/*.css 合并。
+  // 启动扫描主题：内置（编译进包）+ 用户目录 *.json 合并。
+  // 合并后若当前 markdownThemeId 已不存在（如 localStorage 残留旧主题 id），
+  // 重置为默认，避免选中态/编辑指向不存在的主题。
   useEffect(() => {
-    loadAllThemes().then(setThemes);
-  }, [setThemes]);
+    loadAllThemes().then((all) => {
+      setThemes(all);
+      const cur = useStore.getState().markdownThemeId;
+      if (!all.some((t) => t.id === cur)) {
+        setMarkdownTheme(defaultMarkdownTheme.id);
+      }
+    });
+  }, [setThemes, setMarkdownTheme]);
 
   // 首次加载默认教程内容（仅当无草稿时，避免覆盖 persist 恢复的内容）。
   // content.md 在打包时以 ?raw 内联，桌面端无需运行时 fetch。
