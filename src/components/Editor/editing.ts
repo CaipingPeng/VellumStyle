@@ -34,3 +34,21 @@ export function insertLink(doc: string, from: number, to: number): EditResult {
   const selFrom = from + 1;
   return {insert, selFrom, selTo: selFrom + "链接文字".length};
 }
+
+export interface PrefixResult {
+  replaceFrom: number;
+  replaceTo: number;
+  insert: string;
+  selFrom: number;
+  selTo: number;
+}
+
+// 行级前缀：把选区扩到涉及的整行，每行行首加 prefix。
+export function prefixLines(doc: string, from: number, to: number, prefix: string): PrefixResult {
+  const lineStart = doc.lastIndexOf("\n", from - 1) + 1;
+  const nlAfter = doc.indexOf("\n", to);
+  const lineEnd = nlAfter === -1 ? doc.length : nlAfter;
+  const block = doc.slice(lineStart, lineEnd);
+  const insert = block.split("\n").map((ln) => prefix + ln).join("\n");
+  return {replaceFrom: lineStart, replaceTo: lineEnd, insert, selFrom: lineStart, selTo: lineStart + insert.length};
+}

@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {wrapSelection, insertLink} from "./editing.ts";
+import {wrapSelection, insertLink, prefixLines} from "./editing.ts";
 
 test("wrap 有选区：包裹并选中原文字", () => {
   const doc = "你好世界";
@@ -33,4 +33,22 @@ test("link 无选区：选中链接文字占位", () => {
   assert.equal(r.insert, "[链接文字](链接地址)");
   assert.equal(r.selFrom, 1);
   assert.equal(r.selTo, 1 + "链接文字".length);
+});
+
+test("prefix 单行：行首加前缀，光标后移", () => {
+  const doc = "标题";
+  const r = prefixLines(doc, 0, 0, "## ");
+  assert.equal(r.replaceFrom, 0);
+  assert.equal(r.replaceTo, 2);
+  assert.equal(r.insert, "## 标题");
+  assert.equal(r.selFrom, 0);
+  assert.equal(r.selTo, "## 标题".length);
+});
+
+test("prefix 多行：每行逐行加前缀", () => {
+  const doc = "甲\n乙\n丙";
+  const r = prefixLines(doc, 0, 3, "- ");
+  assert.equal(r.replaceFrom, 0);
+  assert.equal(r.replaceTo, 3);
+  assert.equal(r.insert, "- 甲\n- 乙");
 });
