@@ -8,13 +8,13 @@ import {validateModel} from "./themeModel.ts";
 export async function loadAllThemes(): Promise<ThemeOption[]> {
   let user: ThemeOption[] = [];
   try {
-    const raw = await invoke<{id: string; model: unknown}[]>("list_user_themes");
+    const raw = await invoke<{id: string; name: string; model: unknown}[]>("list_user_themes");
     const builtinIds = new Set(builtinThemes.map((t) => t.id));
     user = raw
       .filter((u) => !builtinIds.has(u.id) && validateModel(u.model))
       .map((u) => {
         const model = u.model as StyleModel[];
-        return {id: u.id, name: u.id, css: compileModel(model), model};
+        return {id: u.id, name: u.name || u.id, css: compileModel(model), model};
       });
   } catch {
     // 非 Tauri 环境，仅内置主题

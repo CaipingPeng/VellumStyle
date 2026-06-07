@@ -9,6 +9,7 @@ use tauri::{AppHandle, Manager};
 #[derive(Debug, Clone, Serialize)]
 pub struct UserTheme {
     pub id: String,
+    pub name: String,
     pub model: serde_json::Value, // styleModelList 数组
 }
 
@@ -20,6 +21,28 @@ fn sanitize_id(id: &str) -> String {
     id.chars()
         .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_')
         .collect()
+}
+
+// 解析主题文件内容。兼容两种形态：
+//   1. 裸数组 [...]            —— styleModelList，name 取文件名
+//   2. {"name":..,"model":[..]} —— 带显示名（爬取/导出用），name 取字段
+// 返回 (name, model_array)。无法解析返回 None。
+fn parse_theme_content(text: &str, file_stem: &str) -> Option<(String, serde_json::Value)> {
+    let v: serde_json::Value = serde_json::from_str(text).ok()?;
+    if v.is_array() {
+        return Some((file_stem.to_string(), v));
+    }
+    if let Some(model) = v.get("model") {
+        if model.is_array() {
+            let name = v
+                .get("name")
+                .and_then(|n| n.as_str())
+                .unwrap_or(file_stem)
+                .to_string();
+            return Some((name, model.clone()));
+        }
+    }
+    None
 }
 
 /// 扫描 app_data_dir/themes/*.json，返回用户主题列表。目录不存在/读不到时返回空 vec（不报错）。
@@ -47,8 +70,8 @@ pub fn list_user_themes(app: AppHandle) -> Vec<UserTheme> {
             continue;
         };
         if let Ok(text) = std::fs::read_to_string(&path) {
-            if let Ok(model) = serde_json::from_str::<serde_json::Value>(&text) {
-                themes.push(UserTheme {id, model});
+            if let Some((name, model)) = parse_theme_content(&text, &id) {
+                themes.push(UserTheme {id, name, model});
             }
         }
     }
@@ -72,7 +95,7 @@ pub fn save_user_theme(app: AppHandle, id: String, model_json: String) -> Result
     Ok(())
 }
 
-/// 导入 mdnice 抓包整包：取 data.styleModelList 存为 {id}.json。返回保存的 id。
+/// 导入 mdnice 抓包整包：取 data.styleModelList 存为 {id}.json（含显示名）。返回保存的 id。
 #[tauri::command]
 pub fn import_mdnice_theme(app: AppHandle, id: String, raw_json: String) -> Result<String, String> {
     let parsed: serde_json::Value =
@@ -84,7 +107,9 @@ pub fn import_mdnice_theme(app: AppHandle, id: String, raw_json: String) -> Resu
     if !model.is_array() {
         return Err("styleModelList 不是数组".into());
     }
-    let model_json = serde_json::to_string(model).map_err(|e| e.to_string())?;
+    // 存成 {name, model} 形态，保留原始（可含中文）显示名；文件名仍用 sanitize 后的 id。
+    let wrapped = serde_json::json!({"name": id, "model": model});
+    let model_json = serde_json::to_string(&wrapped).map_err(|e| e.to_string())?;
     save_user_theme(app, id.clone(), model_json)?;
     Ok(sanitize_id(&id))
 }
