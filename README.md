@@ -66,8 +66,10 @@ npm run tauri build
 
 [MIT](./LICENSE) © pengcaiping
 
-## 免责声明
+## 致谢与免责声明
 
-本项目在产品逻辑、主题视觉与排版规则上**借鉴**了开源项目 [mdnice](https://github.com/mdnice/markdown-nice)，内置主题数据参考了 mdnice 的主题样式。本项目仅供学习与个人使用，不作任何商业用途。
+本项目的产品逻辑、渲染管线与排版思路，借鉴自 mdnice 的开源版本 [markdown-nice](https://github.com/mdnice/markdown-nice)（MIT License）。该部分为合规的学习与重写，特此致谢。
 
-若本仓库中任何内容（含主题样式）涉嫌侵犯您的版权或其他合法权益，请通过 Issue 或邮件联系作者，我会**第一时间删除相关内容或删库处理**。
+关于内置主题：`src/themes/presets/` 中的部分主题样式参考自 mdnice 在线服务（mdnice.com）的主题，**并非来自其开源仓库**，其授权范围可能不包含再分发。本项目保留这些主题仅出于学习与个人使用目的，不作任何商业用途。
+
+若本仓库中任何内容（尤其是内置主题样式）涉嫌侵犯您的版权或其他合法权益，请通过 Issue 或邮件联系作者，我会**第一时间删除相关内容或删库处理**。
