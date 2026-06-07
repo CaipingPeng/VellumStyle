@@ -656,3 +656,27 @@ npx tsc --noEmit         # 类型检查
 
 - `npm test` 34/34、`npx tsc -b --noEmit` 零错（除预存 test 文件已修）、`npm run build` 通过、浏览器实操逐项验证（含光标定位修复后复测）。
 
+
+## 功能 — 多文档管理（文件系统树）+ 一键发布草稿箱 + 撤销重做 + toast（✅ 代码完成，待运行时手验，2026-06-08）
+
+> 设计 `docs/superpowers/specs/2026-06-08-multi-doc-and-publish-design.md`，计划 `docs/superpowers/plans/2026-06-08-multi-doc-and-publish.md`（15 任务，subagent-driven + TDD）。
+
+### 架构决策
+
+- **文档内容真相源 = 文件系统**：`app_data_dir/documents/` 真实目录树（文件夹=树节点，`.md`=文档）。store 只缓存当前一篇 `content` + 整棵树 `tree`。`content` 不再 persist 到 localStorage，改 persist `currentDocPath`（记住上次打开）。与主题"丢文件就行"哲学一致，杜绝索引/文件不同步。
+- **Rust `documents.rs`**：7 个命令（list/read/write/create_document/create_folder/rename_entry/delete_entry）。路径沙箱 `resolve_in_documents` 逐段拼接拒绝 `..`/`.` + canonicalize 二次校验防逃逸；`is_valid_name` 过滤 Windows 非法字符。非空文件夹禁删。
+- **debounce 自动保存**：`src/utils/autosave.ts` 纯函数 `createDebouncedSaver`（schedule/flushNow，可单测），store 里 saver 声明在 useStore 之前（回调延迟执行届时 getState 已就绪）。`setContent` 触发 800ms debounce 写盘；`openDocument` 切换前 `await flushSave()`（防旧文档未保存编辑丢失——读写对称）；App `onCloseRequested` 关窗前 flush。
+- **启动迁移**：documents/ 为空且 localStorage 有旧 content → 存成 `草稿.md`；空仓库无旧内容 → 写 `示例.md`（默认教程）；否则打开 persist 的 path 或树第一篇。
+- **发布草稿箱**：`wechat.rs` 加 `upload_thumb`（走 add_material 取 media_id，区别于 upload_image 取 url；UploadResp 加 media_id 字段）+ `add_draft`（draft/add，author/digest/source_url 暂空，token 失效重试）。前端 `publish.ts` 的 `findUnuploadedImages` 复用 markdownMediaScanner 校验正文无非 mmbiz 外链图。PublishDialog 仅标题+封面，只进草稿箱不群发。
+- **撤销/重做**：MarkdownEditor 暴露 undo()/redo()（@codemirror/commands），SyntaxToolbar 最左加按钮（Ctrl+Z/Y 本就可用，仅补可见按钮）。
+- **轻量 toast**：`Toast/toast.ts` 模块单例 + Toaster.tsx 右下角堆叠，替换 App 两处 window.alert。
+
+### 验证状态
+
+- ✅ `npx tsc -b --noEmit` 零错；`npm test` 37/37（含 autosave 3）；`npm run build` 通过；`cargo build` + `cargo test`（documents 沙箱单测）通过。
+- ⏳ **运行时手验未做**：文档增删改重命名、切换不丢编辑、关窗 flush、迁移、发布草稿箱（需真实微信凭证）需 `npx tauri dev` 实操逐项确认。
+
+### 关键踩坑（避免重复）
+
+- **lucide-react ^1.17.0 图标名**：旧版仍有 `Undo2`/`Redo2`（kebab `undo-2.mjs`→PascalCase），但确认前先 `ls node_modules/lucide-react/dist/esm/icons/` 核对，别凭记忆 import 不存在的图标。
+- **删最后一篇文档时 setContent("")**：会触发 saver，但此前 currentDocPath 已设 null，saver 回调 `if (path)` 守卫跳过写盘——安全。顺序很关键。
