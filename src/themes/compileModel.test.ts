@@ -1,5 +1,7 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {fileURLToPath} from "node:url";
 import {compileModel} from "./compileModel.ts";
 import type {StyleModel} from "./themeModel.ts";
 
@@ -29,7 +31,7 @@ test("普通 keys 项编译为规则", () => {
     ]},
   ];
   const r = parseRules(compileModel(models));
-  assert.deepEqual(r["#nice p"], {"font-size": "16px", color: "rgba(43,43,43,1)"});
+  assert.deepEqual(r["#nice p"], {"font-size": "16px", color: "rgba(43, 43, 43, 1)"});
 });
 
 test("children 复合项递归展开", () => {
@@ -65,6 +67,21 @@ test("同一 value 写多个 selector", () => {
     ]},
   ];
   const r = parseRules(compileModel(models));
-  assert.equal(r["#nice blockquote p"].color, "rgba(0,0,0,1)");
-  assert.equal(r["#nice .custom-blockquote p"].color, "rgba(0,0,0,1)");
+  // 编译器把值归一化为浏览器序列化形态（逗号后补空格），故断言带空格的形态
+  assert.equal(r["#nice blockquote p"].color, "rgba(0, 0, 0, 1)");
+  assert.equal(r["#nice .custom-blockquote p"].color, "rgba(0, 0, 0, 1)");
+});
+
+test("oracle：编译 草原绿 model 与其 data.style 规则等价", () => {
+  const path = fileURLToPath(new URL("./__fixtures__/caoyuanlv.json", import.meta.url));
+  const json = JSON.parse(readFileSync(path, "utf-8"));
+  const expected = parseRules(json.data.style);
+  const actual = parseRules(compileModel(json.data.styleModelList));
+
+  for (const sel of Object.keys(expected)) {
+    assert.ok(actual[sel], `缺少 selector: ${sel}`);
+    for (const prop of Object.keys(expected[sel])) {
+      assert.equal(actual[sel][prop], expected[sel][prop], `${sel} { ${prop} } 不匹配`);
+    }
+  }
 });
