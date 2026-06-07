@@ -53,3 +53,7 @@ export function renameEntry(path: string, newName: string): Promise<string> {
 export function deleteEntry(path: string): Promise<void> {
   return invoke("delete_entry", {path});
 }
+
+export function moveEntry(src: string, destDir: string): Promise<string> {
+  return invoke<string>("move_entry", {src, destDir});
+}

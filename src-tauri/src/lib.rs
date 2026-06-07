@@ -82,6 +82,7 @@ pub fn run() {
             documents::create_folder,
             documents::rename_entry,
             documents::delete_entry,
+            documents::move_entry,
             wechat::upload_thumb,
             wechat::add_draft
         ])

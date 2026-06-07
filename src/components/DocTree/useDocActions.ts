@@ -1,7 +1,7 @@
 // 文档树操作封装：create/rename/delete + 操作后 loadTree 刷新。
 // 错误统一 toast；删除当前文档后由调用方决定切到哪篇（这里只负责数据）。
 import {useStore} from "../../store/index.ts";
-import {createDocument, createFolder, renameEntry, deleteEntry} from "../../utils/documents.ts";
+import {createDocument, createFolder, renameEntry, deleteEntry, moveEntry} from "../../utils/documents.ts";
 import {toast} from "../Toast/toast.ts";
 
 export function useDocActions() {
@@ -49,6 +49,22 @@ export function useDocActions() {
             useStore.getState().setCurrentDocPath(null);
             useStore.getState().setContent("");
           }
+        }
+      } catch (e) {
+        toast.show(String(e), "error");
+      }
+    },
+    async move(src: string, destDir: string) {
+      try {
+        const newPath = await moveEntry(src, destDir);
+        await loadTree();
+        // 若移动的是当前文档（或当前文档在被移动的文件夹内），同步当前 path。
+        const cur = useStore.getState().currentDocPath;
+        if (cur === src) {
+          useStore.getState().setCurrentDocPath(newPath);
+        } else if (cur && cur.startsWith(src + "/")) {
+          // 当前文档在被移动的文件夹内：用新前缀替换。
+          useStore.getState().setCurrentDocPath(newPath + cur.slice(src.length));
         }
       } catch (e) {
         toast.show(String(e), "error");

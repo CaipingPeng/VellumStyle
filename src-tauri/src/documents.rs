@@ -193,6 +193,41 @@ pub fn delete_entry(app: AppHandle, path: String) -> Result<(), String> {
     }
 }
 
+/// 移动文件/文件夹到目标目录。src/dest_dir 为相对 documents/ 的路径（dest_dir 空串=根）。
+/// 沙箱校验；目标已存在同名拒绝；禁止把文件夹移进自身或其子孙（成环）。
+#[tauri::command]
+pub fn move_entry(app: AppHandle, src: String, dest_dir: String) -> Result<String, String> {
+    let base = documents_dir(&app)?;
+    let from = resolve_in_documents(&app, &src)?;
+    if !from.exists() {
+        return Err("条目不存在".into());
+    }
+    let dest_parent = resolve_in_documents(&app, &dest_dir)?;
+    if !dest_parent.is_dir() {
+        return Err("目标不是文件夹".into());
+    }
+    let name = from.file_name().ok_or_else(|| "无效来源".to_string())?;
+    let target = dest_parent.join(name);
+
+    // 同位置移动：no-op，直接返回原相对路径。
+    if target == from {
+        return Ok(rel_path(&base, &from));
+    }
+    if target.exists() {
+        return Err("目标位置已存在同名条目".into());
+    }
+    // 防成环：目标目录不能是来源文件夹自身或其子孙。
+    if from.is_dir() {
+        let canon_from = std::fs::canonicalize(&from).map_err(|e| format!("{e}"))?;
+        let canon_dest = std::fs::canonicalize(&dest_parent).map_err(|e| format!("{e}"))?;
+        if canon_dest.starts_with(&canon_from) {
+            return Err("不能把文件夹移动到它自己的子目录".into());
+        }
+    }
+    std::fs::rename(&from, &target).map_err(|e| format!("移动失败：{e}"))?;
+    Ok(rel_path(&base, &target))
+}
+
 #[cfg(test)]
 mod tests {
     use super::is_valid_name;

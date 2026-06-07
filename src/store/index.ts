@@ -13,11 +13,15 @@ export interface EditorState {
   selectedModelId: string | null; // 当前面板编辑的元素 model id
   tree: DocNode[]; // 整棵文档树（运行期，不 persist）
   currentDocPath: string | null; // 当前文档相对路径，persist（记住上次打开）
+  selectedFolderPath: string | null; // 当前选中的文件夹（新建落点 + 高亮），运行期不 persist
+  sidebarOpen: boolean; // 文档侧栏显隐，运行期不 persist，默认隐藏
   setContent: (content: string) => void;
   setMarkdownTheme: (id: string) => void;
   setThemes: (themes: ThemeOption[]) => void;
   setSelectedModel: (modelId: string | null) => void;
   setCurrentDocPath: (path: string | null) => void;
+  setSelectedFolder: (path: string | null) => void;
+  toggleSidebar: () => void;
   loadTree: () => Promise<void>;
   openDocument: (path: string) => Promise<void>;
   // 改当前主题某个 style 项的值（按 model id + style 路径），重编译 css
@@ -63,6 +67,8 @@ export const useStore = create<EditorState>()(
       selectedModelId: null,
       tree: [],
       currentDocPath: null,
+      selectedFolderPath: null,
+      sidebarOpen: false,
       setContent: (content) => {
         set({content});
         scheduleSave(content);
@@ -71,6 +77,8 @@ export const useStore = create<EditorState>()(
       setThemes: (themes) => set({themes}),
       setSelectedModel: (selectedModelId) => set({selectedModelId}),
       setCurrentDocPath: (currentDocPath) => set({currentDocPath}),
+      setSelectedFolder: (selectedFolderPath) => set({selectedFolderPath}),
+      toggleSidebar: () => set((s) => ({sidebarOpen: !s.sidebarOpen})),
       loadTree: async () => {
         const tree = await listDocuments();
         set({tree});

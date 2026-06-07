@@ -18,11 +18,16 @@ function firstDocPath(nodes: DocNode[]): string | null {
 export default function DocTree() {
   const tree = useStore((s) => s.tree);
   const currentDocPath = useStore((s) => s.currentDocPath);
+  const selectedFolderPath = useStore((s) => s.selectedFolderPath);
   const openDocument = useStore((s) => s.openDocument);
+  const setSelectedFolder = useStore((s) => s.setSelectedFolder);
   const actions = useDocActions();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState<null | "doc" | "folder">(null);
   const [draft, setDraft] = useState("");
+  const [dragSrc, setDragSrc] = useState<string | null>(null);
+  const [dragOverPath, setDragOverPath] = useState<string | null>(null);
+  const [rootDragOver, setRootDragOver] = useState(false);
 
   const toggle = (path: string) => {
     setExpanded((prev) => {
@@ -33,8 +38,9 @@ export default function DocTree() {
     });
   };
 
-  // 在「当前选中文档所在文件夹」下新建；无选中则根。
+  // 新建落点：优先选中文件夹，否则当前文档所在文件夹，再否则根。
   const targetDir = (): string => {
+    if (selectedFolderPath) return selectedFolderPath;
     const cur = currentDocPath;
     if (!cur) return "";
     const slash = cur.lastIndexOf("/");
@@ -56,6 +62,15 @@ export default function DocTree() {
     void actions.remove(path, firstDocPath(tree));
   };
 
+  const handleDrop = (destDir: string) => {
+    const src = dragSrc;
+    setDragSrc(null);
+    setDragOverPath(null);
+    setRootDragOver(false);
+    if (!src) return;
+    void actions.move(src, destDir);
+  };
+
   return (
     <div
       style={{
@@ -75,7 +90,26 @@ export default function DocTree() {
           style={btnStyle}><FolderPlus size={15} /></button>
       </div>
 
-      <div style={{flex: 1, overflowY: "auto", paddingTop: 4}}>
+      {/* 根区域：点空白取消选中文件夹；拖拽释放到此移到根目录 */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          paddingTop: 4,
+          background: rootDragOver ? "#eef5fc" : undefined,
+        }}
+        onClick={() => setSelectedFolder(null)}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setRootDragOver(true);
+          setDragOverPath(null);
+        }}
+        onDragLeave={() => setRootDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          handleDrop("");
+        }}
+      >
         {creating && (
           <div style={{padding: "4px 8px"}}>
             <input
@@ -88,6 +122,7 @@ export default function DocTree() {
                 if (e.key === "Enter") void commitCreate();
                 if (e.key === "Escape") {setCreating(null); setDraft("");}
               }}
+              onClick={(e) => e.stopPropagation()}
               style={{width: "100%", fontSize: 13, boxSizing: "border-box"}}
             />
           </div>
@@ -103,11 +138,17 @@ export default function DocTree() {
               node={node}
               depth={0}
               currentPath={currentDocPath}
+              selectedFolder={selectedFolderPath}
               expanded={expanded}
+              dragOverPath={dragOverPath}
               onToggle={toggle}
               onSelect={openDocument}
+              onSelectFolder={setSelectedFolder}
               onRename={actions.rename}
               onDelete={handleDelete}
+              onDragStartNode={setDragSrc}
+              onDragOverNode={setDragOverPath}
+              onDropNode={handleDrop}
             />
           ))
         )}

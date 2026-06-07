@@ -19,6 +19,7 @@ import {uploadImage, type UploadError} from "./utils/upload.ts";
 import {createScrollSync} from "./utils/syncScroll.ts";
 import {createDocument, writeDocument, type DocNode} from "./utils/documents.ts";
 import {getCurrentWindow} from "@tauri-apps/api/window";
+import {PanelLeft} from "lucide-react";
 import defaultContent from "./content.md?raw";
 
 // 取树里第一篇文档路径（深度优先）。
@@ -40,7 +41,7 @@ function existsInTree(nodes: DocNode[], path: string): boolean {
 }
 
 export default function App() {
-  const {content, markdownThemeId, themes, currentDocPath, setContent, setThemes, setMarkdownTheme, loadTree, openDocument} = useStore();
+  const {content, markdownThemeId, themes, currentDocPath, sidebarOpen, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar} = useStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
@@ -168,6 +169,26 @@ export default function App() {
         }}
       >
         <div style={{display: "flex", alignItems: "center", gap: 12}}>
+          <button
+            type="button"
+            title="文档"
+            onClick={toggleSidebar}
+            style={{
+              width: 30,
+              height: 30,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "1px solid #d9d9d9",
+              borderRadius: 4,
+              background: sidebarOpen ? "#e6f0fa" : "#fff",
+              color: sidebarOpen ? "#1e6bb8" : "#333",
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            <PanelLeft size={16} />
+          </button>
           <SyntaxToolbar editorRef={editorRef} />
         </div>
         <div style={{display: "flex", alignItems: "center", gap: 12}}>
@@ -197,7 +218,7 @@ export default function App() {
 
       {/* 主体：文档树 + 编辑器 + 预览 */}
       <main style={{flex: 1, display: "flex", minHeight: 0, position: "relative"}}>
-        <DocTree />
+        {sidebarOpen && <DocTree />}
         <div style={{flex: 1, borderRight: "1px solid #e8e8e8", minWidth: 0, overflow: "hidden"}}>
           <MarkdownEditor
             ref={editorRef}
