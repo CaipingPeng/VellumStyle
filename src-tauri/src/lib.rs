@@ -81,7 +81,9 @@ pub fn run() {
             documents::create_document,
             documents::create_folder,
             documents::rename_entry,
-            documents::delete_entry
+            documents::delete_entry,
+            wechat::upload_thumb,
+            wechat::add_draft
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
