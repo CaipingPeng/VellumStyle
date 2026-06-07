@@ -1,6 +1,13 @@
 import {useState} from "react";
 import {ChevronRight, ChevronDown, Folder, FileText, Pencil, Trash2} from "lucide-react";
 import type {DocNode} from "../../utils/documents.ts";
+import DraftInput from "./DraftInput.tsx";
+
+export interface CreatingState {
+  mode: "doc" | "folder";
+  dir: string; // 目标父目录（相对 documents/，"" = 根）
+  value: string;
+}
 
 interface Props {
   node: DocNode;
@@ -9,6 +16,7 @@ interface Props {
   sidebarFocused: boolean; // 侧栏是否聚焦（决定活跃/失焦配色）
   expanded: Set<string>;
   dragOverPath: string | null;
+  creating: CreatingState | null;
   onToggle: (path: string) => void;
   onSelectDoc: (path: string) => void; // 点文档：选中并打开到编辑器
   onSelectFolder: (path: string) => void; // 点文件夹：仅选中（+展开），不打开文件
@@ -17,12 +25,16 @@ interface Props {
   onDragStartNode: (path: string) => void;
   onDragOverNode: (path: string | null) => void;
   onDropNode: (destDir: string) => void;
+  onDraftChange: (v: string) => void;
+  onDraftCommit: () => void;
+  onDraftCancel: () => void;
 }
 
 export default function TreeNode({
-  node, depth, selectedPath, sidebarFocused, expanded, dragOverPath,
+  node, depth, selectedPath, sidebarFocused, expanded, dragOverPath, creating,
   onToggle, onSelectDoc, onSelectFolder, onRename, onDelete,
   onDragStartNode, onDragOverNode, onDropNode,
+  onDraftChange, onDraftCommit, onDraftCancel,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(node.name);
@@ -158,26 +170,44 @@ export default function TreeNode({
           </>
         )}
       </div>
-      {isOpen &&
-        node.children.map((child) => (
-          <TreeNode
-            key={child.path}
-            node={child}
-            depth={depth + 1}
-            selectedPath={selectedPath}
-            sidebarFocused={sidebarFocused}
-            expanded={expanded}
-            dragOverPath={dragOverPath}
-            onToggle={onToggle}
-            onSelectDoc={onSelectDoc}
-            onSelectFolder={onSelectFolder}
-            onRename={onRename}
-            onDelete={onDelete}
-            onDragStartNode={onDragStartNode}
-            onDragOverNode={onDragOverNode}
-            onDropNode={onDropNode}
-          />
-        ))}
+      {isOpen && (
+        <>
+          {/* 草稿输入行：本文件夹是新建目标时，在子项最前占位显示 */}
+          {creating && creating.dir === node.path && (
+            <DraftInput
+              mode={creating.mode}
+              depth={depth + 1}
+              value={creating.value}
+              onChange={onDraftChange}
+              onCommit={onDraftCommit}
+              onCancel={onDraftCancel}
+            />
+          )}
+          {node.children.map((child) => (
+            <TreeNode
+              key={child.path}
+              node={child}
+              depth={depth + 1}
+              selectedPath={selectedPath}
+              sidebarFocused={sidebarFocused}
+              expanded={expanded}
+              dragOverPath={dragOverPath}
+              creating={creating}
+              onToggle={onToggle}
+              onSelectDoc={onSelectDoc}
+              onSelectFolder={onSelectFolder}
+              onRename={onRename}
+              onDelete={onDelete}
+              onDragStartNode={onDragStartNode}
+              onDragOverNode={onDragOverNode}
+              onDropNode={onDropNode}
+              onDraftChange={onDraftChange}
+              onDraftCommit={onDraftCommit}
+              onDraftCancel={onDraftCancel}
+            />
+          ))}
+        </>
+      )}
     </div>
   );
 }

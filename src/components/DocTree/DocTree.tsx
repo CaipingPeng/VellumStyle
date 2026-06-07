@@ -2,7 +2,8 @@ import {useState} from "react";
 import {FilePlus, FolderPlus} from "lucide-react";
 import {useStore} from "../../store/index.ts";
 import type {DocNode} from "../../utils/documents.ts";
-import TreeNode from "./TreeNode.tsx";
+import TreeNode, {type CreatingState} from "./TreeNode.tsx";
+import DraftInput from "./DraftInput.tsx";
 import {useDocActions} from "./useDocActions.ts";
 
 // 取树里第一篇文档路径（深度优先），删当前文档后回退用。
@@ -34,8 +35,7 @@ export default function DocTree() {
   const setSelectedPath = useStore((s) => s.setSelectedPath);
   const actions = useDocActions();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [creating, setCreating] = useState<null | "doc" | "folder">(null);
-  const [draft, setDraft] = useState("");
+  const [creating, setCreating] = useState<CreatingState | null>(null);
   const [dragSrc, setDragSrc] = useState<string | null>(null);
   const [dragOverPath, setDragOverPath] = useState<string | null>(null);
   const [rootDragOver, setRootDragOver] = useState(false);
@@ -59,15 +59,31 @@ export default function DocTree() {
     return slash === -1 ? "" : sel.slice(0, slash);
   };
 
-  const commitCreate = async () => {
-    const name = draft.trim();
-    const mode = creating;
-    setCreating(null);
-    setDraft("");
-    if (!name || !mode) return;
-    if (mode === "doc") await actions.newDocument(targetDir(), name);
-    else await actions.newFolder(targetDir(), name);
+  // 开始新建：算目标目录，展开它（非根才需要），显示占位输入行。
+  const startCreate = (mode: "doc" | "folder") => {
+    const dir = targetDir();
+    if (dir) {
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        next.add(dir);
+        return next;
+      });
+    }
+    setCreating({mode, dir, value: ""});
   };
+
+  const commitCreate = async () => {
+    if (!creating) return;
+    const {mode, dir, value} = creating;
+    const name = value.trim();
+    setCreating(null);
+    if (!name) return;
+    if (mode === "doc") await actions.newDocument(dir, name);
+    else await actions.newFolder(dir, name);
+  };
+
+  const draftChange = (v: string) =>
+    setCreating((c) => (c ? {...c, value: v} : c));
 
   const handleDelete = (path: string) => {
     if (!window.confirm("确定删除？")) return;
@@ -100,9 +116,9 @@ export default function DocTree() {
       }}
     >
       <div style={{display: "flex", gap: 4, padding: 8, borderBottom: "1px solid #e8e8e8"}}>
-        <button type="button" title="新建文档" onClick={() => {setCreating("doc"); setDraft("");}}
+        <button type="button" title="新建文档" onClick={() => startCreate("doc")}
           style={btnStyle}><FilePlus size={15} /></button>
-        <button type="button" title="新建文件夹" onClick={() => {setCreating("folder"); setDraft("");}}
+        <button type="button" title="新建文件夹" onClick={() => startCreate("folder")}
           style={btnStyle}><FolderPlus size={15} /></button>
       </div>
 
@@ -126,22 +142,16 @@ export default function DocTree() {
           handleDrop("");
         }}
       >
-        {creating && (
-          <div style={{padding: "4px 8px"}}>
-            <input
-              autoFocus
-              placeholder={creating === "doc" ? "文档名" : "文件夹名"}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={() => void commitCreate()}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void commitCreate();
-                if (e.key === "Escape") {setCreating(null); setDraft("");}
-              }}
-              onClick={(e) => e.stopPropagation()}
-              style={{width: "100%", fontSize: 13, boxSizing: "border-box"}}
-            />
-          </div>
+        {/* 根级草稿输入行 */}
+        {creating && creating.dir === "" && (
+          <DraftInput
+            mode={creating.mode}
+            depth={0}
+            value={creating.value}
+            onChange={draftChange}
+            onCommit={() => void commitCreate()}
+            onCancel={() => setCreating(null)}
+          />
         )}
         {tree.length === 0 && !creating ? (
           <div style={{padding: 16, fontSize: 12, color: "#999", lineHeight: 1.6}}>
@@ -157,6 +167,7 @@ export default function DocTree() {
               sidebarFocused={focused}
               expanded={expanded}
               dragOverPath={dragOverPath}
+              creating={creating}
               onToggle={toggle}
               onSelectDoc={openDocument}
               onSelectFolder={setSelectedPath}
@@ -165,6 +176,9 @@ export default function DocTree() {
               onDragStartNode={setDragSrc}
               onDragOverNode={setDragOverPath}
               onDropNode={handleDrop}
+              onDraftChange={draftChange}
+              onDraftCommit={() => void commitCreate()}
+              onDraftCancel={() => setCreating(null)}
             />
           ))
         )}
