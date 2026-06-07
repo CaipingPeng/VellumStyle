@@ -45,28 +45,38 @@ export default function TreeNode({
         draggable={!editing}
         onDragStart={(e) => {
           e.stopPropagation();
+          // 必须写 dataTransfer，否则 WebView2 视为无效拖拽（光标显示禁止符）。
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", node.path);
           onDragStartNode(node.path);
         }}
         onDragOver={(e) => {
-          if (node.isDir) {
-            e.preventDefault();
-            e.stopPropagation();
-            onDragOverNode(node.path);
-          }
+          // 对所有节点 preventDefault 才能让浏览器允许 drop（否则光标禁止符）。
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = "move";
+          // 只有文件夹是有效落点，高亮它；拖到文档上不高亮（释放时按其所在目录处理由父级兜底）。
+          if (node.isDir) onDragOverNode(node.path);
+          else onDragOverNode(null);
         }}
         onDragLeave={() => {
           if (node.isDir && dragOverPath === node.path) onDragOverNode(null);
         }}
         onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          // 拖到文件夹：移进该文件夹。拖到文档：移进该文档所在目录（同级）。
           if (node.isDir) {
-            e.preventDefault();
-            e.stopPropagation();
             onDropNode(node.path);
+          } else {
+            const slash = node.path.lastIndexOf("/");
+            onDropNode(slash === -1 ? "" : node.path.slice(0, slash));
           }
         }}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
-        onClick={() => {
+        onClick={(e) => {
+          e.stopPropagation();
           if (node.isDir) {
             onToggle(node.path);
             onSelectFolder(node.path);
