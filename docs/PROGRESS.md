@@ -612,3 +612,23 @@ npx tsc --noEmit         # 类型检查
 
 - `scripts/crawl_mdnice_themes.py`：token/outId 改为读环境变量 `MDNICE_TOKEN`/`MDNICE_OUT_ID`（不提交密钥）。token 过期后重抓即可重爬。
 
+## 修复 — 主题缩略图打包后空白（CSP nonce 拦截运行时 style）（✅ 完成，2026-06-07）
+
+> `npx tauri dev` 下「主题」对话框卡片缩略图样式正常，`npx tauri build` 安装后全部变成无样式纯文本。
+
+### 根因
+
+- `ThemeThumbnail` 用 `document.createElement("style")` + `appendChild` 在运行时新建 `<style>` 注入 scope 后的主题 CSS。
+- Tauri 2 打包后会按 `tauri.conf.json` 的 CSP 给 `index.html` 里的 `<style>` 注入 **nonce**。CSP 规范：一旦 `style-src` 出现 nonce，浏览器就**忽略 `'unsafe-inline'`**——于是运行时新建的、不带 nonce 的 `<style>` 被静默拦截。卡片渲染出 HTML 但零样式。
+- dev 正常是因为 Vite 开发服务器不改写 CSP，`'unsafe-inline'` 生效。`Preview` 不受影响是因为它走 `replaceStyle()` 写入 `index.html` 里**已存在的带 nonce** 的 `<style id="markdown-theme">`，从不新建标签。
+
+### 修复
+
+- `index.html` 加一个静态占位 `<style id="theme-thumbnails">`（打包时被 CSP 自动加 nonce）。
+- `ThemeThumbnail.tsx` 不再新建元素：每个缩略图把自己 scope 后的 CSS 按 scope class 存进模块级 `Map`，聚合后写入这个共享带 nonce 的 `<style>`，卸载时清理自己那块。对齐已验证可用的 Preview 注入路径。
+- 验证：`npx tauri build` 重新打包安装后，「主题」对话框卡片缩略图样式恢复正常。
+
+### 教训
+
+- **运行时新建 `<style>`/`<script>` 在 Tauri 打包后会被 CSP nonce 拦截**：凡是带 CSP，注入样式/脚本一律写进 `index.html` 预置的标签，别 `createElement`。dev（Vite 不改 CSP）测不出来，只有打包后才暴露。
+
