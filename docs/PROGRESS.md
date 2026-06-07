@@ -680,3 +680,33 @@ npx tsc --noEmit         # 类型检查
 
 - **lucide-react ^1.17.0 图标名**：旧版仍有 `Undo2`/`Redo2`（kebab `undo-2.mjs`→PascalCase），但确认前先 `ls node_modules/lucide-react/dist/esm/icons/` 核对，别凭记忆 import 不存在的图标。
 - **删最后一篇文档时 setContent("")**：会触发 saver，但此前 currentDocPath 已设 null，saver 回调 `if (path)` 守卫跳过写盘——安全。顺序很关键。
+
+## 完善 — 多文档树交互（侧栏切换 / 统一选中 / 拖拽移动 / inline 新建，✅ 运行时验证通过，2026-06-08）
+
+> 在多文档基础功能上按用户实操反馈迭代了四轮。
+
+### 侧栏可切换
+
+- navbar 左侧加「文档」按钮（lucide `PanelLeft`），`store.sidebarOpen`（运行期不 persist，默认 false）控制；App `{sidebarOpen && <DocTree/>}` 条件渲染。默认隐藏避免影响编辑视觉。
+
+### 统一选中模型（文件/文件夹一视同仁）
+
+- 废弃原本两套独立状态（`currentDocPath` 高亮文档 + `selectedFolderPath` 高亮文件夹同时存在、互不取消）。改为单一 `store.selectedPath`（文件或文件夹，唯一高亮源）。
+- 点文档 = 设 selectedPath + `openDocument`（打开到编辑器）；点文件夹 = 仅设 selectedPath + 展开/收起，**不打开任何文件**。`currentDocPath` 仍驱动编辑器内容，与高亮解耦。
+- 活跃/失焦配色（VSCode 风）：侧栏聚焦时选中项实蓝白字，失焦（焦点进编辑器）变浅灰深字。`DocTree` 用 `tabIndex=-1` + onFocus/onBlur 追踪 `focused` 传给 TreeNode。
+- 新建落点 `targetDir`：选中文件夹→其下；选中文件→同级目录；无选中→根。
+
+### 拖拽移动（HTML5 DnD）
+
+- Rust `documents.rs` 加 `move_entry(src, dest_dir)`：沙箱校验 + 目标重名拒绝 + 防成环（canonicalize 后 dest 不能 starts_with src）；同位置移动 no-op。
+- TreeNode 用原生 DnD：拖到文件夹=移进、拖到文档=移到其同级、拖到根空白=移到根。move 当前文档或其所在文件夹后同步 `currentDocPath` 新前缀。
+
+### inline 新建占位
+
+- 新建输入框从「侧栏顶部固定表单」改为「树中目标位置 inline 占位」（`DraftInput` 组件，文件/文件夹共用，按 depth 缩进 + 对应图标）。`creating={mode,dir,value}` 注入递归：TreeNode 在 children 开头按 `creating.dir===node.path` 渲染草稿行，DocTree 处理根级（dir===""）。新建到子文件夹前先展开它。Enter 保存（文档打开/文件夹不打开），Esc/空失焦取消。
+
+### 关键踩坑（避免重复）
+
+- **WebView2 默认吞掉 HTML5 拖放**（核心坑，绕了两轮）：Tauri/wry 窗口默认 `dragDropEnabled: true`，会在窗口级拦截 OS 拖放手势，**直接吃掉 WebView 内的 HTML5 drag-and-drop**——表现为「一开始拖拽光标就是禁止符 🚫、drop 永不触发」。在 React 事件层怎么改都没用（setData/preventDefault 都到不了）。修复 = `tauri.conf.json` 窗口加 `"dragDropEnabled": false`。改这个**必须完全重启 `tauri dev`**（配置启动时读，热重载无效）。确认本项目图片上传走 paste/按钮、不依赖 Tauri 原生拖放，故关闭无副作用。
+- **HTML5 DnD 必须在 dragstart 写 dataTransfer**：`e.dataTransfer.setData(...)` + `effectAllowed="move"`，否则即便 webview 放行拖放，浏览器仍判无效拖拽（禁止符）。`dragover` 要对**所有**落点 `preventDefault` 才允许 drop（只对文件夹 preventDefault 会让光标经过文档时变禁止符）。
+- **点击冒泡清空选中**：TreeNode 行 onClick 必须 `e.stopPropagation()`，否则冒泡到根容器的 `onClick={setSelectedPath(null)}` 把刚设的选中立即清空——表现为「点文件夹没反应/选不中」。
