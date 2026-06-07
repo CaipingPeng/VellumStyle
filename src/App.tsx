@@ -115,8 +115,14 @@ export default function App() {
     const win = getCurrentWindow();
     const unlisten = win.onCloseRequested(async (event) => {
       event.preventDefault();
-      await flushSave();
-      await win.destroy();
+      // 保存失败也必须放行关闭，否则窗口永远关不掉。
+      try {
+        await flushSave();
+      } catch (err) {
+        console.error("关窗前保存失败：", err);
+      } finally {
+        await win.destroy();
+      }
     });
     return () => {
       void unlisten.then((f) => f());
