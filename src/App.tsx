@@ -7,6 +7,7 @@ import UploadButton from "./components/Upload/UploadButton.tsx";
 import ImportButton from "./components/Import/ImportButton.tsx";
 import SettingsDialog from "./components/Settings/SettingsDialog.tsx";
 import StylePanel from "./components/StylePanel/StylePanel.tsx";
+import SyntaxToolbar from "./components/Toolbar/SyntaxToolbar.tsx";
 import {useStore, getThemeById} from "./store/index.ts";
 import {loadAllThemes} from "./themes/loader.ts";
 import {defaultMarkdownTheme} from "./themes/index.ts";
@@ -102,7 +103,10 @@ export default function App() {
           background: "#fff",
         }}
       >
-        <span style={{fontWeight: 600, color: "#1e6bb8"}}>微信公众号排版工具</span>
+        <div style={{display: "flex", alignItems: "center", gap: 12}}>
+          <span style={{fontWeight: 600, color: "#1e6bb8", whiteSpace: "nowrap"}}>排版工具</span>
+          <SyntaxToolbar editorRef={editorRef} />
+        </div>
         <div style={{display: "flex", alignItems: "center", gap: 12}}>
           <UploadButton onPick={handleUploadFile} />
           <ImportButton />
