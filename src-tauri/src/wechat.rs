@@ -350,7 +350,8 @@ fn ext_from_mime(mime: &str) -> &'static str {
 
 /// 带微信 Referer 拉取 mmbiz 图片，返回 (content_type, bytes)。
 /// 供 wximg 自定义协议处理器调用，绕过防盗链。
-pub async fn fetch_proxied_image(raw_url: &str) -> Result<(String, Vec<u8>), String> {    let mut target = url::Url::parse(raw_url).map_err(|_| "bad url".to_string())?;
+pub async fn fetch_proxied_image(raw_url: &str) -> Result<(String, Vec<u8>), String> {
+    let mut target = url::Url::parse(raw_url).map_err(|_| "bad url".to_string())?;
     let host = target.host_str().unwrap_or("");
     if !ALLOWED_IMG_HOSTS.contains(&host) {
         return Err("forbidden host".into());

@@ -1,4 +1,4 @@
-import {useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {useStore} from "../../store/index.ts";
 import {solveHtml} from "../../markdown/converter.ts";
 import {findUnuploadedImages, uploadThumb, addDraft} from "../../utils/publish.ts";
@@ -20,13 +20,25 @@ export default function PublishDialog({onClose, onNeedSettings}: Props) {
   const [thumbPreview, setThumbPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<string | null>(null);
+  previewRef.current = thumbPreview;
+
+  // 弹窗卸载时释放最后的预览 blob URL。
+  useEffect(() => {
+    return () => {
+      if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+    };
+  }, []);
 
   const pickThumb = async (file: File) => {
     setBusy(true);
     try {
       const id = await uploadThumb(file);
       setThumbId(id);
-      setThumbPreview(URL.createObjectURL(file));
+      setThumbPreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(file);
+      });
     } catch (e) {
       const msg = String(e);
       if (msg.includes("NOT_CONFIGURED")) {
