@@ -20,3 +20,17 @@ export function wrapSelection(
   const selTo = selFrom + inner.length;
   return {insert, selFrom, selTo};
 }
+
+// 链接：有选区→选区当文字、选中 url 占位；无选区→选中文字占位（url 随后填）。
+export function insertLink(doc: string, from: number, to: number): EditResult {
+  const hasSel = to > from;
+  if (hasSel) {
+    const text = doc.slice(from, to);
+    const insert = `[${text}](链接地址)`;
+    const urlStart = from + `[${text}](`.length;
+    return {insert, selFrom: urlStart, selTo: urlStart + "链接地址".length};
+  }
+  const insert = "[链接文字](链接地址)";
+  const selFrom = from + 1;
+  return {insert, selFrom, selTo: selFrom + "链接文字".length};
+}
