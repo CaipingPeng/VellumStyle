@@ -12,15 +12,15 @@ export interface EditorState {
   themes: ThemeOption[];
   selectedModelId: string | null; // 当前面板编辑的元素 model id
   tree: DocNode[]; // 整棵文档树（运行期，不 persist）
-  currentDocPath: string | null; // 当前文档相对路径，persist（记住上次打开）
-  selectedFolderPath: string | null; // 当前选中的文件夹（新建落点 + 高亮），运行期不 persist
+  currentDocPath: string | null; // 当前在编辑器打开的文档，persist（记住上次打开）
+  selectedPath: string | null; // 树里当前高亮项（文件或文件夹），统一选中源，运行期不 persist
   sidebarOpen: boolean; // 文档侧栏显隐，运行期不 persist，默认隐藏
   setContent: (content: string) => void;
   setMarkdownTheme: (id: string) => void;
   setThemes: (themes: ThemeOption[]) => void;
   setSelectedModel: (modelId: string | null) => void;
   setCurrentDocPath: (path: string | null) => void;
-  setSelectedFolder: (path: string | null) => void;
+  setSelectedPath: (path: string | null) => void;
   toggleSidebar: () => void;
   loadTree: () => Promise<void>;
   openDocument: (path: string) => Promise<void>;
@@ -67,7 +67,7 @@ export const useStore = create<EditorState>()(
       selectedModelId: null,
       tree: [],
       currentDocPath: null,
-      selectedFolderPath: null,
+      selectedPath: null,
       sidebarOpen: false,
       setContent: (content) => {
         set({content});
@@ -77,7 +77,7 @@ export const useStore = create<EditorState>()(
       setThemes: (themes) => set({themes}),
       setSelectedModel: (selectedModelId) => set({selectedModelId}),
       setCurrentDocPath: (currentDocPath) => set({currentDocPath}),
-      setSelectedFolder: (selectedFolderPath) => set({selectedFolderPath}),
+      setSelectedPath: (selectedPath) => set({selectedPath}),
       toggleSidebar: () => set((s) => ({sidebarOpen: !s.sidebarOpen})),
       loadTree: async () => {
         const tree = await listDocuments();
@@ -87,7 +87,7 @@ export const useStore = create<EditorState>()(
         // 先把当前篇落盘（必须 await，否则旧文档未保存编辑会丢）。
         await flushSave();
         const text = await readDocument(path);
-        set({currentDocPath: path, content: text, selectedModelId: null});
+        set({currentDocPath: path, selectedPath: path, content: text, selectedModelId: null});
       },
       updateStyleValue: (modelId, stylePath, value) =>
         set((s) => {

@@ -5,13 +5,13 @@ import type {DocNode} from "../../utils/documents.ts";
 interface Props {
   node: DocNode;
   depth: number;
-  currentPath: string | null;
-  selectedFolder: string | null;
+  selectedPath: string | null; // 统一选中源（文件或文件夹），高亮唯一项
+  sidebarFocused: boolean; // 侧栏是否聚焦（决定活跃/失焦配色）
   expanded: Set<string>;
   dragOverPath: string | null;
   onToggle: (path: string) => void;
-  onSelect: (path: string) => void;
-  onSelectFolder: (path: string) => void;
+  onSelectDoc: (path: string) => void; // 点文档：选中并打开到编辑器
+  onSelectFolder: (path: string) => void; // 点文件夹：仅选中（+展开），不打开文件
   onRename: (path: string, newName: string) => void;
   onDelete: (path: string) => void;
   onDragStartNode: (path: string) => void;
@@ -20,16 +20,15 @@ interface Props {
 }
 
 export default function TreeNode({
-  node, depth, currentPath, selectedFolder, expanded, dragOverPath,
-  onToggle, onSelect, onSelectFolder, onRename, onDelete,
+  node, depth, selectedPath, sidebarFocused, expanded, dragOverPath,
+  onToggle, onSelectDoc, onSelectFolder, onRename, onDelete,
   onDragStartNode, onDragOverNode, onDropNode,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(node.name);
   const [hover, setHover] = useState(false);
   const isOpen = node.isDir && expanded.has(node.path);
-  const selectedDoc = !node.isDir && currentPath === node.path;
-  const selectedDir = node.isDir && selectedFolder === node.path;
+  const selected = selectedPath === node.path; // 文件/文件夹一视同仁
   const dropTarget = node.isDir && dragOverPath === node.path;
 
   const commitRename = () => {
@@ -38,6 +37,10 @@ export default function TreeNode({
     if (name && name !== node.name) onRename(node.path, name);
     else setDraft(node.name);
   };
+
+  // 选中样式：活跃（侧栏聚焦）实蓝白字；失焦浅灰深字。文件与文件夹相同。
+  const selectedBg = sidebarFocused ? "#1e6bb8" : "#d6dde4";
+  const selectedColor = sidebarFocused ? "#fff" : "#333";
 
   return (
     <div>
@@ -55,7 +58,7 @@ export default function TreeNode({
           e.preventDefault();
           e.stopPropagation();
           e.dataTransfer.dropEffect = "move";
-          // 只有文件夹是有效落点，高亮它；拖到文档上不高亮（释放时按其所在目录处理由父级兜底）。
+          // 只有文件夹是有效落点，高亮它；拖到文档上不高亮（释放时按其所在目录处理）。
           if (node.isDir) onDragOverNode(node.path);
           else onDragOverNode(null);
         }}
@@ -78,10 +81,11 @@ export default function TreeNode({
         onClick={(e) => {
           e.stopPropagation();
           if (node.isDir) {
-            onToggle(node.path);
+            // 文件夹：仅选中 + 展开/收起，不打开任何文件。
             onSelectFolder(node.path);
+            onToggle(node.path);
           } else {
-            onSelect(node.path);
+            onSelectDoc(node.path);
           }
         }}
         style={{
@@ -93,22 +97,14 @@ export default function TreeNode({
           paddingRight: 6,
           cursor: "pointer",
           fontSize: 13,
-          // VSCode 风格层级：
-          // - 文档选中：实蓝条，白字（最强）
-          // - 拖拽悬停文件夹：虚线框 + 浅蓝底（临时态）
-          // - 文件夹选中：浅灰底 + 左侧 2px 蓝色指示条（弱于文档，不抢视觉）
-          // - hover：极浅灰
-          background: selectedDoc
-            ? "#1e6bb8"
+          background: selected
+            ? selectedBg
             : dropTarget
               ? "#cfe3f7"
-              : selectedDir
-                ? "#eaeef2"
-                : hover
-                  ? "#f0f2f5"
-                  : "transparent",
-          color: selectedDoc ? "#fff" : "#333",
-          boxShadow: selectedDir && !selectedDoc ? "inset 2px 0 0 #1e6bb8" : "none",
+              : hover
+                ? "#f0f2f5"
+                : "transparent",
+          color: selected ? selectedColor : "#333",
           outline: dropTarget ? "1px dashed #1e6bb8" : "none",
           outlineOffset: -1,
         }}
@@ -168,12 +164,12 @@ export default function TreeNode({
             key={child.path}
             node={child}
             depth={depth + 1}
-            currentPath={currentPath}
-            selectedFolder={selectedFolder}
+            selectedPath={selectedPath}
+            sidebarFocused={sidebarFocused}
             expanded={expanded}
             dragOverPath={dragOverPath}
             onToggle={onToggle}
-            onSelect={onSelect}
+            onSelectDoc={onSelectDoc}
             onSelectFolder={onSelectFolder}
             onRename={onRename}
             onDelete={onDelete}

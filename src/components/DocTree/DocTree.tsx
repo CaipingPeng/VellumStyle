@@ -15,12 +15,23 @@ function firstDocPath(nodes: DocNode[]): string | null {
   return null;
 }
 
+// 在树里查某路径是否文件夹。
+function isFolderPath(nodes: DocNode[], path: string): boolean {
+  for (const n of nodes) {
+    if (n.path === path) return n.isDir;
+    if (n.isDir) {
+      const r = isFolderPath(n.children, path);
+      if (r) return true;
+    }
+  }
+  return false;
+}
+
 export default function DocTree() {
   const tree = useStore((s) => s.tree);
-  const currentDocPath = useStore((s) => s.currentDocPath);
-  const selectedFolderPath = useStore((s) => s.selectedFolderPath);
+  const selectedPath = useStore((s) => s.selectedPath);
   const openDocument = useStore((s) => s.openDocument);
-  const setSelectedFolder = useStore((s) => s.setSelectedFolder);
+  const setSelectedPath = useStore((s) => s.setSelectedPath);
   const actions = useDocActions();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState<null | "doc" | "folder">(null);
@@ -28,6 +39,7 @@ export default function DocTree() {
   const [dragSrc, setDragSrc] = useState<string | null>(null);
   const [dragOverPath, setDragOverPath] = useState<string | null>(null);
   const [rootDragOver, setRootDragOver] = useState(false);
+  const [focused, setFocused] = useState(false);
 
   const toggle = (path: string) => {
     setExpanded((prev) => {
@@ -38,13 +50,13 @@ export default function DocTree() {
     });
   };
 
-  // 新建落点：优先选中文件夹，否则当前文档所在文件夹，再否则根。
+  // 新建落点：选中项是文件夹→落其下；选中项是文件→落其同级目录；无选中→根。
   const targetDir = (): string => {
-    if (selectedFolderPath) return selectedFolderPath;
-    const cur = currentDocPath;
-    if (!cur) return "";
-    const slash = cur.lastIndexOf("/");
-    return slash === -1 ? "" : cur.slice(0, slash);
+    const sel = selectedPath;
+    if (!sel) return "";
+    if (isFolderPath(tree, sel)) return sel;
+    const slash = sel.lastIndexOf("/");
+    return slash === -1 ? "" : sel.slice(0, slash);
   };
 
   const commitCreate = async () => {
@@ -73,6 +85,9 @@ export default function DocTree() {
 
   return (
     <div
+      tabIndex={-1}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       style={{
         width: 220,
         flexShrink: 0,
@@ -81,6 +96,7 @@ export default function DocTree() {
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
+        outline: "none",
       }}
     >
       <div style={{display: "flex", gap: 4, padding: 8, borderBottom: "1px solid #e8e8e8"}}>
@@ -90,7 +106,7 @@ export default function DocTree() {
           style={btnStyle}><FolderPlus size={15} /></button>
       </div>
 
-      {/* 根区域：点空白取消选中文件夹；拖拽释放到此移到根目录 */}
+      {/* 根区域：点空白取消选中；拖拽释放到此移到根目录 */}
       <div
         style={{
           flex: 1,
@@ -98,7 +114,7 @@ export default function DocTree() {
           paddingTop: 4,
           background: rootDragOver ? "#eef5fc" : undefined,
         }}
-        onClick={() => setSelectedFolder(null)}
+        onClick={() => setSelectedPath(null)}
         onDragOver={(e) => {
           e.preventDefault();
           setRootDragOver(true);
@@ -137,13 +153,13 @@ export default function DocTree() {
               key={node.path}
               node={node}
               depth={0}
-              currentPath={currentDocPath}
-              selectedFolder={selectedFolderPath}
+              selectedPath={selectedPath}
+              sidebarFocused={focused}
               expanded={expanded}
               dragOverPath={dragOverPath}
               onToggle={toggle}
-              onSelect={openDocument}
-              onSelectFolder={setSelectedFolder}
+              onSelectDoc={openDocument}
+              onSelectFolder={setSelectedPath}
               onRename={actions.rename}
               onDelete={handleDelete}
               onDragStartNode={setDragSrc}
