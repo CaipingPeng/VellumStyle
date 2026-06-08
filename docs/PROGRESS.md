@@ -525,12 +525,15 @@ npx tsc --noEmit         # 类型检查
 - ✅ `npm test` 9/9 通过（Node 内置 node:test + tsx，无新依赖），`npx tsc -b --noEmit` 零错误。
 - ✅ Playwright 运行时验证：浮层无遮罩（无全屏背景层）；3 张卡片缩略图字体各异（Optima/Georgia/sans-serif，证明 scope 隔离生效）；点「使用」预览主题切换（Optima→Georgia）且浮层关闭；Esc 可关闭。
 - ✅ 截图确认布局：缩略图填满卡片宽度不溢出（内容 `width:238%` + `scale(0.42)` 缩回 ≈ 卡片宽），与目标截图设计一致。
+- ✅ 2026-06-09 补充 UI 验证：长主题名会单行省略并保留 hover title；「使用/已用」按钮固定宽度、不换行，不会被挤成竖排；弹窗已有标题区、内容区、底部操作区和卡片留白。
 
 ### 设计决策
 
 - **缩略图填宽**：内容放大到卡片宽度的 1/scale（238%）再 scale 缩回，使缩放结果正好填满卡片，不随卡片像素宽变化而裁切。
 - **去重旧 useClickOutside**：Task 5 用新 ThemeMenu 整体替换旧版（旧版自带 `useClickOutside`），避免父子两个 click-outside 同时生效误关浮层；开 `onClick`（click）+ 关 `mousedown` 事件类型错位，开浮层那一下不会自关。
 - **openFolder 容错**：非 Tauri（web 调试）`openThemesDir` 会 reject，try/catch 吞掉仍重扫；分页 page 越界夹回最后一页避免空白页。
+- **主题卡片抗长名称**：卡片内容容器和标题都设置 `minWidth:0`，标题 `overflow:hidden + textOverflow:ellipsis + whiteSpace:nowrap`，右侧按钮 `flex:0 0 auto + whiteSpace:nowrap + minWidth`，保证长名称只截断文本，不挤压「使用/已用」按钮。
+- **弹窗视觉松弛**：面板拆成标题说明区、滚动卡片区和底部操作区，外层浅底、圆角、阴影、分隔线和 28px 横向留白，避免边框刚好框住主题卡片的拥挤感。
 
 ## 增补功能 — 可视化样式面板 + 主题系统改为 model-only（✅ 完成并运行时验证，2026-06-07）
 

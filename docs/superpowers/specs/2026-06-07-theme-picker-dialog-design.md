@@ -47,9 +47,11 @@ basic 层（全是 `#nice`）同样 scope，否则缩略图缺基础样式（段
   - 外层固定尺寸 + `overflow: hidden`，内容 `transform: scale()` 缩小成「缩小版正文」。
 - **`ThemePickerDialog.tsx`** — 浮层：
   - 无遮罩居中面板，右上角 ✕，复用 `useClickOutside` 点外关闭。
+  - 面板分为标题说明区、主题卡片区、底部操作区，外层圆角 + 阴影 + 内容留白，避免卡片贴边。
   - CSS grid 网格，每卡 = 缩略图 + 主题名 + 「使用」按钮，当前主题卡高亮。
+  - 主题名单行省略并保留 `title`，按钮固定最小宽度且不换行，避免长主题名把「使用」挤成竖排。
   - 底部分页 `‹ 1 2 3 ›`，每页固定 N 张（初定 8）。
-  - 角落「打开主题文件夹」按钮：沿用 `openThemesDir` + 重新 `loadAllThemes`。
+  - 底部「打开主题文件夹」按钮：沿用 `openThemesDir` + 重新 `loadAllThemes`。
   - 点「使用」→ `setMarkdownTheme(id)` + 关闭。
 
 `ThemeMenu.tsx` 改为：点「主题 ▾」直接打开 `ThemePickerDialog`，不再文字下拉。

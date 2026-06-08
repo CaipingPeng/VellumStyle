@@ -82,44 +82,60 @@ export default function ThemePickerDialog({onClose}: Props) {
         top: "50%",
         left: "50%",
         transform: "translate(-50%, -50%)",
-        width: 880,
+        width: 920,
         maxWidth: "92vw",
         maxHeight: "86vh",
-        background: "#fff",
-        borderRadius: 8,
-        boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+        background: "#fbfcfe",
+        border: "1px solid rgba(20, 35, 60, 0.08)",
+        borderRadius: 18,
+        boxShadow: "0 24px 70px rgba(15, 23, 42, 0.18)",
         zIndex: 1000,
         display: "flex",
         flexDirection: "column",
-        padding: 20,
+        overflow: "hidden",
       }}
     >
-      <button
-        onClick={onClose}
+      <div
         style={{
-          position: "absolute",
-          top: 12,
-          right: 16,
-          border: "none",
-          background: "transparent",
-          fontSize: 20,
-          color: "#999",
-          cursor: "pointer",
-          lineHeight: 1,
+          padding: "24px 28px 18px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 16,
         }}
-        aria-label="关闭"
       >
-        ×
-      </button>
+        <div>
+          <div style={{fontSize: 18, fontWeight: 650, color: "#172033"}}>选择排版主题</div>
+          <div style={{marginTop: 6, fontSize: 13, color: "#7b8496"}}>预览主题效果，选择后会立即应用到右侧预览区。</div>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: 32,
+            height: 32,
+            border: "1px solid #e6e9ef",
+            borderRadius: 999,
+            background: "#fff",
+            fontSize: 20,
+            color: "#8b93a3",
+            cursor: "pointer",
+            lineHeight: "28px",
+            flex: "0 0 auto",
+          }}
+          aria-label="关闭"
+        >
+          ×
+        </button>
+      </div>
 
       <div
         style={{
           flex: 1,
           overflowY: "auto",
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 16,
-          marginTop: 8,
+          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+          gap: 18,
+          padding: "4px 28px 22px",
         }}
       >
         {pageThemes.map((t) => {
@@ -128,28 +144,48 @@ export default function ThemePickerDialog({onClose}: Props) {
             <div
               key={t.id}
               style={{
-                border: active ? "2px solid #1e6bb8" : "1px solid #e8e8e8",
-                borderRadius: 6,
-                padding: 8,
+                border: "1px solid " + (active ? "#2f7dd3" : "#e8ebf1"),
+                borderRadius: 14,
+                padding: 12,
+                background: "#fff",
+                boxShadow: active ? "0 0 0 3px rgba(30, 107, 184, 0.12)" : "0 10px 24px rgba(15, 23, 42, 0.04)",
                 display: "flex",
                 flexDirection: "column",
-                gap: 8,
+                gap: 10,
+                minWidth: 0,
               }}
             >
               <ThemeThumbnail themeId={t.id} css={t.css} />
-              <div style={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
-                <span style={{fontSize: 13, color: "#333"}}>{t.name}</span>
+              <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, minWidth: 0}}>
+                <span
+                  title={t.name}
+                  style={{
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    fontSize: 13,
+                    fontWeight: 550,
+                    color: "#273142",
+                  }}
+                >
+                  {t.name}
+                </span>
                 <button
                   onClick={() => pick(t.id)}
                   style={{
-                    height: 26,
-                    padding: "0 12px",
+                    height: 28,
+                    minWidth: 52,
+                    padding: "0 14px",
                     fontSize: 12,
+                    fontWeight: 600,
                     border: "1px solid #1e6bb8",
-                    borderRadius: 4,
-                    background: active ? "#1e6bb8" : "#fff",
+                    borderRadius: 999,
+                    background: active ? "#1e6bb8" : "#f7fbff",
                     color: active ? "#fff" : "#1e6bb8",
                     cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    flex: "0 0 auto",
                   }}
                 >
                   {active ? "已用" : "使用"}
@@ -165,41 +201,27 @@ export default function ThemePickerDialog({onClose}: Props) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginTop: 16,
+          gap: 12,
+          padding: "16px 28px 22px",
+          borderTop: "1px solid #edf0f5",
+          background: "#fff",
         }}
       >
-        <button
-          onClick={openFolder}
-          style={{
-            height: 28,
-            padding: "0 12px",
-            fontSize: 12,
-            border: "1px solid #d9d9d9",
-            borderRadius: 4,
-            background: "#fff",
-            color: "#1e6bb8",
-            cursor: "pointer",
-          }}
-        >
-          ＋ 打开主题文件夹
-        </button>
+        <div style={{display: "flex", alignItems: "center", gap: 8}}>
+          <button
+            onClick={openFolder}
+            style={secondaryBtn()}
+          >
+            ＋ 打开主题文件夹
+          </button>
 
-        <button
-          onClick={importTheme}
-          style={{
-            height: 28,
-            padding: "0 12px",
-            fontSize: 12,
-            border: "1px solid #d9d9d9",
-            borderRadius: 4,
-            background: "#fff",
-            color: "#1e6bb8",
-            cursor: "pointer",
-            marginLeft: 8,
-          }}
-        >
-          ↑ 导入 mdnice 主题
-        </button>
+          <button
+            onClick={importTheme}
+            style={secondaryBtn()}
+          >
+            ↑ 导入 mdnice 主题
+          </button>
+        </div>
 
         {totalPages > 1 && (
           <div style={{display: "flex", alignItems: "center", gap: 6}}>
@@ -217,7 +239,8 @@ export default function ThemePickerDialog({onClose}: Props) {
                 style={{
                   ...pageBtn(false),
                   background: idx === safePage ? "#1e6bb8" : "#fff",
-                  color: idx === safePage ? "#fff" : "#333",
+                  borderColor: idx === safePage ? "#1e6bb8" : "#dfe3ea",
+                  color: idx === safePage ? "#fff" : "#334155",
                 }}
               >
                 {idx + 1}
@@ -237,16 +260,31 @@ export default function ThemePickerDialog({onClose}: Props) {
   );
 }
 
+function secondaryBtn(): React.CSSProperties {
+  return {
+    height: 32,
+    padding: "0 14px",
+    fontSize: 12,
+    fontWeight: 550,
+    border: "1px solid #dfe3ea",
+    borderRadius: 999,
+    background: "#fff",
+    color: "#1e6bb8",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  };
+}
+
 function pageBtn(disabled: boolean): React.CSSProperties {
   return {
-    minWidth: 28,
-    height: 28,
-    border: "1px solid #d9d9d9",
-    borderRadius: 4,
+    minWidth: 30,
+    height: 30,
+    border: "1px solid #dfe3ea",
+    borderRadius: 999,
     background: "#fff",
-    color: "#333",
+    color: "#334155",
     cursor: disabled ? "default" : "pointer",
-    opacity: disabled ? 0.4 : 1,
+    opacity: disabled ? 0.38 : 1,
     fontSize: 13,
   };
 }
