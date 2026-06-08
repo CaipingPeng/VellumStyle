@@ -52,7 +52,7 @@ export default function ImportMarkdownDialog({
             选择 Markdown 文件后，会识别本地和在线图片，上传到公众号永久素材库并替换为微信素材链接。Obsidian 的 <code>![[...]]</code> 图片语法也会转换成标准 Markdown 图片。
           </p>
           <p style={{margin: 0, fontSize: 12, color: "#b26b00", lineHeight: 1.6}}>
-            导入成功后会替换当前编辑区全文；视频会被识别但暂不自动上传。
+            导入成功后会在目录树当前位置新建同名文档（已存在则覆盖）并打开，不影响当前文档；视频会被识别但暂不自动上传。
           </p>
 
           <div style={fieldStyle}>

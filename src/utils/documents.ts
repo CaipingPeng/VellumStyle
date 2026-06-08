@@ -57,3 +57,29 @@ export function deleteEntry(path: string): Promise<void> {
 export function moveEntry(src: string, destDir: string): Promise<string> {
   return invoke<string>("move_entry", {src, destDir});
 }
+
+// 在树里查某路径是否文件夹。
+export function isFolderPath(nodes: DocNode[], path: string): boolean {
+  for (const n of nodes) {
+    if (n.path === path) return n.isDir;
+    if (n.isDir && isFolderPath(n.children, path)) return true;
+  }
+  return false;
+}
+
+// 在树里查某相对路径是否已存在（文件或文件夹）。
+export function treeHasPath(nodes: DocNode[], path: string): boolean {
+  for (const n of nodes) {
+    if (n.path === path) return true;
+    if (n.isDir && treeHasPath(n.children, path)) return true;
+  }
+  return false;
+}
+
+// 新建落点：选中项是文件夹→落其下；选中项是文件→落其同级目录；无选中→根("")。
+export function targetDirFor(tree: DocNode[], selectedPath: string | null): string {
+  if (!selectedPath) return "";
+  if (isFolderPath(tree, selectedPath)) return selectedPath;
+  const slash = selectedPath.lastIndexOf("/");
+  return slash === -1 ? "" : selectedPath.slice(0, slash);
+}

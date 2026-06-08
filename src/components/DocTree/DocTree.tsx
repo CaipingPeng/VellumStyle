@@ -1,7 +1,7 @@
 import {useState} from "react";
 import {FilePlus, FolderPlus} from "lucide-react";
 import {useStore} from "../../store/index.ts";
-import type {DocNode} from "../../utils/documents.ts";
+import {targetDirFor, type DocNode} from "../../utils/documents.ts";
 import TreeNode, {type CreatingState} from "./TreeNode.tsx";
 import DraftInput from "./DraftInput.tsx";
 import {useDocActions} from "./useDocActions.ts";
@@ -14,18 +14,6 @@ function firstDocPath(nodes: DocNode[]): string | null {
     if (inChild) return inChild;
   }
   return null;
-}
-
-// 在树里查某路径是否文件夹。
-function isFolderPath(nodes: DocNode[], path: string): boolean {
-  for (const n of nodes) {
-    if (n.path === path) return n.isDir;
-    if (n.isDir) {
-      const r = isFolderPath(n.children, path);
-      if (r) return true;
-    }
-  }
-  return false;
 }
 
 export default function DocTree() {
@@ -51,13 +39,7 @@ export default function DocTree() {
   };
 
   // 新建落点：选中项是文件夹→落其下；选中项是文件→落其同级目录；无选中→根。
-  const targetDir = (): string => {
-    const sel = selectedPath;
-    if (!sel) return "";
-    if (isFolderPath(tree, sel)) return sel;
-    const slash = sel.lastIndexOf("/");
-    return slash === -1 ? "" : sel.slice(0, slash);
-  };
+  const targetDir = (): string => targetDirFor(tree, selectedPath);
 
   // 开始新建：算目标目录，展开它（非根才需要），显示占位输入行。
   const startCreate = (mode: "doc" | "folder") => {
