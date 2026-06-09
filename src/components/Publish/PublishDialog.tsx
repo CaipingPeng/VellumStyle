@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from "react";
 import {useStore} from "../../store/index.ts";
-import {solveHtml} from "../../markdown/converter.ts";
+import {solveDraftHtml} from "../../markdown/converter.ts";
 import {findUnuploadedImages, uploadThumb, addDraft} from "../../utils/publish.ts";
 import {toast} from "../Toast/toast.ts";
 
@@ -68,7 +68,7 @@ export default function PublishDialog({onClose, onNeedSettings}: Props) {
     }
     setBusy(true);
     try {
-      const html = solveHtml();
+      const html = solveDraftHtml();
       await addDraft(title.trim(), html, thumbId);
       toast.show("已发到公众号草稿箱，请在后台确认排版后发送", "info", 4000);
       onClose();

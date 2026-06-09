@@ -52,3 +52,52 @@ export function solveHtml(): string {
     return "";
   }
 }
+
+export function solveDraftHtml(): string {
+  return normalizeDraftLists(solveHtml());
+}
+
+export function normalizeDraftLists(html: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  for (const section of Array.from(doc.querySelectorAll("li > section:first-child"))) {
+    const li = section.parentElement;
+    if (!li || li.tagName.toLowerCase() !== "li") {
+      continue;
+    }
+
+    const extraNodes = Array.from(li.childNodes).filter((node) => {
+      if (node === section) {
+        return false;
+      }
+      return node.nodeType !== Node.TEXT_NODE || node.textContent?.trim();
+    });
+    if (extraNodes.length > 0) {
+      continue;
+    }
+
+    const sourceStyle = (section as HTMLElement).style;
+    const targetStyle = li.style;
+    for (let i = 0; i < sourceStyle.length; i += 1) {
+      const name = sourceStyle.item(i);
+      targetStyle.setProperty(name, sourceStyle.getPropertyValue(name), sourceStyle.getPropertyPriority(name));
+    }
+
+    while (section.firstChild) {
+      li.insertBefore(section.firstChild, section);
+    }
+    section.remove();
+  }
+
+  for (const li of Array.from(doc.querySelectorAll("li"))) {
+    if (!li.textContent?.trim() && li.children.length === 0) {
+      li.remove();
+    }
+  }
+
+  for (const list of Array.from(doc.querySelectorAll("ul, ol"))) {
+    const items = Array.from(list.children).filter((child) => child.tagName.toLowerCase() === "li");
+    list.innerHTML = items.map((item) => item.outerHTML.trim()).join("");
+  }
+
+  return doc.body.innerHTML;
+}
