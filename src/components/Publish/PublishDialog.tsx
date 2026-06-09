@@ -80,8 +80,8 @@ export default function PublishDialog({onClose, onNeedSettings}: Props) {
   };
 
   return (
-    <div style={overlay} onClick={onClose}>
-      <div style={panel} onClick={(e) => e.stopPropagation()}>
+    <div style={overlay}>
+      <div style={panel}>
         <h3 style={{margin: "0 0 16px", fontSize: 16}}>发布到公众号草稿箱</h3>
 
         <label style={labelStyle}>标题</label>
