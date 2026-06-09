@@ -35,7 +35,7 @@ export function solveHtml(): string {
   html = html.replace(/svg><\/span>\s/g, "svg></span>&nbsp;");
   html = html.replace(/mjx-container/g, "section");
   html = html.replace(/class="mjx-solid"/g, 'fill="none" stroke-width="70"');
-  html = html.replace(/<mjx-assistive-mml.+?<\/mjx-assistive-mml>/g, "");
+  html = html.replace(/<mjx-assistive-mml[\s\S]*?<\/mjx-assistive-mml>/g, "");
 
   const allCss =
     readStyle(STYLE_IDS.markdown) +

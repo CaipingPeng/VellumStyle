@@ -3,6 +3,7 @@ import {render} from "../../markdown/parser.ts";
 import {useStore, getThemeById} from "../../store/index.ts";
 import {replaceStyle, STYLE_IDS} from "../../utils/style.ts";
 import {toProxyHtml} from "../../utils/imageProxy.ts";
+import {typesetMath} from "../../markdown/mathjax.ts";
 import {modelIdFromElement} from "../StylePanel/elementMap.ts";
 
 interface Props {
@@ -54,6 +55,16 @@ const Preview = forwardRef<PreviewHandle, Props>(
         }
       };
     }, [content]);
+
+    useEffect(() => {
+      const root = document.getElementById("nice");
+      if (!root || !html.includes("$")) {
+        return;
+      }
+      void typesetMath(root).catch((error) => {
+        console.error("MathJax 排版失败", error);
+      });
+    }, [html]);
 
     // 点击预览元素 → 识别 model id → 打开面板
     function onClick(e: React.MouseEvent) {
