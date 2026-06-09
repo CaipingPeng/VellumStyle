@@ -3,10 +3,53 @@ import {STYLE_IDS} from "../utils/style.ts";
 import {fromProxyHtml} from "../utils/imageProxy.ts";
 
 const BOX_ID = "nice-rich-text-box";
+const DISPLAY_MATH_STYLE =
+  "display:block;text-align:center;margin:1em 0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch";
 
 function readStyle(id: string): string {
   const el = document.getElementById(id);
   return el ? el.innerText : "";
+}
+
+function upsertAttribute(attrs: string, name: string, update: (value: string | null) => string): string {
+  const re = new RegExp(`\\s${name}=(['"])([\\s\\S]*?)\\1`);
+  const match = attrs.match(re);
+  if (!match) {
+    return `${attrs} ${name}="${update(null)}"`;
+  }
+  return attrs.replace(re, ` ${name}="${update(match[2])}"`);
+}
+
+function appendClass(attrs: string, className: string): string {
+  return upsertAttribute(attrs, "class", (value) => {
+    const classes = (value ?? "").split(/\s+/).filter(Boolean);
+    if (!classes.includes(className)) {
+      classes.push(className);
+    }
+    return classes.join(" ");
+  });
+}
+
+function appendStyle(attrs: string, style: string): string {
+  return upsertAttribute(attrs, "style", (value) => {
+    const current = value?.trim();
+    return current ? `${current.replace(/;?\s*$/, ";")}${style}` : style;
+  });
+}
+
+export function normalizeMathJaxForWechat(html: string): string {
+  return html
+    .replace(/<mjx-assistive-mml[\s\S]*?<\/mjx-assistive-mml>/g, "")
+    .replace(/class="mjx-solid"/g, 'fill="none" stroke-width="70"')
+    .replace(/<mjx-container\b([^>]*)>([\s\S]*?)<\/mjx-container>/g, (_match, attrs: string, body: string) => {
+      if (/\sdisplay=(['"])true\1/.test(attrs)) {
+        const nextAttrs = appendStyle(appendClass(attrs, "block-equation"), DISPLAY_MATH_STYLE);
+        return `<section${nextAttrs}>${body}</section>`;
+      }
+      return `<span${attrs}>${body}</span>`;
+    })
+    .replace(/\s<span class="inline/g, '&nbsp;<span class="inline')
+    .replace(/svg><\/span>\s/g, "svg></span>&nbsp;");
 }
 
 // 生成微信兼容的最终 HTML：
@@ -30,12 +73,7 @@ export function solveHtml(): string {
   html = fromProxyHtml(html);
   // 剥离同步滚动用的 data-line，避免污染粘贴到微信的 HTML
   html = html.replace(/\s*data-line="\d+"/g, "");
-  html = html.replace(/<mjx-container (class="inline.+?)<\/mjx-container>/g, "<span $1</span>");
-  html = html.replace(/\s<span class="inline/g, '&nbsp;<span class="inline');
-  html = html.replace(/svg><\/span>\s/g, "svg></span>&nbsp;");
-  html = html.replace(/mjx-container/g, "section");
-  html = html.replace(/class="mjx-solid"/g, 'fill="none" stroke-width="70"');
-  html = html.replace(/<mjx-assistive-mml[\s\S]*?<\/mjx-assistive-mml>/g, "");
+  html = normalizeMathJaxForWechat(html);
 
   const allCss =
     readStyle(STYLE_IDS.markdown) +
