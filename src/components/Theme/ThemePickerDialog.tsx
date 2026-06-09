@@ -78,13 +78,14 @@ export default function ThemePickerDialog({onClose}: Props) {
   }
 
   return createPortal(
-    <motion.div
-      ref={ref}
-      initial={{opacity: 0, scale: 0.96, y: 8}}
-      animate={{opacity: 1, scale: 1, y: 0}}
-      transition={{duration: 0.13}}
-      className="fixed left-1/2 top-1/2 z-[2000] flex w-[920px] max-w-[92vw] max-h-[86vh] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-border bg-bg shadow-lg"
-    >
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-transparent">
+      <motion.div
+        ref={ref}
+        initial={{opacity: 0, scale: 0.96, y: 8}}
+        animate={{opacity: 1, scale: 1, y: 0}}
+        transition={{duration: 0.13}}
+        className="flex w-[920px] max-w-[92vw] max-h-[86vh] flex-col overflow-hidden rounded-lg border border-border bg-bg shadow-lg"
+      >
       <div className="flex items-start justify-between gap-4 px-7 pb-[18px] pt-6">
         <div>
           <div className="text-lg font-semibold text-text">选择排版主题</div>
@@ -175,7 +176,8 @@ export default function ThemePickerDialog({onClose}: Props) {
           </div>
         )}
       </div>
-    </motion.div>,
+      </motion.div>
+    </div>,
     document.body,
   );
 }
