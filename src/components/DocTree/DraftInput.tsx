@@ -37,7 +37,7 @@ export default function DraftInput({mode, depth, value, onChange, onCommit, onCa
           if (e.key === "Enter") onCommit();
           if (e.key === "Escape") onCancel();
         }}
-        style={{flex: 1, fontSize: 13, minWidth: 0}}
+        className="flex-1 min-w-0 px-1 text-[13px] border border-border rounded-sm bg-transparent outline-none focus:border-accent"
       />
     </div>
   );

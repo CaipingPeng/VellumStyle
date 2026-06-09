@@ -1,5 +1,6 @@
 import {useState} from "react";
 import {ChevronRight, ChevronDown, Folder, FileText, Pencil, Trash2} from "lucide-react";
+import {AnimatePresence, motion} from "framer-motion";
 import type {DocNode} from "../../utils/documents.ts";
 import DraftInput from "./DraftInput.tsx";
 
@@ -38,7 +39,6 @@ export default function TreeNode({
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(node.name);
-  const [hover, setHover] = useState(false);
   const isOpen = node.isDir && expanded.has(node.path);
   const selected = selectedPath === node.path; // 文件/文件夹一视同仁
   const dropTarget = node.isDir && dragOverPath === node.path;
@@ -50,9 +50,14 @@ export default function TreeNode({
     else setDraft(node.name);
   };
 
-  // 选中样式：活跃（侧栏聚焦）实蓝白字；失焦浅灰深字。文件与文件夹相同。
-  const selectedBg = sidebarFocused ? "#1e6bb8" : "#d6dde4";
-  const selectedColor = sidebarFocused ? "#fff" : "#333";
+  // 选中样式：选中（文件/文件夹一视同仁）用 accent-subtle 底 + accent 字；
+  // 拖拽落点同样用 accent-subtle 高亮；未选中悬停淡灰底。sidebarFocused 仍透传。
+  void sidebarFocused;
+  const rowTone = selected
+    ? "bg-accent-subtle text-accent"
+    : dropTarget
+      ? "bg-accent-subtle text-text"
+      : "text-text hover:bg-bg-tertiary";
 
   return (
     <div>
@@ -88,8 +93,6 @@ export default function TreeNode({
             onDropNode(slash === -1 ? "" : node.path.slice(0, slash));
           }
         }}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
         onClick={(e) => {
           e.stopPropagation();
           if (node.isDir) {
@@ -100,24 +103,10 @@ export default function TreeNode({
             onSelectDoc(node.path);
           }
         }}
+        className={`group flex items-center gap-1 h-7 pr-1.5 cursor-pointer text-[13px] transition-colors duration-fast ${rowTone}`}
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          height: 28,
           paddingLeft: 8 + depth * 14,
-          paddingRight: 6,
-          cursor: "pointer",
-          fontSize: 13,
-          background: selected
-            ? selectedBg
-            : dropTarget
-              ? "#cfe3f7"
-              : hover
-                ? "#f0f2f5"
-                : "transparent",
-          color: selected ? selectedColor : "#333",
-          outline: dropTarget ? "1px dashed #1e6bb8" : "none",
+          outline: dropTarget ? "1px dashed var(--accent)" : "none",
           outlineOffset: -1,
         }}
       >
@@ -148,8 +137,8 @@ export default function TreeNode({
             {node.name}
           </span>
         )}
-        {hover && !editing && (
-          <>
+        {!editing && (
+          <span className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-fast">
             <Pencil
               size={13}
               style={{flexShrink: 0}}
@@ -167,47 +156,54 @@ export default function TreeNode({
                 onDelete(node.path);
               }}
             />
-          </>
+          </span>
         )}
       </div>
-      {isOpen && (
-        <>
-          {/* 草稿输入行：本文件夹是新建目标时，在子项最前占位显示 */}
-          {creating && creating.dir === node.path && (
-            <DraftInput
-              mode={creating.mode}
-              depth={depth + 1}
-              value={creating.value}
-              onChange={onDraftChange}
-              onCommit={onDraftCommit}
-              onCancel={onDraftCancel}
-            />
-          )}
-          {node.children.map((child) => (
-            <TreeNode
-              key={child.path}
-              node={child}
-              depth={depth + 1}
-              selectedPath={selectedPath}
-              sidebarFocused={sidebarFocused}
-              expanded={expanded}
-              dragOverPath={dragOverPath}
-              creating={creating}
-              onToggle={onToggle}
-              onSelectDoc={onSelectDoc}
-              onSelectFolder={onSelectFolder}
-              onRename={onRename}
-              onDelete={onDelete}
-              onDragStartNode={onDragStartNode}
-              onDragOverNode={onDragOverNode}
-              onDropNode={onDropNode}
-              onDraftChange={onDraftChange}
-              onDraftCommit={onDraftCommit}
-              onDraftCancel={onDraftCancel}
-            />
-          ))}
-        </>
-      )}
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{opacity: 0}}
+            animate={{opacity: 1}}
+            exit={{opacity: 0}}
+            transition={{duration: 0.12}}
+          >
+            {/* 草稿输入行：本文件夹是新建目标时，在子项最前占位显示 */}
+            {creating && creating.dir === node.path && (
+              <DraftInput
+                mode={creating.mode}
+                depth={depth + 1}
+                value={creating.value}
+                onChange={onDraftChange}
+                onCommit={onDraftCommit}
+                onCancel={onDraftCancel}
+              />
+            )}
+            {node.children.map((child) => (
+              <TreeNode
+                key={child.path}
+                node={child}
+                depth={depth + 1}
+                selectedPath={selectedPath}
+                sidebarFocused={sidebarFocused}
+                expanded={expanded}
+                dragOverPath={dragOverPath}
+                creating={creating}
+                onToggle={onToggle}
+                onSelectDoc={onSelectDoc}
+                onSelectFolder={onSelectFolder}
+                onRename={onRename}
+                onDelete={onDelete}
+                onDragStartNode={onDragStartNode}
+                onDragOverNode={onDragOverNode}
+                onDropNode={onDropNode}
+                onDraftChange={onDraftChange}
+                onDraftCommit={onDraftCommit}
+                onDraftCancel={onDraftCancel}
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

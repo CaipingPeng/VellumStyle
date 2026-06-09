@@ -1,9 +1,11 @@
 import {useState} from "react";
 import {FilePlus, FolderPlus} from "lucide-react";
+import {motion} from "framer-motion";
 import {useStore} from "../../store/index.ts";
 import {targetDirFor, type DocNode} from "../../utils/documents.ts";
 import TreeNode, {type CreatingState} from "./TreeNode.tsx";
 import DraftInput from "./DraftInput.tsx";
+import IconButton from "../ui/IconButton.tsx";
 import {useDocActions} from "./useDocActions.ts";
 
 // 取树里第一篇文档路径（深度优先），删当前文档后回退用。
@@ -86,32 +88,20 @@ export default function DocTree() {
       tabIndex={-1}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      style={{
-        width: 220,
-        flexShrink: 0,
-        borderRight: "1px solid #e8e8e8",
-        background: "#fafafa",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        outline: "none",
-      }}
+      className="flex w-[220px] flex-shrink-0 flex-col overflow-hidden border-r border-border bg-bg-tertiary outline-none"
     >
-      <div style={{display: "flex", gap: 4, padding: 8, borderBottom: "1px solid #e8e8e8"}}>
-        <button type="button" title="新建文档" onClick={() => startCreate("doc")}
-          style={btnStyle}><FilePlus size={15} /></button>
-        <button type="button" title="新建文件夹" onClick={() => startCreate("folder")}
-          style={btnStyle}><FolderPlus size={15} /></button>
+      <div className="flex gap-1 p-2 border-b border-border">
+        <IconButton title="新建文档" onClick={() => startCreate("doc")}>
+          <FilePlus size={15} />
+        </IconButton>
+        <IconButton title="新建文件夹" onClick={() => startCreate("folder")}>
+          <FolderPlus size={15} />
+        </IconButton>
       </div>
 
       {/* 根区域：点空白取消选中；拖拽释放到此移到根目录 */}
       <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          paddingTop: 4,
-          background: rootDragOver ? "#eef5fc" : undefined,
-        }}
+        className={`flex-1 overflow-y-auto pt-1${rootDragOver ? " bg-accent-subtle" : ""}`}
         onClick={() => setSelectedPath(null)}
         onDragOver={(e) => {
           e.preventDefault();
@@ -136,48 +126,41 @@ export default function DocTree() {
           />
         )}
         {tree.length === 0 && !creating ? (
-          <div style={{padding: 16, fontSize: 12, color: "#999", lineHeight: 1.6}}>
+          <div className="p-4 text-xs leading-relaxed text-text-muted">
             点击上方 + 新建第一篇文档
           </div>
         ) : (
-          tree.map((node) => (
-            <TreeNode
+          tree.map((node, i) => (
+            <motion.div
               key={node.path}
-              node={node}
-              depth={0}
-              selectedPath={selectedPath}
-              sidebarFocused={focused}
-              expanded={expanded}
-              dragOverPath={dragOverPath}
-              creating={creating}
-              onToggle={toggle}
-              onSelectDoc={openDocument}
-              onSelectFolder={setSelectedPath}
-              onRename={actions.rename}
-              onDelete={handleDelete}
-              onDragStartNode={setDragSrc}
-              onDragOverNode={setDragOverPath}
-              onDropNode={handleDrop}
-              onDraftChange={draftChange}
-              onDraftCommit={() => void commitCreate()}
-              onDraftCancel={() => setCreating(null)}
-            />
+              initial={{opacity: 0, y: 4}}
+              animate={{opacity: 1, y: 0}}
+              transition={{duration: 0.16, delay: i * 0.02, ease: [0.16, 1, 0.3, 1]}}
+            >
+              <TreeNode
+                node={node}
+                depth={0}
+                selectedPath={selectedPath}
+                sidebarFocused={focused}
+                expanded={expanded}
+                dragOverPath={dragOverPath}
+                creating={creating}
+                onToggle={toggle}
+                onSelectDoc={openDocument}
+                onSelectFolder={setSelectedPath}
+                onRename={actions.rename}
+                onDelete={handleDelete}
+                onDragStartNode={setDragSrc}
+                onDragOverNode={setDragOverPath}
+                onDropNode={handleDrop}
+                onDraftChange={draftChange}
+                onDraftCommit={() => void commitCreate()}
+                onDraftCancel={() => setCreating(null)}
+              />
+            </motion.div>
           ))
         )}
       </div>
     </div>
   );
 }
-
-const btnStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 30,
-  height: 28,
-  border: "1px solid #d9d9d9",
-  borderRadius: 4,
-  background: "#fff",
-  cursor: "pointer",
-  color: "#333",
-};
