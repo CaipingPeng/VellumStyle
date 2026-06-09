@@ -7,7 +7,48 @@ export default {
     preflight: false,
   },
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        accent: {
+          DEFAULT: "var(--accent)",
+          hover: "var(--accent-hover)",
+          subtle: "var(--accent-subtle)",
+        },
+        bg: {
+          DEFAULT: "var(--bg)",
+          secondary: "var(--bg-secondary)",
+          tertiary: "var(--bg-tertiary)",
+        },
+        border: {
+          DEFAULT: "var(--border)",
+          strong: "var(--border-strong)",
+        },
+        text: {
+          DEFAULT: "var(--text)",
+          secondary: "var(--text-secondary)",
+          muted: "var(--text-muted)",
+        },
+        success: "var(--success)",
+        danger: "var(--danger)",
+      },
+      borderRadius: {
+        sm: "var(--radius-sm)",
+        DEFAULT: "var(--radius)",
+        lg: "var(--radius-lg)",
+      },
+      boxShadow: {
+        sm: "var(--shadow-sm)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
+      },
+      transitionTimingFunction: {
+        smooth: "var(--ease)",
+      },
+      transitionDuration: {
+        fast: "130ms",
+        DEFAULT: "160ms",
+      },
+    },
   },
   plugins: [],
 };
