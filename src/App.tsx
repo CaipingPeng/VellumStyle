@@ -10,6 +10,8 @@ import StylePanel from "./components/StylePanel/StylePanel.tsx";
 import SyntaxToolbar from "./components/Toolbar/SyntaxToolbar.tsx";
 import DocTree from "./components/DocTree/DocTree.tsx";
 import PublishButton from "./components/Publish/PublishButton.tsx";
+import IconButton from "./components/ui/IconButton.tsx";
+import Button from "./components/ui/Button.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
 import {toast} from "./components/Toast/toast.ts";
 import {useStore, getThemeById, flushSave} from "./store/index.ts";
@@ -162,70 +164,27 @@ export default function App() {
   return (
     <div style={{display: "flex", flexDirection: "column", height: "100%"}}>
       {/* Navbar */}
-      <header
-        style={{
-          height: 50,
-          flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 16px",
-          borderBottom: "1px solid #e8e8e8",
-          background: "#fff",
-        }}
-      >
-        <div style={{display: "flex", alignItems: "center", gap: 12}}>
-          <button
-            type="button"
-            title="文档"
-            onClick={toggleSidebar}
-            style={{
-              width: 30,
-              height: 30,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "1px solid #d9d9d9",
-              borderRadius: 4,
-              background: sidebarOpen ? "#e6f0fa" : "#fff",
-              color: sidebarOpen ? "#1e6bb8" : "#333",
-              cursor: "pointer",
-              padding: 0,
-            }}
-          >
+      <header className="flex h-[52px] flex-shrink-0 items-center justify-between border-b border-border bg-bg/80 px-4 backdrop-blur">
+        <div className="flex items-center gap-3">
+          <IconButton active={sidebarOpen} title="文档" onClick={toggleSidebar}>
             <PanelLeft size={16} />
-          </button>
+          </IconButton>
           <SyntaxToolbar editorRef={editorRef} />
         </div>
-        <div style={{display: "flex", alignItems: "center", gap: 12}}>
+        <div className="flex items-center gap-3">
           <UploadButton onPick={handleUploadFile} />
           <ImportButton />
           <ThemeMenu />
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            style={{
-              height: 30,
-              padding: "0 12px",
-              fontSize: 13,
-              border: "1px solid #d9d9d9",
-              borderRadius: 4,
-              background: "#fff",
-              color: "#333",
-              cursor: "pointer",
-            }}
-          >
-            设置
-          </button>
+          <Button variant="secondary" onClick={() => setSettingsOpen(true)}>设置</Button>
           <PublishButton onNeedSettings={() => setSettingsOpen(true)} />
           <CopyButton />
         </div>
       </header>
 
       {/* 主体：文档树 + 编辑器 + 预览 */}
-      <main style={{flex: 1, display: "flex", minHeight: 0, position: "relative"}}>
+      <main className="relative flex min-h-0 flex-1">
         {sidebarOpen && <DocTree />}
-        <div style={{flex: 1, borderRight: "1px solid #e8e8e8", minWidth: 0, overflow: "hidden"}}>
+        <div className="min-w-0 flex-1 overflow-hidden border-r border-border">
           <MarkdownEditor
             ref={editorRef}
             value={content}
@@ -233,8 +192,8 @@ export default function App() {
             onPasteImage={handleUploadFile}
           />
         </div>
-        <div style={{flex: 1, minWidth: 0, display: "flex"}}>
-          <div style={{flex: 1, minWidth: 0}}>
+        <div className="flex min-w-0 flex-1">
+          <div className="min-w-0 flex-1">
             <Preview
               ref={previewRef}
               content={content}
@@ -246,22 +205,9 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer
-        style={{
-          height: 28,
-          flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          padding: "0 16px",
-          borderTop: "1px solid #e8e8e8",
-          background: "#fafafa",
-          fontSize: 12,
-          color: "#888",
-        }}
-      >
-        <span>行数 {lineCount}</span>
-        <span>字数 {charCount}</span>
+      <footer className="flex h-7 flex-shrink-0 items-center gap-4 border-t border-border bg-bg-secondary px-4 text-xs text-text-muted">
+        <span className="tabular-nums">行数 {lineCount}</span>
+        <span className="tabular-nums">字数 {charCount}</span>
         <span>主题 {getThemeById(themes, markdownThemeId).name}</span>
         {currentDocPath && <span>文档 {currentDocPath.split("/").pop()}</span>}
       </footer>
