@@ -5,14 +5,8 @@ interface CtrlProps {
   onChange: (value: string) => void;
 }
 
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  height: 28,
-  fontSize: 13,
-  padding: "0 6px",
-  border: "1px solid #d9d9d9",
-  borderRadius: 4,
-};
+const inputClass =
+  "w-full h-7 text-[13px] px-1.5 border border-border rounded-sm bg-bg outline-none focus:border-accent";
 
 // 数值+单位（fontSize/lineHeight/letterSpacing）。文本框，保留原单位写法。
 function TextControl({item, onChange}: CtrlProps) {
@@ -21,7 +15,7 @@ function TextControl({item, onChange}: CtrlProps) {
       type="text"
       value={item.value ?? ""}
       onChange={(e) => onChange(e.target.value)}
-      style={inputStyle}
+      className={inputClass}
     />
   );
 }
@@ -34,22 +28,18 @@ function ColorControl({item, onChange}: CtrlProps) {
       value={item.value ?? ""}
       onChange={(e) => onChange(e.target.value)}
       placeholder="rgba(0,0,0,1)"
-      style={inputStyle}
+      className={inputClass}
     />
   );
 }
 
-function toggleButtonStyle(active: boolean): React.CSSProperties {
-  return {
-    flex: 1,
-    height: 28,
-    fontSize: 12,
-    border: "1px solid #d9d9d9",
-    borderRadius: 4,
-    background: active ? "#1e6bb8" : "#fff",
-    color: active ? "#fff" : "#333",
-    cursor: "pointer",
-  };
+function toggleButtonClass(active: boolean): string {
+  return [
+    "flex-1 h-7 text-xs rounded-sm cursor-pointer transition-colors duration-fast",
+    active
+      ? "border border-accent bg-accent text-white"
+      : "border border-border bg-bg text-text hover:border-accent",
+  ].join(" ");
 }
 
 function AlignControl({item, onChange}: CtrlProps) {
@@ -57,7 +47,7 @@ function AlignControl({item, onChange}: CtrlProps) {
   return (
     <div style={{display: "flex", gap: 4}}>
       {opts.map((o) => (
-        <button key={o} onClick={() => onChange(o)} style={toggleButtonStyle(item.value === o)}>
+        <button key={o} onClick={() => onChange(o)} className={toggleButtonClass(item.value === o)}>
           {o}
         </button>
       ))}
@@ -69,7 +59,7 @@ function WeightControl({item, onChange}: CtrlProps) {
   return (
     <div style={{display: "flex", gap: 4}}>
       {["normal", "bold"].map((o) => (
-        <button key={o} onClick={() => onChange(o)} style={toggleButtonStyle(item.value === o)}>
+        <button key={o} onClick={() => onChange(o)} className={toggleButtonClass(item.value === o)}>
           {o}
         </button>
       ))}
@@ -83,14 +73,7 @@ function CommonControl({item, onChange}: CtrlProps) {
       value={item.value ?? ""}
       onChange={(e) => onChange(e.target.value)}
       rows={4}
-      style={{
-        width: "100%",
-        fontSize: 12,
-        fontFamily: "monospace",
-        border: "1px solid #d9d9d9",
-        borderRadius: 4,
-        padding: 6,
-      }}
+      className="w-full text-xs font-mono p-1.5 border border-border rounded-sm bg-bg outline-none focus:border-accent"
     />
   );
 }

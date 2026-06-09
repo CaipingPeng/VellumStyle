@@ -1,4 +1,6 @@
 import {useEffect, useRef, useState} from "react";
+import {motion} from "framer-motion";
+import {X, Plus, Upload} from "lucide-react";
 import {useStore} from "../../store/index.ts";
 import {loadAllThemes, openThemesDir, importMdniceTheme} from "../../themes/loader.ts";
 import ThemeThumbnail from "./ThemeThumbnail.tsx";
@@ -75,118 +77,52 @@ export default function ThemePickerDialog({onClose}: Props) {
   }
 
   return (
-    <div
+    <motion.div
       ref={ref}
-      style={{
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        width: 920,
-        maxWidth: "92vw",
-        maxHeight: "86vh",
-        background: "#fbfcfe",
-        border: "1px solid rgba(20, 35, 60, 0.08)",
-        borderRadius: 18,
-        boxShadow: "0 24px 70px rgba(15, 23, 42, 0.18)",
-        zIndex: 1000,
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
+      initial={{opacity: 0, scale: 0.96, y: 8}}
+      animate={{opacity: 1, scale: 1, y: 0}}
+      transition={{duration: 0.13}}
+      className="fixed left-1/2 top-1/2 z-[1000] flex w-[920px] max-w-[92vw] max-h-[86vh] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-border bg-bg shadow-lg"
     >
-      <div
-        style={{
-          padding: "24px 28px 18px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 16,
-        }}
-      >
+      <div className="flex items-start justify-between gap-4 px-7 pb-[18px] pt-6">
         <div>
-          <div style={{fontSize: 18, fontWeight: 650, color: "#172033"}}>选择排版主题</div>
-          <div style={{marginTop: 6, fontSize: 13, color: "#7b8496"}}>预览主题效果，选择后会立即应用到右侧预览区。</div>
+          <div className="text-lg font-semibold text-text">选择排版主题</div>
+          <div className="mt-1.5 text-[13px] text-text-secondary">预览主题效果，选择后会立即应用到右侧预览区。</div>
         </div>
         <button
           onClick={onClose}
-          style={{
-            width: 32,
-            height: 32,
-            border: "1px solid #e6e9ef",
-            borderRadius: 999,
-            background: "#fff",
-            fontSize: 20,
-            color: "#8b93a3",
-            cursor: "pointer",
-            lineHeight: "28px",
-            flex: "0 0 auto",
-          }}
+          className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-full border border-border bg-bg text-text-muted cursor-pointer transition-colors duration-fast hover:bg-bg-tertiary hover:text-text"
           aria-label="关闭"
         >
-          ×
+          <X size={16} />
         </button>
       </div>
 
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          display: "grid",
-          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-          gap: 18,
-          padding: "4px 28px 22px",
-        }}
-      >
+      <div className="grid flex-1 grid-cols-4 gap-[18px] overflow-y-auto px-7 pb-[22px] pt-1">
         {pageThemes.map((t) => {
           const active = t.id === markdownThemeId;
           return (
             <div
               key={t.id}
-              style={{
-                border: "1px solid " + (active ? "#2f7dd3" : "#e8ebf1"),
-                borderRadius: 14,
-                padding: 12,
-                background: "#fff",
-                boxShadow: active ? "0 0 0 3px rgba(30, 107, 184, 0.12)" : "0 10px 24px rgba(15, 23, 42, 0.04)",
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-                minWidth: 0,
-              }}
+              className={[
+                "flex min-w-0 flex-col gap-2.5 rounded-md border bg-bg p-3 shadow-sm transition-colors duration-fast",
+                active ? "border-accent ring-2 ring-[color:var(--accent)]" : "border-border",
+              ].join(" ")}
             >
               <ThemeThumbnail themeId={t.id} css={t.css} />
               <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, minWidth: 0}}>
                 <span
                   title={t.name}
-                  style={{
-                    minWidth: 0,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    fontSize: 13,
-                    fontWeight: 550,
-                    color: "#273142",
-                  }}
+                  className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text"
                 >
                   {t.name}
                 </span>
                 <button
                   onClick={() => pick(t.id)}
-                  style={{
-                    height: 28,
-                    minWidth: 52,
-                    padding: "0 14px",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    border: "1px solid #1e6bb8",
-                    borderRadius: 999,
-                    background: active ? "#1e6bb8" : "#f7fbff",
-                    color: active ? "#fff" : "#1e6bb8",
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                    flex: "0 0 auto",
-                  }}
+                  className={[
+                    "h-7 min-w-[52px] flex-none whitespace-nowrap rounded-full border border-accent px-3.5 text-xs font-semibold cursor-pointer transition-colors duration-fast",
+                    active ? "bg-accent text-white" : "bg-accent-subtle text-accent hover:bg-accent hover:text-white",
+                  ].join(" ")}
                 >
                   {active ? "已用" : "使用"}
                 </button>
@@ -196,30 +132,14 @@ export default function ThemePickerDialog({onClose}: Props) {
         })}
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          padding: "16px 28px 22px",
-          borderTop: "1px solid #edf0f5",
-          background: "#fff",
-        }}
-      >
+      <div className="flex items-center justify-between gap-3 border-t border-border bg-bg px-7 pb-[22px] pt-4">
         <div style={{display: "flex", alignItems: "center", gap: 8}}>
-          <button
-            onClick={openFolder}
-            style={secondaryBtn()}
-          >
-            ＋ 打开主题文件夹
+          <button onClick={openFolder} className={secondaryBtnClass}>
+            <Plus size={14} /> 打开主题文件夹
           </button>
 
-          <button
-            onClick={importTheme}
-            style={secondaryBtn()}
-          >
-            ↑ 导入 mdnice 主题
+          <button onClick={importTheme} className={secondaryBtnClass}>
+            <Upload size={14} /> 导入 mdnice 主题
           </button>
         </div>
 
@@ -228,7 +148,7 @@ export default function ThemePickerDialog({onClose}: Props) {
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={safePage === 0}
-              style={pageBtn(safePage === 0)}
+              className={pageBtnClass(safePage === 0)}
             >
               ‹
             </button>
@@ -236,12 +156,10 @@ export default function ThemePickerDialog({onClose}: Props) {
               <button
                 key={idx}
                 onClick={() => setPage(idx)}
-                style={{
-                  ...pageBtn(false),
-                  background: idx === safePage ? "#1e6bb8" : "#fff",
-                  borderColor: idx === safePage ? "#1e6bb8" : "#dfe3ea",
-                  color: idx === safePage ? "#fff" : "#334155",
-                }}
+                className={[
+                  pageBtnClass(false),
+                  idx === safePage ? "border-accent bg-accent text-white" : "",
+                ].join(" ")}
               >
                 {idx + 1}
               </button>
@@ -249,42 +167,23 @@ export default function ThemePickerDialog({onClose}: Props) {
             <button
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={safePage === totalPages - 1}
-              style={pageBtn(safePage === totalPages - 1)}
+              className={pageBtnClass(safePage === totalPages - 1)}
             >
               ›
             </button>
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
-function secondaryBtn(): React.CSSProperties {
-  return {
-    height: 32,
-    padding: "0 14px",
-    fontSize: 12,
-    fontWeight: 550,
-    border: "1px solid #dfe3ea",
-    borderRadius: 999,
-    background: "#fff",
-    color: "#1e6bb8",
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  };
-}
+const secondaryBtnClass =
+  "inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-full border border-border bg-bg px-3.5 text-xs font-medium text-accent cursor-pointer transition-colors duration-fast hover:bg-bg-tertiary";
 
-function pageBtn(disabled: boolean): React.CSSProperties {
-  return {
-    minWidth: 30,
-    height: 30,
-    border: "1px solid #dfe3ea",
-    borderRadius: 999,
-    background: "#fff",
-    color: "#334155",
-    cursor: disabled ? "default" : "pointer",
-    opacity: disabled ? 0.38 : 1,
-    fontSize: 13,
-  };
+function pageBtnClass(disabled: boolean): string {
+  return [
+    "inline-flex min-w-[30px] h-[30px] items-center justify-center rounded-full border border-border bg-bg text-[13px] text-text-secondary transition-colors duration-fast",
+    disabled ? "opacity-[0.38] cursor-default" : "cursor-pointer hover:border-accent",
+  ].join(" ");
 }

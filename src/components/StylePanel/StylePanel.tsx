@@ -1,3 +1,5 @@
+import {motion} from "framer-motion";
+import {X} from "lucide-react";
 import {useStore, getThemeById} from "../../store/index.ts";
 import type {StyleItem} from "../../themes/themeModel.ts";
 import {StyleControl} from "./controls.tsx";
@@ -15,42 +17,37 @@ export default function StylePanel() {
     if (item.children && item.children.length > 0) {
       return (
         <div key={item.id} style={{marginBottom: 12}}>
-          <div style={{fontSize: 12, color: "#999", marginBottom: 4}}>{item.id}</div>
+          <div className="mb-1 text-xs text-text-muted">{item.id}</div>
           {item.children.map((c) => renderItem(c, [...path, c.id]))}
         </div>
       );
     }
     return (
       <div key={item.id} style={{marginBottom: 10}}>
-        <div style={{fontSize: 12, color: "#666", marginBottom: 4}}>{item.id}</div>
+        <div className="mb-1 text-xs text-text-secondary">{item.id}</div>
         <StyleControl item={item} onChange={(value) => updateStyleValue(selectedModelId!, path, value)} />
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        width: 280,
-        flexShrink: 0,
-        borderLeft: "1px solid #e8e8e8",
-        background: "#fafafa",
-        padding: 16,
-        overflowY: "auto",
-        height: "100%",
-      }}
+    <motion.div
+      className="flex h-full w-[280px] flex-shrink-0 flex-col overflow-y-auto border-l border-border bg-bg-tertiary p-4"
+      initial={{x: 20, opacity: 0}}
+      animate={{x: 0, opacity: 1}}
+      transition={{duration: 0.16, ease: [0.16, 1, 0.3, 1]}}
     >
       <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12}}>
-        <strong style={{fontSize: 14, color: "#333"}}>{model.label || model.id}</strong>
+        <strong className="text-sm text-text">{model.label || model.id}</strong>
         <button
           onClick={() => setSelectedModel(null)}
-          style={{border: "none", background: "transparent", fontSize: 18, color: "#999", cursor: "pointer"}}
+          className="inline-flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast hover:bg-bg-tertiary hover:text-text"
           aria-label="关闭面板"
         >
-          ×
+          <X size={16} />
         </button>
       </div>
       {model.styles.map((s) => renderItem(s, [s.id]))}
-    </div>
+    </motion.div>
   );
 }
