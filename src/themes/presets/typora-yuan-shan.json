@@ -1,0 +1,1674 @@
+{
+  "name": "Typora Yuan Shan 远山",
+  "source": "Mapped from D:/Backup/Downloads/主题/Typro-theme-YuanShan-master/assets/yuan-shan.css",
+  "model": [
+    {
+      "id": "global",
+      "label": "全局",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "16px",
+          "keys": [
+            {
+              "selector": "#nice",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#547689",
+          "keys": [
+            {
+              "selector": "#nice",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.6",
+          "keys": [
+            {
+              "selector": "#nice",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontFamily",
+          "value": "Georgia, \"Times New Roman\", \"Songti SC\", SimSun, \"Noto Serif CJK SC\", serif",
+          "keys": [
+            {
+              "selector": "#nice",
+              "key": "font-family",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0 10px",
+          "keys": [
+            {
+              "selector": "#nice",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "p",
+      "label": "段落",
+      "styles": [
+        {
+          "id": "margin",
+          "value": "0.8em 0",
+          "keys": [
+            {
+              "selector": "#nice p",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontSize",
+          "value": "16px",
+          "keys": [
+            {
+              "selector": "#nice p",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.8",
+          "keys": [
+            {
+              "selector": "#nice p",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "h1",
+      "label": "一级标题",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "2.4em",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#206864",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.2",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontWeight",
+          "value": "bold",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "textAlign",
+          "value": "center",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "text-align",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderBottom",
+          "value": "1px solid #eee",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "border-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginTop",
+          "value": "1rem",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "margin-top",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginBottom",
+          "value": "1rem",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "margin-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "24px 0 14px",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "h2",
+      "label": "二级标题",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "1.75em",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#1c8d6c",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.225",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontWeight",
+          "value": "bold",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderBottom",
+          "value": "1px solid #eee",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "border-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginTop",
+          "value": "1rem",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "margin-top",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginBottom",
+          "value": "1rem",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "margin-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "24px 0 14px",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "h3",
+      "label": "三级标题",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "1.5em",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#3d8e86",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.43",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontWeight",
+          "value": "bold",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginTop",
+          "value": "1rem",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "margin-top",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginBottom",
+          "value": "1rem",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "margin-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "24px 0 14px",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "h4",
+      "label": "四级标题",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "1.25em",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#5da39d",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.4",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontWeight",
+          "value": "bold",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginTop",
+          "value": "1rem",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "margin-top",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginBottom",
+          "value": "1rem",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "margin-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "24px 0 14px",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "h5",
+      "label": "五级标题",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "1em",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#88bfb8",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.4",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontWeight",
+          "value": "bold",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginTop",
+          "value": "1rem",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "margin-top",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginBottom",
+          "value": "1rem",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "margin-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "24px 0 14px",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "h6",
+      "label": "六级标题",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "1em",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#87c0ca",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.4",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontWeight",
+          "value": "bold",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginTop",
+          "value": "1rem",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "margin-top",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginBottom",
+          "value": "1rem",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "margin-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "24px 0 14px",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "blockquote",
+      "label": "引用",
+      "styles": [
+        {
+          "id": "fontColor",
+          "value": "#94a9b8",
+          "keys": [
+            {
+              "selector": "#nice blockquote",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderLeft",
+          "value": "4px solid #c6d7db",
+          "keys": [
+            {
+              "selector": "#nice blockquote",
+              "key": "border-left",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "0.8em 0",
+          "keys": [
+            {
+              "selector": "#nice blockquote",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0 15px",
+          "keys": [
+            {
+              "selector": "#nice blockquote",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "paddingRight",
+          "value": "15px",
+          "keys": [
+            {
+              "selector": "#nice blockquote",
+              "key": "padding-right",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "backgroundColor",
+          "value": "transparent",
+          "keys": [
+            {
+              "selector": "#nice blockquote",
+              "key": "background-color",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "a",
+      "label": "链接",
+      "styles": [
+        {
+          "id": "fontColor",
+          "value": "#5aa4ae",
+          "keys": [
+            {
+              "selector": "#nice a",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "mark",
+      "label": "高亮",
+      "styles": [
+        {
+          "id": "fontColor",
+          "value": "#547689",
+          "keys": [
+            {
+              "selector": "#nice mark",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "background",
+          "value": "#c6e6e8",
+          "keys": [
+            {
+              "selector": "#nice mark",
+              "key": "background",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "ul",
+      "label": "无序列表",
+      "styles": [
+        {
+          "id": "margin",
+          "value": "0.8em 0",
+          "keys": [
+            {
+              "selector": "#nice ul",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginTop",
+          "value": "0.8em",
+          "keys": [
+            {
+              "selector": "#nice ul",
+              "key": "margin-top",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginBottom",
+          "value": "0.8em",
+          "keys": [
+            {
+              "selector": "#nice ul",
+              "key": "margin-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "paddingLeft",
+          "value": "30px",
+          "keys": [
+            {
+              "selector": "#nice ul",
+              "key": "padding-left",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.8",
+          "keys": [
+            {
+              "selector": "#nice ul",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "ol",
+      "label": "有序列表",
+      "styles": [
+        {
+          "id": "margin",
+          "value": "0.8em 0",
+          "keys": [
+            {
+              "selector": "#nice ol",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginTop",
+          "value": "0.8em",
+          "keys": [
+            {
+              "selector": "#nice ol",
+              "key": "margin-top",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginBottom",
+          "value": "0.8em",
+          "keys": [
+            {
+              "selector": "#nice ol",
+              "key": "margin-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "paddingLeft",
+          "value": "30px",
+          "keys": [
+            {
+              "selector": "#nice ol",
+              "key": "padding-left",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.8",
+          "keys": [
+            {
+              "selector": "#nice ol",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "image",
+      "label": "图片",
+      "styles": [
+        {
+          "id": "display",
+          "value": "block",
+          "keys": [
+            {
+              "selector": "#nice img",
+              "key": "display",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "maxWidth",
+          "value": "100%",
+          "keys": [
+            {
+              "selector": "#nice img",
+              "key": "max-width",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "16px auto",
+          "keys": [
+            {
+              "selector": "#nice img",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "table",
+      "label": "表格",
+      "styles": [
+        {
+          "id": "wordBreak",
+          "value": "initial",
+          "keys": [
+            {
+              "selector": "#nice table",
+              "key": "word-break",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "0.8em 0",
+          "keys": [
+            {
+              "selector": "#nice table",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice table",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "width",
+          "value": "100%",
+          "keys": [
+            {
+              "selector": "#nice table",
+              "key": "width",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderCollapse",
+          "value": "collapse",
+          "keys": [
+            {
+              "selector": "#nice table",
+              "key": "border-collapse",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "tableHead",
+      "label": "表头",
+      "styles": [
+        {
+          "id": "fontWeight",
+          "value": "bold",
+          "keys": [
+            {
+              "selector": "#nice th",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "backgroundColor",
+          "value": "#f8f8f8",
+          "keys": [
+            {
+              "selector": "#nice thead",
+              "key": "background-color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "border",
+          "value": "1px solid #dfe2e5",
+          "keys": [
+            {
+              "selector": "#nice th",
+              "key": "border",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderBottom",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice th",
+              "key": "border-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice th",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginTop",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice th",
+              "key": "margin-top",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginBottom",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice th",
+              "key": "margin-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "6px 13px",
+          "keys": [
+            {
+              "selector": "#nice th",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "tableBody",
+      "label": "单元格",
+      "styles": [
+        {
+          "id": "border",
+          "value": "1px solid #dfe2e5",
+          "keys": [
+            {
+              "selector": "#nice td",
+              "key": "border",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice td",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginTop",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice td",
+              "key": "margin-top",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginBottom",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice td",
+              "key": "margin-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "6px 13px",
+          "keys": [
+            {
+              "selector": "#nice td",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "blockCode",
+      "label": "代码块",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "0.9em",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "backgroundColor",
+          "value": "#f8f8f8",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "background-color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "border",
+          "value": "1px solid #e7eaed",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "border",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderRadius",
+          "value": "3px",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "border-radius",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginTop",
+          "value": "15px",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "margin-top",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginBottom",
+          "value": "15px",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "margin-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "2px 4px 0px 4px",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "paddingTop",
+          "value": "8px",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "padding-top",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "paddingBottom",
+          "value": "6px",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "padding-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontFamily",
+          "value": "Menlo, Monaco, Consolas, \"Courier New\", monospace",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "font-family",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.6",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "16px 0",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "inlineCode",
+      "label": "行内代码",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "0.9em",
+          "keys": [
+            {
+              "selector": "#nice p code",
+              "key": "font-size",
+              "format": null
+            },
+            {
+              "selector": "#nice li code",
+              "key": "font-size",
+              "format": null
+            },
+            {
+              "selector": "#nice td code",
+              "key": "font-size",
+              "format": null
+            },
+            {
+              "selector": "#nice blockquote code",
+              "key": "font-size",
+              "format": null
+            },
+            {
+              "selector": "#nice code",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#108b96",
+          "keys": [
+            {
+              "selector": "#nice p code",
+              "key": "color",
+              "format": null
+            },
+            {
+              "selector": "#nice li code",
+              "key": "color",
+              "format": null
+            },
+            {
+              "selector": "#nice td code",
+              "key": "color",
+              "format": null
+            },
+            {
+              "selector": "#nice blockquote code",
+              "key": "color",
+              "format": null
+            },
+            {
+              "selector": "#nice code",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "backgroundColor",
+          "value": "#f3f4f4",
+          "keys": [
+            {
+              "selector": "#nice p code",
+              "key": "background-color",
+              "format": null
+            },
+            {
+              "selector": "#nice li code",
+              "key": "background-color",
+              "format": null
+            },
+            {
+              "selector": "#nice td code",
+              "key": "background-color",
+              "format": null
+            },
+            {
+              "selector": "#nice blockquote code",
+              "key": "background-color",
+              "format": null
+            },
+            {
+              "selector": "#nice code",
+              "key": "background-color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "border",
+          "value": "1px solid #e7eaed",
+          "keys": [
+            {
+              "selector": "#nice p code",
+              "key": "border",
+              "format": null
+            },
+            {
+              "selector": "#nice li code",
+              "key": "border",
+              "format": null
+            },
+            {
+              "selector": "#nice td code",
+              "key": "border",
+              "format": null
+            },
+            {
+              "selector": "#nice blockquote code",
+              "key": "border",
+              "format": null
+            },
+            {
+              "selector": "#nice code",
+              "key": "border",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderRadius",
+          "value": "3px",
+          "keys": [
+            {
+              "selector": "#nice p code",
+              "key": "border-radius",
+              "format": null
+            },
+            {
+              "selector": "#nice li code",
+              "key": "border-radius",
+              "format": null
+            },
+            {
+              "selector": "#nice td code",
+              "key": "border-radius",
+              "format": null
+            },
+            {
+              "selector": "#nice blockquote code",
+              "key": "border-radius",
+              "format": null
+            },
+            {
+              "selector": "#nice code",
+              "key": "border-radius",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0 2px 0 2px",
+          "keys": [
+            {
+              "selector": "#nice p code",
+              "key": "padding",
+              "format": null
+            },
+            {
+              "selector": "#nice li code",
+              "key": "padding",
+              "format": null
+            },
+            {
+              "selector": "#nice td code",
+              "key": "padding",
+              "format": null
+            },
+            {
+              "selector": "#nice blockquote code",
+              "key": "padding",
+              "format": null
+            },
+            {
+              "selector": "#nice code",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "hr",
+      "label": "分隔线",
+      "styles": [
+        {
+          "id": "backgroundColor",
+          "value": "#e7e7e7",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "background-color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "border",
+          "value": "0 none",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "border",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "height",
+          "value": "2px",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "overflow",
+          "value": "hidden",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "overflow",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "boxSizing",
+          "value": "content-box",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "box-sizing",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "16px 0",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderTop",
+          "value": "1px solid #dddddd",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "border-top",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    }
+  ]
+}

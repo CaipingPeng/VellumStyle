@@ -1,0 +1,1876 @@
+{
+  "name": "Morandi Garden",
+  "source": "Mapped from D:/Backup/Downloads/主题/MorandiGarden/morandigarden.css",
+  "model": [
+    {
+      "id": "global",
+      "label": "全局",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "16px",
+          "keys": [
+            {
+              "selector": "#nice",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#403C3C",
+          "keys": [
+            {
+              "selector": "#nice",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.8",
+          "keys": [
+            {
+              "selector": "#nice",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontFamily",
+          "value": "\"Alibaba PuHuiTi\", \"PingFang SC\", \"Microsoft YaHei\", -apple-system, BlinkMacSystemFont, sans-serif",
+          "keys": [
+            {
+              "selector": "#nice",
+              "key": "font-family",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "backgroundColor",
+          "value": "#FBFDFB",
+          "keys": [
+            {
+              "selector": "#nice",
+              "key": "background-color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "p",
+      "label": "段落",
+      "styles": [
+        {
+          "id": "lineHeight",
+          "value": "1.7",
+          "keys": [
+            {
+              "selector": "#nice p",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "0.5rem 0",
+          "keys": [
+            {
+              "selector": "#nice p",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontSize",
+          "value": "16px",
+          "keys": [
+            {
+              "selector": "#nice p",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "h1",
+      "label": "一级标题",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "2.2rem",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#7A5F52",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.4",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontWeight",
+          "value": "700",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "letterSpacing",
+          "value": "2px",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "letter-spacing",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "border",
+          "value": "none",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "border",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderBottom",
+          "value": "2px solid #DDE6DF",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "border-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "1.8rem 0 1rem",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "paddingBottom",
+          "value": "0.6rem",
+          "keys": [
+            {
+              "selector": "#nice h1",
+              "key": "padding-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "h2",
+      "label": "二级标题",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "1.8rem",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#506956",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.4",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontWeight",
+          "value": "800",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "letterSpacing",
+          "value": "2px",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "letter-spacing",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "border",
+          "value": "none",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "border",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderLeft",
+          "value": "4px solid #506956",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "border-left",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "1.8rem 0 1rem",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "paddingLeft",
+          "value": "0.8rem",
+          "keys": [
+            {
+              "selector": "#nice h2",
+              "key": "padding-left",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "h3",
+      "label": "三级标题",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "1.5rem",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#7A6F89",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.4",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontWeight",
+          "value": "700",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "letterSpacing",
+          "value": "2px",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "letter-spacing",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "border",
+          "value": "none",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "border",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "1.8rem 0 1rem",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "paddingLeft",
+          "value": "0.4rem",
+          "keys": [
+            {
+              "selector": "#nice h3",
+              "key": "padding-left",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "h4",
+      "label": "四级标题",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "1.3rem",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#6F7F88",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.4",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontWeight",
+          "value": "700",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "letterSpacing",
+          "value": "2px",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "letter-spacing",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "border",
+          "value": "none",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "border",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "1.8rem 0 1rem",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice h4",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "h5",
+      "label": "五级标题",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "1.1rem",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#8A7A6F",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.4",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontWeight",
+          "value": "700",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontStyle",
+          "value": "italic",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "font-style",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "letterSpacing",
+          "value": "2px",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "letter-spacing",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "border",
+          "value": "none",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "border",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "1.8rem 0 1rem",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice h5",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "h6",
+      "label": "六级标题",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "1rem",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#7D7A71",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.4",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontWeight",
+          "value": "400",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "letterSpacing",
+          "value": "2px",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "letter-spacing",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "border",
+          "value": "none",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "border",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "1.8rem 0 1rem",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice h6",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "blockquote",
+      "label": "引用",
+      "styles": [
+        {
+          "id": "fontStyle",
+          "value": "normal",
+          "keys": [
+            {
+              "selector": "#nice blockquote",
+              "key": "font-style",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "background",
+          "value": "#EEF4EF",
+          "keys": [
+            {
+              "selector": "#nice blockquote",
+              "key": "background",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderLeft",
+          "value": "4px solid #7A5F52",
+          "keys": [
+            {
+              "selector": "#nice blockquote",
+              "key": "border-left",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderRadius",
+          "value": "0 10px 10px 0",
+          "keys": [
+            {
+              "selector": "#nice blockquote",
+              "key": "border-radius",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "1.5rem 0",
+          "keys": [
+            {
+              "selector": "#nice blockquote",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "1rem 1.2rem",
+          "keys": [
+            {
+              "selector": "#nice blockquote",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#666666",
+          "keys": [
+            {
+              "selector": "#nice blockquote",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "backgroundColor",
+          "value": "#EEF4EF",
+          "keys": [
+            {
+              "selector": "#nice blockquote",
+              "key": "background-color",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "a",
+      "label": "链接",
+      "styles": [
+        {
+          "id": "fontSize",
+          "value": "16px",
+          "keys": [
+            {
+              "selector": "#nice a",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#DE7487",
+          "keys": [
+            {
+              "selector": "#nice a",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontWeight",
+          "value": "600",
+          "keys": [
+            {
+              "selector": "#nice a",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "textDecoration",
+          "value": "none",
+          "keys": [
+            {
+              "selector": "#nice a",
+              "key": "text-decoration",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderBottom",
+          "value": "1px solid #DE7487",
+          "keys": [
+            {
+              "selector": "#nice a",
+              "key": "border-bottom",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "paddingLeft",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice a",
+              "key": "padding-left",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "ul",
+      "label": "无序列表",
+      "styles": [
+        {
+          "id": "listStyleType",
+          "value": "disc",
+          "keys": [
+            {
+              "selector": "#nice ul",
+              "key": "list-style-type",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "1rem 0 1rem 1.6rem",
+          "keys": [
+            {
+              "selector": "#nice ul",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginLeft",
+          "value": "1.2rem",
+          "keys": [
+            {
+              "selector": "#nice ul",
+              "key": "margin-left",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice ul",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "paddingLeft",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice ul",
+              "key": "padding-left",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.8",
+          "keys": [
+            {
+              "selector": "#nice ul",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "ol",
+      "label": "有序列表",
+      "styles": [
+        {
+          "id": "listStyleType",
+          "value": "decimal",
+          "keys": [
+            {
+              "selector": "#nice ol",
+              "key": "list-style-type",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "1rem 0 1rem 1.6rem",
+          "keys": [
+            {
+              "selector": "#nice ol",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "marginLeft",
+          "value": "1.2rem",
+          "keys": [
+            {
+              "selector": "#nice ol",
+              "key": "margin-left",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "paddingLeft",
+          "value": "0",
+          "keys": [
+            {
+              "selector": "#nice ol",
+              "key": "padding-left",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.8",
+          "keys": [
+            {
+              "selector": "#nice ol",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "li",
+      "label": "列表项",
+      "styles": [
+        {
+          "id": "lineHeight",
+          "value": "1.8",
+          "keys": [
+            {
+              "selector": "#nice li",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "listStyle",
+          "value": "inherit",
+          "keys": [
+            {
+              "selector": "#nice li",
+              "key": "list-style",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "6px 0",
+          "keys": [
+            {
+              "selector": "#nice li",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "image",
+      "label": "图片",
+      "styles": [
+        {
+          "id": "display",
+          "value": "block",
+          "keys": [
+            {
+              "selector": "#nice img",
+              "key": "display",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "maxWidth",
+          "value": "100%",
+          "keys": [
+            {
+              "selector": "#nice img",
+              "key": "max-width",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "16px auto",
+          "keys": [
+            {
+              "selector": "#nice img",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "table",
+      "label": "表格",
+      "styles": [
+        {
+          "id": "width",
+          "value": "100%",
+          "keys": [
+            {
+              "selector": "#nice table",
+              "key": "width",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderCollapse",
+          "value": "collapse",
+          "keys": [
+            {
+              "selector": "#nice table",
+              "key": "border-collapse",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "overflow",
+          "value": "hidden",
+          "keys": [
+            {
+              "selector": "#nice table",
+              "key": "overflow",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "2rem 0",
+          "keys": [
+            {
+              "selector": "#nice table",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "tableHead",
+      "label": "表头",
+      "styles": [
+        {
+          "id": "fontColor",
+          "value": "#506956",
+          "keys": [
+            {
+              "selector": "#nice th",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontWeight",
+          "value": "700",
+          "keys": [
+            {
+              "selector": "#nice th",
+              "key": "font-weight",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "background",
+          "value": "#EAF0EB",
+          "keys": [
+            {
+              "selector": "#nice th",
+              "key": "background",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "border",
+          "value": "1px solid #7ea388",
+          "keys": [
+            {
+              "selector": "#nice th",
+              "key": "border",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0.9rem 1rem",
+          "keys": [
+            {
+              "selector": "#nice th",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "tableBody",
+      "label": "单元格",
+      "styles": [
+        {
+          "id": "fontColor",
+          "value": "#403C3C",
+          "keys": [
+            {
+              "selector": "#nice td",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "border",
+          "value": "1px solid #7ea388",
+          "keys": [
+            {
+              "selector": "#nice td",
+              "key": "border",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "0.8rem 1rem",
+          "keys": [
+            {
+              "selector": "#nice td",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "blockCode",
+      "label": "代码块",
+      "styles": [
+        {
+          "id": "fontFamily",
+          "value": "Menlo, Monaco, Consolas, \"Courier New\", monospace",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "font-family",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#403C3C",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontSize",
+          "value": "13px",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "font-size",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "lineHeight",
+          "value": "1.8rem",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "line-height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "backgroundColor",
+          "value": "#F0F5F3",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "background-color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "12px",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderRadius",
+          "value": "6px",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "border-radius",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "16px 0",
+          "keys": [
+            {
+              "selector": "#nice pre.custom",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "codeHeader",
+      "label": "代码块标题条",
+      "styles": [
+        {
+          "id": "display",
+          "value": "block",
+          "keys": [
+            {
+              "selector": "#nice pre.custom::before",
+              "key": "display",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontColor",
+          "value": "#98948C",
+          "keys": [
+            {
+              "selector": "#nice pre.custom::before",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontFamily",
+          "value": "Menlo, Monaco, Consolas, \"Courier New\", monospace",
+          "keys": [
+            {
+              "selector": "#nice pre.custom::before",
+              "key": "font-family",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "textAlign",
+          "value": "center",
+          "keys": [
+            {
+              "selector": "#nice pre.custom::before",
+              "key": "text-align",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "background",
+          "value": "#F0F5F3",
+          "keys": [
+            {
+              "selector": "#nice pre.custom::before",
+              "key": "background",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderRadius",
+          "value": "20px",
+          "keys": [
+            {
+              "selector": "#nice pre.custom::before",
+              "key": "border-radius",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "width",
+          "value": "100%",
+          "keys": [
+            {
+              "selector": "#nice pre.custom::before",
+              "key": "width",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "height",
+          "value": "30px",
+          "keys": [
+            {
+              "selector": "#nice pre.custom::before",
+              "key": "height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "paddingRight",
+          "value": "15px",
+          "keys": [
+            {
+              "selector": "#nice pre.custom::before",
+              "key": "padding-right",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "content",
+          "value": "\"\"",
+          "keys": [
+            {
+              "selector": "#nice pre.custom::before",
+              "key": "content",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "inlineCode",
+      "label": "行内代码",
+      "styles": [
+        {
+          "id": "fontColor",
+          "value": "#7A6F89",
+          "keys": [
+            {
+              "selector": "#nice p code",
+              "key": "color",
+              "format": null
+            },
+            {
+              "selector": "#nice li code",
+              "key": "color",
+              "format": null
+            },
+            {
+              "selector": "#nice td code",
+              "key": "color",
+              "format": null
+            },
+            {
+              "selector": "#nice blockquote code",
+              "key": "color",
+              "format": null
+            },
+            {
+              "selector": "#nice code",
+              "key": "color",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "fontFamily",
+          "value": "Menlo, Monaco, Consolas, \"Courier New\", monospace",
+          "keys": [
+            {
+              "selector": "#nice p code",
+              "key": "font-family",
+              "format": null
+            },
+            {
+              "selector": "#nice li code",
+              "key": "font-family",
+              "format": null
+            },
+            {
+              "selector": "#nice td code",
+              "key": "font-family",
+              "format": null
+            },
+            {
+              "selector": "#nice blockquote code",
+              "key": "font-family",
+              "format": null
+            },
+            {
+              "selector": "#nice code",
+              "key": "font-family",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "letterSpacing",
+          "value": "0.5px",
+          "keys": [
+            {
+              "selector": "#nice p code",
+              "key": "letter-spacing",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "background",
+          "value": "#F0F5F3",
+          "keys": [
+            {
+              "selector": "#nice p code",
+              "key": "background",
+              "format": null
+            },
+            {
+              "selector": "#nice li code",
+              "key": "background",
+              "format": null
+            },
+            {
+              "selector": "#nice td code",
+              "key": "background",
+              "format": null
+            },
+            {
+              "selector": "#nice blockquote code",
+              "key": "background",
+              "format": null
+            },
+            {
+              "selector": "#nice code",
+              "key": "background",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderRadius",
+          "value": "5px",
+          "keys": [
+            {
+              "selector": "#nice p code",
+              "key": "border-radius",
+              "format": null
+            },
+            {
+              "selector": "#nice li code",
+              "key": "border-radius",
+              "format": null
+            },
+            {
+              "selector": "#nice td code",
+              "key": "border-radius",
+              "format": null
+            },
+            {
+              "selector": "#nice blockquote code",
+              "key": "border-radius",
+              "format": null
+            },
+            {
+              "selector": "#nice code",
+              "key": "border-radius",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "padding",
+          "value": "3px 3px 1px",
+          "keys": [
+            {
+              "selector": "#nice p code",
+              "key": "padding",
+              "format": null
+            },
+            {
+              "selector": "#nice li code",
+              "key": "padding",
+              "format": null
+            },
+            {
+              "selector": "#nice td code",
+              "key": "padding",
+              "format": null
+            },
+            {
+              "selector": "#nice blockquote code",
+              "key": "padding",
+              "format": null
+            },
+            {
+              "selector": "#nice code",
+              "key": "padding",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    },
+    {
+      "id": "hr",
+      "label": "分隔线",
+      "styles": [
+        {
+          "id": "background",
+          "value": "#ccd8cf",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "background",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "border",
+          "value": "none",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "border",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "height",
+          "value": "2px",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "height",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "opacity",
+          "value": "1",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "opacity",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "margin",
+          "value": "2.5rem 0",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "margin",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "borderTop",
+          "value": "1px solid #dddddd",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "border-top",
+              "format": null
+            }
+          ],
+          "children": null
+        }
+      ]
+    }
+  ]
+}
