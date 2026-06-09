@@ -109,7 +109,7 @@
         {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#nice h2", "key": "font-weight", "format": null}], "children": null},
         {"id": "lineHeight", "value": "1.5", "keys": [{"selector": "#nice h2", "key": "line-height", "format": null}], "children": null},
         {"id": "textAlign", "value": "left", "keys": [{"selector": "#nice h2", "key": "text-align", "format": null}], "children": null},
-        {"id": "borderBottom", "value": "3px solid #ff5d52", "keys": [{"selector": "#nice h2", "key": "border-bottom", "format": null}], "children": null},
+        {"id": "borderBottom", "value": "none", "keys": [{"selector": "#nice h2", "key": "border-bottom", "format": null}], "children": null},
         {"id": "margin", "value": "28px 0 16px", "keys": [{"selector": "#nice h2", "key": "margin", "format": null}], "children": null},
         {"id": "padding", "value": "8px 0 8px 0", "keys": [{"selector": "#nice h2", "key": "padding", "format": null}], "children": null}
       ]
