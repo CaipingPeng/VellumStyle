@@ -4,13 +4,19 @@ import {solveDraftHtml} from "../../markdown/converter.ts";
 import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
 import {findUnuploadedImages, uploadThumb, addDraft} from "../../utils/publish.ts";
 import {toast} from "../Toast/toast.ts";
+import Dialog from "../ui/Dialog.tsx";
+import Button from "../ui/Button.tsx";
 
 interface Props {
+  open: boolean;
   onClose: () => void;
   onNeedSettings: () => void;
 }
 
-export default function PublishDialog({onClose, onNeedSettings}: Props) {
+const inputClass =
+  "h-8 w-full rounded-sm border border-border px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]";
+
+export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const content = useStore((s) => s.content);
   const currentDocPath = useStore((s) => s.currentDocPath);
   const defaultTitle = currentDocPath
@@ -82,60 +88,42 @@ export default function PublishDialog({onClose, onNeedSettings}: Props) {
   };
 
   return (
-    <div style={overlay}>
-      <div style={panel}>
-        <h3 style={{margin: "0 0 16px", fontSize: 16}}>发布到公众号草稿箱</h3>
-
-        <label style={labelStyle}>标题</label>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} style={inputStyle} />
-
-        <label style={labelStyle}>封面图（必填）</label>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/jpeg,image/png,image/gif"
-          style={{display: "none"}}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void pickThumb(f);
-          }}
-        />
-        <div style={{display: "flex", alignItems: "center", gap: 12, marginBottom: 16}}>
-          <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} style={secondaryBtn}>
-            选择封面
-          </button>
-          {thumbPreview && <img src={thumbPreview} alt="封面" style={{height: 48, borderRadius: 4}} />}
-        </div>
-
-        <div style={{display: "flex", justifyContent: "flex-end", gap: 8}}>
-          <button type="button" onClick={onClose} style={secondaryBtn}>取消</button>
-          <button type="button" onClick={() => void publish()} disabled={busy} style={primaryBtn}>
+    <Dialog
+      open={open}
+      title="发布到公众号草稿箱"
+      onClose={onClose}
+      closeOnOverlay={false}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            取消
+          </Button>
+          <Button type="button" variant="primary" onClick={() => void publish()} disabled={busy}>
             {busy ? "处理中…" : "发布到草稿箱"}
-          </button>
-        </div>
+          </Button>
+        </>
+      }
+    >
+      <label className="mb-1 block text-[13px] text-text-secondary">标题</label>
+      <input value={title} onChange={(e) => setTitle(e.target.value)} className={`${inputClass} mb-4`} />
+
+      <label className="mb-1 block text-[13px] text-text-secondary">封面图（必填）</label>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/gif"
+        style={{display: "none"}}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void pickThumb(f);
+        }}
+      />
+      <div className="flex items-center gap-3">
+        <Button type="button" variant="secondary" onClick={() => fileRef.current?.click()} disabled={busy}>
+          选择封面
+        </Button>
+        {thumbPreview && <img src={thumbPreview} alt="封面" style={{height: 48, borderRadius: 4}} />}
       </div>
-    </div>
+    </Dialog>
   );
 }
-
-const overlay: React.CSSProperties = {
-  position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
-  display: "flex", alignItems: "center", justifyContent: "center", zIndex: 900,
-};
-const panel: React.CSSProperties = {
-  width: 420, background: "#fff", borderRadius: 8, padding: 24,
-  boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-};
-const labelStyle: React.CSSProperties = {display: "block", fontSize: 13, color: "#666", marginBottom: 4};
-const inputStyle: React.CSSProperties = {
-  width: "100%", height: 32, padding: "0 8px", marginBottom: 16,
-  border: "1px solid #d9d9d9", borderRadius: 4, boxSizing: "border-box", fontSize: 14,
-};
-const secondaryBtn: React.CSSProperties = {
-  height: 32, padding: "0 16px", border: "1px solid #d9d9d9",
-  borderRadius: 4, background: "#fff", cursor: "pointer", fontSize: 14,
-};
-const primaryBtn: React.CSSProperties = {
-  height: 32, padding: "0 16px", border: "none",
-  borderRadius: 4, background: "#07c160", color: "#fff", cursor: "pointer", fontSize: 14,
-};

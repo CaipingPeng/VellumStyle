@@ -11,7 +11,7 @@ export default function PublishButton({onNeedSettings}: Props) {
   return (
     <>
       <Button variant="secondary" onClick={() => setOpen(true)}>发布</Button>
-      {open && <PublishDialog onClose={() => setOpen(false)} onNeedSettings={onNeedSettings} />}
+      <PublishDialog open={open} onClose={() => setOpen(false)} onNeedSettings={onNeedSettings} />
     </>
   );
 }

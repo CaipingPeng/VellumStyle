@@ -82,20 +82,19 @@ export default function ImportButton() {
   return (
     <>
       <Button variant="secondary" onClick={() => setOpenDialog(true)}>导入</Button>
-      {openDialog && (
-        <ImportMarkdownDialog
-          markdownPath={markdownPath}
-          resourceRoot={resourceRoot}
-          progress={progress}
-          result={result}
-          error={error}
-          importing={importing}
-          onPickMarkdown={pickMarkdown}
-          onPickResourceRoot={pickResourceRoot}
-          onStart={startImport}
-          onClose={() => setOpenDialog(false)}
-        />
-      )}
+      <ImportMarkdownDialog
+        open={openDialog}
+        markdownPath={markdownPath}
+        resourceRoot={resourceRoot}
+        progress={progress}
+        result={result}
+        error={error}
+        importing={importing}
+        onPickMarkdown={pickMarkdown}
+        onPickResourceRoot={pickResourceRoot}
+        onStart={startImport}
+        onClose={() => setOpenDialog(false)}
+      />
     </>
   );
 }

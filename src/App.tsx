@@ -212,7 +212,7 @@ export default function App() {
         {currentDocPath && <span>文档 {currentDocPath.split("/").pop()}</span>}
       </footer>
 
-      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <Toaster />
     </div>
   );
