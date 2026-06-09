@@ -1,4 +1,5 @@
 import type {ReactNode} from "react";
+import {createPortal} from "react-dom";
 import {AnimatePresence, motion} from "framer-motion";
 import {X} from "lucide-react";
 
@@ -14,12 +15,12 @@ interface Props {
 }
 
 export default function Dialog({open, title, onClose, closeOnOverlay = true, width = 440, children, footer}: Props) {
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center"
-          style={{background: "rgba(20,20,30,0.4)", backdropFilter: "blur(2px)"}}
+          className="fixed inset-0 z-[2000] flex items-center justify-center"
+          style={{background: "rgba(20,20,30,0.4)"}}
           initial={{opacity: 0}}
           animate={{opacity: 1}}
           exit={{opacity: 0}}
@@ -51,6 +52,7 @@ export default function Dialog({open, title, onClose, closeOnOverlay = true, wid
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
