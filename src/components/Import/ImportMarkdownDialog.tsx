@@ -95,13 +95,13 @@ export default function ImportMarkdownDialog({
           <div style={statusStyle}>
             <div>{phaseText[progress.phase] || progress.phase}</div>
             {typeof progress.total === "number" && (
-              <div style={{color: "#888"}}>进度 {progress.completed || 0} / {progress.total}</div>
+              <div className="text-text-muted">进度 {progress.completed || 0} / {progress.total}</div>
             )}
             {progress.current && <div style={pathStyle}>{progress.current}</div>}
           </div>
         )}
 
-        {error && <div style={{...statusStyle, borderColor: "#ffccc7", background: "#fff2f0", color: "#a8071a"}}>{error}</div>}
+        {error && <div className="rounded-sm border border-danger/30 bg-danger/5 p-2.5 text-xs leading-relaxed text-danger">{error}</div>}
 
         {result && (
           <div style={statusStyle}>
@@ -124,8 +124,8 @@ function DetailList({title, items}: {title: string; items: Array<{originalUrl: s
       <ul style={{margin: "6px 0 0", paddingLeft: 18, maxHeight: 120, overflow: "auto"}}>
         {items.slice(0, 20).map((item, index) => (
           <li key={`${item.originalUrl}-${index}`} style={{lineHeight: 1.5}}>
-            <span style={{color: "#555"}}>{item.originalUrl}</span>
-            {item.reason && <span style={{color: "#999"}}> — {item.reason}</span>}
+            <span className="text-text-secondary">{item.originalUrl}</span>
+            {item.reason && <span className="text-text-muted"> — {item.reason}</span>}
           </li>
         ))}
       </ul>
@@ -134,17 +134,17 @@ function DetailList({title, items}: {title: string; items: Array<{originalUrl: s
 }
 
 const statusStyle: React.CSSProperties = {
-  border: "1px solid #d9ecff",
-  background: "#f5fbff",
+  border: "1px solid var(--border)",
+  background: "var(--bg-secondary)",
   borderRadius: 6,
   padding: 10,
   fontSize: 12,
-  color: "#333",
+  color: "var(--text)",
   lineHeight: 1.6,
 };
 
 const pathStyle: React.CSSProperties = {
-  color: "#999",
+  color: "var(--text-muted)",
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
