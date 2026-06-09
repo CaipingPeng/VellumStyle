@@ -2,8 +2,8 @@ import {useState} from "react";
 import {solveHtml} from "../../markdown/converter.ts";
 import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
 import {copyHtml} from "../../utils/clipboard.ts";
+import Button from "../ui/Button.tsx";
 
-// 复制到微信：生成内联 HTML 并写入剪贴板（text/html）。
 export default function CopyButton() {
   const [status, setStatus] = useState<"idle" | "copying" | "ok" | "fail">("idle");
 
@@ -29,20 +29,13 @@ export default function CopyButton() {
   const label = status === "ok" ? "✓ 已复制" : status === "fail" ? "复制失败" : status === "copying" ? "复制中…" : "复制到微信";
 
   return (
-    <button
+    <Button
+      variant="primary"
       onClick={handleCopy}
       disabled={status === "copying"}
-      style={{
-        padding: "6px 16px",
-        background: status === "ok" ? "#07c160" : "#1e6bb8",
-        color: "#fff",
-        border: "none",
-        borderRadius: 4,
-        cursor: "pointer",
-        fontSize: 14,
-      }}
+      className={status === "ok" ? "!bg-success hover:!bg-success" : ""}
     >
       {label}
-    </button>
+    </Button>
   );
 }

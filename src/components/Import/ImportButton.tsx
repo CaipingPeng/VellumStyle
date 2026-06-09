@@ -5,6 +5,7 @@ import {useStore} from "../../store/index.ts";
 import {createDocument, writeDocument, targetDirFor, treeHasPath} from "../../utils/documents.ts";
 import {importMarkdownFile, type ImportMarkdownProgress, type ImportMarkdownResult} from "../../utils/markdownImport.ts";
 import {toast} from "../Toast/toast.ts";
+import Button from "../ui/Button.tsx";
 
 // 从源文件绝对路径取文件名（去目录、去扩展名）。兼容 Windows 反斜杠。
 function docNameFromPath(p: string): string {
@@ -80,9 +81,7 @@ export default function ImportButton() {
 
   return (
     <>
-      <button type="button" onClick={() => setOpenDialog(true)} style={buttonStyle}>
-        导入
-      </button>
+      <Button variant="secondary" onClick={() => setOpenDialog(true)}>导入</Button>
       {openDialog && (
         <ImportMarkdownDialog
           markdownPath={markdownPath}
@@ -100,14 +99,3 @@ export default function ImportButton() {
     </>
   );
 }
-
-const buttonStyle: React.CSSProperties = {
-  height: 30,
-  padding: "0 12px",
-  fontSize: 13,
-  border: "1px solid #d9d9d9",
-  borderRadius: 4,
-  background: "#fff",
-  color: "#333",
-  cursor: "pointer",
-};
