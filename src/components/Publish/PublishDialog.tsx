@@ -146,7 +146,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       title="发布到公众号草稿箱"
       onClose={onClose}
       closeOnOverlay={false}
-      width="88vw"
+      width="min(86vw,1040px)"
       footer={
         <>
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -158,7 +158,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
         </>
       }
     >
-      <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]">
+      <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(300px,0.95fr)_minmax(0,1.05fr)]">
         <div className="flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-bg px-3 py-3">
           <div>
             <label htmlFor="publish-title" className="mb-2 block text-[13px] font-medium text-text">
@@ -238,7 +238,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
             <span className="text-xs text-text-muted">{coverCandidates.length} 张可选</span>
           </div>
           {coverCandidates.length > 0 ? (
-            <div className="grid max-h-[52vh] grid-cols-3 gap-2 overflow-y-auto pr-1 xl:grid-cols-4 2xl:grid-cols-5">
+            <div className="grid max-h-[52vh] grid-cols-2 gap-2 overflow-y-auto pr-1 xl:grid-cols-3">
               {coverCandidates.map((candidate, index) => {
                 const selected = selectedCandidateUrl === candidate.url;
                 return (
