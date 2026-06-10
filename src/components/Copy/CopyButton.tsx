@@ -1,4 +1,5 @@
 import {useState} from "react";
+import {Check, Copy} from "lucide-react";
 import {solveHtml} from "../../markdown/converter.ts";
 import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
 import {copyHtml} from "../../utils/clipboard.ts";
@@ -26,7 +27,8 @@ export default function CopyButton() {
     window.setTimeout(() => setStatus("idle"), 2000);
   };
 
-  const label = status === "ok" ? "✓ 已复制" : status === "fail" ? "复制失败" : status === "copying" ? "复制中…" : "复制到微信";
+  const label = status === "ok" ? "已复制" : status === "fail" ? "复制失败" : status === "copying" ? "复制中…" : "复制到微信";
+  const Icon = status === "ok" ? Check : Copy;
 
   return (
     <Button
@@ -35,6 +37,7 @@ export default function CopyButton() {
       disabled={status === "copying"}
       className={status === "ok" ? "!bg-success hover:!bg-success" : ""}
     >
+      <Icon size={14} />
       {label}
     </Button>
   );

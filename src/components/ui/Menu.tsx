@@ -8,9 +8,10 @@ interface Props {
   trigger: ReactNode;
   children: ReactNode;
   minWidth?: number;
+  align?: "start" | "end";
 }
 
-export default function Menu({open, onClose, trigger, children, minWidth = 120}: Props) {
+export default function Menu({open, onClose, trigger, children, minWidth = 120, align = "start"}: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -28,7 +29,10 @@ export default function Menu({open, onClose, trigger, children, minWidth = 120}:
       <AnimatePresence>
         {open && (
           <motion.div
-            className="absolute left-0 top-[34px] z-10 overflow-hidden rounded-sm border border-border bg-bg shadow-md"
+            className={[
+              "absolute top-[34px] z-10 overflow-hidden rounded-sm border border-border bg-bg shadow-md",
+              align === "end" ? "right-0" : "left-0",
+            ].join(" ")}
             style={{minWidth}}
             initial={{opacity: 0, scale: 0.96, y: -4}}
             animate={{opacity: 1, scale: 1, y: 0}}
@@ -53,7 +57,7 @@ export function MenuItem({onClick, children}: ItemProps) {
     <button
       type="button"
       onClick={onClick}
-      className="block w-full cursor-pointer border-0 bg-transparent px-3 py-1.5 text-left text-[13px] text-text transition-colors duration-fast hover:bg-bg-tertiary"
+      className="flex h-8 w-full cursor-pointer items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-[13px] text-text transition-colors duration-fast hover:bg-bg-tertiary"
     >
       {children}
     </button>

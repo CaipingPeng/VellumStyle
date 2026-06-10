@@ -191,8 +191,8 @@ export default function App() {
   return (
     <div style={{display: "flex", flexDirection: "column", height: "100%"}}>
       {/* Navbar */}
-      <header className="flex h-[52px] flex-shrink-0 items-center justify-between border-b border-border bg-bg/80 px-4 backdrop-blur">
-        <div className="flex items-center gap-3">
+      <header className="flex h-[52px] flex-shrink-0 items-center justify-between gap-3 border-b border-border bg-bg/80 px-4 backdrop-blur">
+        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
           <IconButton active={sidebarOpen} title="文档" onClick={toggleSidebar}>
             <PanelLeft size={16} />
           </IconButton>
@@ -209,7 +209,7 @@ export default function App() {
       {/* 主体：文档树 + 编辑器 + 预览 */}
       <main className="relative flex min-h-0 flex-1">
         {sidebarOpen && <DocTree />}
-        <div className="min-w-0 flex-1 overflow-hidden border-r border-border">
+        <div className="min-w-0 flex-1 overflow-hidden">
           <MarkdownEditor
             ref={editorRef}
             value={content}
@@ -217,6 +217,7 @@ export default function App() {
             onPasteImage={handleUploadFile}
           />
         </div>
+        <div className="w-px flex-none bg-border-strong" aria-hidden="true" />
         <div className="flex min-w-0 flex-1">
           <div className="min-w-0 flex-1">
             <Preview
@@ -230,12 +231,16 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="flex h-7 flex-shrink-0 items-center gap-4 border-t border-border bg-bg-secondary px-4 text-xs text-text-muted">
-        <span className="tabular-nums">行数 {lineCount}</span>
-        <span className="tabular-nums">字数 {charCount}</span>
-        <span>主题 {getThemeById(themes, markdownThemeId).name}</span>
-        {currentDocPath && <span>文档 {currentDocPath.split("/").pop()}</span>}
-        <span className={saveStatus === "error" ? "text-danger" : ""}>{formatSaveStatus(saveStatus, lastSavedAt)}</span>
+      <footer className="flex h-7 flex-shrink-0 items-center justify-between gap-4 border-t border-border bg-bg-secondary px-4 text-xs text-text-muted">
+        <div className="flex min-w-0 items-center gap-4">
+          {currentDocPath && <span className="min-w-0 max-w-[260px] truncate">文档 {currentDocPath.split("/").pop()}</span>}
+          <span className="tabular-nums">行数 {lineCount}</span>
+          <span className="tabular-nums">字数 {charCount}</span>
+        </div>
+        <div className="flex flex-none items-center gap-4">
+          <span>主题 {getThemeById(themes, markdownThemeId).name}</span>
+          <span className={saveStatus === "error" ? "text-danger" : ""}>{formatSaveStatus(saveStatus, lastSavedAt)}</span>
+        </div>
       </footer>
 
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
