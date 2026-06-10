@@ -1,17 +1,12 @@
 import {useEffect, useRef, useState} from "react";
 import MarkdownEditor, {type MarkdownEditorHandle} from "./components/Editor/MarkdownEditor.tsx";
 import Preview, {type PreviewHandle} from "./components/Preview/Preview.tsx";
-import CopyButton from "./components/Copy/CopyButton.tsx";
-import ThemeMenu from "./components/Theme/ThemeMenu.tsx";
-import UploadButton from "./components/Upload/UploadButton.tsx";
-import ImportButton from "./components/Import/ImportButton.tsx";
 import SettingsDialog from "./components/Settings/SettingsDialog.tsx";
 import StylePanel from "./components/StylePanel/StylePanel.tsx";
 import SyntaxToolbar from "./components/Toolbar/SyntaxToolbar.tsx";
+import MainToolbar from "./components/Toolbar/MainToolbar.tsx";
 import DocTree from "./components/DocTree/DocTree.tsx";
-import PublishButton from "./components/Publish/PublishButton.tsx";
 import IconButton from "./components/ui/IconButton.tsx";
-import Button from "./components/ui/Button.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
 import {toast} from "./components/Toast/toast.ts";
 import {useStore, getThemeById, flushSave} from "./store/index.ts";
@@ -20,6 +15,7 @@ import {defaultMarkdownTheme} from "./themes/index.ts";
 import {uploadImage, uploadLocalImage, type UploadError} from "./utils/upload.ts";
 import {createScrollSync} from "./utils/syncScroll.ts";
 import {createDocument, writeDocument, type DocNode} from "./utils/documents.ts";
+import {isTauriRuntime} from "./utils/tauriEnv.ts";
 import {getCurrentWindow} from "@tauri-apps/api/window";
 import {PanelLeft} from "lucide-react";
 import defaultContent from "./content.md?raw";
@@ -42,8 +38,21 @@ function existsInTree(nodes: DocNode[], path: string): boolean {
   return false;
 }
 
+function formatSaveStatus(status: "idle" | "saving" | "saved" | "error", lastSavedAt: number | null): string {
+  if (status === "saving") return "保存中";
+  if (status === "error") return "保存失败";
+  if (status === "saved") {
+    if (!lastSavedAt) return "已保存";
+    const d = new Date(lastSavedAt);
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `已保存 ${hh}:${mm}`;
+  }
+  return "未保存";
+}
+
 export default function App() {
-  const {content, markdownThemeId, themes, currentDocPath, sidebarOpen, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar} = useStore();
+  const {content, markdownThemeId, themes, currentDocPath, sidebarOpen, saveStatus, lastSavedAt, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar} = useStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
@@ -129,6 +138,9 @@ export default function App() {
 
   // 关窗前把当前文档落盘，防丢最后 800ms 编辑。
   useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
     const win = getCurrentWindow();
     const unlisten = win.onCloseRequested(async (event) => {
       event.preventDefault();
@@ -186,14 +198,12 @@ export default function App() {
           </IconButton>
           <SyntaxToolbar editorRef={editorRef} />
         </div>
-        <div className="flex items-center gap-3">
-          <UploadButton onPickFile={handleUploadFile} onPickLocal={handleUploadLocal} />
-          <ImportButton />
-          <ThemeMenu />
-          <Button variant="secondary" onClick={() => setSettingsOpen(true)}>设置</Button>
-          <PublishButton onNeedSettings={() => setSettingsOpen(true)} />
-          <CopyButton />
-        </div>
+        <MainToolbar
+          onPickFile={handleUploadFile}
+          onPickLocal={handleUploadLocal}
+          onOpenSettings={() => setSettingsOpen(true)}
+          onNeedSettings={() => setSettingsOpen(true)}
+        />
       </header>
 
       {/* 主体：文档树 + 编辑器 + 预览 */}
@@ -225,6 +235,7 @@ export default function App() {
         <span className="tabular-nums">字数 {charCount}</span>
         <span>主题 {getThemeById(themes, markdownThemeId).name}</span>
         {currentDocPath && <span>文档 {currentDocPath.split("/").pop()}</span>}
+        <span className={saveStatus === "error" ? "text-danger" : ""}>{formatSaveStatus(saveStatus, lastSavedAt)}</span>
       </footer>
 
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />

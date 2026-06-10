@@ -56,3 +56,17 @@ body {
 .cm-editor .cm-content {
   padding: 12px 16px;
 }
+
+#nice .preview-edit-hover,
+#nice .preview-edit-selected {
+  cursor: pointer;
+  outline-offset: 4px;
+}
+
+#nice .preview-edit-hover {
+  outline: 1px dashed var(--accent);
+}
+
+#nice .preview-edit-selected {
+  outline: 2px solid var(--accent);
+}

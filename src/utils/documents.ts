@@ -1,5 +1,6 @@
 // 前端封装文档树 Tauri 命令。DocNode 与 Rust documents.rs 同构。
 import {invoke} from "@tauri-apps/api/core";
+import {isTauriRuntime} from "./tauriEnv.ts";
 
 export interface DocNode {
   name: string;
@@ -25,36 +26,173 @@ function normalize(node: RawDocNode): DocNode {
   };
 }
 
+const WEB_SAMPLE_PATH = "示例.md";
+const WEB_SAMPLE_CONTENT = `# 微信公众号排版工具
+
+欢迎使用！左侧编辑 **Markdown**，右侧实时预览，点右上角「复制到微信」即可粘贴到公众号编辑器。
+
+## 文本样式
+
+支持**加粗**、*斜体*、~~删除线~~、\`行内代码\`，以及[链接](https://example.com)。
+
+## 列表
+
+- 第一项
+- 第二项
+  - 嵌套项
+`;
+
+let webFiles = new Map<string, string>([[WEB_SAMPLE_PATH, WEB_SAMPLE_CONTENT]]);
+let webDirs = new Set<string>();
+
+function ensureMdName(name: string): string {
+  return /\.md$/i.test(name) ? name : `${name}.md`;
+}
+
+function joinPath(dir: string, name: string): string {
+  return dir ? `${dir}/${name}` : name;
+}
+
+function basename(path: string): string {
+  const slash = path.lastIndexOf("/");
+  return slash === -1 ? path : path.slice(slash + 1);
+}
+
+function dirname(path: string): string {
+  const slash = path.lastIndexOf("/");
+  return slash === -1 ? "" : path.slice(0, slash);
+}
+
+function uniquePath(path: string, exists: (candidate: string) => boolean): string {
+  if (!exists(path)) return path;
+  const dir = dirname(path);
+  const base = basename(path);
+  const dot = base.toLowerCase().endsWith(".md") ? base.length - 3 : -1;
+  const stem = dot >= 0 ? base.slice(0, dot) : base;
+  const ext = dot >= 0 ? ".md" : "";
+  let index = 2;
+  while (true) {
+    const candidate = joinPath(dir, `${stem} ${index}${ext}`);
+    if (!exists(candidate)) return candidate;
+    index++;
+  }
+}
+
+function pathExists(path: string): boolean {
+  return webFiles.has(path) || webDirs.has(path);
+}
+
+function buildWebTree(): DocNode[] {
+  const root: DocNode[] = [];
+  const dirs = new Map<string, DocNode[]>();
+  dirs.set("", root);
+
+  const sortedDirs = Array.from(webDirs).sort((a, b) => a.localeCompare(b, "zh-CN"));
+  for (const path of sortedDirs) {
+    const parent = dirname(path);
+    const node: DocNode = {name: basename(path), path, isDir: true, children: []};
+    if (!dirs.has(parent)) dirs.set(parent, []);
+    dirs.get(parent)!.push(node);
+    dirs.set(path, node.children);
+  }
+
+  const sortedFiles = Array.from(webFiles.keys()).sort((a, b) => a.localeCompare(b, "zh-CN"));
+  for (const path of sortedFiles) {
+    const parent = dirname(path);
+    const node: DocNode = {name: basename(path), path, isDir: false, children: []};
+    if (!dirs.has(parent)) dirs.set(parent, []);
+    dirs.get(parent)!.push(node);
+  }
+
+  return root;
+}
+
 export async function listDocuments(): Promise<DocNode[]> {
+  if (!isTauriRuntime()) {
+    return buildWebTree();
+  }
   const raw = await invoke<RawDocNode[]>("list_documents");
   return raw.map(normalize);
 }
 
 export function readDocument(path: string): Promise<string> {
+  if (!isTauriRuntime()) {
+    return Promise.resolve(webFiles.get(path) ?? "");
+  }
   return invoke<string>("read_document", {path});
 }
 
 export function writeDocument(path: string, text: string): Promise<void> {
+  if (!isTauriRuntime()) {
+    webFiles.set(path, text);
+    return Promise.resolve();
+  }
   return invoke("write_document", {path, text});
 }
 
 export function createDocument(dir: string, name: string): Promise<string> {
+  if (!isTauriRuntime()) {
+    const path = uniquePath(joinPath(dir, ensureMdName(name)), pathExists);
+    webFiles.set(path, "");
+    return Promise.resolve(path);
+  }
   return invoke<string>("create_document", {dir, name});
 }
 
 export function createFolder(dir: string, name: string): Promise<string> {
+  if (!isTauriRuntime()) {
+    const path = uniquePath(joinPath(dir, name), pathExists);
+    webDirs.add(path);
+    return Promise.resolve(path);
+  }
   return invoke<string>("create_folder", {dir, name});
 }
 
 export function renameEntry(path: string, newName: string): Promise<string> {
+  if (!isTauriRuntime()) {
+    const parent = dirname(path);
+    const next = uniquePath(joinPath(parent, webFiles.has(path) ? ensureMdName(newName) : newName), (candidate) => candidate !== path && pathExists(candidate));
+    if (webFiles.has(path)) {
+      const text = webFiles.get(path) ?? "";
+      webFiles.delete(path);
+      webFiles.set(next, text);
+    } else if (webDirs.has(path)) {
+      const oldPrefix = `${path}/`;
+      const newPrefix = `${next}/`;
+      webDirs = new Set(Array.from(webDirs, (dirPath) => dirPath === path ? next : dirPath.startsWith(oldPrefix) ? newPrefix + dirPath.slice(oldPrefix.length) : dirPath));
+      webFiles = new Map(Array.from(webFiles, ([filePath, text]) => [filePath.startsWith(oldPrefix) ? newPrefix + filePath.slice(oldPrefix.length) : filePath, text]));
+    }
+    return Promise.resolve(next);
+  }
   return invoke<string>("rename_entry", {path, newName});
 }
 
 export function deleteEntry(path: string): Promise<void> {
+  if (!isTauriRuntime()) {
+    webFiles.delete(path);
+    const prefix = `${path}/`;
+    webDirs = new Set(Array.from(webDirs).filter((dirPath) => dirPath !== path && !dirPath.startsWith(prefix)));
+    webFiles = new Map(Array.from(webFiles).filter(([filePath]) => !filePath.startsWith(prefix)));
+    return Promise.resolve();
+  }
   return invoke("delete_entry", {path});
 }
 
 export function moveEntry(src: string, destDir: string): Promise<string> {
+  if (!isTauriRuntime()) {
+    const next = uniquePath(joinPath(destDir, basename(src)), (candidate) => candidate !== src && pathExists(candidate));
+    if (webFiles.has(src)) {
+      const text = webFiles.get(src) ?? "";
+      webFiles.delete(src);
+      webFiles.set(next, text);
+    } else if (webDirs.has(src)) {
+      const oldPrefix = `${src}/`;
+      const newPrefix = `${next}/`;
+      webDirs = new Set(Array.from(webDirs, (dirPath) => dirPath === src ? next : dirPath.startsWith(oldPrefix) ? newPrefix + dirPath.slice(oldPrefix.length) : dirPath));
+      webFiles = new Map(Array.from(webFiles, ([filePath, text]) => [filePath.startsWith(oldPrefix) ? newPrefix + filePath.slice(oldPrefix.length) : filePath, text]));
+    }
+    return Promise.resolve(next);
+  }
   return invoke<string>("move_entry", {src, destDir});
 }
 

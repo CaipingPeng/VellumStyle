@@ -3,6 +3,8 @@ import {X} from "lucide-react";
 import {useStore, getThemeById} from "../../store/index.ts";
 import type {StyleItem} from "../../themes/themeModel.ts";
 import {StyleControl} from "./controls.tsx";
+import {getModelLabel} from "./elementMap.ts";
+import {getStyleLabel} from "./styleLabels.ts";
 
 export default function StylePanel() {
   const {selectedModelId, setSelectedModel, themes, markdownThemeId, updateStyleValue} = useStore();
@@ -17,14 +19,14 @@ export default function StylePanel() {
     if (item.children && item.children.length > 0) {
       return (
         <div key={item.id} className="mb-3">
-          <div className="mb-1 text-xs text-text-muted">{item.id}</div>
+          <div className="mb-1 text-xs font-medium text-text-muted" title={item.id}>{getStyleLabel(item.id)}</div>
           {item.children.map((c) => renderItem(c, [...path, c.id]))}
         </div>
       );
     }
     return (
       <div key={item.id} className="mb-2.5">
-        <div className="mb-1 text-xs text-text-secondary">{item.id}</div>
+        <div className="mb-1 text-xs text-text-secondary" title={item.id}>{getStyleLabel(item.id)}</div>
         <StyleControl item={item} onChange={(value) => updateStyleValue(selectedModelId!, path, value)} />
       </div>
     );
@@ -38,7 +40,7 @@ export default function StylePanel() {
       transition={{duration: 0.16, ease: [0.16, 1, 0.3, 1]}}
     >
       <div className="mb-3 flex items-center justify-between">
-        <strong className="text-sm text-text">{model.label || model.id}</strong>
+        <strong className="text-sm text-text" title={model.id}>{model.label || getModelLabel(model.id)}</strong>
         <button
           onClick={() => setSelectedModel(null)}
           className="inline-flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast hover:bg-bg-tertiary hover:text-text"

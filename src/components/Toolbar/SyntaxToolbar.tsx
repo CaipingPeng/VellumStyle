@@ -14,6 +14,10 @@ interface Props {
 
 const ICON = 16;
 
+function Separator() {
+  return <div className="mx-1 h-5 w-px bg-border" />;
+}
+
 export default function SyntaxToolbar({editorRef}: Props) {
   const [headingOpen, setHeadingOpen] = useState(false);
   const ed = () => editorRef.current;
@@ -28,11 +32,13 @@ export default function SyntaxToolbar({editorRef}: Props) {
     <div className="flex items-center gap-1">
       <IconButton title="撤销 (Ctrl+Z)" onClick={() => ed()?.undo()}><Undo2 size={ICON} /></IconButton>
       <IconButton title="重做 (Ctrl+Y)" onClick={() => ed()?.redo()}><Redo2 size={ICON} /></IconButton>
+      <Separator />
       <IconButton title="加粗" onClick={wrap("**", "**", "加粗文本")}><Bold size={ICON} /></IconButton>
       <IconButton title="斜体" onClick={wrap("*", "*", "斜体文本")}><Italic size={ICON} /></IconButton>
       <IconButton title="删除线" onClick={wrap("~~", "~~", "删除文本")}><Strikethrough size={ICON} /></IconButton>
       <IconButton title="行内代码" onClick={wrap("`", "`", "代码")}><Code size={ICON} /></IconButton>
       <IconButton title="链接" onClick={() => ed()?.insertLink()}><Link size={ICON} /></IconButton>
+      <Separator />
 
       <Menu
         open={headingOpen}

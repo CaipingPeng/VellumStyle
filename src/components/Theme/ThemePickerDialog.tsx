@@ -1,11 +1,12 @@
-import {useEffect, useRef, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import {motion} from "framer-motion";
-import {X, Plus, Upload} from "lucide-react";
+import {X, Plus, Upload, Search, Star} from "lucide-react";
 import {useStore} from "../../store/index.ts";
 import {loadAllThemes, openThemesDir, importMdniceTheme} from "../../themes/loader.ts";
 import {toast} from "../Toast/toast.ts";
 import ThemeThumbnail from "./ThemeThumbnail.tsx";
+import {filterAndRankThemes} from "./themePickerModel.ts";
 
 const PAGE_SIZE = 8;
 
@@ -27,8 +28,9 @@ interface Props {
 
 // 无遮罩居中浮层：网格卡片（缩略图 + 名 + 使用）+ 分页 + 打开主题文件夹。
 export default function ThemePickerDialog({onClose}: Props) {
-  const {markdownThemeId, setMarkdownTheme, themes, setThemes} = useStore();
+  const {markdownThemeId, setMarkdownTheme, themes, setThemes, favoriteThemeIds, toggleFavoriteTheme} = useStore();
   const [page, setPage] = useState(0);
+  const [query, setQuery] = useState("");
   const ref = useClickOutside(onClose);
 
   useEffect(() => {
@@ -39,10 +41,19 @@ export default function ThemePickerDialog({onClose}: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const totalPages = Math.max(1, Math.ceil(themes.length / PAGE_SIZE));
+  useEffect(() => {
+    setPage(0);
+  }, [query]);
+
+  const visibleThemes = useMemo(
+    () => filterAndRankThemes(themes, query, favoriteThemeIds, markdownThemeId),
+    [favoriteThemeIds, markdownThemeId, query, themes],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(visibleThemes.length / PAGE_SIZE));
   // themes 重新扫描后可能变少，page 越界则夹回最后一页，避免空白页。
   const safePage = Math.min(page, totalPages - 1);
-  const pageThemes = themes.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+  const pageThemes = visibleThemes.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
 
   function pick(id: string) {
     setMarkdownTheme(id);
@@ -79,7 +90,7 @@ export default function ThemePickerDialog({onClose}: Props) {
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-transparent">
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-[rgba(20,20,30,0.32)]">
       <motion.div
         ref={ref}
         initial={{opacity: 0, scale: 0.96, y: 8}}
@@ -101,9 +112,27 @@ export default function ThemePickerDialog({onClose}: Props) {
         </button>
       </div>
 
+      <div className="px-7 pb-4">
+        <label className="flex h-9 items-center gap-2 rounded-sm border border-border bg-bg-secondary px-3 text-text-muted focus-within:ring-2 focus-within:ring-[color:var(--ring)]">
+          <Search size={15} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="搜索主题名称或 id"
+            className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-text outline-none placeholder:text-text-muted"
+          />
+        </label>
+      </div>
+
       <div className="grid flex-1 grid-cols-4 gap-[18px] overflow-y-auto px-7 pb-[22px] pt-1">
+        {pageThemes.length === 0 && (
+          <div className="col-span-4 flex min-h-[240px] items-center justify-center text-sm text-text-muted">
+            没有匹配的主题
+          </div>
+        )}
         {pageThemes.map((t) => {
           const active = t.id === markdownThemeId;
+          const favorite = favoriteThemeIds.includes(t.id);
           return (
             <div
               key={t.id}
@@ -114,12 +143,25 @@ export default function ThemePickerDialog({onClose}: Props) {
             >
               <ThemeThumbnail themeId={t.id} css={t.css} />
               <div className="flex min-w-0 items-center justify-between gap-2.5">
-                <span
-                  title={t.name}
-                  className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text"
-                >
-                  {t.name}
-                </span>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleFavoriteTheme(t.id)}
+                    title={favorite ? "取消收藏" : "收藏主题"}
+                    className={[
+                      "inline-flex h-6 w-6 flex-none items-center justify-center rounded-sm border-0 bg-transparent cursor-pointer transition-colors duration-fast",
+                      favorite ? "text-accent" : "text-text-muted hover:bg-bg-tertiary hover:text-text",
+                    ].join(" ")}
+                  >
+                    <Star size={14} fill={favorite ? "currentColor" : "none"} />
+                  </button>
+                  <span
+                    title={`${t.name} (${t.id})`}
+                    className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text"
+                  >
+                    {t.name}
+                  </span>
+                </div>
                 <button
                   onClick={() => pick(t.id)}
                   className={[

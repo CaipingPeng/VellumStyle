@@ -5,6 +5,10 @@ import {builtinThemes, defaultMarkdownTheme, type ThemeOption, type StyleModel} 
 import type {StyleItem} from "../themes/themeModel.ts";
 import {listDocuments, readDocument, writeDocument, type DocNode} from "../utils/documents.ts";
 import {createDebouncedSaver} from "../utils/autosave.ts";
+import {toast} from "../components/Toast/toast.ts";
+import type {PreviewModeId} from "../components/Preview/previewModes.ts";
+
+export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export interface EditorState {
   content: string;
@@ -15,12 +19,18 @@ export interface EditorState {
   currentDocPath: string | null; // 当前在编辑器打开的文档，persist（记住上次打开）
   selectedPath: string | null; // 树里当前高亮项（文件或文件夹），统一选中源，运行期不 persist
   sidebarOpen: boolean; // 文档侧栏显隐，运行期不 persist，默认隐藏
+  saveStatus: SaveStatus; // 当前文档保存状态
+  lastSavedAt: number | null; // 最近一次保存成功时间戳
+  previewMode: PreviewModeId; // 预览宽度模式
+  favoriteThemeIds: string[]; // 收藏主题，persist
   setContent: (content: string) => void;
   setMarkdownTheme: (id: string) => void;
   setThemes: (themes: ThemeOption[]) => void;
   setSelectedModel: (modelId: string | null) => void;
   setCurrentDocPath: (path: string | null) => void;
   setSelectedPath: (path: string | null) => void;
+  setPreviewMode: (mode: PreviewModeId) => void;
+  toggleFavoriteTheme: (id: string) => void;
   toggleSidebar: () => void;
   loadTree: () => Promise<void>;
   openDocument: (path: string) => Promise<void>;
@@ -47,7 +57,24 @@ function setValueByPath(styles: StyleItem[], path: string[], value: string): Sty
 const saver = createDebouncedSaver(async (text) => {
   const path = useStore.getState().currentDocPath;
   if (path) await writeDocument(path, text);
-}, 800);
+}, 800, {
+  onScheduled: () => {
+    useStore.setState({saveStatus: "saving"});
+  },
+  onFlushStart: () => {
+    useStore.setState({saveStatus: "saving"});
+  },
+  onFlushSuccess: () => {
+    useStore.setState({saveStatus: "saved", lastSavedAt: Date.now()});
+  },
+  onFlushError: (error) => {
+    console.error("自动保存失败：", error);
+    useStore.setState({saveStatus: "error"});
+    if (typeof window !== "undefined") {
+      toast.show("自动保存失败，请检查磁盘权限或稍后重试。", "error");
+    }
+  },
+});
 
 export function scheduleSave(text: string) {
   saver.schedule(text);
@@ -69,6 +96,10 @@ export const useStore = create<EditorState>()(
       currentDocPath: null,
       selectedPath: null,
       sidebarOpen: false,
+      saveStatus: "idle",
+      lastSavedAt: null,
+      previewMode: "fluid",
+      favoriteThemeIds: [],
       setContent: (content) => {
         set({content});
         scheduleSave(content);
@@ -78,6 +109,13 @@ export const useStore = create<EditorState>()(
       setSelectedModel: (selectedModelId) => set({selectedModelId}),
       setCurrentDocPath: (currentDocPath) => set({currentDocPath}),
       setSelectedPath: (selectedPath) => set({selectedPath}),
+      setPreviewMode: (previewMode) => set({previewMode}),
+      toggleFavoriteTheme: (id) =>
+        set((s) => ({
+          favoriteThemeIds: s.favoriteThemeIds.includes(id)
+            ? s.favoriteThemeIds.filter((themeId) => themeId !== id)
+            : [...s.favoriteThemeIds, id],
+        })),
       toggleSidebar: () => set((s) => ({sidebarOpen: !s.sidebarOpen})),
       loadTree: async () => {
         const tree = await listDocuments();
@@ -87,7 +125,7 @@ export const useStore = create<EditorState>()(
         // 先把当前篇落盘（必须 await，否则旧文档未保存编辑会丢）。
         await flushSave();
         const text = await readDocument(path);
-        set({currentDocPath: path, selectedPath: path, content: text, selectedModelId: null});
+        set({currentDocPath: path, selectedPath: path, content: text, selectedModelId: null, saveStatus: "saved", lastSavedAt: Date.now()});
       },
       updateStyleValue: (modelId, stylePath, value) =>
         set((s) => {
@@ -113,6 +151,8 @@ export const useStore = create<EditorState>()(
       partialize: (s) => ({
         currentDocPath: s.currentDocPath,
         markdownThemeId: s.markdownThemeId,
+        previewMode: s.previewMode,
+        favoriteThemeIds: s.favoriteThemeIds,
       }),
     },
   ),

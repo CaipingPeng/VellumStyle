@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {normalizeMathJaxForWechat} from "./converter.ts";
+import {normalizeMathJaxForWechat, stripPreviewEditClasses} from "./converter.ts";
 
 test("行间 MathJax 导出为居中的 section", () => {
   const html = normalizeMathJaxForWechat('<mjx-container class="MathJax" jax="SVG" display="true"><svg></svg></mjx-container>');
@@ -43,4 +43,10 @@ test("保留 mjx-solid 兼容替换", () => {
   const html = normalizeMathJaxForWechat('<path class="mjx-solid"></path>');
 
   assert.equal(html, '<path fill="none" stroke-width="70"></path>');
+});
+
+test("导出前剥离预览编辑辅助 class 但保留业务 class", () => {
+  const html = stripPreviewEditClasses('<h1 class="title preview-edit-hover preview-edit-selected">标题</h1>');
+
+  assert.equal(html, '<h1 class="title">标题</h1>');
 });

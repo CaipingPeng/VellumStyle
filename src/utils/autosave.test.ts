@@ -37,3 +37,44 @@ test("无 pending 时 flushNow 不保存", async () => {
   await saver.flushNow();
   assert.equal(count, 0);
 });
+
+test("保存成功时按顺序触发状态回调", async () => {
+  const events: string[] = [];
+  const saver = createDebouncedSaver(
+    () => {
+      events.push("save");
+    },
+    50,
+    {
+      onScheduled: () => events.push("scheduled"),
+      onFlushStart: () => events.push("start"),
+      onFlushSuccess: () => events.push("success"),
+    },
+  );
+
+  saver.schedule("ok");
+  await saver.flushNow();
+
+  assert.deepEqual(events, ["scheduled", "start", "save", "success"]);
+});
+
+test("保存失败时触发错误回调并向 flushNow 抛出错误", async () => {
+  const error = new Error("disk full");
+  let observed: unknown = null;
+  const saver = createDebouncedSaver(
+    () => {
+      throw error;
+    },
+    50,
+    {
+      onFlushError: (err) => {
+        observed = err;
+      },
+    },
+  );
+
+  saver.schedule("bad");
+
+  await assert.rejects(() => saver.flushNow(), /disk full/);
+  assert.equal(observed, error);
+});

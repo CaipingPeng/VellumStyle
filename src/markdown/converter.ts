@@ -53,6 +53,13 @@ export function normalizeMathJaxForWechat(html: string): string {
     .replace(/svg><\/span>\s/g, "svg></span>&nbsp;");
 }
 
+export function stripPreviewEditClasses(html: string): string {
+  return html.replace(/\sclass=(['"])([\s\S]*?)\1/g, (_match, quote: string, value: string) => {
+    const classes = value.split(/\s+/).filter((cls) => cls && cls !== "preview-edit-hover" && cls !== "preview-edit-selected");
+    return classes.length > 0 ? ` class=${quote}${classes.join(" ")}${quote}` : "";
+  });
+}
+
 // 生成微信兼容的最终 HTML：
 // 1. 给预览区每个顶层子元素加 data-tool 水印
 // 2. MathJax 节点后处理（行内/块级公式转换、防吞空格）
@@ -74,6 +81,8 @@ export function solveHtml(): string {
   html = fromProxyHtml(html);
   // 剥离同步滚动用的 data-line，避免污染粘贴到微信的 HTML
   html = html.replace(/\s*data-line="\d+"/g, "");
+  // 剥离预览点击编辑用的临时 class，避免污染粘贴到微信的 HTML
+  html = stripPreviewEditClasses(html);
   html = normalizeMathJaxForWechat(html);
 
   // 前置引擎级高亮兜底（低特异性），主题 CSS 在后可覆盖；juice 内联时按特异性选赢家。

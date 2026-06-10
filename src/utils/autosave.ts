@@ -6,9 +6,17 @@ export interface DebouncedSaver {
   flushNow(): Promise<void>;
 }
 
+interface DebouncedSaverEvents {
+  onScheduled?: () => void;
+  onFlushStart?: (text: string) => void;
+  onFlushSuccess?: () => void;
+  onFlushError?: (error: unknown) => void;
+}
+
 export function createDebouncedSaver(
   save: (text: string) => void | Promise<void>,
   delayMs: number,
+  events: DebouncedSaverEvents = {},
 ): DebouncedSaver {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let pending: string | null = null;
@@ -17,16 +25,24 @@ export function createDebouncedSaver(
     if (pending === null) return;
     const text = pending;
     pending = null;
-    await save(text);
+    events.onFlushStart?.(text);
+    try {
+      await save(text);
+      events.onFlushSuccess?.();
+    } catch (error) {
+      events.onFlushError?.(error);
+      throw error;
+    }
   }
 
   return {
     schedule(text: string) {
       pending = text;
+      events.onScheduled?.();
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         timer = null;
-        void doFlush();
+        void doFlush().catch(() => undefined);
       }, delayMs);
     },
     async flushNow() {

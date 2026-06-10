@@ -33,6 +33,34 @@ export const SELECTOR_PRIORITY: SelectorEntry[] = [
   {selector: "p", modelId: "p"},
 ];
 
+const MODEL_LABELS: Record<string, string> = {
+  h1: "一级标题",
+  h2: "二级标题",
+  h3: "三级标题",
+  h4: "四级标题",
+  h5: "五级标题",
+  h6: "六级标题",
+  p: "正文",
+  blockquote: "引用",
+  ul: "无序列表",
+  ol: "有序列表",
+  a: "链接",
+  strong: "加粗",
+  em: "斜体",
+  del: "删除线",
+  blockCode: "代码块",
+  inlineCode: "行内代码",
+  table: "表格",
+  tableHead: "表头",
+  tableBody: "表格正文",
+  image: "图片",
+  imageDescription: "图片说明",
+};
+
+export function getModelLabel(modelId: string): string {
+  return MODEL_LABELS[modelId] ?? modelId;
+}
+
 // 纯逻辑：matches(selector) 返回该 selector 是否命中。按优先级返回首个命中的 modelId。
 export function matchModelId(matches: (selector: string) => boolean): string | null {
   for (const entry of SELECTOR_PRIORITY) {
