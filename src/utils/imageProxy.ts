@@ -13,10 +13,14 @@ const PROXY_PREFIX = isWindows
 // 微信 uploadimg 返回的是 http 链接，需兼容 http/https。
 const MMBIZ_SRC = /(<img\b[^>]*\bsrc=)(["'])(https?:\/\/mmbiz\.(?:qpic|qlogo)\.cn\/[^"']*)\2/gi;
 
+export function toProxyImageUrl(url: string): string {
+  return `${PROXY_PREFIX}${encodeURIComponent(url)}`;
+}
+
 // 预览用：把 mmbiz 图片 src 改写成代理 URL。只作用于渲染出的 HTML 字符串。
 export function toProxyHtml(html: string): string {
   return html.replace(MMBIZ_SRC, (_m, pre, quote, url) => {
-    return `${pre}${quote}${PROXY_PREFIX}${encodeURIComponent(url)}${quote}`;
+    return `${pre}${quote}${toProxyImageUrl(url)}${quote}`;
   });
 }
 

@@ -738,3 +738,32 @@ npx tsc --noEmit         # 类型检查
 
 - **根因**：`.cm-content`（可编辑区）高度只随文本撑开，第一行以下的空白其实是不可编辑的 `.cm-scroller` 区域，点击落不到 `.cm-content` 上，自然不定位光标。
 - **修复**：同一个 theme 扩展里加 `".cm-content": {minHeight: "100%"}`，把内容区撑满滚动容器高度，空白区点击即落在 `.cm-content`，光标落到文末。
+
+## 增补功能 — 发布封面从文中选择（代码完成，2026-06-10）
+
+> 目标：发布到公众号草稿箱时，封面图除本地上传外，也可以从当前文章正文中已上传到微信的图片里选择。
+> spec: `docs/superpowers/specs/2026-06-10-publish-cover-from-content-design.md`
+> plan: `docs/superpowers/plans/2026-06-10-publish-cover-from-content.md`
+
+### 执行结果
+
+| # | 任务 | 状态 | 产出 |
+|---|------|------|------|
+| 1 | 写功能设计与实现计划 | ✅ | `docs/superpowers/specs/2026-06-10-publish-cover-from-content-design.md` `docs/superpowers/plans/2026-06-10-publish-cover-from-content.md` |
+| 2 | 后端远程图片转封面素材 | ✅ | `src-tauri/src/wechat.rs` `src-tauri/src/lib.rs` |
+| 3 | 前端封面候选与上传封装 | ✅ | `src/utils/publish.ts` `src/utils/imageProxy.ts` |
+| 4 | 发布弹窗 UI 接入 | ✅ | `src/components/Publish/PublishDialog.tsx` |
+
+### 关键设计
+
+- 第一版只展示正文中的微信图床图片（`mmbiz.qpic.cn` / `mmbiz.qlogo.cn`）作为候选，保持与发布前正文图片校验一致。
+- 候选提取复用 `scanMarkdownMedia(content)`，覆盖 Markdown 图片、HTML `<img>`、Obsidian embed 等已有扫描能力。
+- 文中候选图不能直接作为草稿封面提交：点击候选后新增 `upload_remote_thumb`，由 Rust 下载远程图片，再走微信永久素材接口取得 `thumb_media_id`。
+- 候选缩略图和封面预览复用 `toProxyImageUrl`，避免 mmbiz 图片在 WebView 里被防盗链拦截。
+- `thumbPreview` 现在可能是 blob URL 或代理远程 URL，因此释放逻辑改为只 `revokeObjectURL(blob:)`。
+
+### 验证状态
+
+- ✅ `npm run build` 通过。
+- ✅ `cargo check --manifest-path src-tauri/Cargo.toml` 通过。
+- ⏳ 待人工运行时手测：本地封面回归、正文 mmbiz 候选显示、无候选空状态、未配置凭证提示、真实凭证下文中图上传为封面并发布草稿箱。

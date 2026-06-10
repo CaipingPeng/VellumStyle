@@ -121,7 +121,10 @@ async fn upload_to_wechat(
         .map_err(|e| (None, format!("解析上传响应失败：{e}")))?;
     match data.url {
         Some(u) => Ok(u),
-        None => Err((data.errcode, data.errmsg.unwrap_or_else(|| "微信上传失败".into()))),
+        None => Err((
+            data.errcode,
+            data.errmsg.unwrap_or_else(|| "微信上传失败".into()),
+        )),
     }
 }
 
@@ -160,9 +163,20 @@ pub async fn upload_local_image(app: AppHandle, path: String) -> Result<String, 
     upload_image_bytes(app, bytes, filename, mime.into()).await
 }
 
+struct DownloadedImage {
+    bytes: Vec<u8>,
+    filename: String,
+    mime: String,
+}
+
 #[tauri::command]
 pub async fn upload_remote_image(app: AppHandle, url: String) -> Result<String, String> {
-    let target = url::Url::parse(url.trim()).map_err(|_| "图片 URL 格式错误".to_string())?;
+    let image = download_remote_image(&url).await?;
+    upload_image_bytes(app, image.bytes, image.filename, image.mime).await
+}
+
+async fn download_remote_image(raw_url: &str) -> Result<DownloadedImage, String> {
+    let target = url::Url::parse(raw_url.trim()).map_err(|_| "图片 URL 格式错误".to_string())?;
     if !matches!(target.scheme(), "http" | "https") {
         return Err("仅支持 http/https 图片".into());
     }
@@ -179,7 +193,10 @@ pub async fn upload_remote_image(app: AppHandle, url: String) -> Result<String, 
         req = req.header("Referer", "https://mp.weixin.qq.com");
     }
 
-    let resp = req.send().await.map_err(|e| format!("下载远程图片失败：{e}"))?;
+    let resp = req
+        .send()
+        .await
+        .map_err(|e| format!("下载远程图片失败：{e}"))?;
     if !resp.status().is_success() {
         return Err(format!("下载远程图片失败：HTTP {}", resp.status()));
     }
@@ -213,7 +230,11 @@ pub async fn upload_remote_image(app: AppHandle, url: String) -> Result<String, 
     }
 
     let filename = filename_from_remote_url(&target, &mime);
-    upload_image_bytes(app, bytes, filename, mime).await
+    Ok(DownloadedImage {
+        bytes,
+        filename,
+        mime,
+    })
 }
 
 async fn upload_image_bytes(
@@ -233,7 +254,11 @@ async fn upload_image_bytes(
         return Err("图片不能超过 10MB".into());
     }
 
-    let name = if filename.is_empty() { "image".to_string() } else { filename };
+    let name = if filename.is_empty() {
+        "image".to_string()
+    } else {
+        filename
+    };
     let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
     match upload_to_wechat(&token, bytes.clone(), &name, &mime).await {
         Ok(url) => Ok(url),
@@ -308,7 +333,12 @@ fn mime_from_ext(ext: &str) -> Option<&'static str> {
 }
 
 fn normalize_mime(content_type: &str) -> Option<&'static str> {
-    let mime = content_type.split(';').next().unwrap_or("").trim().to_ascii_lowercase();
+    let mime = content_type
+        .split(';')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase();
     match mime.as_str() {
         "image/jpeg" | "image/jpg" => Some("image/jpeg"),
         "image/png" => Some("image/png"),
@@ -417,13 +447,31 @@ async fn upload_thumb_inner(
         .map_err(|e| (None, format!("解析上传响应失败：{e}")))?;
     match data.media_id {
         Some(id) => Ok(id),
-        None => Err((data.errcode, data.errmsg.unwrap_or_else(|| "微信上传失败".into()))),
+        None => Err((
+            data.errcode,
+            data.errmsg.unwrap_or_else(|| "微信上传失败".into()),
+        )),
     }
 }
 
 /// 上传封面图到微信永久素材，返回 media_id（供 add_draft 用）。未配置返回 "NOT_CONFIGURED"。
 #[tauri::command]
 pub async fn upload_thumb(
+    app: AppHandle,
+    bytes: Vec<u8>,
+    filename: String,
+    mime: String,
+) -> Result<String, String> {
+    upload_thumb_bytes(app, bytes, filename, mime).await
+}
+
+#[tauri::command]
+pub async fn upload_remote_thumb(app: AppHandle, url: String) -> Result<String, String> {
+    let image = download_remote_image(&url).await?;
+    upload_thumb_bytes(app, image.bytes, image.filename, image.mime).await
+}
+
+async fn upload_thumb_bytes(
     app: AppHandle,
     bytes: Vec<u8>,
     filename: String,
@@ -439,7 +487,11 @@ pub async fn upload_thumb(
     if bytes.len() > MAX_SIZE {
         return Err("图片不能超过 10MB".into());
     }
-    let name = if filename.is_empty() { "thumb".to_string() } else { filename };
+    let name = if filename.is_empty() {
+        "thumb".to_string()
+    } else {
+        filename
+    };
     let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
     match upload_thumb_inner(&token, bytes.clone(), &name, &mime).await {
         Ok(id) => Ok(id),
@@ -447,7 +499,9 @@ pub async fn upload_thumb(
             if matches!(errcode, Some(40001) | Some(42001) | Some(40014)) {
                 clear_token_blocking();
                 let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
-                upload_thumb_inner(&token, bytes, &name, &mime).await.map_err(|(_, m)| m)
+                upload_thumb_inner(&token, bytes, &name, &mime)
+                    .await
+                    .map_err(|(_, m)| m)
             } else {
                 Err(msg)
             }
@@ -484,7 +538,10 @@ async fn add_draft_inner(
         .map_err(|e| (None, format!("解析发布响应失败：{e}")))?;
     match data.media_id {
         Some(id) => Ok(id),
-        None => Err((data.errcode, data.errmsg.unwrap_or_else(|| "微信发布失败".into()))),
+        None => Err((
+            data.errcode,
+            data.errmsg.unwrap_or_else(|| "微信发布失败".into()),
+        )),
     }
 }
 
@@ -508,7 +565,9 @@ pub async fn add_draft(
             if matches!(errcode, Some(40001) | Some(42001) | Some(40014)) {
                 clear_token_blocking();
                 let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
-                add_draft_inner(&token, &title, &content, &thumb_media_id).await.map_err(|(_, m)| m)
+                add_draft_inner(&token, &title, &content, &thumb_media_id)
+                    .await
+                    .map_err(|(_, m)| m)
             } else {
                 Err(msg)
             }

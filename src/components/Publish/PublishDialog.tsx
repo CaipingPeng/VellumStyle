@@ -1,10 +1,11 @@
-import {useEffect, useRef, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import {useStore} from "../../store/index.ts";
 import {solveDraftHtml} from "../../markdown/converter.ts";
 import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
-import {findUnuploadedImages, uploadThumb, addDraft} from "../../utils/publish.ts";
+import {toProxyImageUrl} from "../../utils/imageProxy.ts";
+import {addDraft, findUnuploadedImages, getCoverCandidates, uploadRemoteThumb, uploadThumb} from "../../utils/publish.ts";
 import {toast} from "../Toast/toast.ts";
-import {ImageIcon, UploadCloud} from "lucide-react";
+import {ImageIcon, Images, UploadCloud} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import Button from "../ui/Button.tsx";
 
@@ -16,6 +17,10 @@ interface Props {
 
 const inputClass =
   "box-border h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text outline-none transition-colors duration-fast placeholder:text-text-muted hover:border-border-strong focus-visible:border-accent focus-visible:bg-bg-secondary";
+
+function revokePreview(url: string | null) {
+  if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+}
 
 export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const content = useStore((s) => s.content);
@@ -29,6 +34,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<string | null>(null);
+  const coverCandidates = useMemo(() => getCoverCandidates(content), [content]);
   previewRef.current = thumbPreview;
 
   useEffect(() => {
@@ -36,7 +42,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     setTitle(defaultTitle);
     setThumbId(null);
     setThumbPreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
+      revokePreview(prev);
       return null;
     });
     setBusy(false);
@@ -46,7 +52,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   // 弹窗卸载时释放最后的预览 blob URL。
   useEffect(() => {
     return () => {
-      if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+      revokePreview(previewRef.current);
     };
   }, []);
 
@@ -56,19 +62,41 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       const id = await uploadThumb(file);
       setThumbId(id);
       setThumbPreview((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
+        revokePreview(prev);
         return URL.createObjectURL(file);
       });
     } catch (e) {
-      const msg = String(e);
-      if (msg.includes("NOT_CONFIGURED")) {
-        toast.show("尚未配置微信图床，请先在设置中填写", "error");
-        onNeedSettings();
-      } else {
-        toast.show(`封面上传失败：${msg}`, "error");
-      }
+      handleThumbError(e);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const pickArticleThumb = async (url: string) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const id = await uploadRemoteThumb(url);
+      setThumbId(id);
+      setThumbPreview((prev) => {
+        revokePreview(prev);
+        return toProxyImageUrl(url);
+      });
+      toast.show("已选择文中图片作为封面", "info");
+    } catch (e) {
+      handleThumbError(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleThumbError = (error: unknown) => {
+    const msg = String(error);
+    if (msg.includes("NOT_CONFIGURED")) {
+      toast.show("尚未配置微信图床，请先在设置中填写", "error");
+      onNeedSettings();
+    } else {
+      toast.show(`封面上传失败：${msg}`, "error");
     }
   };
 
@@ -182,7 +210,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                 <div className="relative mt-auto flex w-full items-center justify-between gap-3 p-4 text-white">
                   <div>
                     <div className="text-sm font-semibold">封面已上传</div>
-                    <div className="mt-1 text-xs text-white/80">点击此区域可重新选择</div>
+                    <div className="mt-1 text-xs text-white/80">点击此区域可重新选择本地图片</div>
                   </div>
                   <span className="inline-flex h-9 items-center gap-1.5 rounded-md bg-white/95 px-3 text-[13px] font-medium text-text shadow-sm transition-colors group-hover:bg-white">
                     <UploadCloud size={15} />
@@ -200,6 +228,43 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
               </div>
             )}
           </button>
+
+          <div className="mt-3 rounded-lg border border-border bg-bg px-3 py-3">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="inline-flex items-center gap-2 text-[13px] font-medium text-text">
+                <Images size={15} className="text-accent" />
+                从文中选择
+              </div>
+              <span className="text-xs text-text-muted">{coverCandidates.length} 张可选</span>
+            </div>
+            {coverCandidates.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2">
+                {coverCandidates.map((candidate) => (
+                  <button
+                    key={candidate.url}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void pickArticleThumb(candidate.url)}
+                    className="group relative aspect-[16/10] overflow-hidden rounded-md border border-border bg-bg-secondary outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60"
+                    aria-label="选择文中图片作为封面"
+                  >
+                    <img
+                      src={toProxyImageUrl(candidate.url)}
+                      alt="文中候选封面"
+                      className="h-full w-full object-cover transition-transform duration-fast group-hover:scale-105"
+                    />
+                    <span className="absolute inset-x-0 bottom-0 bg-black/50 px-2 py-1 text-left text-[11px] text-white/90 opacity-0 transition-opacity group-hover:opacity-100">
+                      设为封面
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-md bg-bg-secondary px-3 py-3 text-xs leading-5 text-text-secondary">
+                正文中未找到已上传到微信的图片，请先上传正文图片，或直接上传本地封面。
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </Dialog>

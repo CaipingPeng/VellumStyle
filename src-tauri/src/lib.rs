@@ -85,6 +85,7 @@ pub fn run() {
             documents::delete_entry,
             documents::move_entry,
             wechat::upload_thumb,
+            wechat::upload_remote_thumb,
             wechat::add_draft
         ])
         .run(tauri::generate_context!())
