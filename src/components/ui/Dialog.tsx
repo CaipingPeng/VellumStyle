@@ -9,7 +9,7 @@ interface Props {
   onClose: () => void;
   /** 点遮罩是否关闭，默认 true。发布对话框传 false（已知需求）。 */
   closeOnOverlay?: boolean;
-  width?: number;
+  width?: number | string;
   children: ReactNode;
   footer?: ReactNode;
 }
