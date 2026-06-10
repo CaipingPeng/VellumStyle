@@ -32,6 +32,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const [thumbId, setThumbId] = useState<string | null>(null);
   const [thumbPreview, setThumbPreview] = useState<string | null>(null);
   const [selectedCandidateUrl, setSelectedCandidateUrl] = useState<string | null>(null);
+  const [pendingCandidateUrl, setPendingCandidateUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<string | null>(null);
@@ -39,10 +40,14 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   previewRef.current = thumbPreview;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setPendingCandidateUrl(null);
+      return;
+    }
     setTitle(defaultTitle);
     setThumbId(null);
     setSelectedCandidateUrl(null);
+    setPendingCandidateUrl(null);
     setThumbPreview((prev) => {
       revokePreview(prev);
       return null;
@@ -77,6 +82,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
 
   const pickArticleThumb = async (url: string) => {
     if (busy) return;
+    setPendingCandidateUrl(null);
     setBusy(true);
     try {
       const id = await uploadRemoteThumb(url);
@@ -141,13 +147,14 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   };
 
   return (
-    <Dialog
-      open={open}
-      title="发布到公众号草稿箱"
-      onClose={onClose}
-      closeOnOverlay={false}
-      width="min(86vw,1040px)"
-      footer={
+    <>
+      <Dialog
+        open={open}
+        title="发布到公众号草稿箱"
+        onClose={onClose}
+        closeOnOverlay={false}
+        width="min(86vw,1040px)"
+        footer={
         <>
           <Button type="button" variant="secondary" onClick={onClose}>
             取消
@@ -246,7 +253,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                     key={candidate.url}
                     type="button"
                     disabled={busy}
-                    onClick={() => void pickArticleThumb(candidate.url)}
+                    onClick={() => setPendingCandidateUrl(candidate.url)}
                     className={`group relative aspect-[16/10] overflow-hidden rounded-md border bg-bg-secondary outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
                       selected ? "border-accent ring-2 ring-[color:var(--ring)]" : "border-border"
                     }`}
@@ -277,5 +284,36 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
         </div>
       </div>
     </Dialog>
+      <Dialog
+        open={pendingCandidateUrl !== null}
+        title="确认使用这张图片？"
+        onClose={() => setPendingCandidateUrl(null)}
+        width={420}
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setPendingCandidateUrl(null)} disabled={busy}>
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => pendingCandidateUrl && void pickArticleThumb(pendingCandidateUrl)}
+              disabled={busy}
+            >
+              {busy ? "处理中…" : "确认使用"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="overflow-hidden rounded-md border border-border bg-bg-secondary">
+            {pendingCandidateUrl && (
+              <img src={toProxyImageUrl(pendingCandidateUrl)} alt="待确认的封面图" className="h-44 w-full object-cover" />
+            )}
+          </div>
+          <p className="text-sm leading-6 text-text-secondary">确认后才会获取封面图片 ID，取消不会消耗资源。</p>
+        </div>
+      </Dialog>
+    </>
   );
 }
