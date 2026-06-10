@@ -125,7 +125,11 @@ const Preview = forwardRef<PreviewHandle, Props>(
     }
 
     return (
-      <div ref={scrollRef} style={{height: "100%", overflow: "auto", background: mode.width ? "var(--bg-secondary)" : "#fff"}}>
+      <div
+        ref={scrollRef}
+        className="editor-preview-scrollbar"
+        style={{height: "100%", overflow: "auto", background: mode.width ? "var(--bg-secondary)" : "#fff"}}
+      >
         <div
           id="nice-rich-text-box"
           style={{

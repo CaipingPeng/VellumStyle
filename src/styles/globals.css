@@ -57,6 +57,65 @@ body {
   padding: 12px 16px;
 }
 
+.cm-scroller,
+.editor-preview-scrollbar {
+  scrollbar-color: transparent transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.cm-scroller:hover,
+.cm-scroller:focus-within,
+.editor-preview-scrollbar:hover,
+.editor-preview-scrollbar:focus-within {
+  scrollbar-color: rgba(107, 107, 118, 0.34) transparent;
+}
+
+.cm-scroller::-webkit-scrollbar,
+.editor-preview-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.cm-scroller::-webkit-scrollbar-track,
+.cm-scroller::-webkit-scrollbar-corner,
+.editor-preview-scrollbar::-webkit-scrollbar-track,
+.editor-preview-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.cm-scroller::-webkit-scrollbar-thumb,
+.editor-preview-scrollbar::-webkit-scrollbar-thumb {
+  min-height: 36px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-color: transparent;
+  background-clip: padding-box;
+  transition:
+    background-color 130ms var(--ease),
+    border-color 130ms var(--ease),
+    border-width 130ms var(--ease);
+}
+
+.cm-scroller:hover::-webkit-scrollbar-thumb,
+.cm-scroller:focus-within::-webkit-scrollbar-thumb,
+.editor-preview-scrollbar:hover::-webkit-scrollbar-thumb,
+.editor-preview-scrollbar:focus-within::-webkit-scrollbar-thumb {
+  background-color: rgba(107, 107, 118, 0.32);
+}
+
+.cm-scroller::-webkit-scrollbar-thumb:hover,
+.editor-preview-scrollbar::-webkit-scrollbar-thumb:hover {
+  border-width: 2px;
+  background-color: rgba(107, 107, 118, 0.46);
+}
+
+.cm-scroller::-webkit-scrollbar-thumb:active,
+.editor-preview-scrollbar::-webkit-scrollbar-thumb:active {
+  border-width: 1px;
+  background-color: rgba(94, 106, 210, 0.56);
+}
+
 #nice .preview-edit-hover,
 #nice .preview-edit-selected {
   cursor: pointer;
