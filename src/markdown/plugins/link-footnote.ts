@@ -47,7 +47,7 @@ function renderFootnoteOpen(tokens: Token[], idx: number, options: any, env: any
   if (tokens[idx].meta.subId > 0) {
     id += ":" + tokens[idx].meta.subId;
   }
-  return '<span id="fn' + id + '" class="footnote-item"><span class="footnote-num">[' + id + "] </span>";
+  return '<span id="fn' + id + '" class="footnote-item" style="display:block;"><span class="footnote-num" style="display:inline;width:auto;">[' + id + "] </span>";
 }
 
 function renderFootnoteClose(): string {
@@ -264,17 +264,9 @@ function footnoteTail(state: StateCore) {
 
     if (list[i].tokens) {
       tokens = [];
-      token = new state.Token("paragraph_open", "p", 1);
-      token.block = true;
-      tokens.push(token);
-
       token = new state.Token("inline", "", 0);
       token.children = list[i].tokens;
       token.content = "";
-      tokens.push(token);
-
-      token = new state.Token("paragraph_close", "p", -1);
-      token.block = true;
       tokens.push(token);
     } else if (list[i].label) {
       tokens = refTokens[":" + list[i].label];
