@@ -17,7 +17,7 @@ import {toast} from "./components/Toast/toast.ts";
 import {useStore, getThemeById, flushSave} from "./store/index.ts";
 import {loadAllThemes} from "./themes/loader.ts";
 import {defaultMarkdownTheme} from "./themes/index.ts";
-import {uploadImage, type UploadError} from "./utils/upload.ts";
+import {uploadImage, uploadLocalImage, type UploadError} from "./utils/upload.ts";
 import {createScrollSync} from "./utils/syncScroll.ts";
 import {createDocument, writeDocument, type DocNode} from "./utils/documents.ts";
 import {getCurrentWindow} from "@tauri-apps/api/window";
@@ -48,19 +48,34 @@ export default function App() {
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
 
+  const insertUploadedImage = (url: string) => {
+    editorRef.current?.insertAtCursor(`\n![](${url})\n`);
+  };
+
+  const handleUploadError = (e: unknown) => {
+    const err = e as UploadError;
+    if (err.code === "NOT_CONFIGURED") {
+      toast.show("尚未配置微信图床：请点右上角「设置」填写公众号 AppID/AppSecret。", "error");
+      setSettingsOpen(true);
+    } else {
+      toast.show(err.message || "图片上传失败", "error");
+    }
+  };
+
   // 上传按钮和粘贴共用一条路径：上传 → 光标处插入 → 统一错误提示。
   const handleUploadFile = async (file: File) => {
     try {
-      const url = await uploadImage(file);
-      editorRef.current?.insertAtCursor(`\n![](${url})\n`);
+      insertUploadedImage(await uploadImage(file));
     } catch (e) {
-      const err = e as UploadError;
-      if (err.code === "NOT_CONFIGURED") {
-        toast.show("尚未配置微信图床：请点右上角「设置」填写公众号 AppID/AppSecret。", "error");
-        setSettingsOpen(true);
-      } else {
-        toast.show(err.message || "图片上传失败", "error");
-      }
+      handleUploadError(e);
+    }
+  };
+
+  const handleUploadLocal = async (path: string) => {
+    try {
+      insertUploadedImage(await uploadLocalImage(path));
+    } catch (e) {
+      handleUploadError(e);
     }
   };
 
@@ -172,7 +187,7 @@ export default function App() {
           <SyntaxToolbar editorRef={editorRef} />
         </div>
         <div className="flex items-center gap-3">
-          <UploadButton onPick={handleUploadFile} />
+          <UploadButton onPickFile={handleUploadFile} onPickLocal={handleUploadLocal} />
           <ImportButton />
           <ThemeMenu />
           <Button variant="secondary" onClick={() => setSettingsOpen(true)}>设置</Button>

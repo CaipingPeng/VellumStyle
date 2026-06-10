@@ -1,5 +1,5 @@
-// 图片上传：调 Tauri 的 upload_image command 代理到微信官方图床。
-// 上传按钮与粘贴共用此函数：File/Blob 都转字节+文件名+mime 传给 Rust。
+// 图片上传：调 Tauri command 代理到微信官方图床。
+// 粘贴走 bytes 上传；上传按钮走本地路径上传，避免浏览器文件选择框位置不可控。
 
 import {invoke} from "@tauri-apps/api/core";
 
@@ -13,6 +13,18 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif"];
 
 export function isImageFile(file: File): boolean {
   return ALLOWED_TYPES.includes(file.type);
+}
+
+export async function pickImageFile(): Promise<string | null> {
+  return invoke<string | null>("pick_image_file");
+}
+
+export async function uploadLocalImage(path: string): Promise<string> {
+  try {
+    return await invoke<string>("upload_local_image", {path});
+  } catch (e) {
+    throw normalizeUploadError(e);
+  }
 }
 
 // 上传单张图片，成功返回微信永久链接（mmbiz.qpic.cn）。失败抛 UploadError。
@@ -35,13 +47,16 @@ export async function uploadImage(file: File): Promise<string> {
     });
     return url;
   } catch (e) {
-    // Rust command 抛错返回字符串；"NOT_CONFIGURED" 作错误码，其余作消息。
-    const msg = typeof e === "string" ? e : (e as Error)?.message || "图片上传失败";
-    if (msg === "NOT_CONFIGURED") {
-      throw makeError("尚未配置微信图床", "NOT_CONFIGURED");
-    }
-    throw makeError(msg);
+    throw normalizeUploadError(e);
   }
+}
+
+function normalizeUploadError(e: unknown): UploadError {
+  const msg = typeof e === "string" ? e : (e as Error)?.message || "图片上传失败";
+  if (msg === "NOT_CONFIGURED") {
+    return makeError("尚未配置微信图床", "NOT_CONFIGURED");
+  }
+  return makeError(msg);
 }
 
 function makeError(message: string, code?: string): UploadError {
