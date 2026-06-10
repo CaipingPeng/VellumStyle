@@ -1,5 +1,6 @@
 import {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
 import {render} from "../../markdown/parser.ts";
+import {CODE_FALLBACK_CSS} from "../../markdown/codeFallback.ts";
 import {useStore, getThemeById} from "../../store/index.ts";
 import {replaceStyle, STYLE_IDS} from "../../utils/style.ts";
 import {toProxyHtml} from "../../utils/imageProxy.ts";
@@ -32,12 +33,11 @@ const Preview = forwardRef<PreviewHandle, Props>(
       getScroller: () => scrollRef.current,
     }));
 
-    // 主题层：model 编译出的 css 自包含全部样式。basic 层已废弃，不再注入。
-    // code 层置空，避免与复制管线（converter 拼接）冲突。
+    // 主题层：model 编译出的 css 自包含全部样式，统一注入 markdown 层。
+    // 前置引擎级代码高亮兜底（低特异性），主题自带配色可覆盖它。
     useEffect(() => {
       const css = getThemeById(themes, markdownThemeId).css;
-      replaceStyle(STYLE_IDS.markdown, css);
-      replaceStyle(STYLE_IDS.code, "");
+      replaceStyle(STYLE_IDS.markdown, CODE_FALLBACK_CSS + "\n" + css);
     }, [markdownThemeId, themes]);
 
     // 内容渲染，100ms 节流
