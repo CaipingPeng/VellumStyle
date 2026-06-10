@@ -1,4 +1,5 @@
 import {useState} from "react";
+import {Send} from "lucide-react";
 import PublishDialog from "./PublishDialog.tsx";
 import Button from "../ui/Button.tsx";
 
@@ -10,7 +11,10 @@ export default function PublishButton({onNeedSettings}: Props) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>发布</Button>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        <Send size={14} />
+        发布
+      </Button>
       <PublishDialog open={open} onClose={() => setOpen(false)} onNeedSettings={onNeedSettings} />
     </>
   );
