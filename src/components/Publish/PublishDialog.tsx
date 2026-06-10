@@ -159,7 +159,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       }
     >
       <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]">
-        <div className="min-w-0 space-y-4 rounded-lg border border-border bg-bg px-3 py-3">
+        <div className="flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-bg px-3 py-3">
           <div>
             <label htmlFor="publish-title" className="mb-2 block text-[13px] font-medium text-text">
               文章标题
@@ -173,7 +173,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
             />
           </div>
 
-          <div>
+          <div className="flex min-h-0 flex-1 flex-col">
             <div className="mb-2 flex items-end justify-between gap-3">
               <div>
                 <label htmlFor="publish-thumb" className="block text-[13px] font-medium text-text">
@@ -199,7 +199,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
               onClick={openThumbPicker}
               disabled={busy}
               aria-label={thumbPreview ? "更换封面图" : "上传封面图"}
-              className="group relative flex aspect-[16/10] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-border-strong bg-bg-secondary text-left outline-none transition-all duration-fast ease-smooth hover:border-accent hover:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60"
+              className="group relative flex min-h-[180px] flex-1 w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-border-strong bg-bg-secondary text-left outline-none transition-all duration-fast ease-smooth hover:border-accent hover:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60"
             >
               {thumbPreview ? (
                 <>
