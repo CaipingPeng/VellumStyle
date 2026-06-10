@@ -4,6 +4,7 @@ import {solveDraftHtml} from "../../markdown/converter.ts";
 import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
 import {findUnuploadedImages, uploadThumb, addDraft} from "../../utils/publish.ts";
 import {toast} from "../Toast/toast.ts";
+import {ImageIcon, UploadCloud} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import Button from "../ui/Button.tsx";
 
@@ -14,7 +15,7 @@ interface Props {
 }
 
 const inputClass =
-  "h-8 w-full rounded-sm border border-border px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]";
+  "box-border h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text outline-none transition-colors duration-fast placeholder:text-text-muted hover:border-border-strong focus-visible:border-accent focus-visible:bg-bg-secondary";
 
 export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const content = useStore((s) => s.content);
@@ -99,12 +100,21 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     }
   };
 
+  const openThumbPicker = () => {
+    if (busy) return;
+    if (fileRef.current) {
+      fileRef.current.value = "";
+      fileRef.current.click();
+    }
+  };
+
   return (
     <Dialog
       open={open}
       title="发布到公众号草稿箱"
       onClose={onClose}
       closeOnOverlay={false}
+      width={520}
       footer={
         <>
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -116,25 +126,81 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
         </>
       }
     >
-      <label className="mb-1 block text-[13px] text-text-secondary">标题</label>
-      <input value={title} onChange={(e) => setTitle(e.target.value)} className={`${inputClass} mb-4`} />
+      <div className="space-y-5">
+        <div className="rounded-lg border border-border bg-bg-secondary px-4 py-3">
+          <div className="text-sm font-medium text-text">发布前确认内容与封面</div>
+          <div className="mt-1 text-[13px] leading-5 text-text-secondary">
+            将当前文章发送到公众号草稿箱，正文图片需先上传到微信素材库。
+          </div>
+        </div>
 
-      <label className="mb-1 block text-[13px] text-text-secondary">封面图（必填）</label>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/jpeg,image/png,image/gif"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) void pickThumb(f);
-        }}
-      />
-      <div className="flex items-center gap-3">
-        <Button type="button" variant="secondary" onClick={() => fileRef.current?.click()} disabled={busy}>
-          选择封面
-        </Button>
-        {thumbPreview && <img src={thumbPreview} alt="封面" className="h-12 rounded" />}
+        <div>
+          <label htmlFor="publish-title" className="mb-2 block text-[13px] font-medium text-text">
+            文章标题
+          </label>
+          <input
+            id="publish-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className={inputClass}
+            placeholder="输入公众号文章标题"
+          />
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-end justify-between gap-3">
+            <div>
+              <label htmlFor="publish-thumb" className="block text-[13px] font-medium text-text">
+                封面图
+              </label>
+              <div className="mt-1 text-xs text-text-muted">建议使用清晰横图，支持 JPG、PNG、GIF。</div>
+            </div>
+            {thumbPreview && <span className="text-xs font-medium text-accent">已选择</span>}
+          </div>
+          <input
+            id="publish-thumb"
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void pickThumb(f);
+            }}
+          />
+          <button
+            type="button"
+            onClick={openThumbPicker}
+            disabled={busy}
+            aria-label={thumbPreview ? "更换封面图" : "上传封面图"}
+            className="group relative flex aspect-[16/7] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-border-strong bg-bg-secondary text-left outline-none transition-all duration-fast ease-smooth hover:border-accent hover:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60"
+          >
+            {thumbPreview ? (
+              <>
+                <img src={thumbPreview} alt="已选择的封面图预览" className="absolute inset-0 h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-90 transition-opacity group-hover:opacity-100" />
+                <div className="relative mt-auto flex w-full items-center justify-between gap-3 p-4 text-white">
+                  <div>
+                    <div className="text-sm font-semibold">封面已上传</div>
+                    <div className="mt-1 text-xs text-white/80">点击此区域可重新选择</div>
+                  </div>
+                  <span className="inline-flex h-9 items-center gap-1.5 rounded-md bg-white/95 px-3 text-[13px] font-medium text-text shadow-sm transition-colors group-hover:bg-white">
+                    <UploadCloud size={15} />
+                    更换
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center px-6 text-center">
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent-subtle text-accent transition-transform duration-fast group-hover:scale-105">
+                  <ImageIcon size={22} />
+                </span>
+                <div className="mt-3 text-sm font-semibold text-text">点击上传封面图</div>
+                <div className="mt-1 text-xs leading-5 text-text-secondary">用一张横向图片作为草稿箱封面</div>
+              </div>
+            )}
+          </button>
+        </div>
       </div>
     </Dialog>
   );
