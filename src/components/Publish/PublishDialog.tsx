@@ -158,8 +158,8 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
         </>
       }
     >
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]">
-        <div className="min-w-0 space-y-4">
+      <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]">
+        <div className="min-w-0 space-y-4 rounded-lg border border-border bg-bg px-3 py-3">
           <div>
             <label htmlFor="publish-title" className="mb-2 block text-[13px] font-medium text-text">
               文章标题
