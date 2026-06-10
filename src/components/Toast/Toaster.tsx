@@ -7,7 +7,7 @@ export default function Toaster() {
   useEffect(() => toast.subscribe(setItems), []);
 
   return (
-    <div className="pointer-events-none fixed bottom-10 right-4 z-[1000] flex flex-col gap-2">
+    <div className="pointer-events-none fixed bottom-10 right-4 z-[3000] flex flex-col gap-2">
       <AnimatePresence>
         {items.map((it) => (
           <motion.div

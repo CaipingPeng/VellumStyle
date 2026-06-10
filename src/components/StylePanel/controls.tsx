@@ -45,7 +45,7 @@ function toggleButtonClass(active: boolean): string {
 function AlignControl({item, onChange}: CtrlProps) {
   const opts = ["left", "center", "right"];
   return (
-    <div style={{display: "flex", gap: 4}}>
+    <div className="flex gap-1">
       {opts.map((o) => (
         <button key={o} onClick={() => onChange(o)} className={toggleButtonClass(item.value === o)}>
           {o}
@@ -57,7 +57,7 @@ function AlignControl({item, onChange}: CtrlProps) {
 
 function WeightControl({item, onChange}: CtrlProps) {
   return (
-    <div style={{display: "flex", gap: 4}}>
+    <div className="flex gap-1">
       {["normal", "bold"].map((o) => (
         <button key={o} onClick={() => onChange(o)} className={toggleButtonClass(item.value === o)}>
           {o}

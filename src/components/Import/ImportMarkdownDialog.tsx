@@ -92,20 +92,20 @@ export default function ImportMarkdownDialog({
         </div>
 
         {progress && (
-          <div style={statusStyle}>
+          <div className={statusClass}>
             <div>{phaseText[progress.phase] || progress.phase}</div>
             {typeof progress.total === "number" && (
               <div className="text-text-muted">进度 {progress.completed || 0} / {progress.total}</div>
             )}
-            {progress.current && <div style={pathStyle}>{progress.current}</div>}
+            {progress.current && <div className={pathClass}>{progress.current}</div>}
           </div>
         )}
 
         {error && <div className="rounded-sm border border-danger/30 bg-danger/5 p-2.5 text-xs leading-relaxed text-danger">{error}</div>}
 
         {result && (
-          <div style={statusStyle}>
-            <div style={{fontWeight: 600, marginBottom: 6}}>导入结果</div>
+          <div className={statusClass}>
+            <div className="mb-1.5 font-semibold">导入结果</div>
             <div>共识别 {result.totalRefs} 个媒体引用，成功上传 {totalUploaded} 张图片。</div>
             <div>本地图片 {result.uploadedLocal.length}，在线图片 {result.uploadedRemote.length}，失败 {totalFailed}，未处理 {totalUnsupported}。</div>
             {totalFailed > 0 && <DetailList title="失败项" items={result.failed} />}
@@ -119,11 +119,11 @@ export default function ImportMarkdownDialog({
 
 function DetailList({title, items}: {title: string; items: Array<{originalUrl: string; reason?: string}>}) {
   return (
-    <details style={{marginTop: 8}}>
-      <summary style={{cursor: "pointer"}}>{title}</summary>
-      <ul style={{margin: "6px 0 0", paddingLeft: 18, maxHeight: 120, overflow: "auto"}}>
+    <details className="mt-2">
+      <summary className="cursor-pointer">{title}</summary>
+      <ul className="mt-1.5 max-h-[120px] overflow-auto pl-[18px]">
         {items.slice(0, 20).map((item, index) => (
-          <li key={`${item.originalUrl}-${index}`} style={{lineHeight: 1.5}}>
+          <li key={`${item.originalUrl}-${index}`} className="leading-normal">
             <span className="text-text-secondary">{item.originalUrl}</span>
             {item.reason && <span className="text-text-muted"> — {item.reason}</span>}
           </li>
@@ -133,19 +133,5 @@ function DetailList({title, items}: {title: string; items: Array<{originalUrl: s
   );
 }
 
-const statusStyle: React.CSSProperties = {
-  border: "1px solid var(--border)",
-  background: "var(--bg-secondary)",
-  borderRadius: 6,
-  padding: 10,
-  fontSize: 12,
-  color: "var(--text)",
-  lineHeight: 1.6,
-};
-
-const pathStyle: React.CSSProperties = {
-  color: "var(--text-muted)",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-};
+const statusClass = "rounded-md border border-border bg-bg-secondary p-2.5 text-xs leading-relaxed text-text";
+const pathClass = "overflow-hidden text-ellipsis whitespace-nowrap text-text-muted";

@@ -30,6 +30,18 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const previewRef = useRef<string | null>(null);
   previewRef.current = thumbPreview;
 
+  useEffect(() => {
+    if (!open) return;
+    setTitle(defaultTitle);
+    setThumbId(null);
+    setThumbPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setBusy(false);
+    if (fileRef.current) fileRef.current.value = "";
+  }, [open, defaultTitle]);
+
   // 弹窗卸载时释放最后的预览 blob URL。
   useEffect(() => {
     return () => {
@@ -112,7 +124,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
         ref={fileRef}
         type="file"
         accept="image/jpeg,image/png,image/gif"
-        style={{display: "none"}}
+        className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) void pickThumb(f);
@@ -122,7 +134,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
         <Button type="button" variant="secondary" onClick={() => fileRef.current?.click()} disabled={busy}>
           选择封面
         </Button>
-        {thumbPreview && <img src={thumbPreview} alt="封面" style={{height: 48, borderRadius: 4}} />}
+        {thumbPreview && <img src={thumbPreview} alt="封面" className="h-12 rounded" />}
       </div>
     </Dialog>
   );

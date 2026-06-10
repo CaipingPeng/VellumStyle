@@ -1,6 +1,7 @@
 import {useEffect, useState} from "react";
 import {invoke} from "@tauri-apps/api/core";
 import Dialog from "../ui/Dialog.tsx";
+import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
 
 interface Props {
@@ -47,7 +48,7 @@ export default function SettingsDialog({open, onClose}: Props) {
       onClose();
     } catch (e) {
       const msg = typeof e === "string" ? e : (e as Error)?.message || "保存失败";
-      window.alert(msg);
+      toast.show(msg, "error");
     } finally {
       setSaving(false);
     }

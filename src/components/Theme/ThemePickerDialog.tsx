@@ -4,6 +4,7 @@ import {motion} from "framer-motion";
 import {X, Plus, Upload} from "lucide-react";
 import {useStore} from "../../store/index.ts";
 import {loadAllThemes, openThemesDir, importMdniceTheme} from "../../themes/loader.ts";
+import {toast} from "../Toast/toast.ts";
 import ThemeThumbnail from "./ThemeThumbnail.tsx";
 
 const PAGE_SIZE = 8;
@@ -71,7 +72,7 @@ export default function ThemePickerDialog({onClose}: Props) {
         await importMdniceTheme(name, raw);
         setThemes(await loadAllThemes());
       } catch (e) {
-        window.alert("导入失败：" + (e as Error).message);
+        toast.show(`导入失败：${(e as Error).message}`, "error");
       }
     };
     input.click();
@@ -112,7 +113,7 @@ export default function ThemePickerDialog({onClose}: Props) {
               ].join(" ")}
             >
               <ThemeThumbnail themeId={t.id} css={t.css} />
-              <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, minWidth: 0}}>
+              <div className="flex min-w-0 items-center justify-between gap-2.5">
                 <span
                   title={t.name}
                   className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text"
@@ -135,7 +136,7 @@ export default function ThemePickerDialog({onClose}: Props) {
       </div>
 
       <div className="flex items-center justify-between gap-3 border-t border-border bg-bg px-7 pb-[22px] pt-4">
-        <div style={{display: "flex", alignItems: "center", gap: 8}}>
+        <div className="flex items-center gap-2">
           <button onClick={openFolder} className={secondaryBtnClass}>
             <Plus size={14} /> 打开主题文件夹
           </button>
@@ -146,7 +147,7 @@ export default function ThemePickerDialog({onClose}: Props) {
         </div>
 
         {totalPages > 1 && (
-          <div style={{display: "flex", alignItems: "center", gap: 6}}>
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={safePage === 0}

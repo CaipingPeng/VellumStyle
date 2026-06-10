@@ -28,15 +28,15 @@ export default function Dialog({open, title, onClose, closeOnOverlay = true, wid
           onClick={closeOnOverlay ? onClose : undefined}
         >
           <motion.div
-            className="overflow-hidden rounded-lg bg-bg shadow-lg"
-            style={{width, maxWidth: "90%"}}
+            className="flex max-h-[86vh] flex-col overflow-hidden rounded-lg bg-bg shadow-lg"
+            style={{width, maxWidth: "90vw"}}
             initial={{opacity: 0, scale: 0.96, y: 8}}
             animate={{opacity: 1, scale: 1, y: 0}}
             exit={{opacity: 0, scale: 0.96, y: 8}}
             transition={{duration: 0.13, ease: [0.16, 1, 0.3, 1]}}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex h-11 items-center justify-between border-b border-border px-4 text-sm font-semibold text-text">
+            <div className="flex h-11 shrink-0 items-center justify-between border-b border-border px-4 text-sm font-semibold text-text">
               <span>{title}</span>
               <button
                 type="button"
@@ -47,8 +47,8 @@ export default function Dialog({open, title, onClose, closeOnOverlay = true, wid
                 <X size={16} />
               </button>
             </div>
-            <div className="p-4">{children}</div>
-            {footer && <div className="flex justify-end gap-2 px-4 pb-4">{footer}</div>}
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
+            {footer && <div className="flex shrink-0 justify-end gap-2 border-t border-border px-4 py-3">{footer}</div>}
           </motion.div>
         </motion.div>
       )}

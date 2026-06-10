@@ -16,14 +16,14 @@ export default function StylePanel() {
   function renderItem(item: StyleItem, path: string[]) {
     if (item.children && item.children.length > 0) {
       return (
-        <div key={item.id} style={{marginBottom: 12}}>
+        <div key={item.id} className="mb-3">
           <div className="mb-1 text-xs text-text-muted">{item.id}</div>
           {item.children.map((c) => renderItem(c, [...path, c.id]))}
         </div>
       );
     }
     return (
-      <div key={item.id} style={{marginBottom: 10}}>
+      <div key={item.id} className="mb-2.5">
         <div className="mb-1 text-xs text-text-secondary">{item.id}</div>
         <StyleControl item={item} onChange={(value) => updateStyleValue(selectedModelId!, path, value)} />
       </div>
@@ -37,7 +37,7 @@ export default function StylePanel() {
       animate={{x: 0, opacity: 1}}
       transition={{duration: 0.16, ease: [0.16, 1, 0.3, 1]}}
     >
-      <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12}}>
+      <div className="mb-3 flex items-center justify-between">
         <strong className="text-sm text-text">{model.label || model.id}</strong>
         <button
           onClick={() => setSelectedModel(null)}
