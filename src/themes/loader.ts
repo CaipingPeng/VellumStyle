@@ -1,11 +1,12 @@
 import {invoke} from "@tauri-apps/api/core";
-import {builtinThemes, type ThemeOption, type StyleModel} from "./index.ts";
+import {loadBuiltinThemes, type ThemeOption, type StyleModel} from "./index.ts";
 import {compileModel} from "./compileModel.ts";
 import {validateModel} from "./themeModel.ts";
 
 // 启动：内置 model 主题 + 用户目录 *.json 扫描，编译出 css。
 // 无 Tauri 环境（Web 调试）时 invoke 抛错，回退为仅内置。
 export async function loadAllThemes(): Promise<ThemeOption[]> {
+  const builtinThemes = await loadBuiltinThemes();
   let user: ThemeOption[] = [];
   try {
     const raw = await invoke<{id: string; name: string; model: unknown}[]>("list_user_themes");

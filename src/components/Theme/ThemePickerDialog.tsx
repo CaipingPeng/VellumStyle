@@ -27,7 +27,7 @@ interface Props {
   onClose: () => void;
 }
 
-// 居中浮层：网格卡片（缩略图 + 名 + 使用）+ 分页 + 打开主题文件夹。
+// 居中浮层：网格卡片（缩略图 + 名 + 使用）+ 分页 + 主题文件操作。
 export default function ThemePickerDialog({onClose}: Props) {
   const {markdownThemeId, setMarkdownTheme, themes, setThemes, favoriteThemeIds, toggleFavoriteTheme} = useStore();
   const [page, setPage] = useState(0);
@@ -194,7 +194,7 @@ export default function ThemePickerDialog({onClose}: Props) {
           </button>
 
           <button onClick={importTheme} className={secondaryBtnClass}>
-            <Upload size={14} /> 导入 mdnice 主题
+            <Upload size={14} /> 导入主题文件
           </button>
         </div>
 
@@ -231,7 +231,7 @@ export default function ThemePickerDialog({onClose}: Props) {
 }
 
 const secondaryBtnClass =
-  "inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-sm border border-border bg-bg px-3 text-xs font-medium text-text-secondary cursor-pointer transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]";
+  "inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-sm border border-transparent bg-transparent px-2.5 text-xs font-medium text-text-muted cursor-pointer transition-colors duration-fast ease-smooth hover:bg-bg-secondary hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] [&>svg]:opacity-70 [&>svg]:transition-opacity [&>svg]:duration-fast hover:[&>svg]:opacity-100";
 
 const pageNavBtnClass =
   "inline-flex h-full w-8 items-center justify-center border-0 bg-bg text-text-secondary transition-colors duration-fast enabled:cursor-pointer enabled:hover:bg-bg-tertiary enabled:hover:text-text disabled:cursor-default disabled:opacity-[0.38]";

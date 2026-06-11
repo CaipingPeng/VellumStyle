@@ -21,31 +21,41 @@ const defaultTheme: ThemeOption = {
   model: DEFAULT_MODEL,
 };
 
-// 预置主题（从 mdnice 收录）：presets/*.json 形态为 {name, model}，编译期内联进包。
+// 预置主题（从 mdnice 收录）：presets/*.json 形态为 {name, model}。
 // 文件名（去扩展名）作 id，name 字段作显示名。新增预置主题只需丢 .json 文件。
 type PresetFile = {name?: string; model?: unknown};
-const presetModules = import.meta.glob("./presets/*.json", {eager: true}) as Record<
+const presetModules = import.meta.glob("./presets/*.json", {import: "default"}) as Record<
   string,
-  {default: PresetFile}
+  () => Promise<PresetFile>
 >;
 
-const presetThemes: ThemeOption[] = Object.entries(presetModules)
-  .map(([path, mod]) => {
-    const id = path.replace(/^\.\/presets\//, "").replace(/\.json$/, "");
-    const raw = mod.default;
-    const model = raw?.model;
-    if (!validateModel(model)) return null;
-    return {
-      id,
-      name: raw.name || id,
-      css: compileModel(model),
-      model,
-    } as ThemeOption;
-  })
-  .filter((t): t is ThemeOption => t !== null)
-  .sort((a, b) => a.name.localeCompare(b.name, "zh"));
+let builtinThemesPromise: Promise<ThemeOption[]> | undefined;
 
-// default 永远排第一，其余预置主题跟在后面。
-export const builtinThemes: ThemeOption[] = [defaultTheme, ...presetThemes];
+function toPresetTheme(path: string, raw: PresetFile): ThemeOption | null {
+  const id = path.replace(/^\.\/presets\//, "").replace(/\.json$/, "");
+  const model = raw?.model;
+  if (!validateModel(model)) return null;
+  return {
+    id,
+    name: raw.name || id,
+    css: compileModel(model),
+    model,
+  };
+}
+
+export async function loadBuiltinThemes(): Promise<ThemeOption[]> {
+  if (!builtinThemesPromise) {
+    builtinThemesPromise = Promise.all(
+      Object.entries(presetModules).map(async ([path, load]) => toPresetTheme(path, await load())),
+    ).then((themes) => [
+      defaultTheme,
+      ...themes.filter((t): t is ThemeOption => t !== null).sort((a, b) => a.name.localeCompare(b.name, "zh")),
+    ]);
+  }
+  return builtinThemesPromise;
+}
+
+// 启动首帧只需要默认主题；完整预设由 loadBuiltinThemes() 异步加载。
+export const builtinThemes: ThemeOption[] = [defaultTheme];
 
 export const defaultMarkdownTheme: ThemeOption = defaultTheme;
