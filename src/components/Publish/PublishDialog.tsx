@@ -16,7 +16,7 @@ interface Props {
 }
 
 const titleInputShellClass =
-  "group flex h-11 items-center gap-2 rounded-lg border border-[rgba(224,224,230,0.72)] bg-bg-secondary px-3.5 text-text-muted shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_22px_rgba(20,20,30,0.045)] transition-all duration-fast ease-smooth hover:border-border-strong hover:bg-bg focus-within:border-[rgba(94,106,210,0.36)] focus-within:bg-bg focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_0_0_3px_rgba(94,106,210,0.10),0_10px_24px_rgba(20,20,30,0.06)]";
+  "group box-border flex h-11 items-center gap-2 rounded-lg border-2 border-solid border-[#b8baca] bg-bg-secondary px-3.5 text-text-muted shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_22px_rgba(20,20,30,0.045)] transition-all duration-fast ease-smooth hover:border-[#9ea2b8] hover:bg-bg focus-within:border-[rgba(94,106,210,0.5)] focus-within:bg-bg focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_0_0_3px_rgba(94,106,210,0.10),0_10px_24px_rgba(20,20,30,0.06)]";
 
 const titleInputClass =
   "h-full min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 font-[inherit] text-[15px] text-text outline-none placeholder:text-text-muted";
