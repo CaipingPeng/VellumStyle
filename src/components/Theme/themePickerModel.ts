@@ -23,3 +23,28 @@ export function filterAndRankThemes<T extends ThemeListItem>(
     })
     .map(({theme}) => theme);
 }
+
+export function getPageJumpRange(currentPage: number, totalPages: number, windowSize: number): number[] {
+  if (totalPages <= 0 || windowSize <= 0) return [];
+
+  const safeCurrent = Math.min(Math.max(0, currentPage), totalPages - 1);
+  const size = Math.min(windowSize, totalPages);
+  const maxStart = Math.max(0, totalPages - size);
+  const start = Math.min(safeCurrent, maxStart);
+
+  return Array.from({length: size}, (_, index) => start + index);
+}
+
+export function shouldShowPageJumpInput(totalPages: number, threshold: number): boolean {
+  return totalPages > threshold;
+}
+
+export function getPageJumpTarget(input: string, totalPages: number): number | null {
+  const value = input.trim();
+  if (totalPages <= 0 || !/^\d+$/.test(value)) return null;
+
+  const pageNumber = Number(value);
+  if (!Number.isSafeInteger(pageNumber)) return null;
+
+  return Math.min(Math.max(1, pageNumber), totalPages) - 1;
+}

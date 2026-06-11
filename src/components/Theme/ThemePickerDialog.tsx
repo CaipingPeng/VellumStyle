@@ -1,15 +1,22 @@
-import {useEffect, useMemo, useRef, useState} from "react";
+import {type FormEvent, useEffect, useMemo, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import {motion} from "framer-motion";
-import {Check, ChevronLeft, ChevronRight, FolderOpen, Search, Star, Upload, X} from "lucide-react";
+import {ArrowRight, Check, ChevronLeft, ChevronRight, FolderOpen, Search, Star, Upload, X} from "lucide-react";
 import {getThemeById, useStore} from "../../store/index.ts";
 import {loadAllThemes, openThemesDir, importMdniceTheme} from "../../themes/loader.ts";
 import {toast} from "../Toast/toast.ts";
 import IconButton from "../ui/IconButton.tsx";
 import ThemeThumbnail from "./ThemeThumbnail.tsx";
-import {filterAndRankThemes} from "./themePickerModel.ts";
+import {
+  filterAndRankThemes,
+  getPageJumpRange,
+  getPageJumpTarget,
+  shouldShowPageJumpInput,
+} from "./themePickerModel.ts";
 
 const PAGE_SIZE = 8;
+const PAGE_JUMP_COUNT = 6;
+const PAGE_INPUT_THRESHOLD = 10;
 
 function useClickOutside(onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null);
@@ -32,6 +39,7 @@ export default function ThemePickerDialog({onClose}: Props) {
   const {markdownThemeId, setMarkdownTheme, themes, setThemes, favoriteThemeIds, toggleFavoriteTheme} = useStore();
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
+  const [jumpPage, setJumpPage] = useState("");
   const ref = useClickOutside(onClose);
 
   useEffect(() => {
@@ -55,11 +63,24 @@ export default function ThemePickerDialog({onClose}: Props) {
   // themes 重新扫描后可能变少，page 越界则夹回最后一页，避免空白页。
   const safePage = Math.min(page, totalPages - 1);
   const pageThemes = visibleThemes.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+  const pageJumpRange = getPageJumpRange(safePage, totalPages, PAGE_JUMP_COUNT);
+  const showPageJumpInput = shouldShowPageJumpInput(totalPages, PAGE_INPUT_THRESHOLD);
   const currentTheme = getThemeById(themes, markdownThemeId);
 
   function pick(id: string) {
     setMarkdownTheme(id);
     onClose();
+  }
+
+  function jumpToPage(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const target = getPageJumpTarget(jumpPage, totalPages);
+    if (target === null) {
+      setJumpPage("");
+      return;
+    }
+    setPage(target);
+    setJumpPage("");
   }
 
   async function openFolder() {
@@ -199,28 +220,74 @@ export default function ThemePickerDialog({onClose}: Props) {
         </div>
 
         {totalPages > 1 && (
-          <div className="inline-flex h-8 items-center overflow-hidden rounded-sm border border-border bg-bg shadow-sm">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={safePage === 0}
-              className={pageNavBtnClass}
-              aria-label="上一页"
-            >
-              <ChevronLeft size={15} />
-            </button>
-            <div className="flex h-full min-w-[64px] items-center justify-center border-x border-border px-3 text-xs font-medium tabular-nums text-text-secondary">
-              {safePage + 1} / {totalPages}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="inline-flex h-8 items-center overflow-hidden rounded-sm border border-border bg-bg shadow-sm">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={safePage === 0}
+                className={pageNavBtnClass}
+                aria-label="上一页"
+              >
+                <ChevronLeft size={15} />
+              </button>
+              {pageJumpRange.map((pageIndex) => {
+                const active = pageIndex === safePage;
+                return (
+                  <button
+                    key={pageIndex}
+                    type="button"
+                    onClick={() => setPage(pageIndex)}
+                    aria-current={active ? "page" : undefined}
+                    aria-label={`跳转到第 ${pageIndex + 1} 页`}
+                    className={[pageJumpBtnClass, active ? pageJumpActiveClass : pageJumpIdleClass].join(" ")}
+                  >
+                    {pageIndex + 1}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={safePage === totalPages - 1}
+                className={`${pageNavBtnClass} border-l border-border`}
+                aria-label="下一页"
+              >
+                <ChevronRight size={15} />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={safePage === totalPages - 1}
-              className={pageNavBtnClass}
-              aria-label="下一页"
-            >
-              <ChevronRight size={15} />
-            </button>
+
+            {showPageJumpInput && (
+              <form
+                onSubmit={jumpToPage}
+                className="inline-flex h-8 items-center overflow-hidden rounded-sm border border-border bg-bg shadow-sm focus-within:ring-2 focus-within:ring-[color:var(--ring)]"
+              >
+                <span className="flex h-full items-center border-r border-border px-2 text-xs font-medium text-text-muted">
+                  跳至
+                </span>
+                <input
+                  value={jumpPage}
+                  onChange={(e) => setJumpPage(e.target.value)}
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  step={1}
+                  inputMode="numeric"
+                  placeholder={`${safePage + 1}`}
+                  aria-label={`输入要跳转的页码，共 ${totalPages} 页`}
+                  className="h-full w-[52px] border-0 bg-bg px-2 text-center text-xs font-medium tabular-nums text-text outline-none placeholder:text-text-muted"
+                />
+                <button
+                  type="submit"
+                  disabled={jumpPage.trim() === ""}
+                  className="inline-flex h-full w-8 items-center justify-center border-0 border-l border-border bg-bg text-text-secondary transition-colors duration-fast enabled:cursor-pointer enabled:hover:bg-bg-tertiary enabled:hover:text-text disabled:cursor-default disabled:opacity-[0.38]"
+                  aria-label="跳转到输入页码"
+                  title="跳转"
+                >
+                  <ArrowRight size={14} />
+                </button>
+              </form>
+            )}
           </div>
         )}
       </div>
@@ -235,3 +302,12 @@ const secondaryBtnClass =
 
 const pageNavBtnClass =
   "inline-flex h-full w-8 items-center justify-center border-0 bg-bg text-text-secondary transition-colors duration-fast enabled:cursor-pointer enabled:hover:bg-bg-tertiary enabled:hover:text-text disabled:cursor-default disabled:opacity-[0.38]";
+
+const pageJumpBtnClass =
+  "inline-flex h-full min-w-8 items-center justify-center border-0 border-l border-border px-2 text-xs font-medium tabular-nums transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)]";
+
+const pageJumpIdleClass =
+  "bg-bg text-text-secondary cursor-pointer hover:bg-bg-tertiary hover:text-text";
+
+const pageJumpActiveClass =
+  "bg-accent-subtle text-accent cursor-default";
