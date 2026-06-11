@@ -5,7 +5,7 @@ import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
 import {addDraft, findUnuploadedImages, getCoverCandidates, uploadRemoteThumb, uploadThumb} from "../../utils/publish.ts";
 import {toast} from "../Toast/toast.ts";
-import {ImageIcon, Images, UploadCloud} from "lucide-react";
+import {FileText, ImageIcon, Images, UploadCloud} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import Button from "../ui/Button.tsx";
 
@@ -15,8 +15,11 @@ interface Props {
   onNeedSettings: () => void;
 }
 
-const inputClass =
-  "box-border h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text outline-none transition-colors duration-fast placeholder:text-text-muted hover:border-border-strong focus-visible:border-accent focus-visible:bg-bg-secondary";
+const titleInputShellClass =
+  "group flex h-11 items-center gap-2 rounded-lg border border-[rgba(224,224,230,0.72)] bg-bg-secondary px-3.5 text-text-muted shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_22px_rgba(20,20,30,0.045)] transition-all duration-fast ease-smooth hover:border-border-strong hover:bg-bg focus-within:border-[rgba(94,106,210,0.36)] focus-within:bg-bg focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_0_0_3px_rgba(94,106,210,0.10),0_10px_24px_rgba(20,20,30,0.06)]";
+
+const titleInputClass =
+  "h-full min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 font-[inherit] text-[15px] text-text outline-none placeholder:text-text-muted";
 
 function revokePreview(url: string | null) {
   if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
@@ -168,16 +171,19 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(300px,0.95fr)_minmax(0,1.05fr)]">
         <div className="flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-bg px-3 py-3">
           <div>
-            <label htmlFor="publish-title" className="mb-2 block text-[13px] font-medium text-text">
+            <label htmlFor="publish-title" className="mb-2 block text-[13px] font-medium text-text-secondary">
               文章标题
             </label>
-            <input
-              id="publish-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className={inputClass}
-              placeholder="输入公众号文章标题"
-            />
+            <div className={titleInputShellClass}>
+              <FileText size={16} className="flex-none transition-colors duration-fast group-focus-within:text-accent" />
+              <input
+                id="publish-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className={titleInputClass}
+                placeholder="输入公众号文章标题"
+              />
+            </div>
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col">
