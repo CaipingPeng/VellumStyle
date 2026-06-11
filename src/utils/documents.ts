@@ -27,7 +27,7 @@ function normalize(node: RawDocNode): DocNode {
 }
 
 const WEB_SAMPLE_PATH = "示例.md";
-const WEB_SAMPLE_CONTENT = `# 微信公众号排版工具
+const WEB_SAMPLE_CONTENT = `# 文澜排版
 
 欢迎使用！左侧编辑 **Markdown**，右侧实时预览，点右上角「复制到微信」即可粘贴到公众号编辑器。
 

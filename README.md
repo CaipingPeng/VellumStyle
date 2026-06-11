@@ -1,6 +1,6 @@
-# 微信公众号排版工具
+# 文澜排版 VellumStyle
 
-> 一个本地优先的 Markdown → 微信公众号排版工具。基于 [mdnice](https://github.com/mdnice/markdown-nice) 的产品逻辑，用现代技术栈重写，并在两处做了核心增强：**微信官方图床**（上传即得永久 `mmbiz` 链接）和 **model 化主题系统 + 可视化样式面板**。
+> 文澜排版（VellumStyle）是一个本地优先的 Markdown → 公众号富文本排版工具。基于 [mdnice](https://github.com/mdnice/markdown-nice) 的产品逻辑，用现代技术栈重写，并在两处做了核心增强：**微信官方图床**（上传即得永久 `mmbiz` 链接）和 **model 化主题系统 + 可视化样式面板**。
 
 Markdown 写作 → 实时预览 → 一键复制为微信兼容富文本，粘贴进公众号编辑器即用。桌面端基于 Tauri v2，包体小、启动快、凭证与数据全在本地。
 

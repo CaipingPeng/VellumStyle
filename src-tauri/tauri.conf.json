@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "WeChat MD Editor",
+  "productName": "VellumStyle",
   "version": "0.1.0",
-  "identifier": "com.wechat-md-editor.desktop",
+  "identifier": "com.vellumstyle.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "微信公众号排版工具",
+        "title": "文澜排版",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

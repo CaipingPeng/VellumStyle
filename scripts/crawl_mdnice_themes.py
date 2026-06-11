@@ -15,7 +15,7 @@ import urllib.request
 TOKEN = os.environ.get("MDNICE_TOKEN", "")
 OUT_ID = os.environ.get("MDNICE_OUT_ID", "4c8dce25753141d094b873cc20fa1b08")
 APP_THEMES_DIR = os.path.join(
-    os.environ["APPDATA"], "com.wechat-md-editor.desktop", "themes"
+    os.environ["APPDATA"], "com.vellumstyle.desktop", "themes"
 )
 
 if not TOKEN:

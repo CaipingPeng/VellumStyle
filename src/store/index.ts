@@ -160,7 +160,7 @@ export const useStore = create<EditorState>()(
         }),
     }),
     {
-      name: "wechat-md-editor",
+      name: "vellumstyle",
       // themes 是运行期扫描结果，不持久化；content 改由文件持久化，只记住打开哪篇
       partialize: (s) => ({
         currentDocPath: s.currentDocPath,

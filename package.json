@@ -1,8 +1,8 @@
 {
-  "name": "wechat-md-editor",
+  "name": "vellumstyle",
   "private": true,
   "version": "0.1.0",
-  "description": "本地优先的 Markdown 到微信公众号排版桌面工具",
+  "description": "文澜排版：本地优先的 Markdown 到微信公众号排版桌面工具",
   "author": "pengcaiping",
   "license": "MIT",
   "type": "module",

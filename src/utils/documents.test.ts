@@ -10,7 +10,7 @@ test("非 Tauri 环境下返回可调试的示例文档树和内容", async () =
   assert.match(tree[0].name, /\.md$/);
 
   const content = await readDocument(tree[0].path);
-  assert.match(content, /微信公众号排版工具/);
+  assert.match(content, /文澜排版/);
 });
 
 test("非 Tauri 环境下文档 fallback 支持创建和写入", async () => {

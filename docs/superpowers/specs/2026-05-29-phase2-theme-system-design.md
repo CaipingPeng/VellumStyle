@@ -1,6 +1,6 @@
 # Phase 2a — 主题系统（切换 + 持久化）设计
 
-> 项目：微信公众号排版工具（mdnice 重写）
+> 项目：文澜排版（VellumStyle，mdnice 重写）
 > 日期：2026-05-29
 > 范围：Phase 2 的「切换 + 持久化」子集。自定义 CSS 编辑器（CodeMirror CSS 模式）**不在本轮**，留待下一轮。
 
@@ -67,7 +67,7 @@ interface EditorState {
 }
 ```
 
-- 用 Zustand `persist` middleware，localStorage key = `wechat-md-editor`。
+- 用 Zustand `persist` middleware，localStorage key = `vellumstyle`。
 - 持久化字段：`content` / `markdownThemeId` / `codeThemeId` / `macStyle`。
 - `content` 持久化后，App 首屏逻辑改为：localStorage 有草稿则用草稿，否则才 fetch `/content.md`。
 - 主题 id 容错：persist 恢复的 id 若不在当前列表（主题被删/改名），回退到默认。

@@ -71,7 +71,7 @@ export function solveHtml(): string {
   const articleRoot = box.children[0];
   if (articleRoot) {
     for (const item of Array.from(articleRoot.children)) {
-      item.setAttribute("data-tool", "wechat-md-editor");
+      item.setAttribute("data-tool", "vellumstyle");
     }
   }
 

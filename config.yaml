@@ -1,4 +1,4 @@
-# 微信公众号排版工具 — 配置文件示例
+# 文澜排版 — 配置文件示例
 #
 # 用法：复制本文件为 config.local.yaml 并填入真实凭证。
 # config.local.yaml 已在 .gitignore 中，不会被提交。
@@ -14,4 +14,3 @@ wechat:
   # 填入后桌面端即可用于上传；留空时前端上传会提示「尚未配置」
   appId: ""
   appSecret: ""
-

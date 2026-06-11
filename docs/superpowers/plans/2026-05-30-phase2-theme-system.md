@@ -294,7 +294,7 @@ export const useStore = create<EditorState>()(
       setMacStyle: (macStyle) => set({macStyle}),
     }),
     {
-      name: "wechat-md-editor",
+      name: "vellumstyle",
       partialize: (s) => ({
         content: s.content,
         markdownThemeId: s.markdownThemeId,

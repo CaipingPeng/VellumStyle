@@ -1,6 +1,6 @@
 # 实现进度
 
-> 项目：微信公众号排版工具（基于 DESIGN.md，mdnice 重写）
+> 项目：文澜排版（VellumStyle，基于 DESIGN.md，mdnice 重写）
 > 本轮范围：**Phase 1 — 项目初始化 + 渲染管线 + 编辑器 + 实时预览 + 复制到微信**
 > 开始：2026-05-29 ｜ 最后更新：2026-06-08
 
@@ -295,7 +295,7 @@ CREATE TABLE user_settings (
 | 9 | GUI 设置页：填 AppID/AppSecret 存数据目录，免手动放文件 | ✅ | `src-tauri/src/config.rs`(get/save_config) `src/components/Settings/SettingsDialog.tsx` `src/App.tsx`(设置按钮) |
 | 10 | tauri build 出正式安装包（.msi + .exe nsis） | ✅ | `src-tauri/target/release/bundle/{msi,nsis}/` |
 
-> **build 踩坑**：WiX 的 `light.exe` 不接受中文 `productName`，msi 打包失败。修复 = `productName` 改 ASCII（`WeChat MD Editor`），窗口标题仍中文（`app.windows[].title`）。同时 `identifier` 去掉 `.app` 结尾改 `.desktop`（消 macOS 警告；注意这改了 app_data_dir 路径，旧凭证需在设置页重填一次）。
+> **build 踩坑**：WiX 的 `light.exe` 不接受中文 `productName`，msi 打包失败。修复 = `productName` 改 ASCII（`VellumStyle`），窗口标题仍中文（`app.windows[].title`）。同时 `identifier` 去掉 `.app` 结尾改 `.desktop`（消 macOS 警告；注意这改了 app_data_dir 路径，旧凭证需在设置页重填一次）。
 
 ### 三处对原规划的修正（已与用户确认）
 
@@ -325,8 +325,8 @@ CREATE TABLE user_settings (
 npx tauri build
 ```
 产物已生成在 `src-tauri/target/release/bundle/`：
-- `msi/WeChat MD Editor_0.1.0_x64_en-US.msi`
-- `nsis/WeChat MD Editor_0.1.0_x64-setup.exe`
+- `msi/VellumStyle_0.1.0_x64_en-US.msi`
+- `nsis/VellumStyle_0.1.0_x64-setup.exe`
 
 图标用占位蓝图生成（`gen-icon.cjs` + `npx tauri icon app-icon.png`），**后续可换成正式 logo 重跑 tauri icon**。
 
@@ -442,8 +442,8 @@ npx tsc --noEmit         # 类型检查
 
 - ✅ `npm run build` 通过。
 - ✅ `npx tauri build` 通过，并重新产出：
-  - `src-tauri/target/release/bundle/msi/WeChat MD Editor_0.1.0_x64_en-US.msi`
-  - `src-tauri/target/release/bundle/nsis/WeChat MD Editor_0.1.0_x64-setup.exe`
+  - `src-tauri/target/release/bundle/msi/VellumStyle_0.1.0_x64_en-US.msi`
+  - `src-tauri/target/release/bundle/nsis/VellumStyle_0.1.0_x64-setup.exe`
 - ⏳ 待人工运行时手测：选择 Markdown 文件、选择 Obsidian 资源目录、本地图片替换、在线图片替换、失败项报告、导入后复制到微信。
 
 ## 增补功能 — 公众号文章风格生成主题（已废弃并移除，2026-06-06）
@@ -643,7 +643,7 @@ npx tsc --noEmit         # 类型检查
 
 - **纯函数 `src/components/Editor/editing.ts`**：`wrapSelection`/`insertLink`/`prefixLines`/`insertCodeBlock`，输入 doc+选区→输出插入文本片段+新选区，不碰 CodeMirror，单测在 `editing.test.ts`（34 用例）。
 - **`MarkdownEditor` 暴露 4 个方法**：薄薄包一层 `view.dispatch`（changes + selection），复用现有 `cmRef.current?.view` 守卫。
-- **`src/components/Toolbar/SyntaxToolbar.tsx`**：图标用 `lucide-react`（tree-shakeable，零运行时体积影响），标题做点击展开的 H1-H4 下拉（点空白关闭）。接入 `App.tsx` navbar 左侧（左语法/右全局分段）。navbar 不再放标题文字（窗口标题/页面 title 已体现「微信公众号排版工具」）。
+- **`src/components/Toolbar/SyntaxToolbar.tsx`**：图标用 `lucide-react`（tree-shakeable，零运行时体积影响），标题做点击展开的 H1-H4 下拉（点空白关闭）。接入 `App.tsx` navbar 左侧（左语法/右全局分段）。navbar 不再放标题文字（窗口标题/页面 title 已体现「文澜排版」）。
 
 ### 语义关键点（踩坑）
 

@@ -551,7 +551,7 @@ import SyntaxToolbar from "./components/Toolbar/SyntaxToolbar.tsx";
 
 - [ ] **Step 2: 改造 navbar 内部为左右分段**
 
-把 header 内现有内容（`<span>微信公众号排版工具</span>` 那段标题 + 右侧按钮 `<div>`）替换为：
+把 header 内现有内容（`<span>文澜排版</span>` 那段标题 + 右侧按钮 `<div>`）替换为：
 
 ```tsx
         <div style={{display: "flex", alignItems: "center", gap: 12}}>

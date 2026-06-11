@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 给微信公众号排版工具加文件系统映射的多文档管理（树状）、一键发布到公众号草稿箱、撤销/重做按钮、轻量 toast。
+**Goal:** 给文澜排版加文件系统映射的多文档管理（树状）、一键发布到公众号草稿箱、撤销/重做按钮、轻量 toast。
 
 **Architecture:** 文件系统是文档内容的唯一真相源（`app_data_dir/documents/` 目录树），store 只缓存当前一篇 content + 整棵树结构；编辑 debounce 800ms 写盘，切换/关窗前主动 flush。发布走微信 `draft/add`，封面独立 `upload_thumb` 拿 media_id。
 
