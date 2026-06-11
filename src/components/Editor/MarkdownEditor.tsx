@@ -5,6 +5,7 @@ import {languages} from "@codemirror/language-data";
 import {EditorView} from "@codemirror/view";
 import {undo, redo} from "@codemirror/commands";
 import {wrapSelection as wrapSel, insertLink as insLink, prefixLines as prefixLn, insertCodeBlock as insCode} from "./editing.ts";
+import {getCodeMirrorCspNonce} from "../../utils/cspNonce.ts";
 
 export interface MarkdownEditorHandle {
   // 在当前光标处插入文本（替换选区）。供工具栏上传按钮调用。
@@ -39,6 +40,7 @@ interface Props {
 const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
   ({value, onChange, onPasteImage}, ref) => {
     const cmRef = useRef<ReactCodeMirrorRef>(null);
+    const cspNonce = useMemo(() => getCodeMirrorCspNonce(), []);
 
     useImperativeHandle(ref, () => ({
       insertAtCursor: (text) => {
@@ -133,6 +135,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
 
     const extensions = useMemo(
       () => [
+        ...(cspNonce ? [EditorView.cspNonce.of(cspNonce)] : []),
         markdown({base: markdownLanguage, codeLanguages: languages}),
         EditorView.lineWrapping,
         // 聚焦时不加任何边框；让内容区撑满高度，使空白区域点击也能定位光标。
@@ -163,7 +166,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
           },
         }),
       ],
-      [onPasteImage],
+      [cspNonce, onPasteImage],
     );
 
     return (
