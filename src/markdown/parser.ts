@@ -15,6 +15,7 @@ import markdownItRuby from "markdown-it-ruby";
 import headingSpan from "./plugins/heading-span.ts";
 import tableContainer from "./plugins/table-container.ts";
 import math from "./plugins/math.ts";
+import markdownItMark from "./plugins/mark.ts";
 import linkFootnote from "./plugins/link-footnote.ts";
 import listItemWrap from "./plugins/list-item-wrap.ts";
 import imageFlow from "./plugins/image-flow.ts";
@@ -54,21 +55,22 @@ parser
   .use(headingSpan) // 1. 标题 span 装饰
   .use(tableContainer) // 2. 表格容器
   .use(math) // 3. 数学公式
-  .use(linkFootnote) // 4. 链接转脚注
+  .use(markdownItMark) // 4. ==高亮== 转 <mark>
+  .use(linkFootnote) // 5. 链接转脚注
   .use(markdownItTableOfContents, {
     transformLink: () => "",
     includeLevel: [2, 3],
     markerPattern: /^\[toc\]/im,
-  }) // 5. TOC（二、三级标题）
-  .use(markdownItRuby) // 6. 注音 {文字|拼音}
-  .use(markdownItImplicitFigures, {figcaption: true}) // 7. 图注
-  .use(markdownItDeflist) // 8. 定义列表
-  .use(listItemWrap) // 9. li 内 section 包裹
-  .use(imageFlow) // 10. 横屏图片滑动
-  .use(multiQuote) // 11. 多级引用 class
-  .use(imsize); // 12. 图片尺寸 ![](url =100x200)（自实现，无 Node 依赖）
+  }) // 6. TOC（二、三级标题）
+  .use(markdownItRuby) // 7. 注音 {文字|拼音}
+  .use(markdownItImplicitFigures, {figcaption: true}) // 8. 图注
+  .use(markdownItDeflist) // 9. 定义列表
+  .use(listItemWrap) // 10. li 内 section 包裹
+  .use(imageFlow) // 11. 横屏图片滑动
+  .use(multiQuote) // 12. 多级引用 class
+  .use(imsize); // 13. 图片尺寸 ![](url =100x200)（自实现，无 Node 依赖）
 
-parser.use(dataLine); // 13. 顶层块注入 data-line（同步滚动用）
+parser.use(dataLine); // 14. 顶层块注入 data-line（同步滚动用）
 
 export function render(markdown: string): string {
   return parser.render(markdown);
