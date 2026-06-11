@@ -1,6 +1,5 @@
 import juice from "juice";
 import {STYLE_IDS} from "../utils/style.ts";
-import {CODE_FALLBACK_CSS} from "./codeFallback.ts";
 import {fromProxyHtml} from "../utils/imageProxy.ts";
 
 const BOX_ID = "nice-rich-text-box";
@@ -85,8 +84,8 @@ export function solveHtml(): string {
   html = stripPreviewEditClasses(html);
   html = normalizeMathJaxForWechat(html);
 
-  // 前置引擎级高亮兜底（低特异性），主题 CSS 在后可覆盖；juice 内联时按特异性选赢家。
-  const allCss = CODE_FALLBACK_CSS + "\n" + readStyle(STYLE_IDS.markdown);
+  // 复制使用预览同一份样式：文章主题 + 当前代码主题已在预览层合并注入。
+  const allCss = readStyle(STYLE_IDS.markdown);
 
   try {
     return juice.inlineContent(html, allCss, {

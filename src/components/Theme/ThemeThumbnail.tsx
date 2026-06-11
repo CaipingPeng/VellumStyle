@@ -1,5 +1,7 @@
 import {useEffect, useMemo} from "react";
 import {render} from "../../markdown/parser.ts";
+import {buildMarkdownCss} from "../../markdown/codeThemes.ts";
+import {useStore} from "../../store/index.ts";
 import {scopeCss} from "./scopeCss.ts";
 import {SAMPLE_MARKDOWN} from "./sampleContent.ts";
 
@@ -23,10 +25,11 @@ function flushThumbStyles() {
 // 缩略图：把主题 CSS scope 到本卡唯一 class，写入共享 <style>，
 // 渲染固定示例 HTML，再用 transform: scale 缩成「缩小版正文」。
 export default function ThemeThumbnail({themeId, css}: Props) {
+  const codeThemeId = useStore((s) => s.codeThemeId);
   // scope class 必须是合法 CSS 标识符：非字母数字转 '-'。
   const scopeClass = useMemo(() => "tp-" + themeId.replace(/[^a-zA-Z0-9_-]/g, "-"), [themeId]);
   const html = useMemo(() => render(SAMPLE_MARKDOWN), []);
-  const scoped = useMemo(() => scopeCss(css, scopeClass), [css, scopeClass]);
+  const scoped = useMemo(() => scopeCss(buildMarkdownCss(css, codeThemeId), scopeClass), [codeThemeId, css, scopeClass]);
 
   useEffect(() => {
     thumbBlocks.set(scopeClass, scoped);

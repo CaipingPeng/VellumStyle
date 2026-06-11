@@ -11,6 +11,7 @@ import IconButton from "./components/ui/IconButton.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
 import {toast} from "./components/Toast/toast.ts";
 import {useStore, getThemeById, flushSave} from "./store/index.ts";
+import {getCodeThemeById} from "./markdown/codeThemes.ts";
 import {loadAllThemes} from "./themes/loader.ts";
 import {defaultMarkdownTheme} from "./themes/index.ts";
 import {uploadImage, uploadLocalImage, type UploadError} from "./utils/upload.ts";
@@ -53,7 +54,7 @@ function formatSaveStatus(status: "idle" | "saving" | "saved" | "error", lastSav
 }
 
 export default function App() {
-  const {content, markdownThemeId, themes, currentDocPath, sidebarOpen, saveStatus, lastSavedAt, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar} = useStore();
+  const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, saveStatus, lastSavedAt, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar} = useStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
@@ -192,7 +193,7 @@ export default function App() {
   return (
     <div style={{display: "flex", flexDirection: "column", height: "100%"}}>
       {/* Navbar */}
-      <header className="flex h-[52px] flex-shrink-0 items-center justify-between gap-3 border-b border-border bg-bg/80 px-4 backdrop-blur">
+      <header className="relative z-50 flex h-[52px] flex-shrink-0 items-center justify-between gap-3 border-b border-border bg-bg/80 px-4 backdrop-blur">
         <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
           <IconButton active={sidebarOpen} title="文档" onClick={toggleSidebar}>
             <PanelLeft size={16} />
@@ -240,6 +241,7 @@ export default function App() {
         </div>
         <div className="flex flex-none items-center gap-4">
           <span>主题 {getThemeById(themes, markdownThemeId).name}</span>
+          <span>代码 {getCodeThemeById(codeThemeId).name}</span>
           <span className={saveStatus === "error" ? "text-danger" : ""}>{formatSaveStatus(saveStatus, lastSavedAt)}</span>
           <PreviewModeToggle variant="status" />
         </div>

@@ -1,12 +1,12 @@
 import {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
 import {render} from "../../markdown/parser.ts";
-import {CODE_FALLBACK_CSS} from "../../markdown/codeFallback.ts";
 import {useStore, getThemeById} from "../../store/index.ts";
 import {replaceStyle, STYLE_IDS} from "../../utils/style.ts";
 import {toProxyHtml} from "../../utils/imageProxy.ts";
 import {typesetMath} from "../../markdown/mathjax.ts";
 import {modelIdFromElement, SELECTOR_PRIORITY} from "../StylePanel/elementMap.ts";
 import {getPreviewMode} from "./previewModes.ts";
+import {buildMarkdownCss} from "../../markdown/codeThemes.ts";
 
 interface Props {
   content: string;
@@ -30,6 +30,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
     const hoverEl = useRef<Element | null>(null);
     const selectedEl = useRef<Element | null>(null);
     const themes = useStore((s) => s.themes);
+    const codeThemeId = useStore((s) => s.codeThemeId);
     const previewMode = useStore((s) => s.previewMode);
     const selectedModelId = useStore((s) => s.selectedModelId);
     const setSelectedModel = useStore((s) => s.setSelectedModel);
@@ -39,12 +40,11 @@ const Preview = forwardRef<PreviewHandle, Props>(
       getScroller: () => scrollRef.current,
     }));
 
-    // 主题层：model 编译出的 css 自包含全部样式，统一注入 markdown 层。
-    // 前置引擎级代码高亮兜底（低特异性），主题自带配色可覆盖它。
+    // 主题层：文章主题在前，独立代码主题在后，保证所有文章主题默认共享同一套代码高亮。
     useEffect(() => {
       const css = getThemeById(themes, markdownThemeId).css;
-      replaceStyle(STYLE_IDS.markdown, CODE_FALLBACK_CSS + "\n" + css);
-    }, [markdownThemeId, themes]);
+      replaceStyle(STYLE_IDS.markdown, buildMarkdownCss(css, codeThemeId));
+    }, [codeThemeId, markdownThemeId, themes]);
 
     // 内容渲染，100ms 节流
     useEffect(() => {

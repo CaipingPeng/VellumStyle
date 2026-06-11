@@ -7,12 +7,14 @@ import {listDocuments, readDocument, writeDocument, type DocNode} from "../utils
 import {createDebouncedSaver} from "../utils/autosave.ts";
 import {toast} from "../components/Toast/toast.ts";
 import type {PreviewModeId} from "../components/Preview/previewModes.ts";
+import {DEFAULT_CODE_THEME_ID, type CodeThemeId} from "../markdown/codeThemes.ts";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export interface EditorState {
   content: string;
   markdownThemeId: string;
+  codeThemeId: CodeThemeId;
   themes: ThemeOption[];
   selectedModelId: string | null; // 当前面板编辑的元素 model id
   tree: DocNode[]; // 整棵文档树（运行期，不 persist）
@@ -25,6 +27,7 @@ export interface EditorState {
   favoriteThemeIds: string[]; // 收藏主题，persist
   setContent: (content: string) => void;
   setMarkdownTheme: (id: string) => void;
+  setCodeTheme: (id: CodeThemeId) => void;
   setThemes: (themes: ThemeOption[]) => void;
   setSelectedModel: (modelId: string | null) => void;
   setCurrentDocPath: (path: string | null) => void;
@@ -89,6 +92,7 @@ export const useStore = create<EditorState>()(
     (set) => ({
       content: "",
       markdownThemeId: defaultMarkdownTheme.id,
+      codeThemeId: DEFAULT_CODE_THEME_ID,
       // 初始为内置主题；启动后 loadAllThemes() 合并用户主题覆盖
       themes: builtinThemes,
       selectedModelId: null,
@@ -105,6 +109,7 @@ export const useStore = create<EditorState>()(
         scheduleSave(content);
       },
       setMarkdownTheme: (markdownThemeId) => set({markdownThemeId}),
+      setCodeTheme: (codeThemeId) => set({codeThemeId}),
       setThemes: (themes) => set({themes}),
       setSelectedModel: (selectedModelId) => set({selectedModelId}),
       setCurrentDocPath: (currentDocPath) => set({currentDocPath}),
@@ -151,6 +156,7 @@ export const useStore = create<EditorState>()(
       partialize: (s) => ({
         currentDocPath: s.currentDocPath,
         markdownThemeId: s.markdownThemeId,
+        codeThemeId: s.codeThemeId,
         previewMode: s.previewMode,
         favoriteThemeIds: s.favoriteThemeIds,
       }),

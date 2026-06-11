@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:web": "vite",
+    "generate:code-themes": "node scripts/generate-hljs-themes.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "tauri": "tauri",

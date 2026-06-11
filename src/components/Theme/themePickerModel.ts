@@ -3,6 +3,10 @@ interface ThemeListItem {
   name: string;
 }
 
+interface CodeThemeListItem extends ThemeListItem {
+  group: string;
+}
+
 export function filterAndRankThemes<T extends ThemeListItem>(
   themes: T[],
   query: string,
@@ -19,6 +23,29 @@ export function filterAndRankThemes<T extends ThemeListItem>(
     })
     .sort((a, b) => {
       const rank = (id: string) => id === currentId ? 0 : favorites.has(id) ? 1 : 2;
+      return rank(a.theme.id) - rank(b.theme.id) || a.index - b.index;
+    })
+    .map(({theme}) => theme);
+}
+
+export function filterAndRankCodeThemes<T extends CodeThemeListItem>(
+  themes: T[],
+  query: string,
+  currentId: string,
+): T[] {
+  const q = query.trim().toLocaleLowerCase("zh-CN");
+  return themes
+    .map((theme, index) => ({theme, index}))
+    .filter(({theme}) => {
+      if (!q) return true;
+      return (
+        theme.name.toLocaleLowerCase("zh-CN").includes(q) ||
+        theme.id.toLocaleLowerCase("zh-CN").includes(q) ||
+        theme.group.toLocaleLowerCase("zh-CN").includes(q)
+      );
+    })
+    .sort((a, b) => {
+      const rank = (id: string) => (id === currentId ? 0 : 1);
       return rank(a.theme.id) - rank(b.theme.id) || a.index - b.index;
     })
     .map(({theme}) => theme);

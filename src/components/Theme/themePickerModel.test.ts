@@ -1,6 +1,7 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {
+  filterAndRankCodeThemes,
   filterAndRankThemes,
   getPageJumpRange,
   getPageJumpTarget,
@@ -21,6 +22,19 @@ test("主题搜索按名称和 id 匹配", () => {
 
 test("无搜索时当前主题和收藏主题优先", () => {
   assert.deepEqual(filterAndRankThemes(themes, "", ["ink"], "github").map((t) => t.id), ["github", "ink", "default", "caoyuan"]);
+});
+
+test("代码主题搜索按名称、id 和分组匹配，当前主题优先", () => {
+  const codeThemes = [
+    {id: "vs2015", name: "VS2015", group: "Highlight.js"},
+    {id: "night-owl", name: "Night Owl", group: "Highlight.js"},
+    {id: "base16/onedark", name: "Base16 / Onedark", group: "Base16"},
+    {id: "github-dark", name: "GitHub Dark", group: "Highlight.js"},
+  ];
+
+  assert.deepEqual(filterAndRankCodeThemes(codeThemes, "base16", "vs2015").map((t) => t.id), ["base16/onedark"]);
+  assert.deepEqual(filterAndRankCodeThemes(codeThemes, "git", "vs2015").map((t) => t.id), ["github-dark"]);
+  assert.deepEqual(filterAndRankCodeThemes(codeThemes, "", "night-owl").map((t) => t.id), ["night-owl", "vs2015", "base16/onedark", "github-dark"]);
 });
 
 test("页码跳转按钮从当前页开始展示 6 页窗口", () => {
