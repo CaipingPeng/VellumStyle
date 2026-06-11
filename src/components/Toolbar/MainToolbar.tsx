@@ -3,11 +3,8 @@ import {Copy as CopyIcon, FileInput, ImageUp, MoreHorizontal, Palette, Send, Set
 import UploadButton, {type UploadButtonHandle} from "../Upload/UploadButton.tsx";
 import ImportButton, {type ImportButtonHandle} from "../Import/ImportButton.tsx";
 import ThemeMenu, {type ThemeMenuHandle} from "../Theme/ThemeMenu.tsx";
-import PreviewModeToggle from "../Preview/PreviewModeToggle.tsx";
-import {PREVIEW_MODES, type PreviewModeId} from "../Preview/previewModes.ts";
 import PublishButton from "../Publish/PublishButton.tsx";
 import CopyButton from "../Copy/CopyButton.tsx";
-import {useStore} from "../../store/index.ts";
 import Button from "../ui/Button.tsx";
 import IconButton from "../ui/IconButton.tsx";
 import Menu, {MenuItem} from "../ui/Menu.tsx";
@@ -20,7 +17,7 @@ interface Props {
   onNeedSettings: () => void;
 }
 
-const SECONDARY_ACTIONS = ["upload", "import", "preview", "theme", "settings"] as const;
+const SECONDARY_ACTIONS = ["upload", "import", "theme", "settings"] as const;
 type SecondaryAction = (typeof SECONDARY_ACTIONS)[number];
 const SECONDARY_ACTION_COUNT: number = SECONDARY_ACTIONS.length;
 const MIN_LEFT_TOOLBAR_WIDTH = 30;
@@ -33,8 +30,6 @@ export default function MainToolbar({onPickFile, onPickLocal, onOpenSettings, on
   const uploadRef = useRef<UploadButtonHandle>(null);
   const importRef = useRef<ImportButtonHandle>(null);
   const themeRef = useRef<ThemeMenuHandle>(null);
-  const previewMode = useStore((s) => s.previewMode);
-  const setPreviewMode = useStore((s) => s.setPreviewMode);
 
   const recalcVisible = useCallback(() => {
     const wrap = wrapRef.current;
@@ -90,11 +85,6 @@ export default function MainToolbar({onPickFile, onPickLocal, onOpenSettings, on
 
   const closeMore = () => setMoreOpen(false);
 
-  const pickPreviewMode = (mode: PreviewModeId) => {
-    setPreviewMode(mode);
-    closeMore();
-  };
-
   const runHiddenAction = (action: SecondaryAction) => {
     switch (action) {
       case "upload":
@@ -124,7 +114,6 @@ export default function MainToolbar({onPickFile, onPickLocal, onOpenSettings, on
         <UploadButton ref={uploadRef} showTrigger={false} onPickFile={onPickFile} onPickLocal={onPickLocal} />
       )}
       {isVisible("import") ? <ImportButton ref={importRef} variant="toolbar" /> : <ImportButton ref={importRef} showTrigger={false} />}
-      {isVisible("preview") && <PreviewModeToggle />}
       {isVisible("theme") ? <ThemeMenu ref={themeRef} variant="toolbar" /> : <ThemeMenu ref={themeRef} showTrigger={false} />}
       {isVisible("settings") && (
         <IconButton title="设置" onClick={onOpenSettings} className="text-text-secondary hover:text-text">
@@ -146,14 +135,6 @@ export default function MainToolbar({onPickFile, onPickLocal, onOpenSettings, on
           }
         >
           {hiddenActions.map((action) => {
-            if (action === "preview") {
-              return PREVIEW_MODES.map((mode) => (
-                <MenuItem key={mode.id} onClick={() => pickPreviewMode(mode.id)}>
-                  <span className="w-4 text-center">{previewMode === mode.id ? "✓" : ""}</span>
-                  {mode.label}
-                </MenuItem>
-              ));
-            }
             return (
               <MenuItem key={action} onClick={() => runHiddenAction(action)}>
                 {menuLabel(action)}
@@ -188,9 +169,6 @@ function ToolbarMeasure({measureRef}: {measureRef: RefObject<HTMLDivElement>}) {
       </div>
       <div data-measure="import">
         <Button variant="toolbar"><FileInput size={14} />导入</Button>
-      </div>
-      <div data-measure="preview">
-        <PreviewModeToggle />
       </div>
       <div data-measure="theme">
         <Button variant="toolbar"><Palette size={14} />主题</Button>

@@ -9,12 +9,30 @@ const icons: Record<PreviewModeId, LucideIcon> = {
   mobile: Smartphone,
 };
 
-export default function PreviewModeToggle() {
+interface Props {
+  variant?: "toolbar" | "status";
+}
+
+const sizes = {
+  toolbar: {
+    wrap: "h-8 bg-bg-secondary",
+    button: "h-7 w-7",
+    icon: 15,
+  },
+  status: {
+    wrap: "h-6 bg-bg-tertiary",
+    button: "h-5 w-6",
+    icon: 13,
+  },
+};
+
+export default function PreviewModeToggle({variant = "toolbar"}: Props) {
   const previewMode = useStore((s) => s.previewMode);
   const setPreviewMode = useStore((s) => s.setPreviewMode);
+  const size = sizes[variant];
 
   return (
-    <div className="flex h-8 items-center gap-0.5 rounded-sm bg-bg-secondary p-0.5" aria-label="预览宽度">
+    <div className={["flex items-center gap-0.5 rounded-sm p-0.5", size.wrap].join(" ")} aria-label="预览宽度">
       {PREVIEW_MODES.map((mode) => {
         const Icon = icons[mode.id];
         const active = mode.id === previewMode;
@@ -25,11 +43,12 @@ export default function PreviewModeToggle() {
             title={mode.label}
             onClick={() => setPreviewMode(mode.id)}
             className={[
-              "inline-flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast",
+              "inline-flex items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast",
+              size.button,
               active ? "bg-bg text-accent" : "hover:bg-bg hover:text-text",
             ].join(" ")}
           >
-            <Icon size={15} />
+            <Icon size={size.icon} />
           </button>
         );
       })}

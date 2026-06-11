@@ -1,6 +1,7 @@
 import {useEffect, useRef, useState} from "react";
 import MarkdownEditor, {type MarkdownEditorHandle} from "./components/Editor/MarkdownEditor.tsx";
 import Preview, {type PreviewHandle} from "./components/Preview/Preview.tsx";
+import PreviewModeToggle from "./components/Preview/PreviewModeToggle.tsx";
 import SettingsDialog from "./components/Settings/SettingsDialog.tsx";
 import StylePanel from "./components/StylePanel/StylePanel.tsx";
 import SyntaxToolbar from "./components/Toolbar/SyntaxToolbar.tsx";
@@ -240,6 +241,7 @@ export default function App() {
         <div className="flex flex-none items-center gap-4">
           <span>主题 {getThemeById(themes, markdownThemeId).name}</span>
           <span className={saveStatus === "error" ? "text-danger" : ""}>{formatSaveStatus(saveStatus, lastSavedAt)}</span>
+          <PreviewModeToggle variant="status" />
         </div>
       </footer>
 

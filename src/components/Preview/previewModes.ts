@@ -7,9 +7,9 @@ export interface PreviewMode {
 }
 
 export const PREVIEW_MODES: PreviewMode[] = [
-  {id: "fluid", label: "适应窗口", width: null},
-  {id: "wechat", label: "微信宽度", width: 677},
-  {id: "mobile", label: "移动预览", width: 390},
+  {id: "fluid", label: "放开展示", width: null},
+  {id: "wechat", label: "微信桌面端渲染", width: 677},
+  {id: "mobile", label: "手机端渲染", width: 390},
 ];
 
 export function getPreviewMode(id: PreviewModeId): PreviewMode {
