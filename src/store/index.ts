@@ -7,7 +7,7 @@ import {listDocuments, readDocument, writeDocument, type DocNode} from "../utils
 import {createDebouncedSaver} from "../utils/autosave.ts";
 import {toast} from "../components/Toast/toast.ts";
 import type {PreviewModeId} from "../components/Preview/previewModes.ts";
-import {DEFAULT_CODE_THEME_ID, type CodeThemeId} from "../markdown/codeThemes.ts";
+import {DEFAULT_CODE_THEME_ID, DEFAULT_PINNED_CODE_THEME_IDS, type CodeThemeId} from "../markdown/codeThemes.ts";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -25,6 +25,7 @@ export interface EditorState {
   lastSavedAt: number | null; // 最近一次保存成功时间戳
   previewMode: PreviewModeId; // 预览宽度模式
   favoriteThemeIds: string[]; // 收藏主题，persist
+  pinnedCodeThemeIds: CodeThemeId[]; // 置顶代码主题，persist
   setContent: (content: string) => void;
   setMarkdownTheme: (id: string) => void;
   setCodeTheme: (id: CodeThemeId) => void;
@@ -34,6 +35,7 @@ export interface EditorState {
   setSelectedPath: (path: string | null) => void;
   setPreviewMode: (mode: PreviewModeId) => void;
   toggleFavoriteTheme: (id: string) => void;
+  togglePinnedCodeTheme: (id: CodeThemeId) => void;
   toggleSidebar: () => void;
   loadTree: () => Promise<void>;
   openDocument: (path: string) => Promise<void>;
@@ -104,6 +106,7 @@ export const useStore = create<EditorState>()(
       lastSavedAt: null,
       previewMode: "fluid",
       favoriteThemeIds: [],
+      pinnedCodeThemeIds: [...DEFAULT_PINNED_CODE_THEME_IDS],
       setContent: (content) => {
         set({content});
         scheduleSave(content);
@@ -120,6 +123,12 @@ export const useStore = create<EditorState>()(
           favoriteThemeIds: s.favoriteThemeIds.includes(id)
             ? s.favoriteThemeIds.filter((themeId) => themeId !== id)
             : [...s.favoriteThemeIds, id],
+        })),
+      togglePinnedCodeTheme: (id) =>
+        set((s) => ({
+          pinnedCodeThemeIds: s.pinnedCodeThemeIds.includes(id)
+            ? s.pinnedCodeThemeIds.filter((themeId) => themeId !== id)
+            : [...s.pinnedCodeThemeIds, id],
         })),
       toggleSidebar: () => set((s) => ({sidebarOpen: !s.sidebarOpen})),
       loadTree: async () => {
@@ -159,6 +168,7 @@ export const useStore = create<EditorState>()(
         codeThemeId: s.codeThemeId,
         previewMode: s.previewMode,
         favoriteThemeIds: s.favoriteThemeIds,
+        pinnedCodeThemeIds: s.pinnedCodeThemeIds,
       }),
     },
   ),

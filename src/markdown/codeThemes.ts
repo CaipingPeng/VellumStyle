@@ -3,6 +3,17 @@ import {GENERATED_HLJS_THEMES} from "./generatedHljsThemes.ts";
 export const DEFAULT_CODE_THEME_ID = "vs2015";
 export type CodeThemeId = string;
 
+export const DEFAULT_PINNED_CODE_THEME_IDS: CodeThemeId[] = [
+  "vs2015",
+  "github",
+  "github-dark",
+  "atom-one-dark",
+  "atom-one-light",
+  "monokai-sublime",
+  "night-owl",
+  "xcode",
+];
+
 export interface CodeTheme {
   id: CodeThemeId;
   name: string;

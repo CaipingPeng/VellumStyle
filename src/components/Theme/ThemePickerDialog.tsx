@@ -42,7 +42,18 @@ interface Props {
 
 // 居中浮层：网格卡片（缩略图 + 名 + 使用）+ 分页 + 主题文件操作。
 export default function ThemePickerDialog({onClose}: Props) {
-  const {markdownThemeId, setMarkdownTheme, codeThemeId, setCodeTheme, themes, setThemes, favoriteThemeIds, toggleFavoriteTheme} = useStore();
+  const {
+    markdownThemeId,
+    setMarkdownTheme,
+    codeThemeId,
+    setCodeTheme,
+    themes,
+    setThemes,
+    favoriteThemeIds,
+    toggleFavoriteTheme,
+    pinnedCodeThemeIds,
+    togglePinnedCodeTheme,
+  } = useStore();
   const [activeTab, setActiveTab] = useState<ThemeTab>("markdown");
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
@@ -67,8 +78,8 @@ export default function ThemePickerDialog({onClose}: Props) {
     [favoriteThemeIds, markdownThemeId, query, themes],
   );
   const visibleCodeThemes = useMemo(
-    () => filterAndRankCodeThemes(CODE_THEMES, query, codeThemeId),
-    [codeThemeId, query],
+    () => filterAndRankCodeThemes(CODE_THEMES, query, pinnedCodeThemeIds, codeThemeId),
+    [codeThemeId, pinnedCodeThemeIds, query],
   );
 
   const isCodeTab = activeTab === "code";
@@ -147,7 +158,7 @@ export default function ThemePickerDialog({onClose}: Props) {
           <div className="text-lg font-semibold text-text">选择主题</div>
           <div className="mt-1.5 text-[13px] text-text-secondary">
             {isCodeTab
-              ? `${visibleCodeThemes.length} 个代码主题 · 当前 ${currentCodeTheme.name}`
+              ? `${visibleCodeThemes.length} 个代码主题 · ${pinnedCodeThemeIds.length} 个置顶 · 当前 ${currentCodeTheme.name}`
               : `${visibleThemes.length} 个排版主题 · ${favoriteThemeIds.length} 个收藏 · 当前 ${currentTheme.name}`}
           </div>
         </div>
@@ -207,6 +218,7 @@ export default function ThemePickerDialog({onClose}: Props) {
           )}
           {pageCodeThemes.map((theme) => {
             const active = theme.id === currentCodeTheme.id;
+            const pinned = pinnedCodeThemeIds.includes(theme.id);
             return (
               <div
                 key={theme.id}
@@ -217,15 +229,29 @@ export default function ThemePickerDialog({onClose}: Props) {
               >
                 <CodeThemeThumbnail theme={theme} />
                 <div className="flex min-w-0 items-center justify-between gap-2.5">
-                  <div className="min-w-0">
-                    <div
-                      title={`${theme.name} (${theme.id})`}
-                      className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text"
+                  <div className="flex min-w-0 items-start gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => togglePinnedCodeTheme(theme.id)}
+                      title={pinned ? "取消置顶" : "置顶代码主题"}
+                      aria-label={pinned ? `取消置顶 ${theme.name}` : `置顶 ${theme.name}`}
+                      className={[
+                        "inline-flex h-6 w-6 flex-none items-center justify-center rounded-sm border-0 bg-transparent cursor-pointer transition-colors duration-fast",
+                        pinned ? "text-accent" : "text-text-muted hover:bg-bg-tertiary hover:text-text",
+                      ].join(" ")}
                     >
-                      {theme.name}
-                    </div>
-                    <div className="mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-text-muted">
-                      {theme.group}
+                      <Star size={14} fill={pinned ? "currentColor" : "none"} />
+                    </button>
+                    <div className="min-w-0">
+                      <div
+                        title={`${theme.name} (${theme.id})`}
+                        className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text"
+                      >
+                        {theme.name}
+                      </div>
+                      <div className="mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-text-muted">
+                        {theme.group}
+                      </div>
                     </div>
                   </div>
                   {active ? (

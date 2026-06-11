@@ -31,9 +31,11 @@ export function filterAndRankThemes<T extends ThemeListItem>(
 export function filterAndRankCodeThemes<T extends CodeThemeListItem>(
   themes: T[],
   query: string,
+  pinnedIds: string[],
   currentId: string,
 ): T[] {
   const q = query.trim().toLocaleLowerCase("zh-CN");
+  const pinnedOrder = new Map(pinnedIds.map((id, index) => [id, index]));
   return themes
     .map((theme, index) => ({theme, index}))
     .filter(({theme}) => {
@@ -45,8 +47,12 @@ export function filterAndRankCodeThemes<T extends CodeThemeListItem>(
       );
     })
     .sort((a, b) => {
-      const rank = (id: string) => (id === currentId ? 0 : 1);
-      return rank(a.theme.id) - rank(b.theme.id) || a.index - b.index;
+      const rank = (id: string) => id === currentId ? 0 : pinnedOrder.has(id) ? 1 : 2;
+      const rankA = rank(a.theme.id);
+      const rankB = rank(b.theme.id);
+      const pinnedA = pinnedOrder.get(a.theme.id) ?? Number.MAX_SAFE_INTEGER;
+      const pinnedB = pinnedOrder.get(b.theme.id) ?? Number.MAX_SAFE_INTEGER;
+      return rankA - rankB || pinnedA - pinnedB || a.index - b.index;
     })
     .map(({theme}) => theme);
 }
