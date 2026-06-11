@@ -4,7 +4,27 @@ import {compileModel} from "./compileModel.ts";
 import {validateModel} from "./themeModel.ts";
 import defaultModel from "./default.json" with {type: "json"};
 import happysimple from "./presets/happysimple.json" with {type: "json"};
+import frontEndPeak from "./presets/mdnice-12.json" with {type: "json"};
+import singularity from "./presets/mdnice-1377.json" with {type: "json"};
 import seeYue from "./presets/see-yue.json" with {type: "json"};
+import typoraSpring from "./presets/typora-spring.json" with {type: "json"};
+
+function parseRules(css: string): Record<string, Record<string, string>> {
+  const out: Record<string, Record<string, string>> = {};
+  const re = /([^{}]+)\{([^{}]*)\}/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(css))) {
+    const selector = m[1].trim();
+    const decls: Record<string, string> = {};
+    for (const part of m[2].split(";")) {
+      const i = part.indexOf(":");
+      if (i === -1) continue;
+      decls[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+    }
+    out[selector] = {...(out[selector] || {}), ...decls};
+  }
+  return out;
+}
 
 test("default.json 通过 model 校验", () => {
   assert.equal(validateModel(defaultModel), true);
@@ -48,4 +68,25 @@ test("Typora 映射主题保留微信可渲染的手动修正", () => {
   assert.match(seeYueCss, /#nice pre\.custom \{[^}]*border-top: 40px solid rgba\(167, 187, 195, 0\.6\)/);
   assert.match(seeYueCss, /#nice mark \{[^}]*background-color: #7c9dca/);
   assert.match(seeYueCss, /#nice del \{[^}]*color: #777777/);
+});
+
+test("mdnice 装饰性 h3 主题的脚注标题不被压成窄列", () => {
+  for (const preset of [singularity, frontEndPeak]) {
+    const rules = parseRules(compileModel(preset.model as never));
+    const sepBefore = rules["#nice .footnotes-sep::before"];
+
+    assert.equal(sepBefore.content, '"参考资料"');
+    assert.equal(sepBefore.width, "auto");
+    assert.equal(sepBefore.height, "auto");
+    assert.equal(sepBefore["background-image"], "none");
+  }
+});
+
+test("Typora Spring 根容器和分隔线不向右撑出预览边界", () => {
+  const rules = parseRules(compileModel(typoraSpring.model as never));
+
+  assert.equal(rules["#nice"]["box-sizing"], "border-box");
+  assert.equal(rules["#nice"]["max-width"], "100%");
+  assert.equal(rules["#nice hr"].width, "100%");
+  assert.equal(rules["#nice hr"]["box-sizing"], "border-box");
 });

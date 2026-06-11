@@ -43,6 +43,30 @@
           "children": null
         },
         {
+          "id": "boxSizing",
+          "value": "border-box",
+          "keys": [
+            {
+              "selector": "#nice",
+              "key": "box-sizing",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "maxWidth",
+          "value": "100%",
+          "keys": [
+            {
+              "selector": "#nice",
+              "key": "max-width",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
           "id": "fontColor",
           "value": "#333333",
           "keys": [
@@ -2240,11 +2264,23 @@
         },
         {
           "id": "width",
-          "value": "1024px",
+          "value": "100%",
           "keys": [
             {
               "selector": "#nice hr",
               "key": "width",
+              "format": null
+            }
+          ],
+          "children": null
+        },
+        {
+          "id": "boxSizing",
+          "value": "border-box",
+          "keys": [
+            {
+              "selector": "#nice hr",
+              "key": "box-sizing",
               "format": null
             }
           ],
