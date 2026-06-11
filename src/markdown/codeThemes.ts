@@ -1,4 +1,5 @@
 import {GENERATED_HLJS_THEMES} from "./generatedHljsThemes.ts";
+import {ARTICLE_ROOT_SELECTOR} from "../articleRoot.ts";
 
 export const DEFAULT_CODE_THEME_ID = "vs2015";
 export type CodeThemeId = string;
@@ -23,7 +24,7 @@ export interface CodeTheme {
 }
 
 const CODE_BLOCK_BASE_CSS = `
-#nice pre.custom {
+${ARTICLE_ROOT_SELECTOR} pre.custom {
   box-sizing: border-box;
   margin: 16px 0;
   padding: 0;
@@ -33,7 +34,7 @@ const CODE_BLOCK_BASE_CSS = `
   white-space: pre;
   word-wrap: normal;
 }
-#nice pre.custom code.hljs {
+${ARTICLE_ROOT_SELECTOR} pre.custom code.hljs {
   box-sizing: border-box;
   min-width: 100%;
   font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
@@ -47,12 +48,12 @@ function scopeSelector(selector: string): string[] {
   const trimmed = selector.trim();
   if (!trimmed) return [];
   if (trimmed === ".hljs") {
-    return ["#nice pre.custom", "#nice pre.custom code.hljs"];
+    return [`${ARTICLE_ROOT_SELECTOR} pre.custom`, `${ARTICLE_ROOT_SELECTOR} pre.custom code.hljs`];
   }
   if (trimmed === "pre code.hljs" || trimmed === "code.hljs") {
-    return ["#nice pre.custom code.hljs"];
+    return [`${ARTICLE_ROOT_SELECTOR} pre.custom code.hljs`];
   }
-  return [`#nice pre.custom ${trimmed}`];
+  return [`${ARTICLE_ROOT_SELECTOR} pre.custom ${trimmed}`];
 }
 
 function scopeSelectorList(selectorList: string): string[] {

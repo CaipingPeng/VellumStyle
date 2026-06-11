@@ -4,7 +4,7 @@ import {motion} from "framer-motion";
 import {ArrowRight, Braces, Check, ChevronLeft, ChevronRight, FolderOpen, Palette, Search, Star, Upload, X} from "lucide-react";
 import {getThemeById, useStore} from "../../store/index.ts";
 import {CODE_THEMES, getCodeThemeById} from "../../markdown/codeThemes.ts";
-import {loadAllThemes, openThemesDir, importMdniceTheme} from "../../themes/loader.ts";
+import {loadAllThemes, openThemesDir, importThemeModel} from "../../themes/loader.ts";
 import {toast} from "../Toast/toast.ts";
 import IconButton from "../ui/IconButton.tsx";
 import CodeThemeThumbnail from "./CodeThemeThumbnail.tsx";
@@ -135,7 +135,7 @@ export default function ThemePickerDialog({onClose}: Props) {
       const raw = await file.text();
       const name = file.name.replace(/\.json$/i, "");
       try {
-        await importMdniceTheme(name, raw);
+        await importThemeModel(name, raw);
         setThemes(await loadAllThemes());
       } catch (e) {
         toast.show(`导入失败：${(e as Error).message}`, "error");

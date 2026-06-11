@@ -11,7 +11,7 @@
           "value": "16px",
           "keys": [
             {
-              "selector": "#nice",
+              "selector": "#article",
               "key": "font-size",
               "format": null
             }
@@ -23,7 +23,7 @@
           "value": "#2c3e50",
           "keys": [
             {
-              "selector": "#nice",
+              "selector": "#article",
               "key": "color",
               "format": null
             }
@@ -35,7 +35,7 @@
           "value": "1.8",
           "keys": [
             {
-              "selector": "#nice",
+              "selector": "#article",
               "key": "line-height",
               "format": null
             }
@@ -47,7 +47,7 @@
           "value": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", \"Helvetica Neue\", Arial, sans-serif",
           "keys": [
             {
-              "selector": "#nice",
+              "selector": "#article",
               "key": "font-family",
               "format": null
             }
@@ -59,7 +59,7 @@
           "value": "#fffdf8",
           "keys": [
             {
-              "selector": "#nice",
+              "selector": "#article",
               "key": "background-color",
               "format": null
             }
@@ -71,7 +71,7 @@
           "value": "0",
           "keys": [
             {
-              "selector": "#nice",
+              "selector": "#article",
               "key": "margin",
               "format": null
             }
@@ -83,7 +83,7 @@
           "value": "0",
           "keys": [
             {
-              "selector": "#nice",
+              "selector": "#article",
               "key": "padding",
               "format": null
             }
@@ -101,7 +101,7 @@
           "value": "inherit",
           "keys": [
             {
-              "selector": "#nice p",
+              "selector": "#article p",
               "key": "color",
               "format": null
             }
@@ -113,7 +113,7 @@
           "value": "1em 0",
           "keys": [
             {
-              "selector": "#nice p",
+              "selector": "#article p",
               "key": "margin",
               "format": null
             }
@@ -125,7 +125,7 @@
           "value": "16px",
           "keys": [
             {
-              "selector": "#nice p",
+              "selector": "#article p",
               "key": "font-size",
               "format": null
             }
@@ -137,7 +137,7 @@
           "value": "1.8",
           "keys": [
             {
-              "selector": "#nice p",
+              "selector": "#article p",
               "key": "line-height",
               "format": null
             }
@@ -155,7 +155,7 @@
           "value": "2.1rem",
           "keys": [
             {
-              "selector": "#nice h1",
+              "selector": "#article h1",
               "key": "font-size",
               "format": null
             }
@@ -167,7 +167,7 @@
           "value": "#2c3e50",
           "keys": [
             {
-              "selector": "#nice h1",
+              "selector": "#article h1",
               "key": "color",
               "format": null
             }
@@ -179,7 +179,7 @@
           "value": "1.25",
           "keys": [
             {
-              "selector": "#nice h1",
+              "selector": "#article h1",
               "key": "line-height",
               "format": null
             }
@@ -191,7 +191,7 @@
           "value": "Georgia, \"Times New Roman\", \"Songti SC\", SimSun, \"Noto Serif CJK SC\", serif",
           "keys": [
             {
-              "selector": "#nice h1",
+              "selector": "#article h1",
               "key": "font-family",
               "format": null
             }
@@ -203,7 +203,7 @@
           "value": "700",
           "keys": [
             {
-              "selector": "#nice h1",
+              "selector": "#article h1",
               "key": "font-weight",
               "format": null
             }
@@ -215,7 +215,7 @@
           "value": "2px solid #4a90e2",
           "keys": [
             {
-              "selector": "#nice h1",
+              "selector": "#article h1",
               "key": "border-bottom",
               "format": null
             }
@@ -227,7 +227,7 @@
           "value": "2.2rem 0 1rem",
           "keys": [
             {
-              "selector": "#nice h1",
+              "selector": "#article h1",
               "key": "margin",
               "format": null
             }
@@ -239,7 +239,7 @@
           "value": "0",
           "keys": [
             {
-              "selector": "#nice h1",
+              "selector": "#article h1",
               "key": "margin-top",
               "format": null
             }
@@ -251,7 +251,7 @@
           "value": "0.5em",
           "keys": [
             {
-              "selector": "#nice h1",
+              "selector": "#article h1",
               "key": "padding-bottom",
               "format": null
             }
@@ -269,7 +269,7 @@
           "value": "1.8rem",
           "keys": [
             {
-              "selector": "#nice h2",
+              "selector": "#article h2",
               "key": "font-size",
               "format": null
             }
@@ -281,7 +281,7 @@
           "value": "#2c3e50",
           "keys": [
             {
-              "selector": "#nice h2",
+              "selector": "#article h2",
               "key": "color",
               "format": null
             }
@@ -293,7 +293,7 @@
           "value": "1.25",
           "keys": [
             {
-              "selector": "#nice h2",
+              "selector": "#article h2",
               "key": "line-height",
               "format": null
             }
@@ -305,7 +305,7 @@
           "value": "Georgia, \"Times New Roman\", \"Songti SC\", SimSun, \"Noto Serif CJK SC\", serif",
           "keys": [
             {
-              "selector": "#nice h2",
+              "selector": "#article h2",
               "key": "font-family",
               "format": null
             }
@@ -317,7 +317,7 @@
           "value": "700",
           "keys": [
             {
-              "selector": "#nice h2",
+              "selector": "#article h2",
               "key": "font-weight",
               "format": null
             }
@@ -329,7 +329,7 @@
           "value": "1px solid #e9e3d8",
           "keys": [
             {
-              "selector": "#nice h2",
+              "selector": "#article h2",
               "key": "border-bottom",
               "format": null
             }
@@ -341,7 +341,7 @@
           "value": "2.2rem 0 1rem",
           "keys": [
             {
-              "selector": "#nice h2",
+              "selector": "#article h2",
               "key": "margin",
               "format": null
             }
@@ -353,7 +353,7 @@
           "value": "0.35rem",
           "keys": [
             {
-              "selector": "#nice h2",
+              "selector": "#article h2",
               "key": "padding-bottom",
               "format": null
             }
@@ -371,7 +371,7 @@
           "value": "1.5rem",
           "keys": [
             {
-              "selector": "#nice h3",
+              "selector": "#article h3",
               "key": "font-size",
               "format": null
             }
@@ -383,7 +383,7 @@
           "value": "#2c3e50",
           "keys": [
             {
-              "selector": "#nice h3",
+              "selector": "#article h3",
               "key": "color",
               "format": null
             }
@@ -395,7 +395,7 @@
           "value": "1.25",
           "keys": [
             {
-              "selector": "#nice h3",
+              "selector": "#article h3",
               "key": "line-height",
               "format": null
             }
@@ -407,7 +407,7 @@
           "value": "Georgia, \"Times New Roman\", \"Songti SC\", SimSun, \"Noto Serif CJK SC\", serif",
           "keys": [
             {
-              "selector": "#nice h3",
+              "selector": "#article h3",
               "key": "font-family",
               "format": null
             }
@@ -419,7 +419,7 @@
           "value": "700",
           "keys": [
             {
-              "selector": "#nice h3",
+              "selector": "#article h3",
               "key": "font-weight",
               "format": null
             }
@@ -431,7 +431,7 @@
           "value": "1px solid #e9e3d8",
           "keys": [
             {
-              "selector": "#nice h3",
+              "selector": "#article h3",
               "key": "border-bottom",
               "format": null
             }
@@ -443,7 +443,7 @@
           "value": "2.2rem 0 1rem",
           "keys": [
             {
-              "selector": "#nice h3",
+              "selector": "#article h3",
               "key": "margin",
               "format": null
             }
@@ -455,7 +455,7 @@
           "value": "0.25rem",
           "keys": [
             {
-              "selector": "#nice h3",
+              "selector": "#article h3",
               "key": "padding-bottom",
               "format": null
             }
@@ -473,7 +473,7 @@
           "value": "1.25rem",
           "keys": [
             {
-              "selector": "#nice h4",
+              "selector": "#article h4",
               "key": "font-size",
               "format": null
             }
@@ -485,7 +485,7 @@
           "value": "#2c3e50",
           "keys": [
             {
-              "selector": "#nice h4",
+              "selector": "#article h4",
               "key": "color",
               "format": null
             }
@@ -497,7 +497,7 @@
           "value": "1.25",
           "keys": [
             {
-              "selector": "#nice h4",
+              "selector": "#article h4",
               "key": "line-height",
               "format": null
             }
@@ -509,7 +509,7 @@
           "value": "Georgia, \"Times New Roman\", \"Songti SC\", SimSun, \"Noto Serif CJK SC\", serif",
           "keys": [
             {
-              "selector": "#nice h4",
+              "selector": "#article h4",
               "key": "font-family",
               "format": null
             }
@@ -521,7 +521,7 @@
           "value": "700",
           "keys": [
             {
-              "selector": "#nice h4",
+              "selector": "#article h4",
               "key": "font-weight",
               "format": null
             }
@@ -533,7 +533,7 @@
           "value": "2.2rem 0 1rem",
           "keys": [
             {
-              "selector": "#nice h4",
+              "selector": "#article h4",
               "key": "margin",
               "format": null
             }
@@ -551,7 +551,7 @@
           "value": "1.1rem",
           "keys": [
             {
-              "selector": "#nice h5",
+              "selector": "#article h5",
               "key": "font-size",
               "format": null
             }
@@ -563,7 +563,7 @@
           "value": "#2c3e50",
           "keys": [
             {
-              "selector": "#nice h5",
+              "selector": "#article h5",
               "key": "color",
               "format": null
             }
@@ -575,7 +575,7 @@
           "value": "1.25",
           "keys": [
             {
-              "selector": "#nice h5",
+              "selector": "#article h5",
               "key": "line-height",
               "format": null
             }
@@ -587,7 +587,7 @@
           "value": "Georgia, \"Times New Roman\", \"Songti SC\", SimSun, \"Noto Serif CJK SC\", serif",
           "keys": [
             {
-              "selector": "#nice h5",
+              "selector": "#article h5",
               "key": "font-family",
               "format": null
             }
@@ -599,7 +599,7 @@
           "value": "700",
           "keys": [
             {
-              "selector": "#nice h5",
+              "selector": "#article h5",
               "key": "font-weight",
               "format": null
             }
@@ -611,7 +611,7 @@
           "value": "2.2rem 0 1rem",
           "keys": [
             {
-              "selector": "#nice h5",
+              "selector": "#article h5",
               "key": "margin",
               "format": null
             }
@@ -629,7 +629,7 @@
           "value": "1rem",
           "keys": [
             {
-              "selector": "#nice h6",
+              "selector": "#article h6",
               "key": "font-size",
               "format": null
             }
@@ -641,7 +641,7 @@
           "value": "#7f8c8d",
           "keys": [
             {
-              "selector": "#nice h6",
+              "selector": "#article h6",
               "key": "color",
               "format": null
             }
@@ -653,7 +653,7 @@
           "value": "1.25",
           "keys": [
             {
-              "selector": "#nice h6",
+              "selector": "#article h6",
               "key": "line-height",
               "format": null
             }
@@ -665,7 +665,7 @@
           "value": "Georgia, \"Times New Roman\", \"Songti SC\", SimSun, \"Noto Serif CJK SC\", serif",
           "keys": [
             {
-              "selector": "#nice h6",
+              "selector": "#article h6",
               "key": "font-family",
               "format": null
             }
@@ -677,7 +677,7 @@
           "value": "700",
           "keys": [
             {
-              "selector": "#nice h6",
+              "selector": "#article h6",
               "key": "font-weight",
               "format": null
             }
@@ -689,7 +689,7 @@
           "value": "2.2rem 0 1rem",
           "keys": [
             {
-              "selector": "#nice h6",
+              "selector": "#article h6",
               "key": "margin",
               "format": null
             }
@@ -707,7 +707,7 @@
           "value": "#2c3e50",
           "keys": [
             {
-              "selector": "#nice blockquote",
+              "selector": "#article blockquote",
               "key": "color",
               "format": null
             }
@@ -719,7 +719,7 @@
           "value": "6px",
           "keys": [
             {
-              "selector": "#nice blockquote",
+              "selector": "#article blockquote",
               "key": "border-radius",
               "format": null
             }
@@ -731,7 +731,7 @@
           "value": "0 2px 8px #00000014",
           "keys": [
             {
-              "selector": "#nice blockquote",
+              "selector": "#article blockquote",
               "key": "box-shadow",
               "format": null
             }
@@ -743,7 +743,7 @@
           "value": "border-box",
           "keys": [
             {
-              "selector": "#nice blockquote",
+              "selector": "#article blockquote",
               "key": "box-sizing",
               "format": null
             }
@@ -755,7 +755,7 @@
           "value": "1.25rem 0",
           "keys": [
             {
-              "selector": "#nice blockquote",
+              "selector": "#article blockquote",
               "key": "margin",
               "format": null
             }
@@ -767,7 +767,7 @@
           "value": "0.9rem 1rem",
           "keys": [
             {
-              "selector": "#nice blockquote",
+              "selector": "#article blockquote",
               "key": "padding",
               "format": null
             }
@@ -779,7 +779,7 @@
           "value": "#2563eb1a",
           "keys": [
             {
-              "selector": "#nice blockquote",
+              "selector": "#article blockquote",
               "key": "background-color",
               "format": null
             }
@@ -791,7 +791,7 @@
           "value": "4px solid #2563eb",
           "keys": [
             {
-              "selector": "#nice blockquote",
+              "selector": "#article blockquote",
               "key": "border-left",
               "format": null
             }
@@ -809,7 +809,7 @@
           "value": "#4a90e2",
           "keys": [
             {
-              "selector": "#nice a",
+              "selector": "#article a",
               "key": "color",
               "format": null
             }
@@ -821,7 +821,7 @@
           "value": "none",
           "keys": [
             {
-              "selector": "#nice a",
+              "selector": "#article a",
               "key": "text-decoration",
               "format": null
             }
@@ -833,7 +833,7 @@
           "value": "#4a90e24d",
           "keys": [
             {
-              "selector": "#nice a",
+              "selector": "#article a",
               "key": "background",
               "format": null
             }
@@ -845,7 +845,7 @@
           "value": "1px solid transparent",
           "keys": [
             {
-              "selector": "#nice a",
+              "selector": "#article a",
               "key": "border-bottom",
               "format": null
             }
@@ -857,7 +857,7 @@
           "value": "none",
           "keys": [
             {
-              "selector": "#nice a",
+              "selector": "#article a",
               "key": "outline",
               "format": null
             }
@@ -869,7 +869,7 @@
           "value": "0.5em",
           "keys": [
             {
-              "selector": "#nice a",
+              "selector": "#article a",
               "key": "padding-left",
               "format": null
             }
@@ -887,7 +887,7 @@
           "value": "#2c3e50",
           "keys": [
             {
-              "selector": "#nice strong",
+              "selector": "#article strong",
               "key": "color",
               "format": null
             }
@@ -899,7 +899,7 @@
           "value": "600",
           "keys": [
             {
-              "selector": "#nice strong",
+              "selector": "#article strong",
               "key": "font-weight",
               "format": null
             }
@@ -917,7 +917,7 @@
           "value": "#2c3e50",
           "keys": [
             {
-              "selector": "#nice em",
+              "selector": "#article em",
               "key": "color",
               "format": null
             }
@@ -929,7 +929,7 @@
           "value": "italic",
           "keys": [
             {
-              "selector": "#nice em",
+              "selector": "#article em",
               "key": "font-style",
               "format": null
             }
@@ -947,7 +947,7 @@
           "value": "#95a5a6",
           "keys": [
             {
-              "selector": "#nice del",
+              "selector": "#article del",
               "key": "color",
               "format": null
             }
@@ -959,7 +959,7 @@
           "value": "line-through",
           "keys": [
             {
-              "selector": "#nice del",
+              "selector": "#article del",
               "key": "text-decoration",
               "format": null
             }
@@ -977,7 +977,7 @@
           "value": "#2c3e50",
           "keys": [
             {
-              "selector": "#nice mark",
+              "selector": "#article mark",
               "key": "color",
               "format": null
             }
@@ -989,7 +989,7 @@
           "value": "#fff3cd",
           "keys": [
             {
-              "selector": "#nice mark",
+              "selector": "#article mark",
               "key": "background-color",
               "format": null
             }
@@ -1001,7 +1001,7 @@
           "value": "6px",
           "keys": [
             {
-              "selector": "#nice mark",
+              "selector": "#article mark",
               "key": "border-radius",
               "format": null
             }
@@ -1013,7 +1013,7 @@
           "value": "0.2em 0.4em",
           "keys": [
             {
-              "selector": "#nice mark",
+              "selector": "#article mark",
               "key": "padding",
               "format": null
             }
@@ -1031,7 +1031,7 @@
           "value": "disc",
           "keys": [
             {
-              "selector": "#nice ul",
+              "selector": "#article ul",
               "key": "list-style-type",
               "format": null
             }
@@ -1043,7 +1043,7 @@
           "value": "0.5em 0",
           "keys": [
             {
-              "selector": "#nice ul",
+              "selector": "#article ul",
               "key": "margin",
               "format": null
             }
@@ -1055,7 +1055,7 @@
           "value": "2em",
           "keys": [
             {
-              "selector": "#nice ul",
+              "selector": "#article ul",
               "key": "padding-left",
               "format": null
             }
@@ -1067,7 +1067,7 @@
           "value": "1.8",
           "keys": [
             {
-              "selector": "#nice ul",
+              "selector": "#article ul",
               "key": "line-height",
               "format": null
             }
@@ -1085,7 +1085,7 @@
           "value": "decimal",
           "keys": [
             {
-              "selector": "#nice ol",
+              "selector": "#article ol",
               "key": "list-style-type",
               "format": null
             }
@@ -1097,7 +1097,7 @@
           "value": "0.5em 0",
           "keys": [
             {
-              "selector": "#nice ol",
+              "selector": "#article ol",
               "key": "margin",
               "format": null
             }
@@ -1109,7 +1109,7 @@
           "value": "2em",
           "keys": [
             {
-              "selector": "#nice ol",
+              "selector": "#article ol",
               "key": "padding-left",
               "format": null
             }
@@ -1121,7 +1121,7 @@
           "value": "1.8",
           "keys": [
             {
-              "selector": "#nice ol",
+              "selector": "#article ol",
               "key": "line-height",
               "format": null
             }
@@ -1139,7 +1139,7 @@
           "value": "1.6",
           "keys": [
             {
-              "selector": "#nice li",
+              "selector": "#article li",
               "key": "line-height",
               "format": null
             }
@@ -1151,7 +1151,7 @@
           "value": "0.5em 0",
           "keys": [
             {
-              "selector": "#nice li",
+              "selector": "#article li",
               "key": "margin",
               "format": null
             }
@@ -1169,7 +1169,7 @@
           "value": "block",
           "keys": [
             {
-              "selector": "#nice img",
+              "selector": "#article img",
               "key": "display",
               "format": null
             }
@@ -1181,7 +1181,7 @@
           "value": "transparent",
           "keys": [
             {
-              "selector": "#nice img",
+              "selector": "#article img",
               "key": "background",
               "format": null
             }
@@ -1193,7 +1193,7 @@
           "value": "none",
           "keys": [
             {
-              "selector": "#nice img",
+              "selector": "#article img",
               "key": "border",
               "format": null
             }
@@ -1205,7 +1205,7 @@
           "value": "8px",
           "keys": [
             {
-              "selector": "#nice img",
+              "selector": "#article img",
               "key": "border-radius",
               "format": null
             }
@@ -1217,7 +1217,7 @@
           "value": "0 4px 16px #0000001f",
           "keys": [
             {
-              "selector": "#nice img",
+              "selector": "#article img",
               "key": "box-shadow",
               "format": null
             }
@@ -1229,7 +1229,7 @@
           "value": "none",
           "keys": [
             {
-              "selector": "#nice img",
+              "selector": "#article img",
               "key": "outline",
               "format": null
             }
@@ -1241,7 +1241,7 @@
           "value": "100%",
           "keys": [
             {
-              "selector": "#nice img",
+              "selector": "#article img",
               "key": "max-width",
               "format": null
             }
@@ -1253,7 +1253,7 @@
           "value": "auto",
           "keys": [
             {
-              "selector": "#nice img",
+              "selector": "#article img",
               "key": "height",
               "format": null
             }
@@ -1265,7 +1265,7 @@
           "value": "1.5em auto",
           "keys": [
             {
-              "selector": "#nice img",
+              "selector": "#article img",
               "key": "margin",
               "format": null
             }
@@ -1277,7 +1277,7 @@
           "value": "0",
           "keys": [
             {
-              "selector": "#nice img",
+              "selector": "#article img",
               "key": "padding",
               "format": null
             }
@@ -1295,7 +1295,7 @@
           "value": "#fffdf8",
           "keys": [
             {
-              "selector": "#nice table",
+              "selector": "#article table",
               "key": "background-color",
               "format": null
             }
@@ -1307,7 +1307,7 @@
           "value": "1px solid #e2ddd3",
           "keys": [
             {
-              "selector": "#nice table",
+              "selector": "#article table",
               "key": "border",
               "format": null
             }
@@ -1319,7 +1319,7 @@
           "value": "8px",
           "keys": [
             {
-              "selector": "#nice table",
+              "selector": "#article table",
               "key": "border-radius",
               "format": null
             }
@@ -1331,7 +1331,7 @@
           "value": "0 2px 8px #00000014",
           "keys": [
             {
-              "selector": "#nice table",
+              "selector": "#article table",
               "key": "box-shadow",
               "format": null
             }
@@ -1343,7 +1343,7 @@
           "value": "100%",
           "keys": [
             {
-              "selector": "#nice table",
+              "selector": "#article table",
               "key": "width",
               "format": null
             }
@@ -1355,7 +1355,7 @@
           "value": "separate",
           "keys": [
             {
-              "selector": "#nice table",
+              "selector": "#article table",
               "key": "border-collapse",
               "format": null
             }
@@ -1367,7 +1367,7 @@
           "value": "0",
           "keys": [
             {
-              "selector": "#nice table",
+              "selector": "#article table",
               "key": "border-spacing",
               "format": null
             }
@@ -1379,7 +1379,7 @@
           "value": "hidden",
           "keys": [
             {
-              "selector": "#nice table",
+              "selector": "#article table",
               "key": "overflow",
               "format": null
             }
@@ -1391,7 +1391,7 @@
           "value": "1.5em 0",
           "keys": [
             {
-              "selector": "#nice table",
+              "selector": "#article table",
               "key": "margin",
               "format": null
             }
@@ -1409,7 +1409,7 @@
           "value": "#2c3e50",
           "keys": [
             {
-              "selector": "#nice th",
+              "selector": "#article th",
               "key": "color",
               "format": null
             }
@@ -1421,7 +1421,7 @@
           "value": "600",
           "keys": [
             {
-              "selector": "#nice th",
+              "selector": "#article th",
               "key": "font-weight",
               "format": null
             }
@@ -1433,7 +1433,7 @@
           "value": "left",
           "keys": [
             {
-              "selector": "#nice th",
+              "selector": "#article th",
               "key": "text-align",
               "format": null
             }
@@ -1445,7 +1445,7 @@
           "value": "#f7f4ef",
           "keys": [
             {
-              "selector": "#nice thead",
+              "selector": "#article thead",
               "key": "background-color",
               "format": null
             }
@@ -1457,7 +1457,7 @@
           "value": "1px solid #e2ddd3",
           "keys": [
             {
-              "selector": "#nice th",
+              "selector": "#article th",
               "key": "border-right",
               "format": null
             }
@@ -1469,7 +1469,7 @@
           "value": "2px solid #e2ddd3",
           "keys": [
             {
-              "selector": "#nice th",
+              "selector": "#article th",
               "key": "border-bottom",
               "format": null
             }
@@ -1481,7 +1481,7 @@
           "value": "0.8em 1em",
           "keys": [
             {
-              "selector": "#nice th",
+              "selector": "#article th",
               "key": "padding",
               "format": null
             }
@@ -1493,7 +1493,7 @@
           "value": "1px solid #dddddd",
           "keys": [
             {
-              "selector": "#nice th",
+              "selector": "#article th",
               "key": "border",
               "format": null
             }
@@ -1511,7 +1511,7 @@
           "value": "#fffdf8",
           "keys": [
             {
-              "selector": "#nice td",
+              "selector": "#article td",
               "key": "background-color",
               "format": null
             }
@@ -1523,7 +1523,7 @@
           "value": "#2c3e50",
           "keys": [
             {
-              "selector": "#nice td",
+              "selector": "#article td",
               "key": "color",
               "format": null
             }
@@ -1535,7 +1535,7 @@
           "value": "1px solid #e2ddd3",
           "keys": [
             {
-              "selector": "#nice td",
+              "selector": "#article td",
               "key": "border-right",
               "format": null
             }
@@ -1547,7 +1547,7 @@
           "value": "1px solid #e2ddd3",
           "keys": [
             {
-              "selector": "#nice td",
+              "selector": "#article td",
               "key": "border-bottom",
               "format": null
             }
@@ -1559,7 +1559,7 @@
           "value": "0.8em 1em",
           "keys": [
             {
-              "selector": "#nice td",
+              "selector": "#article td",
               "key": "padding",
               "format": null
             }
@@ -1577,7 +1577,7 @@
           "value": "0.9em",
           "keys": [
             {
-              "selector": "#nice pre.custom",
+              "selector": "#article pre.custom",
               "key": "font-size",
               "format": null
             }
@@ -1589,7 +1589,7 @@
           "value": "#3b2f2a",
           "keys": [
             {
-              "selector": "#nice pre.custom",
+              "selector": "#article pre.custom",
               "key": "color",
               "format": null
             }
@@ -1601,7 +1601,7 @@
           "value": "1.6",
           "keys": [
             {
-              "selector": "#nice pre.custom",
+              "selector": "#article pre.custom",
               "key": "line-height",
               "format": null
             }
@@ -1613,7 +1613,7 @@
           "value": "Menlo, Monaco, Consolas, \"Courier New\", monospace",
           "keys": [
             {
-              "selector": "#nice pre.custom",
+              "selector": "#article pre.custom",
               "key": "font-family",
               "format": null
             }
@@ -1625,7 +1625,7 @@
           "value": "#f7f4ef",
           "keys": [
             {
-              "selector": "#nice pre.custom",
+              "selector": "#article pre.custom",
               "key": "background-color",
               "format": null
             }
@@ -1637,7 +1637,7 @@
           "value": "1px solid #e9e3d8",
           "keys": [
             {
-              "selector": "#nice pre.custom",
+              "selector": "#article pre.custom",
               "key": "border",
               "format": null
             }
@@ -1649,7 +1649,7 @@
           "value": "8px",
           "keys": [
             {
-              "selector": "#nice pre.custom",
+              "selector": "#article pre.custom",
               "key": "border-radius",
               "format": null
             }
@@ -1661,7 +1661,7 @@
           "value": "0 2px 8px #00000014",
           "keys": [
             {
-              "selector": "#nice pre.custom",
+              "selector": "#article pre.custom",
               "key": "box-shadow",
               "format": null
             }
@@ -1673,7 +1673,7 @@
           "value": "auto",
           "keys": [
             {
-              "selector": "#nice pre.custom",
+              "selector": "#article pre.custom",
               "key": "overflow-x",
               "format": null
             }
@@ -1685,7 +1685,7 @@
           "value": "1.5em 0",
           "keys": [
             {
-              "selector": "#nice pre.custom",
+              "selector": "#article pre.custom",
               "key": "margin",
               "format": null
             }
@@ -1697,7 +1697,7 @@
           "value": "1.2em",
           "keys": [
             {
-              "selector": "#nice pre.custom",
+              "selector": "#article pre.custom",
               "key": "padding",
               "format": null
             }
@@ -1715,27 +1715,27 @@
           "value": "0.9em",
           "keys": [
             {
-              "selector": "#nice p code",
+              "selector": "#article p code",
               "key": "font-size",
               "format": null
             },
             {
-              "selector": "#nice li code",
+              "selector": "#article li code",
               "key": "font-size",
               "format": null
             },
             {
-              "selector": "#nice td code",
+              "selector": "#article td code",
               "key": "font-size",
               "format": null
             },
             {
-              "selector": "#nice blockquote code",
+              "selector": "#article blockquote code",
               "key": "font-size",
               "format": null
             },
             {
-              "selector": "#nice code",
+              "selector": "#article code",
               "key": "font-size",
               "format": null
             }
@@ -1747,27 +1747,27 @@
           "value": "#3b2f2a",
           "keys": [
             {
-              "selector": "#nice p code",
+              "selector": "#article p code",
               "key": "color",
               "format": null
             },
             {
-              "selector": "#nice li code",
+              "selector": "#article li code",
               "key": "color",
               "format": null
             },
             {
-              "selector": "#nice td code",
+              "selector": "#article td code",
               "key": "color",
               "format": null
             },
             {
-              "selector": "#nice blockquote code",
+              "selector": "#article blockquote code",
               "key": "color",
               "format": null
             },
             {
-              "selector": "#nice code",
+              "selector": "#article code",
               "key": "color",
               "format": null
             }
@@ -1779,27 +1779,27 @@
           "value": "Menlo, Monaco, Consolas, \"Courier New\", monospace",
           "keys": [
             {
-              "selector": "#nice p code",
+              "selector": "#article p code",
               "key": "font-family",
               "format": null
             },
             {
-              "selector": "#nice li code",
+              "selector": "#article li code",
               "key": "font-family",
               "format": null
             },
             {
-              "selector": "#nice td code",
+              "selector": "#article td code",
               "key": "font-family",
               "format": null
             },
             {
-              "selector": "#nice blockquote code",
+              "selector": "#article blockquote code",
               "key": "font-family",
               "format": null
             },
             {
-              "selector": "#nice code",
+              "selector": "#article code",
               "key": "font-family",
               "format": null
             }
@@ -1811,27 +1811,27 @@
           "value": "#f7f4ef",
           "keys": [
             {
-              "selector": "#nice p code",
+              "selector": "#article p code",
               "key": "background-color",
               "format": null
             },
             {
-              "selector": "#nice li code",
+              "selector": "#article li code",
               "key": "background-color",
               "format": null
             },
             {
-              "selector": "#nice td code",
+              "selector": "#article td code",
               "key": "background-color",
               "format": null
             },
             {
-              "selector": "#nice blockquote code",
+              "selector": "#article blockquote code",
               "key": "background-color",
               "format": null
             },
             {
-              "selector": "#nice code",
+              "selector": "#article code",
               "key": "background-color",
               "format": null
             }
@@ -1843,27 +1843,27 @@
           "value": "6px",
           "keys": [
             {
-              "selector": "#nice p code",
+              "selector": "#article p code",
               "key": "border-radius",
               "format": null
             },
             {
-              "selector": "#nice li code",
+              "selector": "#article li code",
               "key": "border-radius",
               "format": null
             },
             {
-              "selector": "#nice td code",
+              "selector": "#article td code",
               "key": "border-radius",
               "format": null
             },
             {
-              "selector": "#nice blockquote code",
+              "selector": "#article blockquote code",
               "key": "border-radius",
               "format": null
             },
             {
-              "selector": "#nice code",
+              "selector": "#article code",
               "key": "border-radius",
               "format": null
             }
@@ -1875,27 +1875,27 @@
           "value": "0.2em 0.4em",
           "keys": [
             {
-              "selector": "#nice p code",
+              "selector": "#article p code",
               "key": "padding",
               "format": null
             },
             {
-              "selector": "#nice li code",
+              "selector": "#article li code",
               "key": "padding",
               "format": null
             },
             {
-              "selector": "#nice td code",
+              "selector": "#article td code",
               "key": "padding",
               "format": null
             },
             {
-              "selector": "#nice blockquote code",
+              "selector": "#article blockquote code",
               "key": "padding",
               "format": null
             },
             {
-              "selector": "#nice code",
+              "selector": "#article code",
               "key": "padding",
               "format": null
             }
@@ -1913,7 +1913,7 @@
           "value": "none",
           "keys": [
             {
-              "selector": "#nice hr",
+              "selector": "#article hr",
               "key": "border",
               "format": null
             }
@@ -1925,7 +1925,7 @@
           "value": "1px solid #e9e3d8",
           "keys": [
             {
-              "selector": "#nice hr",
+              "selector": "#article hr",
               "key": "border-top",
               "format": null
             }
@@ -1937,7 +1937,7 @@
           "value": "2.5em 0",
           "keys": [
             {
-              "selector": "#nice hr",
+              "selector": "#article hr",
               "key": "margin",
               "format": null
             }

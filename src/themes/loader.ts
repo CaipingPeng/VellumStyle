@@ -28,7 +28,7 @@ export async function openThemesDir(): Promise<void> {
   await invoke("open_themes_dir");
 }
 
-// 导入 mdnice 抓包 JSON：raw 为整包字符串，id 为新主题名。
-export async function importMdniceTheme(id: string, raw: string): Promise<void> {
-  await invoke("import_mdnice_theme", {id, rawJson: raw});
+// 导入主题模型 JSON：raw 为整包字符串，id 为新主题名。
+export async function importThemeModel(id: string, raw: string): Promise<void> {
+  await invoke("import_theme_model", {id, rawJson: raw});
 }

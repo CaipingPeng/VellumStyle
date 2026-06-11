@@ -16,7 +16,7 @@ export interface StyleModel {
   selectors?: string[];
 }
 
-// 宽容校验：是数组、每项有 string id 与 styles 数组。未知字段忽略（mdnice 改版兼容）。
+// 宽容校验：是数组、每项有 string id 与 styles 数组。未知字段忽略，方便兼容外部/历史主题。
 export function validateModel(data: unknown): data is StyleModel[] {
   if (!Array.isArray(data)) return false;
   return data.every(

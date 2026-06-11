@@ -21,7 +21,7 @@ const defaultTheme: ThemeOption = {
   model: DEFAULT_MODEL,
 };
 
-// 预置主题（从 mdnice 收录）：presets/*.json 形态为 {name, model}。
+// 预置主题：presets/*.json 形态为 {name, model}。
 // 文件名（去扩展名）作 id，name 字段作显示名。新增预置主题只需丢 .json 文件。
 type PresetFile = {name?: string; model?: unknown};
 const presetModules = import.meta.glob("./presets/*.json", {import: "default"}) as Record<

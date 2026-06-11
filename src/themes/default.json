@@ -8,7 +8,7 @@
         "value": "16px",
         "keys": [
           {
-            "selector": "#nice",
+            "selector": "#article",
             "key": "font-size",
             "format": null
           }
@@ -20,7 +20,7 @@
         "value": "rgba(51, 51, 51, 1)",
         "keys": [
           {
-            "selector": "#nice",
+            "selector": "#article",
             "key": "color",
             "format": null
           }
@@ -32,7 +32,7 @@
         "value": "1.6em",
         "keys": [
           {
-            "selector": "#nice",
+            "selector": "#article",
             "key": "line-height",
             "format": null
           }
@@ -44,7 +44,7 @@
         "value": "\"Open Sans\", \"Clear Sans\", \"Helvetica Neue\", Helvetica, Arial, \"Segoe UI Emoji\", sans-serif",
         "keys": [
           {
-            "selector": "#nice",
+            "selector": "#article",
             "key": "font-family",
             "format": null
           }
@@ -61,7 +61,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice",
+                "selector": "#article",
                 "key": "margin-top",
                 "format": null
               }
@@ -73,7 +73,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice",
+                "selector": "#article",
                 "key": "margin-bottom",
                 "format": null
               }
@@ -85,7 +85,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice",
+                "selector": "#article",
                 "key": "margin-left",
                 "format": null
               }
@@ -97,7 +97,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice",
+                "selector": "#article",
                 "key": "margin-right",
                 "format": null
               }
@@ -109,7 +109,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice",
+                "selector": "#article",
                 "key": "padding-top",
                 "format": null
               }
@@ -121,7 +121,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice",
+                "selector": "#article",
                 "key": "padding-bottom",
                 "format": null
               }
@@ -133,7 +133,7 @@
             "value": "10px",
             "keys": [
               {
-                "selector": "#nice",
+                "selector": "#article",
                 "key": "padding-left",
                 "format": null
               }
@@ -145,7 +145,7 @@
             "value": "10px",
             "keys": [
               {
-                "selector": "#nice",
+                "selector": "#article",
                 "key": "padding-right",
                 "format": null
               }
@@ -165,7 +165,7 @@
         "value": "16px",
         "keys": [
           {
-            "selector": "#nice p",
+            "selector": "#article p",
             "key": "font-size",
             "format": null
           }
@@ -177,7 +177,7 @@
         "value": "rgba(51, 51, 51, 1)",
         "keys": [
           {
-            "selector": "#nice p",
+            "selector": "#article p",
             "key": "color",
             "format": null
           }
@@ -189,7 +189,7 @@
         "value": "1.6em",
         "keys": [
           {
-            "selector": "#nice p",
+            "selector": "#article p",
             "key": "line-height",
             "format": null
           }
@@ -201,7 +201,7 @@
         "value": "left",
         "keys": [
           {
-            "selector": "#nice p",
+            "selector": "#article p",
             "key": "text-align",
             "format": null
           }
@@ -218,7 +218,7 @@
             "value": "13px",
             "keys": [
               {
-                "selector": "#nice p",
+                "selector": "#article p",
                 "key": "margin-top",
                 "format": null
               }
@@ -230,7 +230,7 @@
             "value": "13px",
             "keys": [
               {
-                "selector": "#nice p",
+                "selector": "#article p",
                 "key": "margin-bottom",
                 "format": null
               }
@@ -242,7 +242,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice p",
+                "selector": "#article p",
                 "key": "margin-left",
                 "format": null
               }
@@ -254,7 +254,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice p",
+                "selector": "#article p",
                 "key": "margin-right",
                 "format": null
               }
@@ -266,7 +266,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice p",
+                "selector": "#article p",
                 "key": "padding-top",
                 "format": null
               }
@@ -278,7 +278,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice p",
+                "selector": "#article p",
                 "key": "padding-bottom",
                 "format": null
               }
@@ -290,7 +290,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice p",
+                "selector": "#article p",
                 "key": "padding-left",
                 "format": null
               }
@@ -302,7 +302,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice p",
+                "selector": "#article p",
                 "key": "padding-right",
                 "format": null
               }
@@ -322,7 +322,7 @@
         "value": "36px",
         "keys": [
           {
-            "selector": "#nice h1 .content",
+            "selector": "#article h1 .content",
             "key": "font-size",
             "format": null
           }
@@ -334,7 +334,7 @@
         "value": "rgba(51, 51, 51, 1)",
         "keys": [
           {
-            "selector": "#nice h1 .content",
+            "selector": "#article h1 .content",
             "key": "color",
             "format": null
           }
@@ -346,7 +346,7 @@
         "value": "1.2em",
         "keys": [
           {
-            "selector": "#nice h1 .content",
+            "selector": "#article h1 .content",
             "key": "line-height",
             "format": null
           }
@@ -358,7 +358,7 @@
         "value": "bold",
         "keys": [
           {
-            "selector": "#nice h1 .content",
+            "selector": "#article h1 .content",
             "key": "font-weight",
             "format": null
           }
@@ -375,7 +375,7 @@
             "value": "16px",
             "keys": [
               {
-                "selector": "#nice h1",
+                "selector": "#article h1",
                 "key": "margin-top",
                 "format": null
               }
@@ -387,7 +387,7 @@
             "value": "16px",
             "keys": [
               {
-                "selector": "#nice h1",
+                "selector": "#article h1",
                 "key": "margin-bottom",
                 "format": null
               }
@@ -399,7 +399,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h1",
+                "selector": "#article h1",
                 "key": "margin-left",
                 "format": null
               }
@@ -411,7 +411,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h1",
+                "selector": "#article h1",
                 "key": "margin-right",
                 "format": null
               }
@@ -423,7 +423,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h1",
+                "selector": "#article h1",
                 "key": "padding-top",
                 "format": null
               }
@@ -435,7 +435,7 @@
             "value": "4px",
             "keys": [
               {
-                "selector": "#nice h1",
+                "selector": "#article h1",
                 "key": "padding-bottom",
                 "format": null
               }
@@ -447,7 +447,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h1",
+                "selector": "#article h1",
                 "key": "padding-left",
                 "format": null
               }
@@ -459,7 +459,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h1",
+                "selector": "#article h1",
                 "key": "padding-right",
                 "format": null
               }
@@ -470,13 +470,13 @@
       },
       {
         "id": "common",
-        "value": "#nice h1 { border-bottom: 1px solid rgba(238, 238, 238, 1); }\n#nice h1 .content { display: block; }",
+        "value": "#article h1 { border-bottom: 1px solid rgba(238, 238, 238, 1); }\n#article h1 .content { display: block; }",
         "keys": null,
         "children": null
       },
       {
         "id": "common",
-        "value": "#nice h1 .prefix { display: none; }\n#nice h1 .suffix { display: none; }",
+        "value": "#article h1 .prefix { display: none; }\n#article h1 .suffix { display: none; }",
         "keys": null,
         "children": null
       }
@@ -491,7 +491,7 @@
         "value": "28px",
         "keys": [
           {
-            "selector": "#nice h2 .content",
+            "selector": "#article h2 .content",
             "key": "font-size",
             "format": null
           }
@@ -503,7 +503,7 @@
         "value": "rgba(51, 51, 51, 1)",
         "keys": [
           {
-            "selector": "#nice h2 .content",
+            "selector": "#article h2 .content",
             "key": "color",
             "format": null
           }
@@ -515,7 +515,7 @@
         "value": "1.225em",
         "keys": [
           {
-            "selector": "#nice h2 .content",
+            "selector": "#article h2 .content",
             "key": "line-height",
             "format": null
           }
@@ -527,7 +527,7 @@
         "value": "bold",
         "keys": [
           {
-            "selector": "#nice h2 .content",
+            "selector": "#article h2 .content",
             "key": "font-weight",
             "format": null
           }
@@ -544,7 +544,7 @@
             "value": "16px",
             "keys": [
               {
-                "selector": "#nice h2",
+                "selector": "#article h2",
                 "key": "margin-top",
                 "format": null
               }
@@ -556,7 +556,7 @@
             "value": "16px",
             "keys": [
               {
-                "selector": "#nice h2",
+                "selector": "#article h2",
                 "key": "margin-bottom",
                 "format": null
               }
@@ -568,7 +568,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h2",
+                "selector": "#article h2",
                 "key": "margin-left",
                 "format": null
               }
@@ -580,7 +580,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h2",
+                "selector": "#article h2",
                 "key": "margin-right",
                 "format": null
               }
@@ -592,7 +592,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h2",
+                "selector": "#article h2",
                 "key": "padding-top",
                 "format": null
               }
@@ -604,7 +604,7 @@
             "value": "4px",
             "keys": [
               {
-                "selector": "#nice h2",
+                "selector": "#article h2",
                 "key": "padding-bottom",
                 "format": null
               }
@@ -616,7 +616,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h2",
+                "selector": "#article h2",
                 "key": "padding-left",
                 "format": null
               }
@@ -628,7 +628,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h2",
+                "selector": "#article h2",
                 "key": "padding-right",
                 "format": null
               }
@@ -639,13 +639,13 @@
       },
       {
         "id": "common",
-        "value": "#nice h2 { border-bottom: 1px solid rgba(238, 238, 238, 1); }\n#nice h2 .content { display: block; }",
+        "value": "#article h2 { border-bottom: 1px solid rgba(238, 238, 238, 1); }\n#article h2 .content { display: block; }",
         "keys": null,
         "children": null
       },
       {
         "id": "common",
-        "value": "#nice h2 .prefix { display: none; }\n#nice h2 .suffix { display: none; }",
+        "value": "#article h2 .prefix { display: none; }\n#article h2 .suffix { display: none; }",
         "keys": null,
         "children": null
       }
@@ -660,7 +660,7 @@
         "value": "24px",
         "keys": [
           {
-            "selector": "#nice h3 .content",
+            "selector": "#article h3 .content",
             "key": "font-size",
             "format": null
           }
@@ -672,7 +672,7 @@
         "value": "rgba(51, 51, 51, 1)",
         "keys": [
           {
-            "selector": "#nice h3 .content",
+            "selector": "#article h3 .content",
             "key": "color",
             "format": null
           }
@@ -684,7 +684,7 @@
         "value": "1.43em",
         "keys": [
           {
-            "selector": "#nice h3 .content",
+            "selector": "#article h3 .content",
             "key": "line-height",
             "format": null
           }
@@ -696,7 +696,7 @@
         "value": "bold",
         "keys": [
           {
-            "selector": "#nice h3 .content",
+            "selector": "#article h3 .content",
             "key": "font-weight",
             "format": null
           }
@@ -713,7 +713,7 @@
             "value": "16px",
             "keys": [
               {
-                "selector": "#nice h3",
+                "selector": "#article h3",
                 "key": "margin-top",
                 "format": null
               }
@@ -725,7 +725,7 @@
             "value": "16px",
             "keys": [
               {
-                "selector": "#nice h3",
+                "selector": "#article h3",
                 "key": "margin-bottom",
                 "format": null
               }
@@ -737,7 +737,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h3",
+                "selector": "#article h3",
                 "key": "margin-left",
                 "format": null
               }
@@ -749,7 +749,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h3",
+                "selector": "#article h3",
                 "key": "margin-right",
                 "format": null
               }
@@ -761,7 +761,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h3",
+                "selector": "#article h3",
                 "key": "padding-top",
                 "format": null
               }
@@ -773,7 +773,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h3",
+                "selector": "#article h3",
                 "key": "padding-bottom",
                 "format": null
               }
@@ -785,7 +785,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h3",
+                "selector": "#article h3",
                 "key": "padding-left",
                 "format": null
               }
@@ -797,7 +797,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h3",
+                "selector": "#article h3",
                 "key": "padding-right",
                 "format": null
               }
@@ -808,7 +808,7 @@
       },
       {
         "id": "common",
-        "value": "#nice h3 .prefix { display: none; }\n#nice h3 .suffix { display: none; }",
+        "value": "#article h3 .prefix { display: none; }\n#article h3 .suffix { display: none; }",
         "keys": null,
         "children": null
       }
@@ -823,7 +823,7 @@
         "value": "20px",
         "keys": [
           {
-            "selector": "#nice h4 .content",
+            "selector": "#article h4 .content",
             "key": "font-size",
             "format": null
           }
@@ -835,7 +835,7 @@
         "value": "rgba(51, 51, 51, 1)",
         "keys": [
           {
-            "selector": "#nice h4 .content",
+            "selector": "#article h4 .content",
             "key": "color",
             "format": null
           }
@@ -847,7 +847,7 @@
         "value": "1.4em",
         "keys": [
           {
-            "selector": "#nice h4 .content",
+            "selector": "#article h4 .content",
             "key": "line-height",
             "format": null
           }
@@ -859,7 +859,7 @@
         "value": "bold",
         "keys": [
           {
-            "selector": "#nice h4 .content",
+            "selector": "#article h4 .content",
             "key": "font-weight",
             "format": null
           }
@@ -876,7 +876,7 @@
             "value": "16px",
             "keys": [
               {
-                "selector": "#nice h4",
+                "selector": "#article h4",
                 "key": "margin-top",
                 "format": null
               }
@@ -888,7 +888,7 @@
             "value": "16px",
             "keys": [
               {
-                "selector": "#nice h4",
+                "selector": "#article h4",
                 "key": "margin-bottom",
                 "format": null
               }
@@ -900,7 +900,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h4",
+                "selector": "#article h4",
                 "key": "margin-left",
                 "format": null
               }
@@ -912,7 +912,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h4",
+                "selector": "#article h4",
                 "key": "margin-right",
                 "format": null
               }
@@ -924,7 +924,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h4",
+                "selector": "#article h4",
                 "key": "padding-top",
                 "format": null
               }
@@ -936,7 +936,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h4",
+                "selector": "#article h4",
                 "key": "padding-bottom",
                 "format": null
               }
@@ -948,7 +948,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h4",
+                "selector": "#article h4",
                 "key": "padding-left",
                 "format": null
               }
@@ -960,7 +960,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h4",
+                "selector": "#article h4",
                 "key": "padding-right",
                 "format": null
               }
@@ -971,7 +971,7 @@
       },
       {
         "id": "common",
-        "value": "#nice h4 .prefix { display: none; }\n#nice h4 .suffix { display: none; }",
+        "value": "#article h4 .prefix { display: none; }\n#article h4 .suffix { display: none; }",
         "keys": null,
         "children": null
       }
@@ -986,7 +986,7 @@
         "value": "16px",
         "keys": [
           {
-            "selector": "#nice h5 .content",
+            "selector": "#article h5 .content",
             "key": "font-size",
             "format": null
           }
@@ -998,7 +998,7 @@
         "value": "rgba(51, 51, 51, 1)",
         "keys": [
           {
-            "selector": "#nice h5 .content",
+            "selector": "#article h5 .content",
             "key": "color",
             "format": null
           }
@@ -1010,7 +1010,7 @@
         "value": "1.4em",
         "keys": [
           {
-            "selector": "#nice h5 .content",
+            "selector": "#article h5 .content",
             "key": "line-height",
             "format": null
           }
@@ -1022,7 +1022,7 @@
         "value": "bold",
         "keys": [
           {
-            "selector": "#nice h5 .content",
+            "selector": "#article h5 .content",
             "key": "font-weight",
             "format": null
           }
@@ -1039,7 +1039,7 @@
             "value": "16px",
             "keys": [
               {
-                "selector": "#nice h5",
+                "selector": "#article h5",
                 "key": "margin-top",
                 "format": null
               }
@@ -1051,7 +1051,7 @@
             "value": "16px",
             "keys": [
               {
-                "selector": "#nice h5",
+                "selector": "#article h5",
                 "key": "margin-bottom",
                 "format": null
               }
@@ -1063,7 +1063,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h5",
+                "selector": "#article h5",
                 "key": "margin-left",
                 "format": null
               }
@@ -1075,7 +1075,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h5",
+                "selector": "#article h5",
                 "key": "margin-right",
                 "format": null
               }
@@ -1087,7 +1087,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h5",
+                "selector": "#article h5",
                 "key": "padding-top",
                 "format": null
               }
@@ -1099,7 +1099,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h5",
+                "selector": "#article h5",
                 "key": "padding-bottom",
                 "format": null
               }
@@ -1111,7 +1111,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h5",
+                "selector": "#article h5",
                 "key": "padding-left",
                 "format": null
               }
@@ -1123,7 +1123,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h5",
+                "selector": "#article h5",
                 "key": "padding-right",
                 "format": null
               }
@@ -1134,7 +1134,7 @@
       },
       {
         "id": "common",
-        "value": "#nice h5 .prefix { display: none; }\n#nice h5 .suffix { display: none; }",
+        "value": "#article h5 .prefix { display: none; }\n#article h5 .suffix { display: none; }",
         "keys": null,
         "children": null
       }
@@ -1149,7 +1149,7 @@
         "value": "16px",
         "keys": [
           {
-            "selector": "#nice h6 .content",
+            "selector": "#article h6 .content",
             "key": "font-size",
             "format": null
           }
@@ -1161,7 +1161,7 @@
         "value": "rgba(119, 119, 119, 1)",
         "keys": [
           {
-            "selector": "#nice h6 .content",
+            "selector": "#article h6 .content",
             "key": "color",
             "format": null
           }
@@ -1173,7 +1173,7 @@
         "value": "1.4em",
         "keys": [
           {
-            "selector": "#nice h6 .content",
+            "selector": "#article h6 .content",
             "key": "line-height",
             "format": null
           }
@@ -1185,7 +1185,7 @@
         "value": "bold",
         "keys": [
           {
-            "selector": "#nice h6 .content",
+            "selector": "#article h6 .content",
             "key": "font-weight",
             "format": null
           }
@@ -1202,7 +1202,7 @@
             "value": "16px",
             "keys": [
               {
-                "selector": "#nice h6",
+                "selector": "#article h6",
                 "key": "margin-top",
                 "format": null
               }
@@ -1214,7 +1214,7 @@
             "value": "16px",
             "keys": [
               {
-                "selector": "#nice h6",
+                "selector": "#article h6",
                 "key": "margin-bottom",
                 "format": null
               }
@@ -1226,7 +1226,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h6",
+                "selector": "#article h6",
                 "key": "margin-left",
                 "format": null
               }
@@ -1238,7 +1238,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h6",
+                "selector": "#article h6",
                 "key": "margin-right",
                 "format": null
               }
@@ -1250,7 +1250,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h6",
+                "selector": "#article h6",
                 "key": "padding-top",
                 "format": null
               }
@@ -1262,7 +1262,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h6",
+                "selector": "#article h6",
                 "key": "padding-bottom",
                 "format": null
               }
@@ -1274,7 +1274,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h6",
+                "selector": "#article h6",
                 "key": "padding-left",
                 "format": null
               }
@@ -1286,7 +1286,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice h6",
+                "selector": "#article h6",
                 "key": "padding-right",
                 "format": null
               }
@@ -1297,7 +1297,7 @@
       },
       {
         "id": "common",
-        "value": "#nice h6 .prefix { display: none; }\n#nice h6 .suffix { display: none; }",
+        "value": "#article h6 .prefix { display: none; }\n#article h6 .suffix { display: none; }",
         "keys": null,
         "children": null
       }
@@ -1312,7 +1312,7 @@
         "value": "rgba(51, 51, 51, 1)",
         "keys": [
           {
-            "selector": "#nice ul li section",
+            "selector": "#article ul li section",
             "key": "color",
             "format": null
           }
@@ -1324,7 +1324,7 @@
         "value": "1.6em",
         "keys": [
           {
-            "selector": "#nice ul li section",
+            "selector": "#article ul li section",
             "key": "line-height",
             "format": null
           }
@@ -1341,7 +1341,7 @@
             "value": "13px",
             "keys": [
               {
-                "selector": "#nice ul",
+                "selector": "#article ul",
                 "key": "margin-top",
                 "format": null
               }
@@ -1353,7 +1353,7 @@
             "value": "13px",
             "keys": [
               {
-                "selector": "#nice ul",
+                "selector": "#article ul",
                 "key": "margin-bottom",
                 "format": null
               }
@@ -1365,7 +1365,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice ul",
+                "selector": "#article ul",
                 "key": "margin-left",
                 "format": null
               }
@@ -1377,7 +1377,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice ul",
+                "selector": "#article ul",
                 "key": "margin-right",
                 "format": null
               }
@@ -1389,7 +1389,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice ul",
+                "selector": "#article ul",
                 "key": "padding-top",
                 "format": null
               }
@@ -1401,7 +1401,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice ul",
+                "selector": "#article ul",
                 "key": "padding-bottom",
                 "format": null
               }
@@ -1413,7 +1413,7 @@
             "value": "30px",
             "keys": [
               {
-                "selector": "#nice ul",
+                "selector": "#article ul",
                 "key": "padding-left",
                 "format": null
               }
@@ -1425,7 +1425,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice ul",
+                "selector": "#article ul",
                 "key": "padding-right",
                 "format": null
               }
@@ -1436,7 +1436,7 @@
       },
       {
         "id": "common",
-        "value": "#nice ul { list-style-type: disc; }",
+        "value": "#article ul { list-style-type: disc; }",
         "keys": null,
         "children": null
       }
@@ -1451,7 +1451,7 @@
         "value": "rgba(51, 51, 51, 1)",
         "keys": [
           {
-            "selector": "#nice ol li section",
+            "selector": "#article ol li section",
             "key": "color",
             "format": null
           }
@@ -1463,7 +1463,7 @@
         "value": "1.6em",
         "keys": [
           {
-            "selector": "#nice ol li section",
+            "selector": "#article ol li section",
             "key": "line-height",
             "format": null
           }
@@ -1480,7 +1480,7 @@
             "value": "13px",
             "keys": [
               {
-                "selector": "#nice ol",
+                "selector": "#article ol",
                 "key": "margin-top",
                 "format": null
               }
@@ -1492,7 +1492,7 @@
             "value": "13px",
             "keys": [
               {
-                "selector": "#nice ol",
+                "selector": "#article ol",
                 "key": "margin-bottom",
                 "format": null
               }
@@ -1504,7 +1504,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice ol",
+                "selector": "#article ol",
                 "key": "margin-left",
                 "format": null
               }
@@ -1516,7 +1516,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice ol",
+                "selector": "#article ol",
                 "key": "margin-right",
                 "format": null
               }
@@ -1528,7 +1528,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice ol",
+                "selector": "#article ol",
                 "key": "padding-top",
                 "format": null
               }
@@ -1540,7 +1540,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice ol",
+                "selector": "#article ol",
                 "key": "padding-bottom",
                 "format": null
               }
@@ -1552,7 +1552,7 @@
             "value": "30px",
             "keys": [
               {
-                "selector": "#nice ol",
+                "selector": "#article ol",
                 "key": "padding-left",
                 "format": null
               }
@@ -1564,7 +1564,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice ol",
+                "selector": "#article ol",
                 "key": "padding-right",
                 "format": null
               }
@@ -1575,7 +1575,7 @@
       },
       {
         "id": "common",
-        "value": "#nice ol { list-style-type: decimal; }",
+        "value": "#article ol { list-style-type: decimal; }",
         "keys": null,
         "children": null
       }
@@ -1590,12 +1590,12 @@
         "value": "rgba(119, 119, 119, 1)",
         "keys": [
           {
-            "selector": "#nice blockquote p",
+            "selector": "#article blockquote p",
             "key": "color",
             "format": null
           },
           {
-            "selector": "#nice .custom-blockquote p",
+            "selector": "#article .custom-blockquote p",
             "key": "color",
             "format": null
           }
@@ -1607,12 +1607,12 @@
         "value": "1.6em",
         "keys": [
           {
-            "selector": "#nice blockquote p",
+            "selector": "#article blockquote p",
             "key": "line-height",
             "format": null
           },
           {
-            "selector": "#nice .custom-blockquote p",
+            "selector": "#article .custom-blockquote p",
             "key": "line-height",
             "format": null
           }
@@ -1629,7 +1629,7 @@
             "value": "13px",
             "keys": [
               {
-                "selector": "#nice blockquote",
+                "selector": "#article blockquote",
                 "key": "margin-top",
                 "format": null
               }
@@ -1641,7 +1641,7 @@
             "value": "13px",
             "keys": [
               {
-                "selector": "#nice blockquote",
+                "selector": "#article blockquote",
                 "key": "margin-bottom",
                 "format": null
               }
@@ -1653,7 +1653,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice blockquote",
+                "selector": "#article blockquote",
                 "key": "margin-left",
                 "format": null
               }
@@ -1665,7 +1665,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice blockquote",
+                "selector": "#article blockquote",
                 "key": "margin-right",
                 "format": null
               }
@@ -1677,7 +1677,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice blockquote",
+                "selector": "#article blockquote",
                 "key": "padding-top",
                 "format": null
               }
@@ -1689,7 +1689,7 @@
             "value": "0px",
             "keys": [
               {
-                "selector": "#nice blockquote",
+                "selector": "#article blockquote",
                 "key": "padding-bottom",
                 "format": null
               }
@@ -1701,7 +1701,7 @@
             "value": "15px",
             "keys": [
               {
-                "selector": "#nice blockquote",
+                "selector": "#article blockquote",
                 "key": "padding-left",
                 "format": null
               }
@@ -1713,7 +1713,7 @@
             "value": "15px",
             "keys": [
               {
-                "selector": "#nice blockquote",
+                "selector": "#article blockquote",
                 "key": "padding-right",
                 "format": null
               }
@@ -1724,7 +1724,7 @@
       },
       {
         "id": "common",
-        "value": "#nice blockquote { border-left: 4px solid rgba(223, 226, 229, 1); background: none; }\n#nice blockquote::before { display: none; }\n#nice .custom-blockquote::before { display: none; }",
+        "value": "#article blockquote { border-left: 4px solid rgba(223, 226, 229, 1); background: none; }\n#article blockquote::before { display: none; }\n#article .custom-blockquote::before { display: none; }",
         "keys": null,
         "children": null
       }
@@ -1739,7 +1739,7 @@
         "value": "rgba(65, 131, 196, 1)",
         "keys": [
           {
-            "selector": "#nice a",
+            "selector": "#article a",
             "key": "color",
             "format": null
           }
@@ -1748,7 +1748,7 @@
       },
       {
         "id": "common",
-        "value": "#nice a { font-weight: normal; text-decoration: none; border-bottom: none; }",
+        "value": "#article a { font-weight: normal; text-decoration: none; border-bottom: none; }",
         "keys": null,
         "children": null
       }
@@ -1763,7 +1763,7 @@
         "value": "rgba(51, 51, 51, 1)",
         "keys": [
           {
-            "selector": "#nice strong",
+            "selector": "#article strong",
             "key": "color",
             "format": null
           }
@@ -1775,7 +1775,7 @@
         "value": "bold",
         "keys": [
           {
-            "selector": "#nice strong",
+            "selector": "#article strong",
             "key": "font-weight",
             "format": null
           }
@@ -1793,7 +1793,7 @@
         "value": "rgba(51, 51, 51, 1)",
         "keys": [
           {
-            "selector": "#nice em",
+            "selector": "#article em",
             "key": "color",
             "format": null
           }
@@ -1802,7 +1802,7 @@
       },
       {
         "id": "common",
-        "value": "#nice em { font-style: italic; }",
+        "value": "#article em { font-style: italic; }",
         "keys": null,
         "children": null
       }
@@ -1817,12 +1817,12 @@
         "value": "rgba(51, 51, 51, 1)",
         "keys": [
           {
-            "selector": "#nice del",
+            "selector": "#article del",
             "key": "color",
             "format": null
           },
           {
-            "selector": "#nice s",
+            "selector": "#article s",
             "key": "color",
             "format": null
           }
@@ -1837,7 +1837,7 @@
     "styles": [
       {
         "id": "common",
-        "value": "#nice hr { height: 2px; margin: 16px 0; background-color: rgba(231, 231, 231, 1); border: 0; }",
+        "value": "#article hr { height: 2px; margin: 16px 0; background-color: rgba(231, 231, 231, 1); border: 0; }",
         "keys": null,
         "children": null
       }
@@ -1852,12 +1852,12 @@
         "value": "rgba(51, 51, 51, 1)",
         "keys": [
           {
-            "selector": "#nice p code",
+            "selector": "#article p code",
             "key": "color",
             "format": null
           },
           {
-            "selector": "#nice li code",
+            "selector": "#article li code",
             "key": "color",
             "format": null
           }
@@ -1869,12 +1869,12 @@
         "value": "14px",
         "keys": [
           {
-            "selector": "#nice p code",
+            "selector": "#article p code",
             "key": "font-size",
             "format": null
           },
           {
-            "selector": "#nice li code",
+            "selector": "#article li code",
             "key": "font-size",
             "format": null
           }
@@ -1883,7 +1883,7 @@
       },
       {
         "id": "common",
-        "value": "#nice p code, #nice li code { background-color: rgba(243, 244, 244, 1); border: 1px solid rgba(231, 234, 237, 1); border-radius: 3px; padding: 2px 4px; font-family: Consolas, \"Liberation Mono\", Menlo, Courier, monospace; }",
+        "value": "#article p code, #article li code { background-color: rgba(243, 244, 244, 1); border: 1px solid rgba(231, 234, 237, 1); border-radius: 3px; padding: 2px 4px; font-family: Consolas, \"Liberation Mono\", Menlo, Courier, monospace; }",
         "keys": null,
         "children": null
       }
@@ -1895,7 +1895,7 @@
     "styles": [
       {
         "id": "common",
-        "value": "#nice pre.custom { background-color: rgba(248, 248, 248, 1); border-radius: 3px; padding: 8px 12px; margin: 15px 0; }\n#nice pre code { font-family: Consolas, \"Liberation Mono\", Menlo, Courier, monospace; font-size: 14px; }",
+        "value": "#article pre.custom { background-color: rgba(248, 248, 248, 1); border-radius: 3px; padding: 8px 12px; margin: 15px 0; }\n#article pre code { font-family: Consolas, \"Liberation Mono\", Menlo, Courier, monospace; font-size: 14px; }",
         "keys": null,
         "children": null
       }
@@ -1907,7 +1907,7 @@
     "styles": [
       {
         "id": "common",
-        "value": "#nice figure { margin: 16px 0; display: flex; flex-direction: column; align-items: center; max-width: 100%; }\n#nice figure img { display: block; margin: 0 auto; max-width: 100%; height: auto; box-sizing: border-box; }\n#nice img { max-width: 100%; height: auto; }",
+        "value": "#article figure { margin: 16px 0; display: flex; flex-direction: column; align-items: center; max-width: 100%; }\n#article figure img { display: block; margin: 0 auto; max-width: 100%; height: auto; box-sizing: border-box; }\n#article img { max-width: 100%; height: auto; }",
         "keys": null,
         "children": null
       }
@@ -1922,7 +1922,7 @@
         "value": "rgba(119, 119, 119, 1)",
         "keys": [
           {
-            "selector": "#nice figure figcaption",
+            "selector": "#article figure figcaption",
             "key": "color",
             "format": null
           }
@@ -1934,7 +1934,7 @@
         "value": "14px",
         "keys": [
           {
-            "selector": "#nice figure figcaption",
+            "selector": "#article figure figcaption",
             "key": "font-size",
             "format": null
           }
@@ -1943,7 +1943,7 @@
       },
       {
         "id": "common",
-        "value": "#nice figure figcaption { text-align: center; margin-top: 5px; }",
+        "value": "#article figure figcaption { text-align: center; margin-top: 5px; }",
         "keys": null,
         "children": null
       }
@@ -1955,7 +1955,7 @@
     "styles": [
       {
         "id": "common",
-        "value": "#nice table tr th, #nice table tr td { border: 1px solid rgba(223, 226, 229, 1); padding: 6px 13px; text-align: left; font-size: 16px; color: rgba(51, 51, 51, 1); }\n#nice table tr th { font-weight: bold; background-color: rgba(248, 248, 248, 1); }\n#nice table tr:nth-child(2n) { background-color: rgba(248, 248, 248, 1); }",
+        "value": "#article table tr th, #article table tr td { border: 1px solid rgba(223, 226, 229, 1); padding: 6px 13px; text-align: left; font-size: 16px; color: rgba(51, 51, 51, 1); }\n#article table tr th { font-weight: bold; background-color: rgba(248, 248, 248, 1); }\n#article table tr:nth-child(2n) { background-color: rgba(248, 248, 248, 1); }",
         "keys": null,
         "children": null
       }
@@ -1970,12 +1970,12 @@
         "value": "rgba(65, 131, 196, 1)",
         "keys": [
           {
-            "selector": "#nice .footnote-word",
+            "selector": "#article .footnote-word",
             "key": "color",
             "format": null
           },
           {
-            "selector": "#nice .footnote-ref",
+            "selector": "#article .footnote-ref",
             "key": "color",
             "format": null
           }

@@ -137,16 +137,16 @@ body {
   background-color: rgba(94, 106, 210, 0.56);
 }
 
-#nice .preview-edit-hover,
-#nice .preview-edit-selected {
+#article .preview-edit-hover,
+#article .preview-edit-selected {
   cursor: pointer;
   outline-offset: 4px;
 }
 
-#nice .preview-edit-hover {
+#article .preview-edit-hover {
   outline: 1px dashed var(--accent);
 }
 
-#nice .preview-edit-selected {
+#article .preview-edit-selected {
   outline: 2px solid var(--accent);
 }

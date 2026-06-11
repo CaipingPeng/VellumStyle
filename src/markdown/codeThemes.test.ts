@@ -2,6 +2,7 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import {readdirSync, statSync} from "node:fs";
 import {join, relative, sep} from "node:path";
+import {ARTICLE_ROOT_SELECTOR} from "../articleRoot.ts";
 import {buildMarkdownCss, CODE_THEMES, DEFAULT_CODE_THEME_ID, getCodeThemeById} from "./codeThemes.ts";
 
 const HIGHLIGHT_STYLES_DIR = join(process.cwd(), "node_modules", "highlight.js", "styles");
@@ -28,17 +29,17 @@ test("默认代码主题为 VS2015，未知 id 也回退到 VS2015", () => {
 });
 
 test("文章主题 CSS 先注入，代码主题 CSS 后注入以保持独立覆盖", () => {
-  const articleCss = "#nice pre.custom { background: #ffffff; }";
+  const articleCss = `${ARTICLE_ROOT_SELECTOR} pre.custom { background: #ffffff; }`;
   const css = buildMarkdownCss(articleCss);
 
-  assert.ok(css.indexOf(articleCss) < css.indexOf("#nice pre.custom,\n#nice pre.custom code.hljs"));
-  assert.match(css, /#nice pre\.custom,\s*#nice pre\.custom code\.hljs\s*\{[^}]*background:\s*#1E1E1E/i);
+  assert.ok(css.indexOf(articleCss) < css.indexOf(`${ARTICLE_ROOT_SELECTOR} pre.custom,\n${ARTICLE_ROOT_SELECTOR} pre.custom code.hljs`));
+  assert.match(css, /#article pre\.custom,\s*#article pre\.custom code\.hljs\s*\{[^}]*background:\s*#1E1E1E/i);
 });
 
 test("切换代码主题会输出对应的 scoped hljs token 配色", () => {
   const css = buildMarkdownCss("", "night-owl");
 
-  assert.match(css, /#nice pre\.custom \.hljs-params\s*\{[^}]*color:\s*#7fdbca/i);
+  assert.match(css, /#article pre\.custom \.hljs-params\s*\{[^}]*color:\s*#7fdbca/i);
   assert.doesNotMatch(css, /(^|\n)\.hljs-params\s*\{/);
 });
 

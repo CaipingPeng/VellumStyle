@@ -15,5 +15,5 @@ export const SAMPLE_MARKDOWN = `## 主题预览标题
 | 表格 | 正常 |
 
 \`\`\`ts
-const theme = "nice";
+const theme = "article";
 \`\`\``;

@@ -1,16 +1,20 @@
 // 用户自定义主题：扫描 app_data_dir/themes/*.json（model 主题）。
-// 用户安装软件后把 .json（mdnice styleModelList 数组）丢进该目录即新增一个主题，
+// 用户安装软件后把 .json（主题模型数组）丢进该目录即新增一个主题，
 // 文件名（去扩展名）作主题 id/名。内置主题编译进包（见前端 themes/index.ts），与用户主题在前端合并。
 
 use serde::Serialize;
+use serde_json::Value;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
+
+const ARTICLE_ROOT_SELECTOR: &str = "#article";
+const LEGACY_ARTICLE_ROOT_SELECTORS: &[&str] = &["#nice", "#wechat-article"];
 
 #[derive(Debug, Clone, Serialize)]
 pub struct UserTheme {
     pub id: String,
     pub name: String,
-    pub model: serde_json::Value, // styleModelList 数组
+    pub model: serde_json::Value, // 主题模型数组
 }
 
 fn themes_dir(app: &AppHandle) -> Option<PathBuf> {
@@ -23,6 +27,55 @@ fn sanitize_id(id: &str) -> String {
         .collect()
 }
 
+fn is_selector_boundary(ch: Option<char>) -> bool {
+    !matches!(ch, Some(c) if c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
+fn normalize_article_root_text(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+
+    while let Some((idx, legacy_selector)) = LEGACY_ARTICLE_ROOT_SELECTORS
+        .iter()
+        .filter_map(|selector| rest.find(selector).map(|idx| (idx, *selector)))
+        .min_by_key(|(idx, _)| *idx)
+    {
+        let after = idx + legacy_selector.len();
+        if is_selector_boundary(rest[after..].chars().next()) {
+            out.push_str(&rest[..idx]);
+            out.push_str(ARTICLE_ROOT_SELECTOR);
+        } else {
+            out.push_str(&rest[..after]);
+        }
+        rest = &rest[after..];
+    }
+
+    out.push_str(rest);
+    out
+}
+
+fn normalize_article_root_value(value: &mut Value) {
+    match value {
+        Value::String(text) => {
+            let normalized = normalize_article_root_text(text);
+            if normalized != *text {
+                *text = normalized;
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                normalize_article_root_value(item);
+            }
+        }
+        Value::Object(map) => {
+            for item in map.values_mut() {
+                normalize_article_root_value(item);
+            }
+        }
+        _ => {}
+    }
+}
+
 // 解析主题文件内容。兼容两种形态：
 //   1. 裸数组 [...]            —— styleModelList，name 取文件名
 //   2. {"name":..,"model":[..]} —— 带显示名（爬取/导出用），name 取字段
@@ -30,7 +83,9 @@ fn sanitize_id(id: &str) -> String {
 fn parse_theme_content(text: &str, file_stem: &str) -> Option<(String, serde_json::Value)> {
     let v: serde_json::Value = serde_json::from_str(text).ok()?;
     if v.is_array() {
-        return Some((file_stem.to_string(), v));
+        let mut model = v;
+        normalize_article_root_value(&mut model);
+        return Some((file_stem.to_string(), model));
     }
     if let Some(model) = v.get("model") {
         if model.is_array() {
@@ -39,7 +94,9 @@ fn parse_theme_content(text: &str, file_stem: &str) -> Option<(String, serde_jso
                 .and_then(|n| n.as_str())
                 .unwrap_or(file_stem)
                 .to_string();
-            return Some((name, model.clone()));
+            let mut model = model.clone();
+            normalize_article_root_value(&mut model);
+            return Some((name, model));
         }
     }
     None
@@ -85,19 +142,22 @@ pub fn save_user_theme(app: AppHandle, id: String, model_json: String) -> Result
     let dir = themes_dir(&app).ok_or_else(|| "无法定位数据目录".to_string())?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("创建主题目录失败：{e}"))?;
     // 校验是合法 JSON
-    serde_json::from_str::<serde_json::Value>(&model_json).map_err(|e| format!("非法 JSON：{e}"))?;
+    let mut model_value =
+        serde_json::from_str::<serde_json::Value>(&model_json).map_err(|e| format!("非法 JSON：{e}"))?;
+    normalize_article_root_value(&mut model_value);
+    let normalized_model_json = serde_json::to_string(&model_value).map_err(|e| e.to_string())?;
     let safe_id = sanitize_id(&id);
     if safe_id.is_empty() {
         return Err("非法主题 id".into());
     }
     let path = dir.join(format!("{safe_id}.json"));
-    std::fs::write(&path, model_json).map_err(|e| format!("写入失败：{e}"))?;
+    std::fs::write(&path, normalized_model_json).map_err(|e| format!("写入失败：{e}"))?;
     Ok(())
 }
 
-/// 导入 mdnice 抓包整包：取 data.styleModelList 存为 {id}.json（含显示名）。返回保存的 id。
+/// 导入主题模型整包：取 data.styleModelList 存为 {id}.json（含显示名）。返回保存的 id。
 #[tauri::command]
-pub fn import_mdnice_theme(app: AppHandle, id: String, raw_json: String) -> Result<String, String> {
+pub fn import_theme_model(app: AppHandle, id: String, raw_json: String) -> Result<String, String> {
     let parsed: serde_json::Value =
         serde_json::from_str(&raw_json).map_err(|e| format!("非法 JSON：{e}"))?;
     let model = parsed
@@ -136,4 +196,49 @@ pub fn open_themes_dir(app: AppHandle) -> Result<(), String> {
     let result = std::process::Command::new("xdg-open").arg(&dir).spawn();
 
     result.map(|_| ()).map_err(|e| format!("打开目录失败：{e}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalizes_legacy_article_root_selector() {
+        assert_eq!(
+            normalize_article_root_text("#nice p, #nice h1 .content"),
+            "#article p, #article h1 .content"
+        );
+        assert_eq!(
+            normalize_article_root_text("#wechat-article p"),
+            "#article p"
+        );
+    }
+
+    #[test]
+    fn keeps_non_root_names_that_start_with_nice() {
+        assert_eq!(normalize_article_root_text("#nice-card p"), "#nice-card p");
+        assert_eq!(normalize_article_root_text("#nice_legacy p"), "#nice_legacy p");
+    }
+
+    #[test]
+    fn normalizes_theme_model_strings_recursively() {
+        let mut value = serde_json::json!({
+            "name": "theme",
+            "model": [{
+                "keys": [{"selector": "#nice p"}],
+                "value": "#nice p strong { color: red; }",
+                "selectors": ["#nice p", "#nice-card p"]
+            }]
+        });
+
+        normalize_article_root_value(&mut value);
+
+        assert_eq!(value["model"][0]["keys"][0]["selector"], "#article p");
+        assert_eq!(
+            value["model"][0]["value"],
+            "#article p strong { color: red; }"
+        );
+        assert_eq!(value["model"][0]["selectors"][0], "#article p");
+        assert_eq!(value["model"][0]["selectors"][1], "#nice-card p");
+    }
 }

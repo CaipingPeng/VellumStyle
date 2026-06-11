@@ -9,31 +9,31 @@
         {
           "id": "fontSize",
           "value": "17px",
-          "keys": [{"selector": "#nice", "key": "font-size", "format": null}],
+          "keys": [{"selector": "#article", "key": "font-size", "format": null}],
           "children": null
         },
         {
           "id": "fontColor",
           "value": "#222222",
-          "keys": [{"selector": "#nice", "key": "color", "format": null}],
+          "keys": [{"selector": "#article", "key": "color", "format": null}],
           "children": null
         },
         {
           "id": "lineHeight",
           "value": "1.75",
-          "keys": [{"selector": "#nice", "key": "line-height", "format": null}],
+          "keys": [{"selector": "#article", "key": "line-height", "format": null}],
           "children": null
         },
         {
           "id": "fontFamily",
           "value": "Georgia, \"Times New Roman\", \"Songti SC\", SimSun, \"Noto Serif CJK SC\", serif",
-          "keys": [{"selector": "#nice", "key": "font-family", "format": null}],
+          "keys": [{"selector": "#article", "key": "font-family", "format": null}],
           "children": null
         },
         {
           "id": "backgroundColor",
           "value": "#ffffff",
-          "keys": [{"selector": "#nice", "key": "background-color", "format": null}],
+          "keys": [{"selector": "#article", "key": "background-color", "format": null}],
           "children": null
         },
         {
@@ -41,12 +41,12 @@
           "value": null,
           "keys": null,
           "children": [
-            {"id": "marginTop", "value": "0", "keys": [{"selector": "#nice", "key": "margin-top", "format": null}], "children": null},
-            {"id": "marginBottom", "value": "0", "keys": [{"selector": "#nice", "key": "margin-bottom", "format": null}], "children": null},
-            {"id": "paddingTop", "value": "16px", "keys": [{"selector": "#nice", "key": "padding-top", "format": null}], "children": null},
-            {"id": "paddingBottom", "value": "24px", "keys": [{"selector": "#nice", "key": "padding-bottom", "format": null}], "children": null},
-            {"id": "paddingLeft", "value": "18px", "keys": [{"selector": "#nice", "key": "padding-left", "format": null}], "children": null},
-            {"id": "paddingRight", "value": "18px", "keys": [{"selector": "#nice", "key": "padding-right", "format": null}], "children": null}
+            {"id": "marginTop", "value": "0", "keys": [{"selector": "#article", "key": "margin-top", "format": null}], "children": null},
+            {"id": "marginBottom", "value": "0", "keys": [{"selector": "#article", "key": "margin-bottom", "format": null}], "children": null},
+            {"id": "paddingTop", "value": "16px", "keys": [{"selector": "#article", "key": "padding-top", "format": null}], "children": null},
+            {"id": "paddingBottom", "value": "24px", "keys": [{"selector": "#article", "key": "padding-bottom", "format": null}], "children": null},
+            {"id": "paddingLeft", "value": "18px", "keys": [{"selector": "#article", "key": "padding-left", "format": null}], "children": null},
+            {"id": "paddingRight", "value": "18px", "keys": [{"selector": "#article", "key": "padding-right", "format": null}], "children": null}
           ]
         }
       ]
@@ -55,242 +55,242 @@
       "id": "p",
       "label": "段落",
       "styles": [
-        {"id": "fontSize", "value": "17px", "keys": [{"selector": "#nice p", "key": "font-size", "format": null}], "children": null},
-        {"id": "fontColor", "value": "#222222", "keys": [{"selector": "#nice p", "key": "color", "format": null}], "children": null},
-        {"id": "lineHeight", "value": "1.85", "keys": [{"selector": "#nice p", "key": "line-height", "format": null}], "children": null},
-        {"id": "textAlign", "value": "left", "keys": [{"selector": "#nice p", "key": "text-align", "format": null}], "children": null},
-        {"id": "letterSpacing", "value": "0.01em", "keys": [{"selector": "#nice p", "key": "letter-spacing", "format": null}], "children": null},
-        {"id": "margin", "value": "1em 0", "keys": [{"selector": "#nice p", "key": "margin", "format": null}], "children": null}
+        {"id": "fontSize", "value": "17px", "keys": [{"selector": "#article p", "key": "font-size", "format": null}], "children": null},
+        {"id": "fontColor", "value": "#222222", "keys": [{"selector": "#article p", "key": "color", "format": null}], "children": null},
+        {"id": "lineHeight", "value": "1.85", "keys": [{"selector": "#article p", "key": "line-height", "format": null}], "children": null},
+        {"id": "textAlign", "value": "left", "keys": [{"selector": "#article p", "key": "text-align", "format": null}], "children": null},
+        {"id": "letterSpacing", "value": "0.01em", "keys": [{"selector": "#article p", "key": "letter-spacing", "format": null}], "children": null},
+        {"id": "margin", "value": "1em 0", "keys": [{"selector": "#article p", "key": "margin", "format": null}], "children": null}
       ]
     },
     {
       "id": "h1",
       "label": "一级标题",
       "styles": [
-        {"id": "fontSize", "value": "30px", "keys": [{"selector": "#nice h1", "key": "font-size", "format": null}], "children": null},
-        {"id": "fontColor", "value": "#fd7c5e", "keys": [{"selector": "#nice h1", "key": "color", "format": null}], "children": null},
-        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#nice h1", "key": "font-weight", "format": null}], "children": null},
-        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#nice h1", "key": "font-family", "format": null}], "children": null},
-        {"id": "lineHeight", "value": "1.35", "keys": [{"selector": "#nice h1", "key": "line-height", "format": null}], "children": null},
-        {"id": "textAlign", "value": "center", "keys": [{"selector": "#nice h1", "key": "text-align", "format": null}], "children": null},
-        {"id": "letterSpacing", "value": "0.08em", "keys": [{"selector": "#nice h1", "key": "letter-spacing", "format": null}], "children": null},
-        {"id": "margin", "value": "42px 0 30px", "keys": [{"selector": "#nice h1", "key": "margin", "format": null}], "children": null}
+        {"id": "fontSize", "value": "30px", "keys": [{"selector": "#article h1", "key": "font-size", "format": null}], "children": null},
+        {"id": "fontColor", "value": "#fd7c5e", "keys": [{"selector": "#article h1", "key": "color", "format": null}], "children": null},
+        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#article h1", "key": "font-weight", "format": null}], "children": null},
+        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#article h1", "key": "font-family", "format": null}], "children": null},
+        {"id": "lineHeight", "value": "1.35", "keys": [{"selector": "#article h1", "key": "line-height", "format": null}], "children": null},
+        {"id": "textAlign", "value": "center", "keys": [{"selector": "#article h1", "key": "text-align", "format": null}], "children": null},
+        {"id": "letterSpacing", "value": "0.08em", "keys": [{"selector": "#article h1", "key": "letter-spacing", "format": null}], "children": null},
+        {"id": "margin", "value": "42px 0 30px", "keys": [{"selector": "#article h1", "key": "margin", "format": null}], "children": null}
       ]
     },
     {
       "id": "h2",
       "label": "二级标题",
       "styles": [
-        {"id": "fontSize", "value": "26px", "keys": [{"selector": "#nice h2", "key": "font-size", "format": null}], "children": null},
-        {"id": "fontColor", "value": "#ffffff", "keys": [{"selector": "#nice h2", "key": "color", "format": null}], "children": null},
-        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#nice h2", "key": "font-weight", "format": null}], "children": null},
-        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#nice h2", "key": "font-family", "format": null}], "children": null},
-        {"id": "lineHeight", "value": "1.35", "keys": [{"selector": "#nice h2", "key": "line-height", "format": null}], "children": null},
-        {"id": "margin", "value": "36px 0 18px", "keys": [{"selector": "#nice h2", "key": "margin", "format": null}], "children": null},
-        {"id": "padding", "value": "0 0 10px", "keys": [{"selector": "#nice h2", "key": "padding", "format": null}], "children": null}
+        {"id": "fontSize", "value": "26px", "keys": [{"selector": "#article h2", "key": "font-size", "format": null}], "children": null},
+        {"id": "fontColor", "value": "#ffffff", "keys": [{"selector": "#article h2", "key": "color", "format": null}], "children": null},
+        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#article h2", "key": "font-weight", "format": null}], "children": null},
+        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#article h2", "key": "font-family", "format": null}], "children": null},
+        {"id": "lineHeight", "value": "1.35", "keys": [{"selector": "#article h2", "key": "line-height", "format": null}], "children": null},
+        {"id": "margin", "value": "36px 0 18px", "keys": [{"selector": "#article h2", "key": "margin", "format": null}], "children": null},
+        {"id": "padding", "value": "0 0 10px", "keys": [{"selector": "#article h2", "key": "padding", "format": null}], "children": null}
       ]
     },
     {
       "id": "h3",
       "label": "三级标题",
       "styles": [
-        {"id": "fontSize", "value": "23px", "keys": [{"selector": "#nice h3", "key": "font-size", "format": null}], "children": null},
-        {"id": "fontColor", "value": "#81b29a", "keys": [{"selector": "#nice h3", "key": "color", "format": null}], "children": null},
-        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#nice h3", "key": "font-weight", "format": null}], "children": null},
-        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#nice h3", "key": "font-family", "format": null}], "children": null},
-        {"id": "lineHeight", "value": "1.35", "keys": [{"selector": "#nice h3", "key": "line-height", "format": null}], "children": null},
-        {"id": "margin", "value": "26px 0 10px", "keys": [{"selector": "#nice h3", "key": "margin", "format": null}], "children": null}
+        {"id": "fontSize", "value": "23px", "keys": [{"selector": "#article h3", "key": "font-size", "format": null}], "children": null},
+        {"id": "fontColor", "value": "#81b29a", "keys": [{"selector": "#article h3", "key": "color", "format": null}], "children": null},
+        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#article h3", "key": "font-weight", "format": null}], "children": null},
+        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#article h3", "key": "font-family", "format": null}], "children": null},
+        {"id": "lineHeight", "value": "1.35", "keys": [{"selector": "#article h3", "key": "line-height", "format": null}], "children": null},
+        {"id": "margin", "value": "26px 0 10px", "keys": [{"selector": "#article h3", "key": "margin", "format": null}], "children": null}
       ]
     },
     {
       "id": "h4",
       "label": "四级标题",
       "styles": [
-        {"id": "fontSize", "value": "21px", "keys": [{"selector": "#nice h4", "key": "font-size", "format": null}], "children": null},
-        {"id": "fontColor", "value": "#81b29a", "keys": [{"selector": "#nice h4", "key": "color", "format": null}], "children": null},
-        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#nice h4", "key": "font-weight", "format": null}], "children": null},
-        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#nice h4", "key": "font-family", "format": null}], "children": null},
-        {"id": "margin", "value": "22px 0 8px", "keys": [{"selector": "#nice h4", "key": "margin", "format": null}], "children": null}
+        {"id": "fontSize", "value": "21px", "keys": [{"selector": "#article h4", "key": "font-size", "format": null}], "children": null},
+        {"id": "fontColor", "value": "#81b29a", "keys": [{"selector": "#article h4", "key": "color", "format": null}], "children": null},
+        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#article h4", "key": "font-weight", "format": null}], "children": null},
+        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#article h4", "key": "font-family", "format": null}], "children": null},
+        {"id": "margin", "value": "22px 0 8px", "keys": [{"selector": "#article h4", "key": "margin", "format": null}], "children": null}
       ]
     },
     {
       "id": "h5",
       "label": "五级标题",
       "styles": [
-        {"id": "fontSize", "value": "19px", "keys": [{"selector": "#nice h5", "key": "font-size", "format": null}], "children": null},
-        {"id": "fontColor", "value": "rgba(129, 178, 154, 0.75)", "keys": [{"selector": "#nice h5", "key": "color", "format": null}], "children": null},
-        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#nice h5", "key": "font-weight", "format": null}], "children": null},
-        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#nice h5", "key": "font-family", "format": null}], "children": null},
-        {"id": "margin", "value": "18px 0 6px", "keys": [{"selector": "#nice h5", "key": "margin", "format": null}], "children": null}
+        {"id": "fontSize", "value": "19px", "keys": [{"selector": "#article h5", "key": "font-size", "format": null}], "children": null},
+        {"id": "fontColor", "value": "rgba(129, 178, 154, 0.75)", "keys": [{"selector": "#article h5", "key": "color", "format": null}], "children": null},
+        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#article h5", "key": "font-weight", "format": null}], "children": null},
+        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#article h5", "key": "font-family", "format": null}], "children": null},
+        {"id": "margin", "value": "18px 0 6px", "keys": [{"selector": "#article h5", "key": "margin", "format": null}], "children": null}
       ]
     },
     {
       "id": "h6",
       "label": "六级标题",
       "styles": [
-        {"id": "fontSize", "value": "17px", "keys": [{"selector": "#nice h6", "key": "font-size", "format": null}], "children": null},
-        {"id": "fontColor", "value": "rgba(129, 178, 154, 0.55)", "keys": [{"selector": "#nice h6", "key": "color", "format": null}], "children": null},
-        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#nice h6", "key": "font-weight", "format": null}], "children": null},
-        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#nice h6", "key": "font-family", "format": null}], "children": null},
-        {"id": "margin", "value": "16px 0 6px", "keys": [{"selector": "#nice h6", "key": "margin", "format": null}], "children": null}
+        {"id": "fontSize", "value": "17px", "keys": [{"selector": "#article h6", "key": "font-size", "format": null}], "children": null},
+        {"id": "fontColor", "value": "rgba(129, 178, 154, 0.55)", "keys": [{"selector": "#article h6", "key": "color", "format": null}], "children": null},
+        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#article h6", "key": "font-weight", "format": null}], "children": null},
+        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#article h6", "key": "font-family", "format": null}], "children": null},
+        {"id": "margin", "value": "16px 0 6px", "keys": [{"selector": "#article h6", "key": "margin", "format": null}], "children": null}
       ]
     },
     {
       "id": "blockquote",
       "label": "引用",
       "styles": [
-        {"id": "fontSize", "value": "16px", "keys": [{"selector": "#nice blockquote", "key": "font-size", "format": null}], "children": null},
-        {"id": "fontColor", "value": "#777777", "keys": [{"selector": "#nice blockquote", "key": "color", "format": null}], "children": null},
-        {"id": "lineHeight", "value": "1.75", "keys": [{"selector": "#nice blockquote", "key": "line-height", "format": null}], "children": null},
-        {"id": "fontFamily", "value": "\"LXGW WenKai\", \"KaiTi\", \"STKaiti\", serif", "keys": [{"selector": "#nice blockquote", "key": "font-family", "format": null}], "children": null},
-        {"id": "backgroundColor", "value": "rgba(236, 244, 249, 0.75)", "keys": [{"selector": "#nice blockquote", "key": "background-color", "format": null}], "children": null},
-        {"id": "borderLeft", "value": "4px solid #8496b0", "keys": [{"selector": "#nice blockquote", "key": "border-left", "format": null}], "children": null},
-        {"id": "borderRadius", "value": "6px", "keys": [{"selector": "#nice blockquote", "key": "border-radius", "format": null}], "children": null},
-        {"id": "margin", "value": "18px 0", "keys": [{"selector": "#nice blockquote", "key": "margin", "format": null}], "children": null},
-        {"id": "padding", "value": "12px 14px", "keys": [{"selector": "#nice blockquote", "key": "padding", "format": null}], "children": null}
+        {"id": "fontSize", "value": "16px", "keys": [{"selector": "#article blockquote", "key": "font-size", "format": null}], "children": null},
+        {"id": "fontColor", "value": "#777777", "keys": [{"selector": "#article blockquote", "key": "color", "format": null}], "children": null},
+        {"id": "lineHeight", "value": "1.75", "keys": [{"selector": "#article blockquote", "key": "line-height", "format": null}], "children": null},
+        {"id": "fontFamily", "value": "\"LXGW WenKai\", \"KaiTi\", \"STKaiti\", serif", "keys": [{"selector": "#article blockquote", "key": "font-family", "format": null}], "children": null},
+        {"id": "backgroundColor", "value": "rgba(236, 244, 249, 0.75)", "keys": [{"selector": "#article blockquote", "key": "background-color", "format": null}], "children": null},
+        {"id": "borderLeft", "value": "4px solid #8496b0", "keys": [{"selector": "#article blockquote", "key": "border-left", "format": null}], "children": null},
+        {"id": "borderRadius", "value": "6px", "keys": [{"selector": "#article blockquote", "key": "border-radius", "format": null}], "children": null},
+        {"id": "margin", "value": "18px 0", "keys": [{"selector": "#article blockquote", "key": "margin", "format": null}], "children": null},
+        {"id": "padding", "value": "12px 14px", "keys": [{"selector": "#article blockquote", "key": "padding", "format": null}], "children": null}
       ]
     },
     {
       "id": "a",
       "label": "链接",
       "styles": [
-        {"id": "fontColor", "value": "#81b29a", "keys": [{"selector": "#nice a", "key": "color", "format": null}], "children": null},
-        {"id": "fontWeight", "value": "normal", "keys": [{"selector": "#nice a", "key": "font-weight", "format": null}], "children": null},
-        {"id": "textDecoration", "value": "none", "keys": [{"selector": "#nice a", "key": "text-decoration", "format": null}], "children": null},
-        {"id": "borderBottom", "value": "1px dashed #81b29a", "keys": [{"selector": "#nice a", "key": "border-bottom", "format": null}], "children": null}
+        {"id": "fontColor", "value": "#81b29a", "keys": [{"selector": "#article a", "key": "color", "format": null}], "children": null},
+        {"id": "fontWeight", "value": "normal", "keys": [{"selector": "#article a", "key": "font-weight", "format": null}], "children": null},
+        {"id": "textDecoration", "value": "none", "keys": [{"selector": "#article a", "key": "text-decoration", "format": null}], "children": null},
+        {"id": "borderBottom", "value": "1px dashed #81b29a", "keys": [{"selector": "#article a", "key": "border-bottom", "format": null}], "children": null}
       ]
     },
     {
       "id": "strong",
       "label": "加粗",
       "styles": [
-        {"id": "fontColor", "value": "#000000", "keys": [{"selector": "#nice strong", "key": "color", "format": null}], "children": null},
-        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#nice strong", "key": "font-weight", "format": null}], "children": null},
-        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#nice strong", "key": "font-family", "format": null}], "children": null}
+        {"id": "fontColor", "value": "#000000", "keys": [{"selector": "#article strong", "key": "color", "format": null}], "children": null},
+        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#article strong", "key": "font-weight", "format": null}], "children": null},
+        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#article strong", "key": "font-family", "format": null}], "children": null}
       ]
     },
     {
       "id": "em",
       "label": "斜体",
       "styles": [
-        {"id": "fontColor", "value": "#111111", "keys": [{"selector": "#nice em", "key": "color", "format": null}], "children": null},
-        {"id": "fontStyle", "value": "italic", "keys": [{"selector": "#nice em", "key": "font-style", "format": null}], "children": null},
-        {"id": "padding", "value": "0 5px 0 2px", "keys": [{"selector": "#nice em", "key": "padding", "format": null}], "children": null}
+        {"id": "fontColor", "value": "#111111", "keys": [{"selector": "#article em", "key": "color", "format": null}], "children": null},
+        {"id": "fontStyle", "value": "italic", "keys": [{"selector": "#article em", "key": "font-style", "format": null}], "children": null},
+        {"id": "padding", "value": "0 5px 0 2px", "keys": [{"selector": "#article em", "key": "padding", "format": null}], "children": null}
       ]
     },
     {
       "id": "del",
       "label": "删除线",
       "styles": [
-        {"id": "fontColor", "value": "#808080", "keys": [{"selector": "#nice del", "key": "color", "format": null}], "children": null},
-        {"id": "textDecoration", "value": "line-through", "keys": [{"selector": "#nice del", "key": "text-decoration", "format": null}], "children": null}
+        {"id": "fontColor", "value": "#808080", "keys": [{"selector": "#article del", "key": "color", "format": null}], "children": null},
+        {"id": "textDecoration", "value": "line-through", "keys": [{"selector": "#article del", "key": "text-decoration", "format": null}], "children": null}
       ]
     },
     {
       "id": "ul",
       "label": "无序列表",
       "styles": [
-        {"id": "fontSize", "value": "17px", "keys": [{"selector": "#nice ul", "key": "font-size", "format": null}], "children": null},
-        {"id": "fontColor", "value": "#222222", "keys": [{"selector": "#nice ul", "key": "color", "format": null}], "children": null},
-        {"id": "lineHeight", "value": "1.8", "keys": [{"selector": "#nice ul", "key": "line-height", "format": null}], "children": null},
-        {"id": "margin", "value": "1em 0", "keys": [{"selector": "#nice ul", "key": "margin", "format": null}], "children": null},
-        {"id": "paddingLeft", "value": "30px", "keys": [{"selector": "#nice ul", "key": "padding-left", "format": null}], "children": null}
+        {"id": "fontSize", "value": "17px", "keys": [{"selector": "#article ul", "key": "font-size", "format": null}], "children": null},
+        {"id": "fontColor", "value": "#222222", "keys": [{"selector": "#article ul", "key": "color", "format": null}], "children": null},
+        {"id": "lineHeight", "value": "1.8", "keys": [{"selector": "#article ul", "key": "line-height", "format": null}], "children": null},
+        {"id": "margin", "value": "1em 0", "keys": [{"selector": "#article ul", "key": "margin", "format": null}], "children": null},
+        {"id": "paddingLeft", "value": "30px", "keys": [{"selector": "#article ul", "key": "padding-left", "format": null}], "children": null}
       ]
     },
     {
       "id": "ol",
       "label": "有序列表",
       "styles": [
-        {"id": "fontSize", "value": "17px", "keys": [{"selector": "#nice ol", "key": "font-size", "format": null}], "children": null},
-        {"id": "fontColor", "value": "#222222", "keys": [{"selector": "#nice ol", "key": "color", "format": null}], "children": null},
-        {"id": "lineHeight", "value": "1.8", "keys": [{"selector": "#nice ol", "key": "line-height", "format": null}], "children": null},
-        {"id": "margin", "value": "1em 0", "keys": [{"selector": "#nice ol", "key": "margin", "format": null}], "children": null},
-        {"id": "paddingLeft", "value": "30px", "keys": [{"selector": "#nice ol", "key": "padding-left", "format": null}], "children": null},
-        {"id": "listStyle", "value": "decimal-leading-zero", "keys": [{"selector": "#nice ol", "key": "list-style", "format": null}], "children": null}
+        {"id": "fontSize", "value": "17px", "keys": [{"selector": "#article ol", "key": "font-size", "format": null}], "children": null},
+        {"id": "fontColor", "value": "#222222", "keys": [{"selector": "#article ol", "key": "color", "format": null}], "children": null},
+        {"id": "lineHeight", "value": "1.8", "keys": [{"selector": "#article ol", "key": "line-height", "format": null}], "children": null},
+        {"id": "margin", "value": "1em 0", "keys": [{"selector": "#article ol", "key": "margin", "format": null}], "children": null},
+        {"id": "paddingLeft", "value": "30px", "keys": [{"selector": "#article ol", "key": "padding-left", "format": null}], "children": null},
+        {"id": "listStyle", "value": "decimal-leading-zero", "keys": [{"selector": "#article ol", "key": "list-style", "format": null}], "children": null}
       ]
     },
     {
       "id": "image",
       "label": "图片",
       "styles": [
-        {"id": "display", "value": "block", "keys": [{"selector": "#nice img", "key": "display", "format": null}], "children": null},
-        {"id": "maxWidth", "value": "100%", "keys": [{"selector": "#nice img", "key": "max-width", "format": null}], "children": null},
-        {"id": "border", "value": "none", "keys": [{"selector": "#nice img", "key": "border", "format": null}], "children": null},
-        {"id": "borderRadius", "value": "6px", "keys": [{"selector": "#nice img", "key": "border-radius", "format": null}], "children": null},
-        {"id": "margin", "value": "16px auto", "keys": [{"selector": "#nice img", "key": "margin", "format": null}], "children": null}
+        {"id": "display", "value": "block", "keys": [{"selector": "#article img", "key": "display", "format": null}], "children": null},
+        {"id": "maxWidth", "value": "100%", "keys": [{"selector": "#article img", "key": "max-width", "format": null}], "children": null},
+        {"id": "border", "value": "none", "keys": [{"selector": "#article img", "key": "border", "format": null}], "children": null},
+        {"id": "borderRadius", "value": "6px", "keys": [{"selector": "#article img", "key": "border-radius", "format": null}], "children": null},
+        {"id": "margin", "value": "16px auto", "keys": [{"selector": "#article img", "key": "margin", "format": null}], "children": null}
       ]
     },
     {
       "id": "imageDescription",
       "label": "图片说明",
       "styles": [
-        {"id": "fontSize", "value": "14px", "keys": [{"selector": "#nice figcaption", "key": "font-size", "format": null}], "children": null},
-        {"id": "fontColor", "value": "#777777", "keys": [{"selector": "#nice figcaption", "key": "color", "format": null}], "children": null},
-        {"id": "textAlign", "value": "center", "keys": [{"selector": "#nice figcaption", "key": "text-align", "format": null}], "children": null},
-        {"id": "margin", "value": "8px 0 16px", "keys": [{"selector": "#nice figcaption", "key": "margin", "format": null}], "children": null}
+        {"id": "fontSize", "value": "14px", "keys": [{"selector": "#article figcaption", "key": "font-size", "format": null}], "children": null},
+        {"id": "fontColor", "value": "#777777", "keys": [{"selector": "#article figcaption", "key": "color", "format": null}], "children": null},
+        {"id": "textAlign", "value": "center", "keys": [{"selector": "#article figcaption", "key": "text-align", "format": null}], "children": null},
+        {"id": "margin", "value": "8px 0 16px", "keys": [{"selector": "#article figcaption", "key": "margin", "format": null}], "children": null}
       ]
     },
     {
       "id": "table",
       "label": "表格",
       "styles": [
-        {"id": "fontSize", "value": "16px", "keys": [{"selector": "#nice table", "key": "font-size", "format": null}], "children": null},
-        {"id": "lineHeight", "value": "1.6", "keys": [{"selector": "#nice table", "key": "line-height", "format": null}], "children": null},
-        {"id": "width", "value": "100%", "keys": [{"selector": "#nice table", "key": "width", "format": null}], "children": null},
-        {"id": "borderSpacing", "value": "0", "keys": [{"selector": "#nice table", "key": "border-spacing", "format": null}], "children": null},
-        {"id": "borderCollapse", "value": "separate", "keys": [{"selector": "#nice table", "key": "border-collapse", "format": null}], "children": null},
-        {"id": "margin", "value": "1em 0", "keys": [{"selector": "#nice table", "key": "margin", "format": null}], "children": null}
+        {"id": "fontSize", "value": "16px", "keys": [{"selector": "#article table", "key": "font-size", "format": null}], "children": null},
+        {"id": "lineHeight", "value": "1.6", "keys": [{"selector": "#article table", "key": "line-height", "format": null}], "children": null},
+        {"id": "width", "value": "100%", "keys": [{"selector": "#article table", "key": "width", "format": null}], "children": null},
+        {"id": "borderSpacing", "value": "0", "keys": [{"selector": "#article table", "key": "border-spacing", "format": null}], "children": null},
+        {"id": "borderCollapse", "value": "separate", "keys": [{"selector": "#article table", "key": "border-collapse", "format": null}], "children": null},
+        {"id": "margin", "value": "1em 0", "keys": [{"selector": "#article table", "key": "margin", "format": null}], "children": null}
       ]
     },
     {
       "id": "tableHead",
       "label": "表头",
       "styles": [
-        {"id": "fontColor", "value": "#e2542e", "keys": [{"selector": "#nice th", "key": "color", "format": null}], "children": null},
-        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#nice th", "key": "font-weight", "format": null}], "children": null},
-        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#nice th", "key": "font-family", "format": null}], "children": null},
-        {"id": "backgroundColor", "value": "#fbfbfb", "keys": [{"selector": "#nice th", "key": "background-color", "format": null}], "children": null},
-        {"id": "border", "value": "1.5px solid #cccccc", "keys": [{"selector": "#nice th", "key": "border", "format": null}], "children": null},
-        {"id": "borderBottom", "value": "2.5px solid #888888", "keys": [{"selector": "#nice th", "key": "border-bottom", "format": null}], "children": null},
-        {"id": "padding", "value": "7px 10px", "keys": [{"selector": "#nice th", "key": "padding", "format": null}], "children": null}
+        {"id": "fontColor", "value": "#e2542e", "keys": [{"selector": "#article th", "key": "color", "format": null}], "children": null},
+        {"id": "fontWeight", "value": "bold", "keys": [{"selector": "#article th", "key": "font-weight", "format": null}], "children": null},
+        {"id": "fontFamily", "value": "-apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif", "keys": [{"selector": "#article th", "key": "font-family", "format": null}], "children": null},
+        {"id": "backgroundColor", "value": "#fbfbfb", "keys": [{"selector": "#article th", "key": "background-color", "format": null}], "children": null},
+        {"id": "border", "value": "1.5px solid #cccccc", "keys": [{"selector": "#article th", "key": "border", "format": null}], "children": null},
+        {"id": "borderBottom", "value": "2.5px solid #888888", "keys": [{"selector": "#article th", "key": "border-bottom", "format": null}], "children": null},
+        {"id": "padding", "value": "7px 10px", "keys": [{"selector": "#article th", "key": "padding", "format": null}], "children": null}
       ]
     },
     {
       "id": "tableBody",
       "label": "单元格",
       "styles": [
-        {"id": "fontColor", "value": "#222222", "keys": [{"selector": "#nice td", "key": "color", "format": null}], "children": null},
-        {"id": "fontWeight", "value": "normal", "keys": [{"selector": "#nice td", "key": "font-weight", "format": null}], "children": null},
-        {"id": "backgroundColor", "value": "#ffffff", "keys": [{"selector": "#nice td", "key": "background-color", "format": null}], "children": null},
-        {"id": "border", "value": "1.5px solid #cccccc", "keys": [{"selector": "#nice td", "key": "border", "format": null}], "children": null},
-        {"id": "padding", "value": "7px 10px", "keys": [{"selector": "#nice td", "key": "padding", "format": null}], "children": null}
+        {"id": "fontColor", "value": "#222222", "keys": [{"selector": "#article td", "key": "color", "format": null}], "children": null},
+        {"id": "fontWeight", "value": "normal", "keys": [{"selector": "#article td", "key": "font-weight", "format": null}], "children": null},
+        {"id": "backgroundColor", "value": "#ffffff", "keys": [{"selector": "#article td", "key": "background-color", "format": null}], "children": null},
+        {"id": "border", "value": "1.5px solid #cccccc", "keys": [{"selector": "#article td", "key": "border", "format": null}], "children": null},
+        {"id": "padding", "value": "7px 10px", "keys": [{"selector": "#article td", "key": "padding", "format": null}], "children": null}
       ]
     },
     {
       "id": "blockCode",
       "label": "代码块",
       "styles": [
-        {"id": "fontSize", "value": "15px", "keys": [{"selector": "#nice pre.custom", "key": "font-size", "format": null}], "children": null},
-        {"id": "fontColor", "value": "#2c74c7", "keys": [{"selector": "#nice pre.custom", "key": "color", "format": null}], "children": null},
-        {"id": "lineHeight", "value": "1.65", "keys": [{"selector": "#nice pre.custom", "key": "line-height", "format": null}], "children": null},
-        {"id": "fontFamily", "value": "\"Fira Code\", Menlo, Monaco, Consolas, \"Courier New\", monospace", "keys": [{"selector": "#nice pre.custom", "key": "font-family", "format": null}], "children": null},
-        {"id": "backgroundColor", "value": "#f5f9fd", "keys": [{"selector": "#nice pre.custom", "key": "background-color", "format": null}], "children": null},
-        {"id": "borderRadius", "value": "8px", "keys": [{"selector": "#nice pre.custom", "key": "border-radius", "format": null}], "children": null},
-        {"id": "boxShadow", "value": "0 0 10px rgba(0, 0, 0, 0.15)", "keys": [{"selector": "#nice pre.custom", "key": "box-shadow", "format": null}], "children": null},
-        {"id": "margin", "value": "18px 0", "keys": [{"selector": "#nice pre.custom", "key": "margin", "format": null}], "children": null},
-        {"id": "padding", "value": "8px 14px 14px", "keys": [{"selector": "#nice pre.custom", "key": "padding", "format": null}], "children": null}
+        {"id": "fontSize", "value": "15px", "keys": [{"selector": "#article pre.custom", "key": "font-size", "format": null}], "children": null},
+        {"id": "fontColor", "value": "#2c74c7", "keys": [{"selector": "#article pre.custom", "key": "color", "format": null}], "children": null},
+        {"id": "lineHeight", "value": "1.65", "keys": [{"selector": "#article pre.custom", "key": "line-height", "format": null}], "children": null},
+        {"id": "fontFamily", "value": "\"Fira Code\", Menlo, Monaco, Consolas, \"Courier New\", monospace", "keys": [{"selector": "#article pre.custom", "key": "font-family", "format": null}], "children": null},
+        {"id": "backgroundColor", "value": "#f5f9fd", "keys": [{"selector": "#article pre.custom", "key": "background-color", "format": null}], "children": null},
+        {"id": "borderRadius", "value": "8px", "keys": [{"selector": "#article pre.custom", "key": "border-radius", "format": null}], "children": null},
+        {"id": "boxShadow", "value": "0 0 10px rgba(0, 0, 0, 0.15)", "keys": [{"selector": "#article pre.custom", "key": "box-shadow", "format": null}], "children": null},
+        {"id": "margin", "value": "18px 0", "keys": [{"selector": "#article pre.custom", "key": "margin", "format": null}], "children": null},
+        {"id": "padding", "value": "8px 14px 14px", "keys": [{"selector": "#article pre.custom", "key": "padding", "format": null}], "children": null}
       ]
     },
     {
       "id": "inlineCode",
       "label": "行内代码",
       "styles": [
-        {"id": "fontSize", "value": "0.95em", "keys": [{"selector": "#nice p code", "key": "font-size", "format": null}, {"selector": "#nice li code", "key": "font-size", "format": null}, {"selector": "#nice td code", "key": "font-size", "format": null}, {"selector": "#nice blockquote code", "key": "font-size", "format": null}], "children": null},
-        {"id": "fontColor", "value": "rgb(238, 130, 42)", "keys": [{"selector": "#nice p code", "key": "color", "format": null}, {"selector": "#nice li code", "key": "color", "format": null}, {"selector": "#nice td code", "key": "color", "format": null}, {"selector": "#nice blockquote code", "key": "color", "format": null}], "children": null},
-        {"id": "fontFamily", "value": "\"Fira Code\", Menlo, Monaco, Consolas, \"Courier New\", monospace", "keys": [{"selector": "#nice p code", "key": "font-family", "format": null}, {"selector": "#nice li code", "key": "font-family", "format": null}, {"selector": "#nice td code", "key": "font-family", "format": null}, {"selector": "#nice blockquote code", "key": "font-family", "format": null}], "children": null},
-        {"id": "backgroundColor", "value": "#f3f4f4", "keys": [{"selector": "#nice p code", "key": "background-color", "format": null}, {"selector": "#nice li code", "key": "background-color", "format": null}, {"selector": "#nice td code", "key": "background-color", "format": null}, {"selector": "#nice blockquote code", "key": "background-color", "format": null}], "children": null},
-        {"id": "borderRadius", "value": "4px", "keys": [{"selector": "#nice p code", "key": "border-radius", "format": null}, {"selector": "#nice li code", "key": "border-radius", "format": null}, {"selector": "#nice td code", "key": "border-radius", "format": null}, {"selector": "#nice blockquote code", "key": "border-radius", "format": null}], "children": null},
-        {"id": "padding", "value": "1.5px 5px", "keys": [{"selector": "#nice p code", "key": "padding", "format": null}, {"selector": "#nice li code", "key": "padding", "format": null}, {"selector": "#nice td code", "key": "padding", "format": null}, {"selector": "#nice blockquote code", "key": "padding", "format": null}], "children": null}
+        {"id": "fontSize", "value": "0.95em", "keys": [{"selector": "#article p code", "key": "font-size", "format": null}, {"selector": "#article li code", "key": "font-size", "format": null}, {"selector": "#article td code", "key": "font-size", "format": null}, {"selector": "#article blockquote code", "key": "font-size", "format": null}], "children": null},
+        {"id": "fontColor", "value": "rgb(238, 130, 42)", "keys": [{"selector": "#article p code", "key": "color", "format": null}, {"selector": "#article li code", "key": "color", "format": null}, {"selector": "#article td code", "key": "color", "format": null}, {"selector": "#article blockquote code", "key": "color", "format": null}], "children": null},
+        {"id": "fontFamily", "value": "\"Fira Code\", Menlo, Monaco, Consolas, \"Courier New\", monospace", "keys": [{"selector": "#article p code", "key": "font-family", "format": null}, {"selector": "#article li code", "key": "font-family", "format": null}, {"selector": "#article td code", "key": "font-family", "format": null}, {"selector": "#article blockquote code", "key": "font-family", "format": null}], "children": null},
+        {"id": "backgroundColor", "value": "#f3f4f4", "keys": [{"selector": "#article p code", "key": "background-color", "format": null}, {"selector": "#article li code", "key": "background-color", "format": null}, {"selector": "#article td code", "key": "background-color", "format": null}, {"selector": "#article blockquote code", "key": "background-color", "format": null}], "children": null},
+        {"id": "borderRadius", "value": "4px", "keys": [{"selector": "#article p code", "key": "border-radius", "format": null}, {"selector": "#article li code", "key": "border-radius", "format": null}, {"selector": "#article td code", "key": "border-radius", "format": null}, {"selector": "#article blockquote code", "key": "border-radius", "format": null}], "children": null},
+        {"id": "padding", "value": "1.5px 5px", "keys": [{"selector": "#article p code", "key": "padding", "format": null}, {"selector": "#article li code", "key": "padding", "format": null}, {"selector": "#article td code", "key": "padding", "format": null}, {"selector": "#article blockquote code", "key": "padding", "format": null}], "children": null}
       ]
     },
     {
@@ -299,7 +299,7 @@
       "styles": [
         {
           "id": "common",
-          "value": "#nice, #nice * { box-sizing: border-box; }\n#nice h1 .prefix::before { content: \"「\"; color: #3e89df; font-size: 0.9em; margin-right: 8px; }\n#nice h1 .suffix::before { content: \"」\"; color: #3e89df; font-size: 0.9em; margin-left: 8px; }\n#nice h2 { position: relative; }\n#nice h2 .prefix::before { content: \"#2\"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 11px; vertical-align: top; }\n#nice h2 .content { display: inline-block; padding: 0 7px; color: #ffffff; border-radius: 5px; background-image: linear-gradient(to bottom, #74c69d, #b7e4c7); }\n#nice h2::after { content: \"\"; display: block; height: 4px; margin-top: 8px; border-radius: 4px; background-image: linear-gradient(to right, #c1dfc4 0%, #deecdd 100%); }\n#nice h3 .prefix::before { content: \"#3\"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 10px; vertical-align: top; }\n#nice h4 .prefix::before { content: \"#4\"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 10px; vertical-align: top; }\n#nice h5 .prefix::before { content: \"#5\"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 10px; vertical-align: top; }\n#nice h6 .prefix::before { content: \"#6\"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 10px; vertical-align: top; }\n#nice h3 .suffix, #nice h4 .suffix, #nice h5 .suffix, #nice h6 .suffix { display: none; }\n#nice blockquote p { margin: 0.6em 0; color: #777777; }\n#nice blockquote h3:first-child, #nice blockquote h4:first-child, #nice blockquote h5:first-child, #nice blockquote h6:first-child { margin: -4px 0 8px; padding: 0; font-family: -apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif; font-size: 18px; letter-spacing: 1px; }\n#nice blockquote h3:first-child { color: #c00000; }\n#nice blockquote h4:first-child { color: #428bca; }\n#nice blockquote h5:first-child { color: #ffae00; }\n#nice blockquote h6:first-child { color: #004d41; }\n#nice li { margin: 4px 0; }\n#nice li section { margin: 0; }\n#nice li::marker { color: #8ebba6; font-size: 18px; }\n#nice ul ul { border-left: 1.5px solid rgba(129, 178, 154, 0.3); margin-left: 2px; }\n#nice figure { margin: 1em 0; text-align: center; border-radius: 6px; }\n#nice .table-container { margin: 1em 0; overflow-x: auto; border-radius: 6px; box-shadow: 0 0 0 1.5px #cccccc; }\n#nice table tr th:first-child, #nice table tr td:first-child { border-left-width: 0; }\n#nice table tr th:last-child, #nice table tr td:last-child { border-right-width: 0; }\n#nice table tr th { border-top: none; }\n#nice table tbody td { border-bottom: none; }\n#nice pre.custom { position: relative; overflow-x: auto; white-space: pre-wrap; word-break: break-word; border-top: 40px solid rgba(167, 187, 195, 0.6); }\n#nice pre.custom::before { content: \"\"; position: absolute; left: 12px; top: -26px; width: 12px; height: 12px; border-radius: 50%; background: #fc625d; box-shadow: 25px 0 #fdbc40, 50px 0 #35cd4b; }\n#nice pre.custom code { display: block; color: #2c74c7; background: transparent; border: none; padding: 0; font-family: \"Fira Code\", Menlo, Monaco, Consolas, \"Courier New\", monospace; }\n#nice pre.custom .hljs-keyword, #nice pre.custom .hljs-selector-tag { color: #8f08c4; }\n#nice pre.custom .hljs-operator { color: #36374c; }\n#nice pre.custom .hljs-string, #nice pre.custom .hljs-regexp { color: #a31515; }\n#nice pre.custom .hljs-comment, #nice pre.custom .hljs-quote { color: #546e7a; }\n#nice pre.custom .hljs-number, #nice pre.custom .hljs-literal { color: #b4654d; }\n#nice pre.custom .hljs-title, #nice pre.custom .hljs-function { color: #74531f; }\n#nice pre.custom .hljs-attr, #nice pre.custom .hljs-attribute { color: #ffcb6b; }\n#nice pre.custom .hljs-built_in, #nice pre.custom .hljs-property { color: #80cbae; }\n#nice u { text-decoration: none; border-bottom: 1.6px solid #f47c35; padding-bottom: 1px; }\n#nice mark { margin: 0 2px; padding: 1px 3px 0; color: #ffffff; background-color: #7c9dca; border-radius: 3px; font-family: \"Fira Code\", \"Songti SC\", SimSun, serif; font-size: 1em; }\n#nice del { padding: 1px 2px; color: #777777; }\n#nice hr { height: 2px; padding: 0; margin: 2rem 0; background-color: #dddddd; border: none; }\n#nice .footnotes, #nice .footnotes p, #nice .footnotes li { font-size: 14px; color: #777777; }\n#nice sup.md-footnote { color: #e96900; font-size: 12px; }",
+          "value": "#article, #article * { box-sizing: border-box; }\n#article h1 .prefix::before { content: \"「\"; color: #3e89df; font-size: 0.9em; margin-right: 8px; }\n#article h1 .suffix::before { content: \"」\"; color: #3e89df; font-size: 0.9em; margin-left: 8px; }\n#article h2 { position: relative; }\n#article h2 .prefix::before { content: \"#2\"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 11px; vertical-align: top; }\n#article h2 .content { display: inline-block; padding: 0 7px; color: #ffffff; border-radius: 5px; background-image: linear-gradient(to bottom, #74c69d, #b7e4c7); }\n#article h2::after { content: \"\"; display: block; height: 4px; margin-top: 8px; border-radius: 4px; background-image: linear-gradient(to right, #c1dfc4 0%, #deecdd 100%); }\n#article h3 .prefix::before { content: \"#3\"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 10px; vertical-align: top; }\n#article h4 .prefix::before { content: \"#4\"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 10px; vertical-align: top; }\n#article h5 .prefix::before { content: \"#5\"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 10px; vertical-align: top; }\n#article h6 .prefix::before { content: \"#6\"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 10px; vertical-align: top; }\n#article h3 .suffix, #article h4 .suffix, #article h5 .suffix, #article h6 .suffix { display: none; }\n#article blockquote p { margin: 0.6em 0; color: #777777; }\n#article blockquote h3:first-child, #article blockquote h4:first-child, #article blockquote h5:first-child, #article blockquote h6:first-child { margin: -4px 0 8px; padding: 0; font-family: -apple-system, BlinkMacSystemFont, \"PingFang SC\", \"Microsoft YaHei\", sans-serif; font-size: 18px; letter-spacing: 1px; }\n#article blockquote h3:first-child { color: #c00000; }\n#article blockquote h4:first-child { color: #428bca; }\n#article blockquote h5:first-child { color: #ffae00; }\n#article blockquote h6:first-child { color: #004d41; }\n#article li { margin: 4px 0; }\n#article li section { margin: 0; }\n#article li::marker { color: #8ebba6; font-size: 18px; }\n#article ul ul { border-left: 1.5px solid rgba(129, 178, 154, 0.3); margin-left: 2px; }\n#article figure { margin: 1em 0; text-align: center; border-radius: 6px; }\n#article .table-container { margin: 1em 0; overflow-x: auto; border-radius: 6px; box-shadow: 0 0 0 1.5px #cccccc; }\n#article table tr th:first-child, #article table tr td:first-child { border-left-width: 0; }\n#article table tr th:last-child, #article table tr td:last-child { border-right-width: 0; }\n#article table tr th { border-top: none; }\n#article table tbody td { border-bottom: none; }\n#article pre.custom { position: relative; overflow-x: auto; white-space: pre-wrap; word-break: break-word; border-top: 40px solid rgba(167, 187, 195, 0.6); }\n#article pre.custom::before { content: \"\"; position: absolute; left: 12px; top: -26px; width: 12px; height: 12px; border-radius: 50%; background: #fc625d; box-shadow: 25px 0 #fdbc40, 50px 0 #35cd4b; }\n#article pre.custom code { display: block; color: #2c74c7; background: transparent; border: none; padding: 0; font-family: \"Fira Code\", Menlo, Monaco, Consolas, \"Courier New\", monospace; }\n#article pre.custom .hljs-keyword, #article pre.custom .hljs-selector-tag { color: #8f08c4; }\n#article pre.custom .hljs-operator { color: #36374c; }\n#article pre.custom .hljs-string, #article pre.custom .hljs-regexp { color: #a31515; }\n#article pre.custom .hljs-comment, #article pre.custom .hljs-quote { color: #546e7a; }\n#article pre.custom .hljs-number, #article pre.custom .hljs-literal { color: #b4654d; }\n#article pre.custom .hljs-title, #article pre.custom .hljs-function { color: #74531f; }\n#article pre.custom .hljs-attr, #article pre.custom .hljs-attribute { color: #ffcb6b; }\n#article pre.custom .hljs-built_in, #article pre.custom .hljs-property { color: #80cbae; }\n#article u { text-decoration: none; border-bottom: 1.6px solid #f47c35; padding-bottom: 1px; }\n#article mark { margin: 0 2px; padding: 1px 3px 0; color: #ffffff; background-color: #7c9dca; border-radius: 3px; font-family: \"Fira Code\", \"Songti SC\", SimSun, serif; font-size: 1em; }\n#article del { padding: 1px 2px; color: #777777; }\n#article hr { height: 2px; padding: 0; margin: 2rem 0; background-color: #dddddd; border: none; }\n#article .footnotes, #article .footnotes p, #article .footnotes li { font-size: 14px; color: #777777; }\n#article sup.md-footnote { color: #e96900; font-size: 12px; }",
           "keys": null,
           "children": null
         }

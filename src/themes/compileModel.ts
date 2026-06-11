@@ -1,6 +1,7 @@
 import type {StyleModel, StyleItem} from "./themeModel.ts";
+import {normalizeArticleRootSelector} from "../articleRoot.ts";
 
-// 把声明值归一化为浏览器 CSSOM 序列化后的形态，使编译产物与 mdnice data.style 一致：
+// 把声明值归一化为浏览器 CSSOM 序列化后的形态，使编译产物稳定：
 // 1) 逗号后补空格（rgba(0,0,0,1) → rgba(0, 0, 0, 1)，字体列表同理）；
 // 2) content 的单引号字符串归一化为双引号（'❝' → "❝"）。
 function normalizeValue(value: string): string {
@@ -20,16 +21,17 @@ export function compileModel(models: StyleModel[]): string {
       // 1) 剥掉 CSS 注释——浏览器序列化的 data.style 不含注释，且注释若紧贴选择器会污染解析；
       // 2) 同样做值归一化（逗号补空格、单引号转双引号），使其与浏览器序列化形态一致。
       const stripped = item.value.replace(/\/\*[\s\S]*?\*\//g, "");
-      commonBlocks.push(normalizeValue(stripped));
+      commonBlocks.push(normalizeArticleRootSelector(normalizeValue(stripped)));
       return;
     }
     if (item.keys && item.value != null) {
       const normalized = normalizeValue(item.value);
       for (const k of item.keys) {
-        let m = ruleMap.get(k.selector);
+        const selector = normalizeArticleRootSelector(k.selector);
+        let m = ruleMap.get(selector);
         if (!m) {
           m = new Map();
-          ruleMap.set(k.selector, m);
+          ruleMap.set(selector, m);
         }
         m.set(k.key, normalized);
       }

@@ -32,10 +32,10 @@ test("default.json 通过 model 校验", () => {
 
 test("default 编译出 GitHub 风格关键视觉值", () => {
   const css = compileModel(defaultModel as never);
-  assert.match(css, /#nice p \{[^}]*font-size: 16px/);
-  assert.match(css, /#nice h1 \.content \{[^}]*font-size: 36px/);
-  assert.match(css, /#nice h1 \.content \{[^}]*color: rgba\(51, 51, 51, 1\)/);
-  assert.match(css, /#nice a \{[^}]*color: rgba\(65, 131, 196, 1\)/);
+  assert.match(css, /#article p \{[^}]*font-size: 16px/);
+  assert.match(css, /#article h1 \.content \{[^}]*font-size: 36px/);
+  assert.match(css, /#article h1 \.content \{[^}]*color: rgba\(51, 51, 51, 1\)/);
+  assert.match(css, /#article a \{[^}]*color: rgba\(65, 131, 196, 1\)/);
 });
 
 test("default 不含 mdnice 主题残留（绿色/网图背景）", () => {
@@ -48,32 +48,32 @@ test("Typora 映射预置主题通过 model 校验并编译关键选择器", () 
   for (const model of [happysimple.model, seeYue.model]) {
     assert.equal(validateModel(model), true);
     const css = compileModel(model as never);
-    assert.match(css, /#nice \{/);
-    assert.match(css, /#nice p \{/);
-    assert.match(css, /#nice h1 \{/);
-    assert.match(css, /#nice h2 \{/);
-    assert.match(css, /#nice blockquote \{/);
-    assert.match(css, /#nice table \{/);
-    assert.match(css, /#nice pre\.custom \{/);
+    assert.match(css, /#article \{/);
+    assert.match(css, /#article p \{/);
+    assert.match(css, /#article h1 \{/);
+    assert.match(css, /#article h2 \{/);
+    assert.match(css, /#article blockquote \{/);
+    assert.match(css, /#article table \{/);
+    assert.match(css, /#article pre\.custom \{/);
   }
 });
 
 test("Typora 映射主题保留微信可渲染的手动修正", () => {
   const happyCss = compileModel(happysimple.model as never);
-  assert.match(happyCss, /#nice h2 \{[^}]*border-bottom: none/);
-  assert.match(happyCss, /#nice h2 \.content \{[^}]*border-bottom: 3px solid #ff5d52/);
+  assert.match(happyCss, /#article h2 \{[^}]*border-bottom: none/);
+  assert.match(happyCss, /#article h2 \.content \{[^}]*border-bottom: 3px solid #ff5d52/);
 
   const seeYueCss = compileModel(seeYue.model as never);
-  assert.match(seeYueCss, /#nice pre\.custom \{[^}]*padding: 8px 14px 14px/);
-  assert.match(seeYueCss, /#nice pre\.custom \{[^}]*border-top: 40px solid rgba\(167, 187, 195, 0\.6\)/);
-  assert.match(seeYueCss, /#nice mark \{[^}]*background-color: #7c9dca/);
-  assert.match(seeYueCss, /#nice del \{[^}]*color: #777777/);
+  assert.match(seeYueCss, /#article pre\.custom \{[^}]*padding: 8px 14px 14px/);
+  assert.match(seeYueCss, /#article pre\.custom \{[^}]*border-top: 40px solid rgba\(167, 187, 195, 0\.6\)/);
+  assert.match(seeYueCss, /#article mark \{[^}]*background-color: #7c9dca/);
+  assert.match(seeYueCss, /#article del \{[^}]*color: #777777/);
 });
 
 test("mdnice 装饰性 h3 主题的脚注标题不被压成窄列", () => {
   for (const preset of [singularity, frontEndPeak]) {
     const rules = parseRules(compileModel(preset.model as never));
-    const sepBefore = rules["#nice .footnotes-sep::before"];
+    const sepBefore = rules["#article .footnotes-sep::before"];
 
     assert.equal(sepBefore.content, '"参考资料"');
     assert.equal(sepBefore.width, "auto");
@@ -85,8 +85,8 @@ test("mdnice 装饰性 h3 主题的脚注标题不被压成窄列", () => {
 test("Typora Spring 根容器和分隔线不向右撑出预览边界", () => {
   const rules = parseRules(compileModel(typoraSpring.model as never));
 
-  assert.equal(rules["#nice"]["box-sizing"], "border-box");
-  assert.equal(rules["#nice"]["max-width"], "100%");
-  assert.equal(rules["#nice hr"].width, "100%");
-  assert.equal(rules["#nice hr"]["box-sizing"], "border-box");
+  assert.equal(rules["#article"]["box-sizing"], "border-box");
+  assert.equal(rules["#article"]["max-width"], "100%");
+  assert.equal(rules["#article hr"].width, "100%");
+  assert.equal(rules["#article hr"]["box-sizing"], "border-box");
 });

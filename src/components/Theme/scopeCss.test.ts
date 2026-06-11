@@ -9,6 +9,16 @@ test("#nice 前缀替换为 scope class", () => {
   assert.equal(out.trim(), ".tp-x p { color: red; }");
 });
 
+test("#wechat-article 前缀替换为 scope class", () => {
+  const out = scopeCss("#wechat-article p { color: red; }", "tp-x");
+  assert.equal(out.trim(), ".tp-x p { color: red; }");
+});
+
+test("#article 前缀替换为 scope class", () => {
+  const out = scopeCss("#article p { color: red; }", "tp-x");
+  assert.equal(out.trim(), ".tp-x p { color: red; }");
+});
+
 test("裸选择器前面补 scope", () => {
   const out = scopeCss(".hljs { background: #f8f8f8; }", "tp-x");
   assert.equal(out.trim(), ".tp-x .hljs { background: #f8f8f8; }");

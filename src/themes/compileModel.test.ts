@@ -2,6 +2,7 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {fileURLToPath} from "node:url";
+import {normalizeArticleRootSelector} from "../articleRoot.ts";
 import {compileModel} from "./compileModel.ts";
 import type {StyleModel} from "./themeModel.ts";
 
@@ -31,7 +32,37 @@ test("普通 keys 项编译为规则", () => {
     ]},
   ];
   const r = parseRules(compileModel(models));
-  assert.deepEqual(r["#nice p"], {"font-size": "16px", color: "rgba(43, 43, 43, 1)"});
+  assert.deepEqual(r["#article p"], {"font-size": "16px", color: "rgba(43, 43, 43, 1)"});
+});
+
+test("legacy #nice selector 编译为中性的文章根选择器", () => {
+  const models: StyleModel[] = [
+    {id: "p", label: "p", styles: [
+      {id: "fontSize", value: "16px", keys: [{selector: "#nice p", key: "font-size", format: null}], children: null},
+      {id: "common", value: "#nice p strong { color: rgba(43,43,43,1); }", keys: null, children: null},
+    ]},
+  ];
+  const css = compileModel(models);
+  const r = parseRules(css);
+
+  assert.deepEqual(r["#article p"], {"font-size": "16px"});
+  assert.deepEqual(r["#article p strong"], {color: "rgba(43, 43, 43, 1)"});
+  assert.ok(!css.includes("#nice"));
+});
+
+test("previous #wechat-article selector 编译为 #article", () => {
+  const models: StyleModel[] = [
+    {id: "p", label: "p", styles: [
+      {id: "fontSize", value: "16px", keys: [{selector: "#wechat-article p", key: "font-size", format: null}], children: null},
+      {id: "common", value: "#wechat-article p strong { color: rgba(43,43,43,1); }", keys: null, children: null},
+    ]},
+  ];
+  const css = compileModel(models);
+  const r = parseRules(css);
+
+  assert.deepEqual(r["#article p"], {"font-size": "16px"});
+  assert.deepEqual(r["#article p strong"], {color: "rgba(43, 43, 43, 1)"});
+  assert.ok(!css.includes("#wechat-article"));
 });
 
 test("children 复合项递归展开", () => {
@@ -44,7 +75,7 @@ test("children 复合项递归展开", () => {
     ]},
   ];
   const r = parseRules(compileModel(models));
-  assert.deepEqual(r["#nice h1"], {"margin-top": "30px", "margin-bottom": "15px"});
+  assert.deepEqual(r["#article h1"], {"margin-top": "30px", "margin-bottom": "15px"});
 });
 
 test("common 项原样输出", () => {
@@ -54,7 +85,7 @@ test("common 项原样输出", () => {
     ]},
   ];
   const r = parseRules(compileModel(models));
-  assert.deepEqual(r["#nice h1 .prefix"], {display: "none"});
+  assert.deepEqual(r["#article h1 .prefix"], {display: "none"});
 });
 
 test("同一 value 写多个 selector", () => {
@@ -68,14 +99,14 @@ test("同一 value 写多个 selector", () => {
   ];
   const r = parseRules(compileModel(models));
   // 编译器把值归一化为浏览器序列化形态（逗号后补空格），故断言带空格的形态
-  assert.equal(r["#nice blockquote p"].color, "rgba(0, 0, 0, 1)");
-  assert.equal(r["#nice .custom-blockquote p"].color, "rgba(0, 0, 0, 1)");
+  assert.equal(r["#article blockquote p"].color, "rgba(0, 0, 0, 1)");
+  assert.equal(r["#article .custom-blockquote p"].color, "rgba(0, 0, 0, 1)");
 });
 
 test("oracle：编译 草原绿 model 与其 data.style 规则等价", () => {
   const path = fileURLToPath(new URL("./__fixtures__/caoyuanlv.json", import.meta.url));
   const json = JSON.parse(readFileSync(path, "utf-8"));
-  const expected = parseRules(json.data.style);
+  const expected = parseRules(normalizeArticleRootSelector(json.data.style));
   const actual = parseRules(compileModel(json.data.styleModelList));
 
   for (const sel of Object.keys(expected)) {

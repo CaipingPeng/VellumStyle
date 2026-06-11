@@ -1,13 +1,27 @@
+import {ARTICLE_ROOT_SELECTOR, LEGACY_ARTICLE_ROOT_SELECTORS} from "../../articleRoot.ts";
+
 // 把主题 CSS 的选择器改写到卡片唯一 scope class，使多个不同主题缩略图能同页共存。
-// 规则：选择器以 #nice 开头 → 替换 #nice 为 .scope；否则（裸选择器如 .hljs）→ 前面补 ".scope "。
+// 规则：选择器以文章根开头 → 替换为 .scope；否则（裸选择器如 .hljs）→ 前面补 ".scope "。
 // 仅用于主题选择器对话框的缩略图，不影响复制管线。
+
+const ARTICLE_ROOT_SELECTORS = [ARTICLE_ROOT_SELECTOR, ...LEGACY_ARTICLE_ROOT_SELECTORS];
+
+function stripArticleRootSelector(selector: string): string | null {
+  for (const rootSelector of ARTICLE_ROOT_SELECTORS) {
+    if (selector === rootSelector) return "";
+    if (selector.startsWith(rootSelector) && !/[-_a-zA-Z0-9]/.test(selector[rootSelector.length] ?? "")) {
+      return selector.slice(rootSelector.length);
+    }
+  }
+  return null;
+}
 
 // 单条选择器（逗号分隔后的一个）改写。
 function scopeSelector(sel: string, scopeClass: string): string {
   const s = sel.trim();
   if (!s) return s;
-  if (s === "#nice") return `.${scopeClass}`;
-  if (s.startsWith("#nice")) return `.${scopeClass}${s.slice("#nice".length)}`;
+  const suffix = stripArticleRootSelector(s);
+  if (suffix != null) return `.${scopeClass}${suffix}`;
   return `.${scopeClass} ${s}`;
 }
 

@@ -7,6 +7,7 @@ import {typesetMath} from "../../markdown/mathjax.ts";
 import {modelIdFromElement, SELECTOR_PRIORITY} from "../StylePanel/elementMap.ts";
 import {getPreviewMode} from "./previewModes.ts";
 import {buildMarkdownCss} from "../../markdown/codeThemes.ts";
+import {ARTICLE_BOX_ID, ARTICLE_ROOT_ID} from "../../articleRoot.ts";
 
 interface Props {
   content: string;
@@ -20,7 +21,7 @@ export interface PreviewHandle {
 
 const RENDER_THROTTLE_MS = 100;
 
-// 实时预览：注入主题层样式 + 渲染 HTML 到 #nice，自适应占满预览区宽度。
+// 实时预览：注入主题层样式 + 渲染 HTML 到文章根容器，自适应占满预览区宽度。
 // 点击预览元素 → 识别 model id → 打开样式面板。
 const Preview = forwardRef<PreviewHandle, Props>(
   ({content, markdownThemeId}, ref) => {
@@ -65,7 +66,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
     }, [content]);
 
     useEffect(() => {
-      const root = document.getElementById("nice");
+      const root = document.getElementById(ARTICLE_ROOT_ID);
       if (!root || !html.includes("$")) {
         return;
       }
@@ -82,7 +83,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
     }, [selectedModelId]);
 
     function findEditableElement(target: Element): {element: Element; modelId: string} | null {
-      const root = document.getElementById("nice");
+      const root = document.getElementById(ARTICLE_ROOT_ID);
       if (!root) return null;
       for (const entry of SELECTOR_PRIORITY) {
         const element = target.closest(entry.selector);
@@ -131,7 +132,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
         style={{height: "100%", overflow: "auto", background: mode.width ? "var(--bg-secondary)" : "#fff"}}
       >
         <div
-          id="nice-rich-text-box"
+          id={ARTICLE_BOX_ID}
           style={{
             boxSizing: "border-box",
             width: mode.width ? `${mode.width}px` : "100%",
@@ -145,7 +146,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
           onMouseMove={onMouseMove}
           onMouseLeave={onMouseLeave}
         >
-          <section id="nice" dangerouslySetInnerHTML={{__html: html}} />
+          <section id={ARTICLE_ROOT_ID} dangerouslySetInnerHTML={{__html: html}} />
         </div>
       </div>
     );
