@@ -24,3 +24,22 @@ test("双等号高亮语法渲染为 mark", () => {
   assert.match(html, /<p data-line="0">这是一段<mark>高亮<\/mark>文本。<\/p>/);
   assert.doesNotMatch(html, /==高亮==/);
 });
+
+test("原始 HTML 中的脚本和事件属性不会进入渲染结果", () => {
+  const html = render('<img src="https://example.com/a.png" onerror="alert(1)"><script>alert(1)</script><a href="javascript:alert(1)" onclick="alert(2)">链接</a>');
+
+  assert.match(html, /<img src="https:\/\/example\.com\/a\.png"/);
+  assert.match(html, />链接<\/a>/);
+  assert.doesNotMatch(html, /<script/i);
+  assert.doesNotMatch(html, /onerror/i);
+  assert.doesNotMatch(html, /onclick/i);
+  assert.doesNotMatch(html, /javascript:/i);
+});
+
+test("image-flow 图片语法中的 alt 不会注入额外属性", () => {
+  const html = render('<![封面" onerror="alert(1)](https://example.com/a.png)>');
+
+  assert.match(html, /class="imageflow-img"/);
+  assert.match(html, /alt="封面&quot; onerror=&quot;alert\(1\)"/);
+  assert.doesNotMatch(html, /\sonerror=(["'])/i);
+});

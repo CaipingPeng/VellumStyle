@@ -22,6 +22,7 @@ import imageFlow from "./plugins/image-flow.ts";
 import multiQuote from "./plugins/multi-quote.ts";
 import imsize from "./plugins/imsize.ts";
 import dataLine from "./data-line.ts";
+import {sanitizeRenderedHtml} from "./sanitize.ts";
 
 // 代码高亮：输出 <pre class="custom">，并把换行/空格转成 <br/> 和 &nbsp;，
 // 这样粘贴到微信编辑器后排版不丢失（微信会吞掉普通空格和换行）。
@@ -73,5 +74,5 @@ parser
 parser.use(dataLine); // 14. 顶层块注入 data-line（同步滚动用）
 
 export function render(markdown: string): string {
-  return parser.render(markdown);
+  return sanitizeRenderedHtml(parser.render(markdown));
 }

@@ -5,6 +5,7 @@ use crate::config::load_wechat_config;
 use reqwest::redirect::Policy;
 use serde::Deserialize;
 use std::fs;
+use std::io;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::path::Path;
 use std::sync::Mutex;
@@ -184,7 +185,22 @@ async fn download_remote_image(raw_url: &str) -> Result<DownloadedImage, String>
 
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(20))
-        .redirect(Policy::limited(5))
+        .redirect(Policy::custom(|attempt| {
+            if attempt.previous().len() >= 5 {
+                return attempt.error(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "远程图片重定向次数过多",
+                ));
+            }
+            if is_allowed_redirect_target(attempt.url()) {
+                attempt.follow()
+            } else {
+                attempt.error(io::Error::new(
+                    io::ErrorKind::PermissionDenied,
+                    "远程图片重定向到了不支持的地址",
+                ))
+            }
+        }))
         .build()
         .map_err(|e| format!("创建下载客户端失败：{e}"))?;
 
@@ -277,6 +293,10 @@ async fn upload_image_bytes(
 }
 
 fn ensure_public_remote_url(target: &url::Url) -> Result<(), String> {
+    if !matches!(target.scheme(), "http" | "https") {
+        return Err("仅支持 http/https 图片".into());
+    }
+
     let host = target.host_str().unwrap_or("");
     if host.eq_ignore_ascii_case("localhost") {
         return Err("不支持下载本机地址图片".into());
@@ -289,6 +309,10 @@ fn ensure_public_remote_url(target: &url::Url) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn is_allowed_redirect_target(target: &url::Url) -> bool {
+    ensure_public_remote_url(target).is_ok()
 }
 
 fn is_private_or_local_ip(ip: IpAddr) -> bool {
@@ -572,5 +596,26 @@ pub async fn add_draft(
                 Err(msg)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_allowed_redirect_target;
+
+    #[test]
+    fn redirect_targets_must_remain_public_http_urls() {
+        assert!(is_allowed_redirect_target(
+            &url::Url::parse("https://example.com/image.png").unwrap()
+        ));
+        assert!(!is_allowed_redirect_target(
+            &url::Url::parse("http://127.0.0.1/admin").unwrap()
+        ));
+        assert!(!is_allowed_redirect_target(
+            &url::Url::parse("http://localhost/admin").unwrap()
+        ));
+        assert!(!is_allowed_redirect_target(
+            &url::Url::parse("file:///etc/passwd").unwrap()
+        ));
     }
 }

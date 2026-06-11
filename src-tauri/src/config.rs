@@ -4,7 +4,7 @@
 // 缺文件/缺字段时返回空凭证，由 upload 层返回 NOT_CONFIGURED，前端弹设置引导。
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -43,6 +43,30 @@ fn load_config(app: &AppHandle) -> AppConfig {
     AppConfig::default()
 }
 
+fn write_private_file(path: &Path, content: &str) -> Result<(), String> {
+    #[cfg(unix)]
+    {
+        use std::io::Write;
+        use std::os::unix::fs::OpenOptionsExt;
+
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .mode(0o600)
+            .open(path)
+            .map_err(|e| format!("写入配置失败：{e}"))?;
+        file.write_all(content.as_bytes())
+            .map_err(|e| format!("写入配置失败：{e}"))?;
+        return Ok(());
+    }
+
+    #[cfg(not(unix))]
+    {
+        std::fs::write(path, content).map_err(|e| format!("写入配置失败：{e}"))
+    }
+}
+
 /// 读取微信凭证。无配置时返回空 WechatConfig（不报错）。
 pub fn load_wechat_config(app: &AppHandle) -> WechatConfig {
     load_config(app).wechat
@@ -70,8 +94,7 @@ pub fn save_config(app: AppHandle, app_id: String, app_secret: String) -> Result
         },
     };
     let yaml = serde_yaml::to_string(&raw).map_err(|e| format!("序列化配置失败：{e}"))?;
-    std::fs::write(dir.join("config.local.yaml"), yaml)
-        .map_err(|e| format!("写入配置失败：{e}"))?;
+    write_private_file(&dir.join("config.local.yaml"), &yaml)?;
 
     // 微信凭证可能变了，旧 access_token 作废，清缓存下次重取。
     crate::wechat::clear_token_blocking();

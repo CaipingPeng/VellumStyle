@@ -123,12 +123,16 @@ pub fn list_user_themes(app: AppHandle) -> Vec<UserTheme> {
         if !is_json {
             continue;
         }
-        let Some(id) = path.file_stem().and_then(|s| s.to_str()).map(|s| s.to_string()) else {
+        let Some(id) = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_string())
+        else {
             continue;
         };
         if let Ok(text) = std::fs::read_to_string(&path) {
             if let Some((name, model)) = parse_theme_content(&text, &id) {
-                themes.push(UserTheme {id, name, model});
+                themes.push(UserTheme { id, name, model });
             }
         }
     }
@@ -142,8 +146,8 @@ pub fn save_user_theme(app: AppHandle, id: String, model_json: String) -> Result
     let dir = themes_dir(&app).ok_or_else(|| "无法定位数据目录".to_string())?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("创建主题目录失败：{e}"))?;
     // 校验是合法 JSON
-    let mut model_value =
-        serde_json::from_str::<serde_json::Value>(&model_json).map_err(|e| format!("非法 JSON：{e}"))?;
+    let mut model_value = serde_json::from_str::<serde_json::Value>(&model_json)
+        .map_err(|e| format!("非法 JSON：{e}"))?;
     normalize_article_root_value(&mut model_value);
     let normalized_model_json = serde_json::to_string(&model_value).map_err(|e| e.to_string())?;
     let safe_id = sanitize_id(&id);
@@ -217,7 +221,10 @@ mod tests {
     #[test]
     fn keeps_non_root_names_that_start_with_nice() {
         assert_eq!(normalize_article_root_text("#nice-card p"), "#nice-card p");
-        assert_eq!(normalize_article_root_text("#nice_legacy p"), "#nice_legacy p");
+        assert_eq!(
+            normalize_article_root_text("#nice_legacy p"),
+            "#nice_legacy p"
+        );
     }
 
     #[test]

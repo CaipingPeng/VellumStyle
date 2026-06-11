@@ -79,7 +79,8 @@ pub fn resolve_import_media(
     resource_root: Option<String>,
     raw_url: String,
 ) -> Result<ResolvedMedia, String> {
-    let base_dir = fs::canonicalize(base_dir).map_err(|e| format!("解析 Markdown 目录失败：{e}"))?;
+    let base_dir =
+        fs::canonicalize(base_dir).map_err(|e| format!("解析 Markdown 目录失败：{e}"))?;
     let resource_root = resource_root
         .filter(|v| !v.trim().is_empty())
         .map(fs::canonicalize)
@@ -195,7 +196,11 @@ fn push_existing_image(candidates: &mut Vec<String>, path: PathBuf) {
     }
 }
 
-fn search_by_filename(root: &Path, filename: &str, candidates: &mut Vec<String>) -> Result<(), String> {
+fn search_by_filename(
+    root: &Path,
+    filename: &str,
+    candidates: &mut Vec<String>,
+) -> Result<(), String> {
     let mut stack = vec![root.to_path_buf()];
     let mut visited = 0usize;
 

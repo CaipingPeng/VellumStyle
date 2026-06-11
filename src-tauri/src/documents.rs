@@ -71,7 +71,11 @@ fn scan(dir: &Path, base: &Path) -> Vec<DocNode> {
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {
-            let name = path.file_name().and_then(|s| s.to_str()).unwrap_or("").to_string();
+            let name = path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+                .to_string();
             dirs.push(DocNode {
                 name,
                 path: rel_path(base, &path),
@@ -87,7 +91,11 @@ fn scan(dir: &Path, base: &Path) -> Vec<DocNode> {
             if !is_md {
                 continue;
             }
-            let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_string();
+            let name = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+                .to_string();
             files.push(DocNode {
                 name,
                 path: rel_path(base, &path),

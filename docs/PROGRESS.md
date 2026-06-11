@@ -590,7 +590,7 @@ npx tsc --noEmit         # 类型检查
 ### 爬取 mdnice 主题
 
 - **两个 API**：`GET /themes?pageSize=12&currentPage=N` 翻页拿全部主题元信息（`themeId`/`name`，css 为 null，无 total 字段，翻到空页为止）；`PUT /articles/styles` body `{outId, themeId}` 取单主题完整 `{styleModelList, style, dataVersion}`（与抓包 `草原绿.json` 同构）。需 `authorization: Bearer <token>` + `referer: https://editor.mdnice.com/`。
-- **共 30 个主题**，脚本 `crawl_mdnice_themes.py`（桌面，一次性工具，token 会过期）翻页 + 逐个取 model + 存 `{name, model}` JSON，0.3s 间隔。付费主题（如奇点 price=100）也一并收录（用户自担版权风险）。
+- **共 30 个主题**，脚本 `crawl_mdnice_themes.py`（桌面，一次性工具，token 会过期）翻页 + 逐个取 model + 存 `{name, model}` JSON，0.3s 间隔。该批主题来源于第三方在线服务，开源发布时需保留清晰的来源说明与权利人联系/下架处理方式。
 - 产物存 `src/themes/presets/mdnice-{themeId}.json`，文件名作 id、`name` 字段存中文名。
 
 ### 中文显示名支持

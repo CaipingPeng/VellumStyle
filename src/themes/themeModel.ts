@@ -16,13 +16,33 @@ export interface StyleModel {
   selectors?: string[];
 }
 
-// 宽容校验：是数组、每项有 string id 与 styles 数组。未知字段忽略，方便兼容外部/历史主题。
+function isStyleKey(data: unknown): data is StyleKey {
+  const key = data as StyleKey;
+  return (
+    key != null &&
+    typeof key.selector === "string" &&
+    typeof key.key === "string" &&
+    (key.format === null || typeof key.format === "string")
+  );
+}
+
+function isStyleItem(data: unknown): data is StyleItem {
+  const item = data as StyleItem;
+  if (item == null || typeof item.id !== "string") return false;
+  if (item.value != null && typeof item.value !== "string") return false;
+  if (item.keys != null && (!Array.isArray(item.keys) || !item.keys.every(isStyleKey))) return false;
+  if (item.children != null && (!Array.isArray(item.children) || !item.children.every(isStyleItem))) return false;
+  return true;
+}
+
+// 宽容校验：未知字段忽略，但会递归校验 model/styles/keys/children 的核心形态，避免坏主题导入后编译崩溃。
 export function validateModel(data: unknown): data is StyleModel[] {
   if (!Array.isArray(data)) return false;
   return data.every(
     (m) =>
       m != null &&
       typeof (m as StyleModel).id === "string" &&
-      Array.isArray((m as StyleModel).styles),
+      Array.isArray((m as StyleModel).styles) &&
+      (m as StyleModel).styles.every(isStyleItem),
   );
 }

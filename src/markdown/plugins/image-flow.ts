@@ -49,12 +49,21 @@ export default function imageFlow(md: MarkdownIt, opt?: Partial<ImageFlowOptions
     for (const content of contents) {
       const altMatch = content.match(/\[([^[\]]*)\]/);
       const srcMatch = content.match(/[^[]*\(([^()]*)\)[^\]]*/);
-      const alt = altMatch ? altMatch[1] : "";
-      const src = srcMatch ? srcMatch[1] : "";
+      const alt = md.utils.escapeHtml(altMatch ? altMatch[1] : "");
+      const rawSrc = srcMatch ? srcMatch[1].trim() : "";
+      const src = stateSafeLink(md, rawSrc);
+      if (!src) {
+        continue;
+      }
       wrapped += `<section class="imageflow-layer3"><img alt="${alt}" src="${src}" class="imageflow-img" /></section>`;
     }
     return open + wrapped + close;
   };
 
   md.block.ruler.before("paragraph", "imageFlow", tokenize);
+}
+
+function stateSafeLink(md: MarkdownIt, rawSrc: string): string {
+  const src = md.normalizeLink(rawSrc);
+  return md.validateLink(src) ? md.utils.escapeHtml(src) : "";
 }
