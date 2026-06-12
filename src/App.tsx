@@ -18,7 +18,13 @@ import {uploadImage, uploadLocalImage, type UploadError} from "./utils/upload.ts
 import {createScrollSync} from "./utils/syncScroll.ts";
 import {createDocument, writeDocument, type DocNode} from "./utils/documents.ts";
 import {isTauriRuntime} from "./utils/tauriEnv.ts";
+import {
+  checkStartupOutboundIp,
+  formatOutboundIpChangedMessage,
+  shouldRunStartupOutboundIpCheck,
+} from "./utils/outboundIpMonitor.ts";
 import {defaultWindowIcon} from "@tauri-apps/api/app";
+import {invoke} from "@tauri-apps/api/core";
 import {getCurrentWindow} from "@tauri-apps/api/window";
 import {PanelLeft} from "lucide-react";
 import defaultContent from "./content.md?raw";
@@ -155,6 +161,29 @@ export default function App() {
         console.warn("设置窗口图标失败：", err);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // 桌面端完整启动后后台检查一次出口 IP；变化时提醒用户更新公众号 IP 白名单。
+  useEffect(() => {
+    if (!isTauriRuntime() || !shouldRunStartupOutboundIpCheck()) {
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await checkStartupOutboundIp(() => invoke<string>("get_outbound_ip"));
+        if (!cancelled && result.status === "changed") {
+          window.alert(formatOutboundIpChangedMessage(result.previousIp, result.currentIp));
+        }
+      } catch (err) {
+        console.warn("启动时自动检测出口 IP 失败：", err);
+      }
+    })();
+
     return () => {
       cancelled = true;
     };

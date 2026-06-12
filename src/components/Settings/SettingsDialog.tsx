@@ -4,6 +4,7 @@ import {Check, Copy, Eye, EyeOff, KeyRound, LockKeyhole, Network, RefreshCw, Sav
 import Dialog from "../ui/Dialog.tsx";
 import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
+import {rememberOutboundIp} from "../../utils/outboundIpMonitor.ts";
 
 interface Props {
   open: boolean;
@@ -106,6 +107,7 @@ export default function SettingsDialog({open, onClose}: Props) {
     setCopyStatus("idle");
     try {
       const ip = await invoke<string>("get_outbound_ip");
+      rememberOutboundIp(ip);
       setOutboundIp(ip);
       setIpStatus("ok");
       toast.show("已获取当前出口 IP", "info");
