@@ -12,7 +12,7 @@
     "generate:code-themes": "node scripts/generate-hljs-themes.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
+    "tauri": "tauri dev",
     "test": "node --import tsx --import ./src/test/setupDom.ts --test \"src/**/*.test.ts\""
   },
   "dependencies": {

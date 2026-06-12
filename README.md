@@ -1,5 +1,7 @@
 # 文澜排版 VellumStyle
 
+![image-20260612220637768](C:\Users\Administrator\Desktop\微信公众号排版工具\assets\image-20260612220637768.png)
+
 文澜排版是一个本地优先的 Markdown 到微信公众号排版桌面工具。它把 Markdown 写作、公众号样式预览、微信兼容富文本复制、图片上传到微信官方素材库、发布到公众号草稿箱、多文档管理和可视化主题调整放在同一个 Tauri 桌面应用里。
 
 项目的核心思路来自 mdnice/markdown-nice 的排版工作流，但实现已经重写为 React + TypeScript + Tauri v2，并补上了本地文件、微信官方图床、草稿箱发布和结构化主题模型。
@@ -28,135 +30,52 @@
 
 ## 核心功能
 
-- **Markdown 编辑与实时预览**：左侧使用 CodeMirror 6 编辑，右侧实时渲染公众号文章样式。
-- **复制到微信**：把预览 DOM 转成微信编辑器可识别的 `text/html`，并用 `juice` 将 CSS 内联到元素 `style`。
-- **同步滚动**：Markdown 顶层块带 `data-line` 行号，编辑器与预览区按源码行双向同步。
-- **微信官方图床**：通过 Tauri Rust 命令代理调用微信公众号永久素材接口，上传成功后获得 `mmbiz.qpic.cn` 链接。
-- **mmbiz 图片预览代理**：预览时使用 Tauri 自定义 `wximg` 协议带微信 Referer 拉图，复制前自动还原为原始 mmbiz 链接。
+- **Markdown 编辑与实时预览**：左侧使用 CodeMirror 6 编辑，右侧支持实时渲染移动端、web端公众号文章样式。
+- **微信官方图床**：通过 Tauri Rust 命令代理调用微信公众号永久素材接口，上传成功后获得 `mmbiz.qpic.cn` 链接。这样做规避了mdnice等工具使用第三方图床，带来图床跑路，文章作废的风险。
+- **Markdown 文章导入**：选择外部 `.md` / `.markdown` 文件，可以将文章导入，并自动扫描文章中远程图片链接，下载并上传到微信素材库并替换链接；对于本地图片链接，可以自动扫描附件目录，并上传到微信素材库并替换链接。
+- **mmbiz 图片预览代理**：预览时如果不使用代理，永久素材库的图片链接将无法显示（微信会验证图片是不是在微信域名打开的）。因此本工具使用 Tauri 自定义 `wximg` 协议带微信 Referer 拉图，复制前自动还原为原始 mmbiz 链接。
 - **发布到公众号草稿箱**：上传封面图，校验正文图片均已进入微信素材域，再调用 `draft/add` 写入公众号草稿箱。
-- **多文档管理**：应用数据目录下维护真实 `documents/` 文件树，支持新建、重命名、删除、移动和自动保存。
-- **Markdown 导入**：选择外部 `.md` / `.markdown` 文件，扫描本地或远程图片，上传到微信素材库并替换链接。
+- **复制到微信**：如果不想上传到草稿箱，也可以在浏览器打开公众号文章编辑页面，然后点击“复制”，把预览 DOM 转成微信编辑器可识别的 `text/html`，并用 `juice` 将 CSS 内联到元素 `style`。粘贴到编辑页面后将保留在工具中渲染出来的样式。
 - **主题选择与收藏**：内置 40+ 排版主题和 250+ Highlight.js/Base16 代码主题，支持搜索、分页、收藏和置顶。
 - **结构化主题模型**：主题不是裸 CSS，而是 `StyleModel`；运行时编译成 CSS，预览元素可点击后在样式面板中调整。
+- **多文档管理**：应用数据目录下维护真实 `documents/` 文件树，支持新建、重命名、删除、移动和自动保存。
+- **IP 白名单辅助**：从设置页一键获取当前出口 IPv4 地址并复制到剪贴板，方便添加到公众号后台白名单。
+- **同步滚动**：Markdown 顶层块带 `data-line` 行号，编辑器与预览区按源码行双向同步。
 - **本地优先**：文档、主题和微信凭证都保存在本机 Tauri 应用数据目录中，不依赖远端服务器。
 
-## 技术栈
+## 软件功能全量使用前提：微信公众号AppID、Secrect、IP地址白名单配置
 
-| 层级 | 技术 |
-| --- | --- |
-| 前端框架 | React 18 + TypeScript |
-| 构建工具 | Vite 6 |
-| 桌面运行时 | Tauri v2 |
-| 后端能力 | Rust 1.77.2+ Tauri Commands |
-| 编辑器 | CodeMirror 6 / `@uiw/react-codemirror` |
-| 状态管理 | Zustand + persist |
-| 样式 | Tailwind CSS 3，禁用 preflight 以避免污染预览区 |
-| Markdown | markdown-it + 自定义插件链 |
-| 数学公式 | MathJax 3 |
-| 代码高亮 | highlight.js 主题生成与作用域化 |
-| CSS 内联 | juice |
-| HTML 清洗 | DOMPurify |
-| 动效与图标 | framer-motion + lucide-react |
-| 配置格式 | YAML / JSON |
-| 测试 | Node.js test runner + tsx + jsdom，Rust `cargo test` |
+> 微信相关能力只在桌面模式下完整可用。
 
-## 运行环境
+1. 获取本机网络出口公网IP
 
-本项目可以以两种模式运行：
+   打开软件，点击“设置”，进入设置页。
 
-| 模式 | 命令 | 能力范围 |
-| --- | --- | --- |
-| Web 开发模式 | `npm run dev` | 编辑、预览、主题、复制等纯前端能力；Tauri 命令不可用，文件树使用内存 fallback |
-| 桌面开发模式 | `npm run tauri dev` | 完整能力：本地文件、微信图床、导入、主题目录、草稿箱发布、mmbiz 代理 |
+   ![image-20260612221622544](C:\Users\Administrator\Desktop\微信公众号排版工具\assets\image-20260612221622544.png)
 
-推荐开发环境：
+   接着，在设置页先点`获取出口IP`，等获取到IP后，点击`复制`按钮。操作顺序如下图所示。
 
-- Node.js 20 或更高版本。
-- npm 10 或更高版本。
-- Rust 1.77.2 或更高版本。
-- Windows 桌面构建需要 WebView2 Runtime 和 Microsoft C++ Build Tools。
-- macOS / Linux 构建请按 Tauri v2 官方前置依赖安装系统库。
-- 使用微信图床或草稿箱发布时，需要一个已认证的微信公众号服务号 AppID / AppSecret，并正确配置 IP 白名单。
+   ![image-20260612221727234](C:\Users\Administrator\Desktop\微信公众号排版工具\assets\image-20260612221727234.png)
 
-## 快速开始
+2. 去`微信开发者平台`填写IP白名单，并获取`AppID`和`AppSecret`
 
-### 1. 安装依赖
+   打开微信开发者平台网页（https://developers.weixin.qq.com/platform），然后扫码登录。
 
-```bash
-npm install
-```
+   ![image-20260612222441002](C:\Users\Administrator\Desktop\微信公众号排版工具\assets\image-20260612222441002.png)
 
-### 2. 启动 Web 开发模式
+   登录后点击右上角`头像`，点`账号管理`
 
-```bash
-npm run dev
-```
+   ![image-20260612222727116](C:\Users\Administrator\Desktop\微信公众号排版工具\assets\image-20260612222727116.png)
 
-默认端口是 `5173`，并且 Vite 配置了 `strictPort: true`。如果端口被占用，需要先关闭占用进程，或临时修改 `vite.config.ts` 中的端口。
+   在接下来的页面里按照如下图示步骤打开公众号详情页。
 
-Web 模式适合调试前端 UI、Markdown 渲染、主题和复制逻辑。它没有真实 Tauri 后端，因此微信图床、文件选择器、本地文档目录、草稿箱发布等桌面能力不可用。
+   ![image-20260612222908145](C:\Users\Administrator\Desktop\微信公众号排版工具\assets\image-20260612222908145.png)
 
-### 3. 启动桌面开发模式
+   在详情页的下图所示几个地方，可以分别获取到`AppID`、`APPSecrect`，并且可以添加`API IP`白名单。
 
-```bash
-npm run tauri dev
-```
+   ![image-20260612223135935](C:\Users\Administrator\Desktop\微信公众号排版工具\assets\image-20260612223135935.png)
 
-Tauri 会先执行 `npm run dev:web` 启动 Vite，再打开桌面窗口。完整功能请优先用这个模式验证。
-
-### 4. 执行基础检查
-
-```bash
-npx tsc -b --noEmit
-npm test
-npm run build
-cargo test --manifest-path src-tauri/Cargo.toml
-```
-
-`npm test` 覆盖前端纯逻辑与 DOM 逻辑；`cargo test` 覆盖 Rust 侧路径校验、主题选择器迁移、远程图片安全限制等逻辑。
-
-## 微信图床与草稿箱配置
-
-微信相关能力只在桌面模式下完整可用。
-
-### 需要准备什么
-
-1. 已认证的微信公众号服务号。
-2. 公众号后台的 AppID 和 AppSecret。
-3. 在「微信公众平台 -> 设置与开发 -> 基本配置」中配置当前机器出口 IP 白名单。
-4. 图片需为 JPG、PNG 或 GIF，单张不超过 10MB。
-
-### 在应用内配置
-
-打开桌面应用后，点击右上角「设置」，填入 AppID 和 AppSecret，保存即可。
-
-保存后凭证会写入 Tauri 应用数据目录下的 `config.local.yaml`。前端不会直接持有 AppSecret，上传和发布均通过 Rust 命令读取本机配置后代理调用微信接口。
-
-### 仓库中的配置模板
-
-根目录的 `config.yaml` 是示例模板：
-
-```yaml
-server:
-  port: 8787
-
-wechat:
-  appId: ""
-  appSecret: ""
-```
-
-真实凭证不要提交到仓库。`.gitignore` 已忽略 `config.local.yaml`、`.env`、`*.local` 等本地敏感文件。
-
-### 微信接口使用方式
-
-| 能力 | 微信接口 | 返回值 | 代码入口 |
-| --- | --- | --- | --- |
-| 正文图片上传 | `material/add_material?type=image` | 永久 `mmbiz` 图片 URL | `src-tauri/src/wechat.rs` 的 `upload_image` / `upload_local_image` / `upload_remote_image` |
-| 封面图上传 | `material/add_material?type=image` | `media_id` | `upload_thumb` / `upload_remote_thumb` |
-| 发布到草稿箱 | `draft/add` | 草稿 `media_id` | `add_draft` |
-| access_token | `cgi-bin/token` | 缓存 token | `get_access_token` |
-
-Rust 侧会缓存 `access_token`，提前 5 分钟过期，并在微信返回 `40001`、`42001`、`40014` 等 token 错误时清缓存重试一次。
+3. 回到软件设置页，填写`AppID`和`AppSecret`后保存。
 
 ## 日常使用流程
 
@@ -170,7 +89,7 @@ Rust 侧会缓存 `access_token`，提前 5 分钟过期，并在微信返回 `4
 
 ### 上传图片
 
-点击「上传图片」选择本地图片，或直接在编辑器中粘贴图片。上传成功后会在光标处插入：
+点击「上传图片」选择本地图片，或直接在编辑器中使用Ctrl+V粘贴图片。上传成功后会在光标处插入：
 
 ```markdown
 ![](http://mmbiz.qpic.cn/...)
@@ -211,6 +130,85 @@ Rust 侧会缓存 `access_token`，提前 5 分钟过期，并在微信返回 `4
 点击「发布」，填写标题并选择封面图。封面可以来自本地图片，也可以从正文中已经上传到微信素材域的图片里选择。
 
 发布前会检查正文图片，如果存在本地图片或非 mmbiz 远程图片，会提示先上传图片。发布成功后，请进入公众号后台检查排版，再手动群发。
+
+## 技术栈
+
+| 层级 | 技术 |
+| --- | --- |
+| 前端框架 | React 18 + TypeScript |
+| 构建工具 | Vite 6 |
+| 桌面运行时 | Tauri v2 |
+| 后端能力 | Rust 1.77.2+ Tauri Commands |
+| 编辑器 | CodeMirror 6 / `@uiw/react-codemirror` |
+| 状态管理 | Zustand + persist |
+| 样式 | Tailwind CSS 3，禁用 preflight 以避免污染预览区 |
+| Markdown | markdown-it + 自定义插件链 |
+| 数学公式 | MathJax 3 |
+| 代码高亮 | highlight.js 主题生成与作用域化 |
+| CSS 内联 | juice |
+| HTML 清洗 | DOMPurify |
+| 动效与图标 | framer-motion + lucide-react |
+| 配置格式 | YAML / JSON |
+| 测试 | Node.js test runner + tsx + jsdom，Rust `cargo test` |
+
+## 运行环境
+
+本项目可以以两种模式运行：
+
+| 模式 | 命令 | 能力范围 |
+| --- | --- | --- |
+| Web 开发模式 | `npm run dev` | 编辑、预览、主题、复制等纯前端能力；Tauri 命令不可用，文件树使用内存 fallback |
+| 桌面开发模式 | `npm run tauri dev`或`npx tauri dev` | 完整能力：本地文件、微信图床、导入、主题目录、草稿箱发布、mmbiz 代理 |
+
+推荐开发环境：
+
+- Node.js 20 或更高版本。
+- npm 10 或更高版本。
+- Rust 1.77.2 或更高版本。
+- Windows 桌面构建需要 WebView2 Runtime 和 Microsoft C++ Build Tools。
+- macOS / Linux 构建请按 Tauri v2 官方前置依赖安装系统库。
+- 使用微信图床或草稿箱发布时，需要一个已认证的微信公众号服务号 AppID / AppSecret，并正确配置 IP 白名单。
+
+## 快速开始
+
+### 1. 安装依赖
+
+```bash
+npm install
+```
+
+### 2. 启动 Web 开发模式
+
+```bash
+npm run dev
+```
+
+默认端口是 `5173`，并且 Vite 配置了 `strictPort: true`。如果端口被占用，需要先关闭占用进程，或临时修改 `vite.config.ts` 中的端口。
+
+Web 模式适合调试前端 UI、Markdown 渲染、主题和复制逻辑。它没有真实 Tauri 后端，因此微信图床、文件选择器、本地文档目录、草稿箱发布等桌面能力不可用。
+
+### 3. 启动桌面开发模式
+
+```bash
+npm run tauri dev
+或
+npx tauri dev
+```
+
+Tauri 会先执行 `npm run dev:web` 启动 Vite，再打开桌面窗口。完整功能请优先用这个模式验证。
+
+### 4. 执行基础检查
+
+```bash
+npx tsc -b --noEmit
+npm test
+npm run build
+cargo test --manifest-path src-tauri/Cargo.toml
+```
+
+`npm test` 覆盖前端纯逻辑与 DOM 逻辑；`cargo test` 覆盖 Rust 侧路径校验、主题选择器迁移、远程图片安全限制等逻辑。
+
+
 
 ## 项目结构
 
@@ -287,6 +285,7 @@ Rust 侧会缓存 `access_token`，提前 5 分钟过期，并在微信返回 `4
 │   ├── PROGRESS.md                   # 历史实现进度与决策记录
 │   ├── learn/                        # 代码阅读说明
 │   └── superpowers/                  # 设计与实现计划归档
+├── logos/                            # 应用 Logo SVG 源图与生成脚本
 ├── config.yaml                       # 微信配置示例模板
 ├── package.json                      # 前端脚本与依赖
 ├── vite.config.ts                    # Vite 构建配置
@@ -503,6 +502,7 @@ Rust 侧 `documents.rs` 中所有文档路径都是相对 `documents/` 的路径
 | `npm run tauri build` | 构建桌面安装包 |
 | `npm test` | 运行前端测试 |
 | `npm run generate:code-themes` | 重新生成 Highlight.js 代码主题集合 |
+| `npm run generate:logos` | 根据 SVG 源图生成各尺寸 PNG 格式应用图标 |
 | `npx tsc -b --noEmit` | 只做 TypeScript 类型检查 |
 | `cargo check --manifest-path src-tauri/Cargo.toml` | Rust 快速检查 |
 | `cargo test --manifest-path src-tauri/Cargo.toml` | Rust 测试 |
@@ -598,6 +598,14 @@ npm run generate:code-themes
 ```
 
 该脚本会读取 `highlight.js` 主题资源，生成 `src/markdown/generatedHljsThemes.ts`。当升级 highlight.js 或需要新增代码主题时使用。
+
+### 重新生成应用图标
+
+```bash
+npm run generate:logos
+```
+
+该脚本会读取 `logos/` 目录下的 SVG 源图，生成各尺寸 PNG 格式的图标文件，用于桌面端打包。当修改应用 Logo 后使用。
 
 ### 抓取 mdnice 主题
 
