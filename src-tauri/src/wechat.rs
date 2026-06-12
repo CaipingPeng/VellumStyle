@@ -26,6 +26,15 @@ struct TokenCache {
 
 static TOKEN_CACHE: Mutex<Option<TokenCache>> = Mutex::new(None);
 
+const OUTBOUND_IP_ENDPOINTS: [&str; 4] = [
+    "https://ifconfig.me/ip",
+    "https://icanhazip.com",
+    "http://ipinfo.io/ip",
+    "https://checkip.amazonaws.com",
+];
+
+const WECHAT_IP_WHITELIST_HINT: &str = "请去微信后台 IP 白名单设置：在微信公众平台「设置与开发 → 基本配置 → IP 白名单」添加/更换当前出口 IP；可在本软件设置页一键获取出口 IP。";
+
 #[derive(Deserialize)]
 struct TokenResp {
     access_token: Option<String>,
@@ -66,13 +75,11 @@ async fn fetch_access_token(app_id: &str, app_secret: &str) -> Result<String, St
             });
             Ok(token)
         }
-        None => Err(format!(
-            "获取 access_token 失败：{} {}",
-            data.errcode.unwrap_or(0),
-            data.errmsg.unwrap_or_default()
-        )
-        .trim()
-        .to_string()),
+        None => Err(format_wechat_error(
+            data.errcode,
+            &data.errmsg.unwrap_or_default(),
+            "获取 access_token 失败",
+        )),
     }
 }
 
@@ -92,6 +99,89 @@ async fn get_access_token(app_id: &str, app_secret: &str) -> Result<String, Stri
 pub fn clear_token_blocking() {
     let mut cache = TOKEN_CACHE.lock().unwrap();
     *cache = None;
+}
+
+#[tauri::command]
+pub async fn get_outbound_ip() -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(8))
+        .local_address(IpAddr::V4(Ipv4Addr::UNSPECIFIED))
+        // IP 白名单需要本机直连出口；系统代理会显示代理节点 IP，和微信后台看到的不一致。
+        .no_proxy()
+        .build()
+        .map_err(|e| format!("创建出口 IP 查询客户端失败：{e}"))?;
+
+    let mut last_error = String::new();
+    for endpoint in OUTBOUND_IP_ENDPOINTS {
+        match client.get(endpoint).send().await {
+            Ok(resp) => {
+                if !resp.status().is_success() {
+                    last_error = format!("{endpoint} 返回 HTTP {}", resp.status());
+                    continue;
+                }
+                match resp.text().await {
+                    Ok(body) => match parse_outbound_ip_response(&body) {
+                        Ok(ip) => return Ok(ip),
+                        Err(msg) => last_error = format!("{endpoint}：{msg}"),
+                    },
+                    Err(e) => last_error = format!("{endpoint} 响应读取失败：{e}"),
+                }
+            }
+            Err(e) => last_error = format!("{endpoint} 请求失败：{e}"),
+        }
+    }
+
+    if last_error.is_empty() {
+        Err("获取出口 IP 失败，请检查网络后重试".into())
+    } else {
+        Err(format!("获取出口 IP 失败：{last_error}"))
+    }
+}
+
+fn parse_outbound_ip_response(body: &str) -> Result<String, String> {
+    let value = body.trim();
+    match value.parse::<IpAddr>() {
+        Ok(IpAddr::V4(ip)) => Ok(ip.to_string()),
+        Ok(IpAddr::V6(_)) => Err("出口 IP 服务返回的是 IPv6 地址，请重试获取 IPv4".to_string()),
+        Err(_) => Err("出口 IP 服务返回内容不是合法 IP".to_string()),
+    }
+}
+
+fn format_wechat_error(errcode: Option<i64>, errmsg: &str, context: &str) -> String {
+    let msg = errmsg.trim();
+    let detail = match (errcode, msg.is_empty()) {
+        (Some(code), false) => format!("{code} {msg}"),
+        (Some(code), true) => code.to_string(),
+        (None, false) => msg.to_string(),
+        (None, true) => String::new(),
+    };
+
+    let base = if detail.is_empty() || detail == context {
+        context.to_string()
+    } else {
+        format!("{context}：{detail}")
+    };
+
+    if is_wechat_ip_whitelist_error(errcode, msg) {
+        format!("{base}。{WECHAT_IP_WHITELIST_HINT}")
+    } else {
+        base
+    }
+}
+
+fn is_wechat_ip_whitelist_error(errcode: Option<i64>, errmsg: &str) -> bool {
+    if errcode == Some(40164) {
+        return true;
+    }
+
+    let lower = errmsg.to_ascii_lowercase();
+    lower.contains("invalid ip")
+        || lower.contains("not in whitelist")
+        || lower.contains("ip whitelist")
+        || lower.contains("ip white list")
+        || lower.contains("ip.white_list")
+        || lower.contains("white_list")
+        || lower.contains("白名单")
 }
 
 // 调微信 add_material（type=image）；返回永久 mmbiz 链接，errcode 时返回 (errcode, msg)。
@@ -124,7 +214,11 @@ async fn upload_to_wechat(
         Some(u) => Ok(u),
         None => Err((
             data.errcode,
-            data.errmsg.unwrap_or_else(|| "微信上传失败".into()),
+            format_wechat_error(
+                data.errcode,
+                &data.errmsg.unwrap_or_else(|| "微信上传失败".into()),
+                "微信上传失败",
+            ),
         )),
     }
 }
@@ -473,7 +567,11 @@ async fn upload_thumb_inner(
         Some(id) => Ok(id),
         None => Err((
             data.errcode,
-            data.errmsg.unwrap_or_else(|| "微信上传失败".into()),
+            format_wechat_error(
+                data.errcode,
+                &data.errmsg.unwrap_or_else(|| "微信上传失败".into()),
+                "微信上传失败",
+            ),
         )),
     }
 }
@@ -564,7 +662,11 @@ async fn add_draft_inner(
         Some(id) => Ok(id),
         None => Err((
             data.errcode,
-            data.errmsg.unwrap_or_else(|| "微信发布失败".into()),
+            format_wechat_error(
+                data.errcode,
+                &data.errmsg.unwrap_or_else(|| "微信发布失败".into()),
+                "微信发布失败",
+            ),
         )),
     }
 }
@@ -601,7 +703,10 @@ pub async fn add_draft(
 
 #[cfg(test)]
 mod tests {
-    use super::is_allowed_redirect_target;
+    use super::{
+        format_wechat_error, get_outbound_ip, is_allowed_redirect_target,
+        parse_outbound_ip_response, OUTBOUND_IP_ENDPOINTS,
+    };
 
     #[test]
     fn redirect_targets_must_remain_public_http_urls() {
@@ -617,5 +722,69 @@ mod tests {
         assert!(!is_allowed_redirect_target(
             &url::Url::parse("file:///etc/passwd").unwrap()
         ));
+    }
+
+    #[test]
+    fn whitelist_errors_get_a_specific_setup_hint() {
+        let msg = format_wechat_error(
+            Some(40164),
+            "invalid ip 203.0.113.42, not in whitelist",
+            "获取 access_token 失败",
+        );
+
+        assert!(msg.contains("40164"));
+        assert!(msg.contains("invalid ip 203.0.113.42"));
+        assert!(msg.contains("微信后台 IP 白名单"));
+        assert!(msg.contains("设置与开发"));
+        assert!(msg.contains("出口 IP"));
+    }
+
+    #[test]
+    fn non_whitelist_errors_keep_their_original_context() {
+        let msg = format_wechat_error(Some(40013), "invalid appid", "获取 access_token 失败");
+
+        assert_eq!(msg, "获取 access_token 失败：40013 invalid appid");
+    }
+
+    #[test]
+    fn outbound_ip_response_must_be_a_plain_ipv4_address() {
+        assert_eq!(
+            parse_outbound_ip_response(" 198.51.100.42\n").unwrap(),
+            "198.51.100.42"
+        );
+        assert!(parse_outbound_ip_response(" 2001:db8::8\n").is_err());
+        assert!(parse_outbound_ip_response("{\"ip\":\"198.51.100.42\"}").is_err());
+    }
+
+    #[test]
+    fn outbound_ip_endpoints_match_redundant_echo_services() {
+        assert_eq!(
+            OUTBOUND_IP_ENDPOINTS.as_slice(),
+            &[
+                "https://ifconfig.me/ip",
+                "https://icanhazip.com",
+                "http://ipinfo.io/ip",
+                "https://checkip.amazonaws.com",
+            ]
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "live network check for Windows proxy behavior"]
+    fn live_outbound_ip_matches_direct_curl() {
+        let curl = std::process::Command::new("curl.exe")
+            .args(["-s", "https://ifconfig.me/ip"])
+            .output()
+            .expect("curl.exe should run");
+        assert!(curl.status.success(), "curl.exe failed: {curl:?}");
+
+        let expected = String::from_utf8(curl.stdout)
+            .expect("curl output should be utf-8")
+            .trim()
+            .to_string();
+        let actual = tauri::async_runtime::block_on(get_outbound_ip()).unwrap();
+
+        assert_eq!(actual, expected);
     }
 }
