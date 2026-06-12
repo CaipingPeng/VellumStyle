@@ -147,7 +147,11 @@ export default function ImportMarkdownDialog({
         {progress && (
           <div className={statusClass}>
             <div className="flex items-center gap-2 font-semibold text-text">
-              <Loader2 size={14} className="animate-spin text-accent" />
+              {progress.phase === "done" ? (
+                <CheckCircle2 size={14} className="text-success" />
+              ) : (
+                <Loader2 size={14} className="animate-spin text-accent" />
+              )}
               {phaseText[progress.phase] || progress.phase}
             </div>
             {typeof progress.total === "number" && (

@@ -68,6 +68,7 @@ const ImportButton = forwardRef<ImportButtonHandle, Props>(
           setProgress,
         );
         setResult(next);
+        const needsImportReview = next.failed.length > 0 || next.unsupported.length > 0;
 
         // 不覆盖当前文档：在目录树落点新建（或覆盖）同名文档并打开。
         const name = docNameFromPath(next.markdownPath);
@@ -84,6 +85,9 @@ const ImportButton = forwardRef<ImportButtonHandle, Props>(
         await loadTree();
         await openDocument(newPath);
         toast.show(`已导入到「${name}」`, "info");
+        if (!needsImportReview) {
+          setOpenDialog(false);
+        }
       } catch (e) {
         const msg = typeof e === "string" ? e : (e as Error)?.message || "导入失败";
         setError(msg === "NOT_CONFIGURED" ? "尚未配置微信图床：请点右上角「设置」填写公众号 AppID/AppSecret。" : msg);
