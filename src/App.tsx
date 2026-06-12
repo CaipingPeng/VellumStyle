@@ -18,6 +18,7 @@ import {uploadImage, uploadLocalImage, type UploadError} from "./utils/upload.ts
 import {createScrollSync} from "./utils/syncScroll.ts";
 import {createDocument, writeDocument, type DocNode} from "./utils/documents.ts";
 import {isTauriRuntime} from "./utils/tauriEnv.ts";
+import {defaultWindowIcon} from "@tauri-apps/api/app";
 import {getCurrentWindow} from "@tauri-apps/api/window";
 import {PanelLeft} from "lucide-react";
 import defaultContent from "./content.md?raw";
@@ -136,6 +137,27 @@ export default function App() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 在桌面运行时显式应用默认图标，覆盖 dev 窗口/任务栏的运行时图标。
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const icon = await defaultWindowIcon();
+        if (!cancelled && icon) {
+          await getCurrentWindow().setIcon(icon);
+        }
+      } catch (err) {
+        console.warn("设置窗口图标失败：", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // 关窗前把当前文档落盘，防丢最后 800ms 编辑。
