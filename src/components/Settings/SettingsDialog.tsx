@@ -1,6 +1,6 @@
 import {useEffect, useState} from "react";
 import {invoke} from "@tauri-apps/api/core";
-import {Eye, EyeOff, KeyRound, LockKeyhole, Save, ShieldCheck} from "lucide-react";
+import {Check, Copy, Eye, EyeOff, KeyRound, LockKeyhole, Network, RefreshCw, Save, ShieldCheck} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
@@ -25,6 +25,37 @@ const inputShellClass =
 
 const labelClass = "mb-1.5 block text-[13px] font-medium text-text";
 
+type IpStatus = "idle" | "loading" | "ok" | "error";
+type CopyStatus = "idle" | "ok" | "fail";
+
+async function copyPlainText(text: string): Promise<boolean> {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Continue to the selection fallback below.
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-1000px";
+  textarea.style.top = "-1000px";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  try {
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
 // 设置弹窗：读 get_config 回显，保存调 save_config（写 config.local.yaml；微信凭证变更会清 token 缓存）。
 export default function SettingsDialog({open, onClose}: Props) {
   const [appId, setAppId] = useState("");
@@ -32,11 +63,17 @@ export default function SettingsDialog({open, onClose}: Props) {
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
+  const [outboundIp, setOutboundIp] = useState("");
+  const [ipStatus, setIpStatus] = useState<IpStatus>("idle");
+  const [ipError, setIpError] = useState("");
+  const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
 
   useEffect(() => {
     if (!open) return;
     setLoaded(false);
     setShowSecret(false);
+    setIpError("");
+    setCopyStatus("idle");
     invoke<AppConfig>("get_config")
       .then((cfg) => {
         setAppId(cfg.wechat?.app_id || "");
@@ -60,6 +97,32 @@ export default function SettingsDialog({open, onClose}: Props) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleFetchOutboundIp = async () => {
+    if (ipStatus === "loading") return;
+    setIpStatus("loading");
+    setIpError("");
+    setCopyStatus("idle");
+    try {
+      const ip = await invoke<string>("get_outbound_ip");
+      setOutboundIp(ip);
+      setIpStatus("ok");
+      toast.show("已获取当前出口 IP", "info");
+    } catch (e) {
+      const msg = typeof e === "string" ? e : (e as Error)?.message || "获取出口 IP 失败";
+      setIpStatus("error");
+      setIpError(msg);
+      toast.show(msg, "error");
+    }
+  };
+
+  const handleCopyOutboundIp = async () => {
+    if (!outboundIp) return;
+    const ok = await copyPlainText(outboundIp);
+    setCopyStatus(ok ? "ok" : "fail");
+    toast.show(ok ? "出口 IP 已复制" : "复制出口 IP 失败", ok ? "info" : "error");
+    window.setTimeout(() => setCopyStatus("idle"), 1800);
   };
 
   return (
@@ -153,9 +216,58 @@ export default function SettingsDialog({open, onClose}: Props) {
           </div>
         </div>
 
-        <p className="m-0 rounded-md border border-border bg-bg px-3 py-2.5 text-xs leading-5 text-text-secondary">
-          可在「微信公众平台 → 设置与开发 → 基本配置」查看这两项凭证。
-        </p>
+        <div className="rounded-md border border-border bg-bg px-3 py-3 text-xs leading-5 text-text-secondary">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-1 items-start gap-2.5">
+              <span className="mt-0.5 inline-flex h-7 w-7 flex-none items-center justify-center rounded-sm bg-accent-subtle text-accent">
+                <Network size={15} />
+              </span>
+              <div className="min-w-0">
+                <div className="text-[13px] font-semibold leading-5 text-text">IP 白名单辅助</div>
+                <p className="m-0 mt-0.5">
+                  可在「微信公众平台 → 设置与开发 → 基本配置」查看凭证，并把当前出口 IP 填入白名单。
+                </p>
+              </div>
+            </div>
+
+            <div className="grid min-w-0 flex-none gap-2" style={{width: 204, maxWidth: "100%"}}>
+              <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_2rem] items-center gap-2">
+                <span
+                  className={`box-border inline-flex h-8 w-full min-w-0 items-center rounded-sm border border-border bg-bg-secondary px-2 font-mono text-[12px] leading-none tabular-nums ${
+                    outboundIp ? "text-text" : "text-text-muted"
+                  }`}
+                >
+                  {outboundIp || "IPv4 待获取"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void handleCopyOutboundIp()}
+                  disabled={!outboundIp}
+                  title="复制 IPv4"
+                  aria-label="复制 IPv4"
+                  className={`inline-flex h-8 w-8 flex-none cursor-pointer items-center justify-center rounded-sm border border-border bg-bg-secondary text-text-muted transition-colors duration-fast hover:border-border-strong hover:bg-bg-tertiary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-50 ${
+                    copyStatus === "ok" ? "!border-success !bg-success !text-white" : ""
+                  }`}
+                >
+                  {copyStatus === "ok" ? <Check size={14} /> : <Copy size={14} />}
+                </button>
+              </div>
+              <div className="grid w-full min-w-0 grid-cols-1">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void handleFetchOutboundIp()}
+                  disabled={ipStatus === "loading"}
+                  className="w-full min-w-0 gap-2 px-2"
+                >
+                  <RefreshCw size={14} className={ipStatus === "loading" ? "animate-spin" : ""} />
+                  {ipStatus === "loading" ? "获取中…" : "获取出口 IP"}
+                </Button>
+              </div>
+              {ipError && <p className="m-0 text-[12px] leading-5 text-danger">{ipError}</p>}
+            </div>
+          </div>
+        </div>
       </section>
     </Dialog>
   );
