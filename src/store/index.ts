@@ -5,6 +5,7 @@ import {builtinThemes, defaultMarkdownTheme, type ThemeOption, type StyleModel} 
 import type {StyleItem} from "../themes/themeModel.ts";
 import {listDocuments, readDocument, writeDocument, type DocNode} from "../utils/documents.ts";
 import {createDebouncedSaver} from "../utils/autosave.ts";
+import {runCloudSync, type CloudSyncStatusValue} from "../utils/cloudSync.ts";
 import {toast} from "../components/Toast/toast.ts";
 import type {PreviewModeId} from "../components/Preview/previewModes.ts";
 import {DEFAULT_CODE_THEME_ID, DEFAULT_PINNED_CODE_THEME_IDS, type CodeThemeId} from "../markdown/codeThemes.ts";
@@ -24,6 +25,9 @@ export interface EditorState {
   outlineOpen: boolean; // 当前文档大纲侧栏显隐，运行期不 persist，默认隐藏
   saveStatus: SaveStatus; // 当前文档保存状态
   lastSavedAt: number | null; // 最近一次保存成功时间戳
+  syncStatus: CloudSyncStatusValue; // 文件云同步状态
+  lastSyncedAt: number | null; // 最近一次同步成功时间戳
+  syncMessage: string; // 最近一次同步说明或错误
   previewMode: PreviewModeId; // 预览宽度模式
   favoriteThemeIds: string[]; // 收藏主题，persist
   pinnedCodeThemeIds: CodeThemeId[]; // 置顶代码主题，persist
@@ -41,6 +45,7 @@ export interface EditorState {
   toggleOutline: () => void;
   loadTree: () => Promise<void>;
   openDocument: (path: string) => Promise<void>;
+  runSyncNow: () => Promise<void>;
   // 改当前主题某个 style 项的值（按 model id + style 路径），重编译 css
   updateStyleValue: (modelId: string, stylePath: string[], value: string) => void;
 }
@@ -60,6 +65,10 @@ function setValueByPath(styles: StyleItem[], path: string[], value: string): Sty
 }
 
 const AUTOSAVE_DELAY_MS = 1200;
+const CLOUD_SYNC_DELAY_MS = 1800;
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+let syncDrainPromise: Promise<void> | null = null;
+let syncQueued = false;
 
 // 自动保存器：写当前文档到磁盘。debounce 后串行保存；切换/关窗前调 flushSave。
 // 声明在 useStore 之前——回调延迟执行（debounce 到点才跑），届时 useStore 已就绪。
@@ -74,6 +83,7 @@ const saver = createDebouncedSaver(async (text) => {
     const state = useStore.getState();
     if (state.content === text) {
       useStore.setState({saveStatus: "saved", lastSavedAt: Date.now()});
+      scheduleCloudSync();
     } else {
       useStore.setState({saveStatus: "idle"});
     }
@@ -95,6 +105,67 @@ export function flushSave(): Promise<void> {
   return saver.flushNow();
 }
 
+async function runCloudSyncOnce(): Promise<void> {
+  useStore.setState({syncStatus: "syncing", syncMessage: ""});
+  try {
+    const summary = await runCloudSync();
+    if (!summary.enabled) {
+      useStore.setState({
+        syncStatus: "disabled",
+        syncMessage: summary.message,
+      });
+      return;
+    }
+    useStore.setState({
+      syncStatus: summary.conflicts > 0 ? "conflict" : "synced",
+      lastSyncedAt: summary.syncedAt ?? Date.now(),
+      syncMessage: summary.message,
+    });
+  } catch (error) {
+    const message = typeof error === "string" ? error : (error as Error)?.message || "同步失败";
+    console.warn("文件同步失败：", error);
+    useStore.setState({syncStatus: "error", syncMessage: message});
+  }
+}
+
+function startCloudSyncDrain(): Promise<void> {
+  if (!syncDrainPromise) {
+    syncDrainPromise = runCloudSyncOnce().finally(() => {
+      syncDrainPromise = null;
+      if (syncQueued) {
+        syncQueued = false;
+        void startCloudSyncDrain();
+      }
+    });
+  }
+  return syncDrainPromise;
+}
+
+export function scheduleCloudSync(delayMs = CLOUD_SYNC_DELAY_MS): void {
+  if (syncTimer) {
+    clearTimeout(syncTimer);
+  }
+  syncTimer = setTimeout(() => {
+    syncTimer = null;
+    if (syncDrainPromise) {
+      syncQueued = true;
+      return;
+    }
+    void startCloudSyncDrain();
+  }, delayMs);
+}
+
+export function flushCloudSync(): Promise<void> {
+  if (syncTimer) {
+    clearTimeout(syncTimer);
+    syncTimer = null;
+  }
+  if (syncDrainPromise) {
+    syncQueued = true;
+  }
+  return startCloudSyncDrain();
+}
+
 export const useStore = create<EditorState>()(
   persist(
     (set) => ({
@@ -111,6 +182,9 @@ export const useStore = create<EditorState>()(
       outlineOpen: false,
       saveStatus: "idle",
       lastSavedAt: null,
+      syncStatus: "idle",
+      lastSyncedAt: null,
+      syncMessage: "",
       previewMode: "fluid",
       favoriteThemeIds: [],
       pinnedCodeThemeIds: [...DEFAULT_PINNED_CODE_THEME_IDS],
@@ -149,6 +223,7 @@ export const useStore = create<EditorState>()(
         const text = await readDocument(path);
         set({currentDocPath: path, selectedPath: path, content: text, selectedModelId: null, saveStatus: "saved", lastSavedAt: Date.now()});
       },
+      runSyncNow: () => flushCloudSync(),
       updateStyleValue: (modelId, stylePath, value) =>
         set((s) => {
           // 用与显示一致的「有效主题」解析：若 markdownThemeId 在 themes 中找不到

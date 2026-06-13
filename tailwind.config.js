@@ -29,6 +29,7 @@ export default {
           muted: "var(--text-muted)",
         },
         success: "var(--success)",
+        warning: "var(--warning)",
         danger: "var(--danger)",
       },
       borderRadius: {
