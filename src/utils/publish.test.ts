@@ -1,0 +1,43 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {listImageMaterials} from "./publish.ts";
+
+test("listImageMaterials 调用永久图片素材库命令并保留分页参数", async () => {
+  const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+  let calledWith: {cmd: string; args: unknown} | null = null;
+
+  (window as unknown as {__TAURI_INTERNALS__: {invoke: (cmd: string, args: unknown) => Promise<unknown>}}).__TAURI_INTERNALS__ = {
+    invoke: async (cmd, args) => {
+      calledWith = {cmd, args};
+      return {
+        totalCount: 8,
+        itemCount: 1,
+        items: [
+          {
+            mediaId: "MEDIA_ID_1",
+            name: "series-cover.png",
+            updateTime: 1780000000,
+            url: "http://mmbiz.qpic.cn/mmbiz_png/example/0",
+          },
+        ],
+      };
+    },
+  };
+
+  try {
+    const page = await listImageMaterials(20, 10);
+
+    assert.deepEqual(calledWith, {
+      cmd: "list_image_materials",
+      args: {offset: 20, count: 10},
+    });
+    assert.equal(page.totalCount, 8);
+    assert.equal(page.items[0].mediaId, "MEDIA_ID_1");
+  } finally {
+    if (previousInternals === undefined) {
+      delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+    } else {
+      (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
+    }
+  }
+});

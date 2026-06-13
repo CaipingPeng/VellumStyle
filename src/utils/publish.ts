@@ -11,6 +11,19 @@ export interface CoverCandidate {
   sourceType: MediaRef["sourceType"];
 }
 
+export interface MaterialImage {
+  mediaId: string;
+  name: string;
+  updateTime: number;
+  url: string;
+}
+
+export interface MaterialImagePage {
+  totalCount: number;
+  itemCount: number;
+  items: MaterialImage[];
+}
+
 // 返回正文里仍为非 mmbiz 远程/本地图片的 url 列表（发布前需先上传）。
 export function findUnuploadedImages(markdown: string): string[] {
   const refs = scanMarkdownMedia(markdown);
@@ -51,6 +64,10 @@ export async function uploadThumb(file: File): Promise<string> {
 
 export function uploadRemoteThumb(url: string): Promise<string> {
   return invoke<string>("upload_remote_thumb", {url});
+}
+
+export function listImageMaterials(offset: number, count: number): Promise<MaterialImagePage> {
+  return invoke<MaterialImagePage>("list_image_materials", {offset, count});
 }
 
 export function addDraft(title: string, content: string, thumbMediaId: string): Promise<string> {

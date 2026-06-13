@@ -1,11 +1,19 @@
-import {useEffect, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useStore} from "../../store/index.ts";
 import {solveDraftHtml} from "../../markdown/converter.ts";
 import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
-import {addDraft, findUnuploadedImages, getCoverCandidates, uploadRemoteThumb, uploadThumb} from "../../utils/publish.ts";
+import {
+  addDraft,
+  findUnuploadedImages,
+  getCoverCandidates,
+  listImageMaterials,
+  type MaterialImage,
+  uploadRemoteThumb,
+  uploadThumb,
+} from "../../utils/publish.ts";
 import {toast} from "../Toast/toast.ts";
-import {FileText, ImageIcon, Images, UploadCloud} from "lucide-react";
+import {FileText, ImageIcon, Images, Library, Loader2, RefreshCw, UploadCloud} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import Button from "../ui/Button.tsx";
 
@@ -14,6 +22,10 @@ interface Props {
   onClose: () => void;
   onNeedSettings: () => void;
 }
+
+type CoverSource = "article" | "material";
+
+const MATERIAL_PAGE_SIZE = 20;
 
 const titleInputShellClass =
   "group box-border flex h-11 items-center gap-2 rounded-lg border-2 border-solid border-[#b8baca] bg-bg-secondary px-3.5 text-text-muted shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_22px_rgba(20,20,30,0.045)] transition-all duration-fast ease-smooth hover:border-[#9ea2b8] hover:bg-bg focus-within:border-[rgba(94,106,210,0.5)] focus-within:bg-bg focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_0_0_3px_rgba(94,106,210,0.10),0_10px_24px_rgba(20,20,30,0.06)]";
@@ -25,6 +37,22 @@ function revokePreview(url: string | null) {
   if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
 }
 
+function mergeMaterialItems(existing: MaterialImage[], incoming: MaterialImage[]): MaterialImage[] {
+  const seen = new Set(existing.map((item) => item.mediaId));
+  const merged = [...existing];
+  for (const item of incoming) {
+    if (seen.has(item.mediaId)) continue;
+    seen.add(item.mediaId);
+    merged.push(item);
+  }
+  return merged;
+}
+
+function formatMaterialTime(value: number): string {
+  if (!value) return "未知时间";
+  return new Date(value * 1000).toLocaleDateString("zh-CN");
+}
+
 export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const content = useStore((s) => s.content);
   const currentDocPath = useStore((s) => s.currentDocPath);
@@ -34,13 +62,43 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const [title, setTitle] = useState(defaultTitle);
   const [thumbId, setThumbId] = useState<string | null>(null);
   const [thumbPreview, setThumbPreview] = useState<string | null>(null);
+  const [coverSource, setCoverSource] = useState<CoverSource>("article");
   const [selectedCandidateUrl, setSelectedCandidateUrl] = useState<string | null>(null);
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
   const [pendingCandidateUrl, setPendingCandidateUrl] = useState<string | null>(null);
+  const [materialItems, setMaterialItems] = useState<MaterialImage[]>([]);
+  const [materialTotal, setMaterialTotal] = useState(0);
+  const [materialLoaded, setMaterialLoaded] = useState(false);
+  const [materialLoading, setMaterialLoading] = useState(false);
+  const [materialError, setMaterialError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<string | null>(null);
   const coverCandidates = useMemo(() => getCoverCandidates(content), [content]);
   previewRef.current = thumbPreview;
+
+  const loadMaterialLibrary = useCallback(async (offset = 0) => {
+    if (materialLoading) return;
+    setMaterialLoading(true);
+    setMaterialError(null);
+    try {
+      const page = await listImageMaterials(offset, MATERIAL_PAGE_SIZE);
+      setMaterialTotal(page.totalCount);
+      setMaterialItems((prev) => (offset === 0 ? page.items : mergeMaterialItems(prev, page.items)));
+    } catch (e) {
+      const msg = String(e);
+      setMaterialError(msg);
+      if (msg.includes("NOT_CONFIGURED")) {
+        toast.show("尚未配置微信图床，请先在设置中填写", "error");
+        onNeedSettings();
+      } else {
+        toast.show(`素材库读取失败：${msg}`, "error");
+      }
+    } finally {
+      setMaterialLoaded(true);
+      setMaterialLoading(false);
+    }
+  }, [materialLoading, onNeedSettings]);
 
   useEffect(() => {
     if (!open) {
@@ -49,8 +107,15 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     }
     setTitle(defaultTitle);
     setThumbId(null);
+    setCoverSource("article");
     setSelectedCandidateUrl(null);
+    setSelectedMaterialId(null);
     setPendingCandidateUrl(null);
+    setMaterialItems([]);
+    setMaterialTotal(0);
+    setMaterialLoaded(false);
+    setMaterialLoading(false);
+    setMaterialError(null);
     setThumbPreview((prev) => {
       revokePreview(prev);
       return null;
@@ -58,6 +123,11 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     setBusy(false);
     if (fileRef.current) fileRef.current.value = "";
   }, [open, defaultTitle]);
+
+  useEffect(() => {
+    if (!open || coverSource !== "material" || materialLoaded || materialLoading) return;
+    void loadMaterialLibrary(0);
+  }, [coverSource, loadMaterialLibrary, materialLoaded, materialLoading, open]);
 
   // 弹窗卸载时释放最后的预览 blob URL。
   useEffect(() => {
@@ -72,6 +142,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       const id = await uploadThumb(file);
       setThumbId(id);
       setSelectedCandidateUrl(null);
+      setSelectedMaterialId(null);
       setThumbPreview((prev) => {
         revokePreview(prev);
         return URL.createObjectURL(file);
@@ -91,6 +162,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       const id = await uploadRemoteThumb(url);
       setThumbId(id);
       setSelectedCandidateUrl(url);
+      setSelectedMaterialId(null);
       setThumbPreview((prev) => {
         revokePreview(prev);
         return toProxyImageUrl(url);
@@ -101,6 +173,18 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     } finally {
       setBusy(false);
     }
+  };
+
+  const pickMaterialThumb = (item: MaterialImage) => {
+    if (busy) return;
+    setThumbId(item.mediaId);
+    setSelectedCandidateUrl(null);
+    setSelectedMaterialId(item.mediaId);
+    setThumbPreview((prev) => {
+      revokePreview(prev);
+      return toProxyImageUrl(item.url);
+    });
+    toast.show("已选择素材库图片作为封面", "info");
   };
 
   const handleThumbError = (error: unknown) => {
@@ -243,48 +327,172 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
         </div>
 
         <div className="min-w-0 rounded-lg border border-border bg-bg px-3 py-3">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="inline-flex items-center gap-2 text-[13px] font-medium text-text">
-              <Images size={15} className="text-accent" />
-              从文中选择
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="inline-flex w-fit rounded-md bg-bg-secondary p-1">
+              <button
+                type="button"
+                aria-pressed={coverSource === "article"}
+                onClick={() => setCoverSource("article")}
+                className={`inline-flex h-8 items-center gap-1.5 rounded px-2.5 text-[13px] font-medium outline-none transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+                  coverSource === "article" ? "bg-bg text-text shadow-sm" : "text-text-secondary hover:bg-bg-tertiary hover:text-text"
+                }`}
+              >
+                <Images size={15} />
+                文中图片
+              </button>
+              <button
+                type="button"
+                aria-pressed={coverSource === "material"}
+                onClick={() => setCoverSource("material")}
+                className={`inline-flex h-8 items-center gap-1.5 rounded px-2.5 text-[13px] font-medium outline-none transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+                  coverSource === "material" ? "bg-bg text-text shadow-sm" : "text-text-secondary hover:bg-bg-tertiary hover:text-text"
+                }`}
+              >
+                <Library size={15} />
+                素材库
+              </button>
             </div>
-            <span className="text-xs text-text-muted">{coverCandidates.length} 张可选</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-text-muted">
+                {coverSource === "article"
+                  ? `${coverCandidates.length} 张可选`
+                  : materialLoaded
+                    ? `${materialItems.length}/${materialTotal || materialItems.length} 张`
+                    : "未加载"}
+              </span>
+              {coverSource === "material" && (
+                <button
+                  type="button"
+                  title="刷新素材库"
+                  aria-label="刷新素材库"
+                  disabled={busy || materialLoading}
+                  onClick={() => void loadMaterialLibrary(0)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-border bg-bg-secondary text-text-secondary outline-none transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-50"
+                >
+                  <RefreshCw size={14} className={materialLoading ? "animate-spin" : ""} />
+                </button>
+              )}
+            </div>
           </div>
-          {coverCandidates.length > 0 ? (
-            <div className="grid max-h-[52vh] grid-cols-2 gap-2 overflow-y-auto pr-1 xl:grid-cols-3">
-              {coverCandidates.map((candidate, index) => {
-                const selected = selectedCandidateUrl === candidate.url;
-                return (
-                  <button
-                    key={candidate.url}
-                    type="button"
-                    disabled={busy}
-                    onClick={() => setPendingCandidateUrl(candidate.url)}
-                    className={`group relative aspect-[16/10] overflow-hidden rounded-md border bg-bg-secondary outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
-                      selected ? "border-accent ring-2 ring-[color:var(--ring)]" : "border-border"
-                    }`}
-                    aria-label={`选择第 ${index + 1} 张文中图片作为封面`}
-                  >
-                    <img
-                      src={toProxyImageUrl(candidate.url)}
-                      alt="文中候选封面"
-                      className="h-full w-full object-cover transition-transform duration-fast group-hover:scale-105"
-                    />
-                    {selected && (
-                      <span className="absolute right-1.5 top-1.5 rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
-                        已选
+
+          {coverSource === "article" ? (
+            coverCandidates.length > 0 ? (
+              <div className="grid max-h-[52vh] grid-cols-2 gap-2 overflow-y-auto pr-1 xl:grid-cols-3">
+                {coverCandidates.map((candidate, index) => {
+                  const selected = selectedCandidateUrl === candidate.url;
+                  return (
+                    <button
+                      key={candidate.url}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setPendingCandidateUrl(candidate.url)}
+                      className={`group relative aspect-[16/10] overflow-hidden rounded-md border bg-bg-secondary outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
+                        selected ? "border-accent ring-2 ring-[color:var(--ring)]" : "border-border"
+                      }`}
+                      aria-label={`选择第 ${index + 1} 张文中图片作为封面`}
+                    >
+                      <img
+                        src={toProxyImageUrl(candidate.url)}
+                        alt="文中候选封面"
+                        className="h-full w-full object-cover transition-transform duration-fast group-hover:scale-105"
+                      />
+                      {selected && (
+                        <span className="absolute right-1.5 top-1.5 rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
+                          已选
+                        </span>
+                      )}
+                      <span className="absolute inset-x-0 bottom-0 bg-black/50 px-2 py-1 text-left text-[11px] text-white/90 opacity-0 transition-opacity group-hover:opacity-100">
+                        设为封面
                       </span>
-                    )}
-                    <span className="absolute inset-x-0 bottom-0 bg-black/50 px-2 py-1 text-left text-[11px] text-white/90 opacity-0 transition-opacity group-hover:opacity-100">
-                      设为封面
-                    </span>
-                  </button>
-                );
-              })}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-md bg-bg-secondary px-3 py-3 text-xs leading-5 text-text-secondary">
+                正文中未找到已上传到微信的图片，请先上传正文图片，或直接上传本地封面。
+              </div>
+            )
+          ) : materialLoading && materialItems.length === 0 ? (
+            <div className="grid max-h-[52vh] grid-cols-2 gap-2 overflow-hidden pr-1 xl:grid-cols-3">
+              {Array.from({length: 6}).map((_, index) => (
+                <div
+                  key={index}
+                  className="flex aspect-[16/10] items-center justify-center rounded-md border border-border bg-bg-secondary text-text-muted"
+                >
+                  <Loader2 size={18} className="animate-spin" />
+                </div>
+              ))}
             </div>
+          ) : materialError && materialItems.length === 0 ? (
+            <div className="rounded-md bg-bg-secondary px-3 py-3 text-xs leading-5 text-text-secondary">
+              <div className="font-medium text-text">素材库读取失败</div>
+              <div className="mt-1 break-words">
+                {materialError.includes("NOT_CONFIGURED") ? "请先在设置中填写微信素材上传凭证。" : materialError}
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                className="mt-3"
+                disabled={materialLoading}
+                onClick={() => void loadMaterialLibrary(0)}
+              >
+                重试
+              </Button>
+            </div>
+          ) : materialItems.length > 0 ? (
+            <>
+              <div className="grid max-h-[52vh] grid-cols-2 gap-2 overflow-y-auto pr-1 xl:grid-cols-3">
+                {materialItems.map((item, index) => {
+                  const selected = selectedMaterialId === item.mediaId;
+                  return (
+                    <button
+                      key={item.mediaId}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => pickMaterialThumb(item)}
+                      className={`group relative aspect-[16/10] overflow-hidden rounded-md border bg-bg-secondary outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
+                        selected ? "border-accent ring-2 ring-[color:var(--ring)]" : "border-border"
+                      }`}
+                      aria-label={`选择素材库第 ${index + 1} 张图片作为封面：${item.name}`}
+                    >
+                      <img
+                        src={toProxyImageUrl(item.url)}
+                        alt={`素材库候选封面：${item.name}`}
+                        className="h-full w-full object-cover transition-transform duration-fast group-hover:scale-105"
+                      />
+                      <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-left text-[11px] leading-4 text-white/90 opacity-0 transition-opacity group-hover:opacity-100">
+                        <span className="block truncate">{item.name}</span>
+                        <span className="block text-white/70">{formatMaterialTime(item.updateTime)}</span>
+                      </span>
+                      {selected && (
+                        <span className="absolute right-1.5 top-1.5 rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
+                          已选
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="text-xs text-text-muted">
+                  {materialTotal > 0 ? `共 ${materialTotal} 张图片素材` : "已显示素材库图片"}
+                </span>
+                {materialItems.length < materialTotal && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={busy || materialLoading}
+                    onClick={() => void loadMaterialLibrary(materialItems.length)}
+                  >
+                    {materialLoading ? "加载中…" : "加载更多"}
+                  </Button>
+                )}
+              </div>
+            </>
           ) : (
             <div className="rounded-md bg-bg-secondary px-3 py-3 text-xs leading-5 text-text-secondary">
-              正文中未找到已上传到微信的图片，请先上传正文图片，或直接上传本地封面。
+              素材库暂无图片素材。上传过的正文图片会进入这里，后续发布同系列文章时可以直接复用。
             </div>
           )}
         </div>

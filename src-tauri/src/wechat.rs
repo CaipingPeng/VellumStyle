@@ -3,7 +3,7 @@
 
 use crate::config::load_wechat_config;
 use reqwest::redirect::Policy;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
@@ -49,6 +49,40 @@ struct UploadResp {
     media_id: Option<String>,
     errcode: Option<i64>,
     errmsg: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct MaterialListResp {
+    total_count: Option<u32>,
+    item_count: Option<u32>,
+    item: Option<Vec<RawMaterialItem>>,
+    errcode: Option<i64>,
+    errmsg: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct RawMaterialItem {
+    media_id: Option<String>,
+    name: Option<String>,
+    update_time: Option<u64>,
+    url: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MaterialImageItem {
+    media_id: String,
+    name: String,
+    update_time: u64,
+    url: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MaterialImagePage {
+    total_count: u32,
+    item_count: u32,
+    items: Vec<MaterialImageItem>,
 }
 
 async fn fetch_access_token(app_id: &str, app_secret: &str) -> Result<String, String> {
@@ -182,6 +216,117 @@ fn is_wechat_ip_whitelist_error(errcode: Option<i64>, errmsg: &str) -> bool {
         || lower.contains("ip.white_list")
         || lower.contains("white_list")
         || lower.contains("白名单")
+}
+
+fn parse_material_page_response(body: &str) -> Result<MaterialImagePage, (Option<i64>, String)> {
+    let data: MaterialListResp = serde_json::from_str(body)
+        .map_err(|e| (None, format!("解析素材库响应失败：{e}")))?;
+
+    if let Some(code) = data.errcode {
+        if code != 0 {
+            return Err((
+                Some(code),
+                format_wechat_error(
+                    Some(code),
+                    &data.errmsg.unwrap_or_else(|| "微信素材库获取失败".into()),
+                    "微信素材库获取失败",
+                ),
+            ));
+        }
+    }
+
+    let raw_items = data.item.unwrap_or_default();
+    let items: Vec<MaterialImageItem> = raw_items
+        .into_iter()
+        .filter_map(|item| {
+            let media_id = item.media_id?.trim().to_string();
+            let url = item.url?.trim().to_string();
+            if media_id.is_empty() || url.is_empty() {
+                return None;
+            }
+
+            let name = item
+                .name
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+                .unwrap_or_else(|| "未命名图片".to_string());
+
+            Some(MaterialImageItem {
+                media_id,
+                name,
+                update_time: item.update_time.unwrap_or(0),
+                url,
+            })
+        })
+        .collect();
+    let item_count = data.item_count.unwrap_or(items.len() as u32);
+
+    Ok(MaterialImagePage {
+        total_count: data.total_count.unwrap_or(0),
+        item_count,
+        items,
+    })
+}
+
+async fn list_image_materials_inner(
+    token: &str,
+    offset: u32,
+    count: u32,
+) -> Result<MaterialImagePage, (Option<i64>, String)> {
+    let bounded_count = count.clamp(1, 20);
+    let body = serde_json::json!({
+        "type": "image",
+        "offset": offset,
+        "count": bounded_count,
+    });
+    let url = format!(
+        "https://api.weixin.qq.com/cgi-bin/material/batchget_material?access_token={token}"
+    );
+    let resp = reqwest::Client::new()
+        .post(&url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| (None, format!("获取素材库请求失败：{e}")))?;
+    let status = resp.status();
+    if !status.is_success() {
+        return Err((None, format!("获取素材库失败：HTTP {status}")));
+    }
+    let body = resp
+        .text()
+        .await
+        .map_err(|e| (None, format!("读取素材库响应失败：{e}")))?;
+
+    parse_material_page_response(&body)
+}
+
+/// 获取公众号永久图片素材列表。未配置返回 "NOT_CONFIGURED"。
+#[tauri::command]
+pub async fn list_image_materials(
+    app: AppHandle,
+    offset: u32,
+    count: u32,
+) -> Result<MaterialImagePage, String> {
+    let cfg = load_wechat_config(&app);
+    if !cfg.is_configured() {
+        return Err("NOT_CONFIGURED".into());
+    }
+
+    let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
+    match list_image_materials_inner(&token, offset, count).await {
+        Ok(page) => Ok(page),
+        Err((errcode, msg)) => {
+            if matches!(errcode, Some(40001) | Some(42001) | Some(40014)) {
+                clear_token_blocking();
+                let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
+                list_image_materials_inner(&token, offset, count)
+                    .await
+                    .map_err(|(_, m)| m)
+            } else {
+                Err(msg)
+            }
+        }
+    }
 }
 
 // 调微信 add_material（type=image）；返回永久 mmbiz 链接，errcode 时返回 (errcode, msg)。
@@ -705,7 +850,7 @@ pub async fn add_draft(
 mod tests {
     use super::{
         format_wechat_error, get_outbound_ip, is_allowed_redirect_target,
-        parse_outbound_ip_response, OUTBOUND_IP_ENDPOINTS,
+        parse_material_page_response, parse_outbound_ip_response, OUTBOUND_IP_ENDPOINTS,
     };
 
     #[test]
@@ -767,6 +912,40 @@ mod tests {
                 "https://checkip.amazonaws.com",
             ]
         );
+    }
+
+    #[test]
+    fn material_page_response_maps_wechat_items_for_frontend() {
+        let body = r#"{
+            "total_count": 8,
+            "item_count": 2,
+            "item": [
+                {
+                    "media_id": "MEDIA_ID_1",
+                    "name": "series-cover.png",
+                    "update_time": 1780000000,
+                    "url": "http://mmbiz.qpic.cn/mmbiz_png/example/0"
+                },
+                {
+                    "media_id": "MEDIA_ID_2",
+                    "name": "",
+                    "update_time": 1780000060,
+                    "url": "https://mmbiz.qlogo.cn/mmbiz_jpg/example/1"
+                }
+            ]
+        }"#;
+
+        let page = parse_material_page_response(body).expect("material list should parse");
+        assert_eq!(page.total_count, 8);
+        assert_eq!(page.item_count, 2);
+        assert_eq!(page.items[0].media_id, "MEDIA_ID_1");
+        assert_eq!(page.items[0].name, "series-cover.png");
+        assert_eq!(page.items[1].name, "未命名图片");
+
+        let json = serde_json::to_value(page).expect("page should serialize");
+        assert_eq!(json["items"][0]["mediaId"], "MEDIA_ID_1");
+        assert_eq!(json["items"][0]["updateTime"], 1780000000);
+        assert!(json["items"][0]["media_id"].is_null());
     }
 
     #[cfg(windows)]

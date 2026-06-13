@@ -767,3 +767,32 @@ npx tsc --noEmit         # 类型检查
 - ✅ `npm run build` 通过。
 - ✅ `cargo check --manifest-path src-tauri/Cargo.toml` 通过。
 - ⏳ 待人工运行时手测：本地封面回归、正文 mmbiz 候选显示、无候选空状态、未配置凭证提示、真实凭证下文中图上传为封面并发布草稿箱。
+
+## 增补功能 — 发布封面从永久素材库选择（代码完成，2026-06-14）
+
+> 目标：发布同系列文章时可直接复用公众号永久素材库里的图片作为封面，避免每次重新上传生成重复素材。
+
+### 执行结果
+
+| # | 任务 | 状态 | 产出 |
+|---|------|------|------|
+| 1 | 后端获取永久图片素材列表 | ✅ | `src-tauri/src/wechat.rs` `src-tauri/src/lib.rs` |
+| 2 | 前端素材库列表 wrapper | ✅ | `src/utils/publish.ts` `src/utils/publish.test.ts` |
+| 3 | 发布弹窗增加“文中图片 / 素材库”来源切换 | ✅ | `src/components/Publish/PublishDialog.tsx` `src/components/Publish/publishDialogMaterialLibrary.test.ts` |
+
+### 关键设计
+
+- 后端新增 `list_image_materials`，调用微信 `material/batchget_material`，固定获取 `type=image` 的永久素材。
+- 素材库返回已有 `media_id`，前端选择后直接设置 `thumbId`，不再二次上传，解决重复素材占用问题。
+- 发布弹窗右侧改为分段来源：`文中图片` 保留原确认上传流程，`素材库` 懒加载分页列表并支持刷新/加载更多。
+- 素材库缩略图和封面预览继续走 `toProxyImageUrl`，兼容 mmbiz 防盗链。
+- 未配置微信凭证时沿用 `NOT_CONFIGURED` 引导设置。
+
+### 验证状态
+
+- ✅ 新增测试先红后绿：`listImageMaterials` wrapper、发布弹窗素材库入口、素材库响应解析。
+- ✅ `npm test` 116/116 通过。
+- ✅ `npm run build` 通过。
+- ✅ `cargo check --manifest-path src-tauri/Cargo.toml` 通过。
+- ✅ `cargo test --manifest-path src-tauri/Cargo.toml` 10 passed / 1 ignored。
+- ⏳ 待真实凭证运行时手测：素材库分页加载、素材图预览、选择后发布到草稿箱。

@@ -63,6 +63,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             wechat::upload_image,
             wechat::get_outbound_ip,
+            wechat::list_image_materials,
             wechat::upload_local_image,
             wechat::upload_remote_image,
             import::pick_markdown_file,
