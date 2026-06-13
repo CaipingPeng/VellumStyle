@@ -17,9 +17,61 @@ interface Props {
 export interface PreviewHandle {
   // 预览滚动容器（外层 overflow:auto 的 div），供同步滚动监听
   getScroller: () => HTMLElement | null;
+  // 按源码行号滚到预览中最接近的 data-line 锚点。
+  scrollToLine: (line: number) => void;
+  // 当前预览视口顶部附近的标题源码行号。
+  getActiveHeadingLine: () => number | null;
 }
 
 const RENDER_THROTTLE_MS = 100;
+const HEADING_ANCHOR_SELECTOR = "h1[data-line], h2[data-line], h3[data-line], h4[data-line], h5[data-line], h6[data-line]";
+const ACTIVE_HEADING_OFFSET_PX = 32;
+
+interface LineAnchor {
+  element: HTMLElement;
+  line: number;
+  top: number;
+}
+
+function lineAnchors(scroller: HTMLElement, selector: string): LineAnchor[] {
+  const anchors: LineAnchor[] = [];
+  for (const element of scroller.querySelectorAll<HTMLElement>(selector)) {
+    const line = Number(element.getAttribute("data-line"));
+    if (!Number.isNaN(line)) {
+      anchors.push({element, line, top: element.offsetTop});
+    }
+  }
+  anchors.sort((a, b) => a.line - b.line);
+  return anchors;
+}
+
+function targetAnchorForLine(anchors: LineAnchor[], line: number): HTMLElement | null {
+  let fallback: HTMLElement | null = null;
+  for (const anchor of anchors) {
+    if (anchor.line >= line) {
+      return anchor.element;
+    }
+    fallback = anchor.element;
+  }
+  return fallback;
+}
+
+function activeHeadingLine(scroller: HTMLElement): number | null {
+  const anchors = lineAnchors(scroller, HEADING_ANCHOR_SELECTOR).sort((a, b) => a.top - b.top);
+  if (anchors.length === 0) {
+    return null;
+  }
+  const threshold = scroller.scrollTop + ACTIVE_HEADING_OFFSET_PX;
+  let active = anchors[0];
+  for (const anchor of anchors) {
+    if (anchor.top <= threshold) {
+      active = anchor;
+    } else {
+      break;
+    }
+  }
+  return active.line;
+}
 
 // 实时预览：注入主题层样式 + 渲染 HTML 到文章根容器，自适应占满预览区宽度。
 // 点击预览元素 → 识别 model id → 打开样式面板。
@@ -39,6 +91,20 @@ const Preview = forwardRef<PreviewHandle, Props>(
 
     useImperativeHandle(ref, () => ({
       getScroller: () => scrollRef.current,
+      scrollToLine: (line) => {
+        const scroller = scrollRef.current;
+        if (!scroller) {
+          return;
+        }
+        const target = targetAnchorForLine(lineAnchors(scroller, "[data-line]"), line);
+        if (target) {
+          scroller.scrollTop = target.offsetTop;
+        }
+      },
+      getActiveHeadingLine: () => {
+        const scroller = scrollRef.current;
+        return scroller ? activeHeadingLine(scroller) : null;
+      },
     }));
 
     // 主题层：文章主题在前，独立代码主题在后，保证所有文章主题默认共享同一套代码高亮。

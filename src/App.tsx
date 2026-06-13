@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import MarkdownEditor, {type MarkdownEditorHandle} from "./components/Editor/MarkdownEditor.tsx";
 import Preview, {type PreviewHandle} from "./components/Preview/Preview.tsx";
 import PreviewModeToggle from "./components/Preview/PreviewModeToggle.tsx";
@@ -7,11 +7,13 @@ import StylePanel from "./components/StylePanel/StylePanel.tsx";
 import SyntaxToolbar from "./components/Toolbar/SyntaxToolbar.tsx";
 import MainToolbar from "./components/Toolbar/MainToolbar.tsx";
 import DocTree from "./components/DocTree/DocTree.tsx";
+import OutlineNav from "./components/Outline/OutlineNav.tsx";
 import IconButton from "./components/ui/IconButton.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
 import {toast} from "./components/Toast/toast.ts";
 import {useStore, getThemeById, flushSave} from "./store/index.ts";
 import {getCodeThemeById} from "./markdown/codeThemes.ts";
+import {getActiveOutlineLine, parseMarkdownOutline} from "./utils/outline.ts";
 import {loadAllThemes} from "./themes/loader.ts";
 import {defaultMarkdownTheme} from "./themes/index.ts";
 import {uploadImage, uploadLocalImage, type UploadError} from "./utils/upload.ts";
@@ -26,7 +28,7 @@ import {
 import {defaultWindowIcon} from "@tauri-apps/api/app";
 import {invoke} from "@tauri-apps/api/core";
 import {getCurrentWindow} from "@tauri-apps/api/window";
-import {PanelLeft} from "lucide-react";
+import {ListTree, PanelLeft} from "lucide-react";
 import defaultContent from "./content.md?raw";
 
 // 取树里第一篇文档路径（深度优先）。
@@ -61,10 +63,12 @@ function formatSaveStatus(status: "idle" | "saving" | "saved" | "error", lastSav
 }
 
 export default function App() {
-  const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, saveStatus, lastSavedAt, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar} = useStore();
+  const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, outlineOpen, saveStatus, lastSavedAt, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar, toggleOutline} = useStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
+  const outlineItems = useMemo(() => parseMarkdownOutline(content), [content]);
 
   const insertUploadedImage = (url: string) => {
     editorRef.current?.insertAtCursor(`\n![](${url})\n`);
@@ -96,6 +100,11 @@ export default function App() {
       handleUploadError(e);
     }
   };
+
+  const handleOutlineJump = useCallback((line: number) => {
+    setActiveOutlineLine(line);
+    previewRef.current?.scrollToLine(line);
+  }, []);
 
   // 启动扫描主题：内置（编译进包）+ 用户目录 *.json 合并。
   // 合并后若当前 markdownThemeId 已不存在（如 localStorage 残留旧主题 id），
@@ -144,6 +153,46 @@ export default function App() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    setActiveOutlineLine((currentLine) => getActiveOutlineLine(outlineItems, currentLine) ?? outlineItems[0]?.line ?? null);
+  }, [outlineItems]);
+
+  // 预览滚动时，读取视口顶部附近的标题行，更新大纲高亮。
+  useEffect(() => {
+    let raf = 0;
+    let retryRaf = 0;
+    let timer = 0;
+    let cleanup: (() => void) | null = null;
+
+    const updateActiveLine = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const headingLine = previewRef.current?.getActiveHeadingLine() ?? null;
+        setActiveOutlineLine(getActiveOutlineLine(outlineItems, headingLine));
+      });
+    };
+
+    const attach = () => {
+      const scroller = previewRef.current?.getScroller();
+      if (!scroller) {
+        retryRaf = requestAnimationFrame(attach);
+        return;
+      }
+      scroller.addEventListener("scroll", updateActiveLine, {passive: true});
+      cleanup = () => scroller.removeEventListener("scroll", updateActiveLine);
+      updateActiveLine();
+      timer = window.setTimeout(updateActiveLine, 160);
+    };
+
+    attach();
+    return () => {
+      cancelAnimationFrame(raf);
+      cancelAnimationFrame(retryRaf);
+      window.clearTimeout(timer);
+      cleanup?.();
+    };
+  }, [outlineItems]);
 
   // 在桌面运行时显式应用默认图标，覆盖 dev 窗口/任务栏的运行时图标。
   useEffect(() => {
@@ -246,8 +295,11 @@ export default function App() {
       {/* Navbar */}
       <header className="relative z-50 flex h-[52px] flex-shrink-0 items-center justify-between gap-3 border-b border-border bg-bg/80 px-4 backdrop-blur">
         <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
-          <IconButton active={sidebarOpen} title="文档" onClick={toggleSidebar}>
+          <IconButton active={sidebarOpen} title="文档" aria-pressed={sidebarOpen} onClick={toggleSidebar}>
             <PanelLeft size={16} />
+          </IconButton>
+          <IconButton active={outlineOpen} title="大纲" aria-pressed={outlineOpen} onClick={toggleOutline}>
+            <ListTree size={16} />
           </IconButton>
           <SyntaxToolbar editorRef={editorRef} />
         </div>
@@ -262,6 +314,13 @@ export default function App() {
       {/* 主体：文档树 + 编辑器 + 预览 */}
       <main className="relative flex min-h-0 flex-1">
         {sidebarOpen && <DocTree />}
+        {outlineOpen && (
+          <OutlineNav
+            items={outlineItems}
+            activeLine={activeOutlineLine}
+            onJump={handleOutlineJump}
+          />
+        )}
         <div className="min-w-0 flex-1 overflow-hidden">
           <MarkdownEditor
             ref={editorRef}

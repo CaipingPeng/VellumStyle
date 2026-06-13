@@ -21,6 +21,7 @@ export interface EditorState {
   currentDocPath: string | null; // 当前在编辑器打开的文档，persist（记住上次打开）
   selectedPath: string | null; // 树里当前高亮项（文件或文件夹），统一选中源，运行期不 persist
   sidebarOpen: boolean; // 文档侧栏显隐，运行期不 persist，默认隐藏
+  outlineOpen: boolean; // 当前文档大纲侧栏显隐，运行期不 persist，默认隐藏
   saveStatus: SaveStatus; // 当前文档保存状态
   lastSavedAt: number | null; // 最近一次保存成功时间戳
   previewMode: PreviewModeId; // 预览宽度模式
@@ -37,6 +38,7 @@ export interface EditorState {
   toggleFavoriteTheme: (id: string) => void;
   togglePinnedCodeTheme: (id: CodeThemeId) => void;
   toggleSidebar: () => void;
+  toggleOutline: () => void;
   loadTree: () => Promise<void>;
   openDocument: (path: string) => Promise<void>;
   // 改当前主题某个 style 项的值（按 model id + style 路径），重编译 css
@@ -106,6 +108,7 @@ export const useStore = create<EditorState>()(
       currentDocPath: null,
       selectedPath: null,
       sidebarOpen: false,
+      outlineOpen: false,
       saveStatus: "idle",
       lastSavedAt: null,
       previewMode: "fluid",
@@ -135,6 +138,7 @@ export const useStore = create<EditorState>()(
             : [...s.pinnedCodeThemeIds, id],
         })),
       toggleSidebar: () => set((s) => ({sidebarOpen: !s.sidebarOpen})),
+      toggleOutline: () => set((s) => ({outlineOpen: !s.outlineOpen})),
       loadTree: async () => {
         const tree = await listDocuments();
         set({tree});
