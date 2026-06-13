@@ -1,8 +1,8 @@
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {FilePlus, FolderPlus} from "lucide-react";
 import {motion} from "framer-motion";
 import {useStore} from "../../store/index.ts";
-import {targetDirFor, type DocNode} from "../../utils/documents.ts";
+import {ancestorDirsForPath, targetDirFor, type DocNode} from "../../utils/documents.ts";
 import TreeNode, {type CreatingState} from "./TreeNode.tsx";
 import DraftInput from "./DraftInput.tsx";
 import IconButton from "../ui/IconButton.tsx";
@@ -20,6 +20,7 @@ function firstDocPath(nodes: DocNode[]): string | null {
 
 export default function DocTree() {
   const tree = useStore((s) => s.tree);
+  const currentDocPath = useStore((s) => s.currentDocPath);
   const selectedPath = useStore((s) => s.selectedPath);
   const openDocument = useStore((s) => s.openDocument);
   const setSelectedPath = useStore((s) => s.setSelectedPath);
@@ -39,6 +40,29 @@ export default function DocTree() {
       return next;
     });
   };
+
+  useEffect(() => {
+    if (!currentDocPath) return;
+
+    if (useStore.getState().selectedPath !== currentDocPath) {
+      setSelectedPath(currentDocPath);
+    }
+
+    const ancestorDirs = ancestorDirsForPath(currentDocPath);
+    if (ancestorDirs.length === 0) return;
+
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const dir of ancestorDirs) {
+        if (!next.has(dir)) {
+          next.add(dir);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [currentDocPath, setSelectedPath]);
 
   // 新建落点：选中项是文件夹→落其下；选中项是文件→落其同级目录；无选中→根。
   const targetDir = (): string => targetDirFor(tree, selectedPath);

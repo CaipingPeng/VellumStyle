@@ -221,3 +221,16 @@ export function targetDirFor(tree: DocNode[], selectedPath: string | null): stri
   const slash = selectedPath.lastIndexOf("/");
   return slash === -1 ? "" : selectedPath.slice(0, slash);
 }
+
+// 给文档路径返回所有父级目录，用于文件树自动展开。
+export function ancestorDirsForPath(path: string | null): string[] {
+  if (!path) return [];
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length <= 1) return [];
+
+  const dirs: string[] = [];
+  for (let i = 1; i < parts.length; i++) {
+    dirs.push(parts.slice(0, i).join("/"));
+  }
+  return dirs;
+}
