@@ -1,7 +1,7 @@
 {
   "name": "vellumstyle",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "文澜排版：本地优先的 Markdown 到微信公众号排版桌面工具",
   "author": "pengcaiping",
   "license": "MIT",
