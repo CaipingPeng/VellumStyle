@@ -1,6 +1,7 @@
 mod config;
 mod documents;
 mod import;
+mod sync;
 mod themes;
 mod wechat;
 
@@ -73,6 +74,8 @@ pub fn run() {
             import::resolve_import_media,
             config::get_config,
             config::save_config,
+            sync::sync_documents,
+            sync::test_sync_connection,
             themes::list_user_themes,
             themes::save_user_theme,
             themes::import_theme_model,

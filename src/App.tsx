@@ -19,6 +19,7 @@ import {defaultMarkdownTheme} from "./themes/index.ts";
 import {uploadImage, uploadLocalImage, type UploadError} from "./utils/upload.ts";
 import {createScrollSync} from "./utils/syncScroll.ts";
 import {createDocument, writeDocument, type DocNode} from "./utils/documents.ts";
+import {formatSyncStatus as formatCloudSyncStatus, syncStatusTone, type CloudSyncTone} from "./utils/cloudSync.ts";
 import {isTauriRuntime} from "./utils/tauriEnv.ts";
 import {
   checkStartupOutboundIp,
@@ -62,8 +63,16 @@ function formatSaveStatus(status: "idle" | "saving" | "saved" | "error", lastSav
   return "未保存";
 }
 
+function syncStatusClass(tone: CloudSyncTone): string {
+  if (tone === "accent") return "text-accent";
+  if (tone === "success") return "text-success";
+  if (tone === "warning") return "text-warning";
+  if (tone === "danger") return "text-danger";
+  return "";
+}
+
 export default function App() {
-  const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, outlineOpen, saveStatus, lastSavedAt, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar, toggleOutline} = useStore();
+  const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, outlineOpen, saveStatus, lastSavedAt, syncStatus, lastSyncedAt, syncMessage, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar, toggleOutline} = useStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null);
   const editorRef = useRef<MarkdownEditorHandle>(null);
@@ -133,6 +142,7 @@ export default function App() {
         await writeDocument(path, legacyContent);
         await loadTree();
         await openDocument(path);
+        void useStore.getState().runSyncNow();
         return;
       }
       // 首次空仓库且无旧内容：写一篇默认教程。
@@ -141,6 +151,7 @@ export default function App() {
         await writeDocument(path, defaultContent);
         await loadTree();
         await openDocument(path);
+        void useStore.getState().runSyncNow();
         return;
       }
       // 已有文档：打开上次的，否则打开第一篇。
@@ -150,6 +161,7 @@ export default function App() {
         const first = flattenFirst(tree);
         if (first) await openDocument(first);
       }
+      void useStore.getState().runSyncNow();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -353,6 +365,12 @@ export default function App() {
           <span>主题 {getThemeById(themes, markdownThemeId).name}</span>
           <span>代码 {getCodeThemeById(codeThemeId).name}</span>
           <span className={saveStatus === "error" ? "text-danger" : ""}>{formatSaveStatus(saveStatus, lastSavedAt)}</span>
+          <span
+            className={syncStatusClass(syncStatusTone(syncStatus))}
+            title={syncMessage || undefined}
+          >
+            {formatCloudSyncStatus({status: syncStatus, lastSyncedAt, message: syncMessage})}
+          </span>
           <PreviewModeToggle variant="status" />
         </div>
       </footer>
