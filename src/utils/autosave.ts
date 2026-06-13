@@ -1,5 +1,5 @@
 // debounce 自动保存：schedule 重置计时，到点 flush；flushNow 立即 flush 并取消计时。
-// 取纯逻辑（计时决策 + pending 标记）便于单测，不耦合 store/CodeMirror。
+// 保存串行执行，避免慢磁盘/Tauri 写入时并发 flush 抢占编辑体验。
 
 export interface DebouncedSaver {
   schedule(text: string): void;
@@ -9,7 +9,7 @@ export interface DebouncedSaver {
 interface DebouncedSaverEvents {
   onScheduled?: () => void;
   onFlushStart?: (text: string) => void;
-  onFlushSuccess?: () => void;
+  onFlushSuccess?: (text: string) => void;
   onFlushError?: (error: unknown) => void;
 }
 
@@ -20,19 +20,35 @@ export function createDebouncedSaver(
 ): DebouncedSaver {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let pending: string | null = null;
+  let flushRequested = false;
+  let drainPromise: Promise<void> | null = null;
 
-  async function doFlush() {
-    if (pending === null) return;
-    const text = pending;
-    pending = null;
-    events.onFlushStart?.(text);
-    try {
-      await save(text);
-      events.onFlushSuccess?.();
-    } catch (error) {
-      events.onFlushError?.(error);
-      throw error;
+  async function drain() {
+    while (flushRequested && pending !== null) {
+      flushRequested = false;
+      const text = pending;
+      pending = null;
+      events.onFlushStart?.(text);
+      try {
+        await save(text);
+        events.onFlushSuccess?.(text);
+      } catch (error) {
+        events.onFlushError?.(error);
+        throw error;
+      }
     }
+  }
+
+  function startDrain(): Promise<void> {
+    if (!drainPromise) {
+      drainPromise = drain().finally(() => {
+        drainPromise = null;
+        if (flushRequested && pending !== null) {
+          void startDrain().catch(() => undefined);
+        }
+      });
+    }
+    return drainPromise;
   }
 
   return {
@@ -42,7 +58,8 @@ export function createDebouncedSaver(
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         timer = null;
-        void doFlush().catch(() => undefined);
+        flushRequested = true;
+        void startDrain().catch(() => undefined);
       }, delayMs);
     },
     async flushNow() {
@@ -50,7 +67,12 @@ export function createDebouncedSaver(
         clearTimeout(timer);
         timer = null;
       }
-      await doFlush();
+      if (pending === null) {
+        await drainPromise;
+        return;
+      }
+      flushRequested = true;
+      await startDrain();
     },
   };
 }

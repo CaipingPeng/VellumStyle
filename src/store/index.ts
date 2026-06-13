@@ -57,20 +57,24 @@ function setValueByPath(styles: StyleItem[], path: string[], value: string): Sty
   });
 }
 
-// 自动保存器：写当前文档到磁盘。debounce 800ms；切换/关窗前调 flushSave。
+const AUTOSAVE_DELAY_MS = 1200;
+
+// 自动保存器：写当前文档到磁盘。debounce 后串行保存；切换/关窗前调 flushSave。
 // 声明在 useStore 之前——回调延迟执行（debounce 到点才跑），届时 useStore 已就绪。
 const saver = createDebouncedSaver(async (text) => {
   const path = useStore.getState().currentDocPath;
   if (path) await writeDocument(path, text);
-}, 800, {
-  onScheduled: () => {
-    useStore.setState({saveStatus: "saving"});
-  },
+}, AUTOSAVE_DELAY_MS, {
   onFlushStart: () => {
     useStore.setState({saveStatus: "saving"});
   },
-  onFlushSuccess: () => {
-    useStore.setState({saveStatus: "saved", lastSavedAt: Date.now()});
+  onFlushSuccess: (text) => {
+    const state = useStore.getState();
+    if (state.content === text) {
+      useStore.setState({saveStatus: "saved", lastSavedAt: Date.now()});
+    } else {
+      useStore.setState({saveStatus: "idle"});
+    }
   },
   onFlushError: (error) => {
     console.error("自动保存失败：", error);
@@ -108,7 +112,7 @@ export const useStore = create<EditorState>()(
       favoriteThemeIds: [],
       pinnedCodeThemeIds: [...DEFAULT_PINNED_CODE_THEME_IDS],
       setContent: (content) => {
-        set({content});
+        set({content, saveStatus: "idle"});
         scheduleSave(content);
       },
       setMarkdownTheme: (markdownThemeId) => set({markdownThemeId}),
