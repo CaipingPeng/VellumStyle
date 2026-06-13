@@ -10,6 +10,7 @@
 
 - [核心功能](#核心功能)
 - [软件使用](#软件使用)
+- [文件同步](#文件同步)
 - [技术栈](#技术栈)
 - [运行环境](#运行环境)
 - [二次开发](#二次开发)
@@ -39,6 +40,7 @@
 - **主题选择与收藏**：内置 41 款排版主题和 250+ Highlight.js/Base16 代码主题，支持搜索、分页、收藏和置顶。
 - **结构化主题模型**：主题不是裸 CSS，而是 `StyleModel`；运行时编译成 CSS，预览元素可点击后在样式面板中调整。
 - **多文档管理**：应用数据目录下维护真实 `documents/` 文件树，支持新建、重命名、删除、移动和自动保存。
+- **坚果云文件同步**：可在设置页启用坚果云 WebDAV 同步，把本机 `documents/` 下的 Markdown 文档同步到云端目录；状态栏会在“已保存”旁边显示同步状态。
 - **IP 白名单辅助**：从设置页一键获取当前出口 IPv4 地址并复制到剪贴板，方便添加到公众号后台白名单。
 - **同步滚动**：Markdown 顶层块带 `data-line` 行号，编辑器与预览区按源码行双向同步。
 - **文档大纲导航**：自动解析 Markdown 文档中的标题层级，生成可导航的大纲侧栏。点击大纲项可跳转到对应章节，预览滚动时大纲高亮自动跟随。
@@ -47,6 +49,45 @@
 # 软件使用
 
 相关问题，见[VellumStyle-文澜排版帮助文档](https://my.feishu.cn/docx/RUDpd1zWnoWuuyx0uFxcahIGnmC)
+
+# 文件同步
+
+文件同步目前支持坚果云 WebDAV。它是本地优先的同步能力：应用数据目录中的 `documents/` 仍然是真实文档源，坚果云只作为多设备之间交换 Markdown 文档的远端存储。后续如果接入其他 WebDAV 或云盘接口，也会沿用同一套配置和同步状态模型。
+
+## 启用坚果云同步
+
+1. 打开应用右上角「设置」。
+2. 在左侧导航切到「文件同步」。
+3. 打开「启用文件同步」。
+4. 填写坚果云账号邮箱。
+5. 填写坚果云“第三方应用管理”中生成的应用授权密码，不要填写坚果云网页登录密码。
+6. 确认云端目录，默认是 `VellumStyle`。应用会把同步索引和文档写入这个目录。
+7. 点击「测试连接」确认账号和授权密码可用。
+8. 点击「保存设置」后，同步会在应用启动、文档保存、文档树新建/重命名/删除/移动后自动触发。
+
+「测试连接」只做只读 WebDAV `PROPFIND` 校验，用来确认坚果云账号和应用授权密码是否正确；它不会保存设置，也不会创建远端目录。真正启用后，应用会按需创建云端目录和子目录。
+
+## 同步状态
+
+状态栏会在保存状态旁边显示文件同步状态：
+
+| 状态 | 含义 |
+| --- | --- |
+| `同步关闭` | 未启用同步，或 Web 调试模式下不可用 |
+| `待同步` | 已启用但尚未完成一次同步 |
+| `同步中` | 正在和坚果云交换文档 |
+| `已同步 HH:mm` | 最近一次同步成功 |
+| `同步冲突` | 同步完成，但检测到本地和云端都有改动 |
+| `同步失败` | 网络、账号、授权密码或 WebDAV 服务返回错误 |
+
+鼠标悬停在状态文本上可以看到最近一次同步返回的详细消息。
+
+## 冲突与数据边界
+
+- 当前只同步 `documents/` 下的 `.md` 文档，不同步微信凭证、主题、localStorage UI 偏好和构建产物。
+- 如果本地和云端同时修改同一个文档，应用保留本地文件作为主版本，并把云端版本保存成同目录下的冲突副本，例如 `周报 (坚果云冲突 20260614-090800).md`。
+- 同步索引会写入云端目录的 `.vellumstyle-sync.json`，本机同步状态会写入 Tauri 应用数据目录下的 `sync-state.json`。这两个文件用于判断上传、下载、删除和冲突。
+- 更换坚果云账号或云端目录会形成新的同步作用域；应用会重新建立对应目录下的同步索引。
 
 # 技术栈
 
@@ -147,7 +188,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 │   │   ├── Import/                   # Markdown 导入弹窗
 │   │   ├── Preview/                  # 公众号预览区与预览宽度模式
 │   │   ├── Publish/                  # 发布到公众号草稿箱
-│   │   ├── Settings/                 # 微信凭证设置
+│   │   ├── Settings/                 # 微信凭证、文件同步、网络辅助设置
 │   │   ├── StylePanel/               # 可视化样式面板
 │   │   ├── Theme/                    # 主题选择、缩略图和主题导入
 │   │   ├── Toast/                    # 轻量 toast
@@ -163,7 +204,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 │   │   ├── generatedHljsThemes.ts    # 生成的代码主题集合
 │   │   └── plugins/                  # 自定义 markdown-it 插件
 │   ├── store/
-│   │   └── index.ts                  # Zustand 状态、自动保存、主题状态
+│   │   └── index.ts                  # Zustand 状态、自动保存、主题与同步状态
 │   ├── styles/
 │   │   └── globals.css               # 应用全局样式与滚动条样式
 │   ├── test/
@@ -177,6 +218,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 │   │   └── presets/                  # 内置排版主题 JSON
 │   └── utils/
 │       ├── autosave.ts               # debounce 自动保存
+│       ├── cloudSync.ts              # 文件同步 Tauri command 封装与状态格式化
 │       ├── clipboard.ts              # text/html 剪贴板写入
 │       ├── documents.ts              # 前端文档树 Tauri command 封装
 │       ├── imageProxy.ts             # mmbiz 预览代理链接转换
@@ -197,6 +239,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 │       ├── config.rs                 # 配置读取与保存
 │       ├── documents.rs              # 文档文件树
 │       ├── import.rs                 # 文件选择与导入媒体解析
+│       ├── sync.rs                   # 坚果云 WebDAV 文档同步
 │       ├── themes.rs                 # 用户主题目录与导入
 │       └── wechat.rs                 # 微信图床、草稿箱、图片代理
 ├── scripts/
@@ -279,6 +322,7 @@ Preview DOM
 - 读取和保存微信凭证。
 - 选择 Markdown 文件、图片文件、资源目录。
 - 维护 `documents/` 文档树。
+- 通过坚果云 WebDAV 同步 `documents/` 下的 Markdown 文档。
 - 维护 `themes/` 用户主题目录。
 - 代理上传图片到微信素材库。
 - 代理发布到微信公众号草稿箱。
@@ -286,6 +330,21 @@ Preview DOM
 - 注册 `wximg` 自定义协议，用于预览 mmbiz 图片。
 
 `src-tauri/capabilities/default.json` 只授予主窗口核心能力、窗口 destroy 权限和 dialog 权限。新增 Tauri API 时需要同步检查权限。
+
+### 文件同步流水线
+
+```text
+本地 documents/*.md
+  -> 扫描相对路径和内容指纹
+  -> 读取本机 sync-state.json
+  -> 读取坚果云 .vellumstyle-sync.json
+  -> 对比本地 / 云端 / 上次同步三方状态
+  -> 上传、下载、删除或生成冲突副本
+  -> 写回本机和云端同步索引
+  -> 更新状态栏同步状态
+```
+
+同步入口是 Rust 命令 `sync_documents`，前端通过 `src/utils/cloudSync.ts` 调用。`App.tsx` 会在启动后触发一次同步，文档保存或文档树发生变化后也会触发后台同步。连接测试入口是 `test_sync_connection`，它只使用只读 `PROPFIND` 校验坚果云 WebDAV 凭证。
 
 ### mmbiz 图片代理
 
@@ -308,6 +367,9 @@ Preview DOM
 | --- | --- | --- |
 | Markdown 文档 | Tauri `app_data_dir/documents/` | 真实文件树，`.md` 文件即文档 |
 | 微信凭证 | Tauri `app_data_dir/config.local.yaml` | 由设置页写入，不提交仓库 |
+| 同步配置 | Tauri `app_data_dir/config.local.yaml` | `sync.enabled`、`provider`、坚果云账号、应用授权密码和远端目录 |
+| 本机同步状态 | Tauri `app_data_dir/sync-state.json` | 记录上次同步的文件指纹，用于判断改动和删除 |
+| 云端同步索引 | 坚果云 WebDAV 目录 `.vellumstyle-sync.json` | 记录云端文件指纹，用于多设备同步 |
 | 用户主题 | Tauri `app_data_dir/themes/*.json` | 主题文件夹可在应用内打开 |
 | 当前打开文档、主题偏好 | localStorage `vellumstyle` | Zustand persist，只存轻量 UI 偏好 |
 | 构建产物 | `dist/`、`src-tauri/target/` | 已被 `.gitignore` 忽略 |
@@ -318,6 +380,15 @@ Preview DOM
 - 切换文档前会 `await flushSave()`，避免旧文档未落盘。
 - 关闭窗口前会阻止默认关闭，先 flush，再调用 `win.destroy()`。
 - 保存失败会进入 `saveStatus: "error"` 并展示 toast。
+- 同步启用后，保存成功会调度后台同步；同步失败不会阻止本地保存。
+
+### 文件同步机制
+
+- 同步服务只处理 `.md` 文件，保持文档树相对路径，不会上传应用配置、主题文件或构建产物。
+- 首次同步时，如果云端目录没有索引，应用会创建 `.vellumstyle-sync.json` 并把本机文档作为初始状态上传。
+- 后续同步会比较本机文件、云端索引和本机 `sync-state.json` 三方状态，区分新增、修改、删除和冲突。
+- 同一个文件本地和云端都改过时，本地版本继续占用原文件名，云端版本会被保存为带 `坚果云冲突` 标记的副本。
+- Web 开发模式没有 Tauri 后端，`runCloudSync()` 会返回“Web 调试模式未启用文件同步”，不会访问坚果云。
 
 ### 文档路径安全
 
@@ -441,12 +512,13 @@ npm test
 "test": "node --import tsx --import ./src/test/setupDom.ts --test \"src/**/*.test.ts\""
 ```
 
-覆盖重点包括（22 个测试文件）：
+覆盖重点包括（26 个测试文件）：
 
 - Tauri 环境识别。
 - Web fallback 文档树。
 - CSP nonce 读取。
 - 自动保存 debounce 与 flush。
+- 文件同步状态格式化与 Web 调试模式 fallback。
 - Markdown 渲染、清洗和导出转换。
 - MathJax 导出后处理。
 - 代码主题作用域化。
@@ -477,7 +549,7 @@ cargo check --manifest-path src-tauri/Cargo.toml
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-Rust 测试目前覆盖路径命名规则、主题选择器归一化、远程图片重定向安全限制等逻辑。
+Rust 测试目前覆盖路径命名规则、主题选择器归一化、远程图片重定向安全限制、同步配置校验、WebDAV 状态分类和冲突副本命名等逻辑。
 
 ### 生产构建检查
 
@@ -536,8 +608,42 @@ server: {
 - 微信图床上传。
 - 公众号草稿箱发布。
 - 本地文档真实文件树。
+- 坚果云 WebDAV 文件同步。
 - 用户主题目录。
 - mmbiz 图片代理协议。
+
+### 文件同步测试连接失败
+
+先确认填写的是坚果云账号邮箱和“第三方应用管理”中生成的应用授权密码。坚果云网页登录密码不能用于 WebDAV。
+
+如果仍然失败，继续检查：
+
+- 当前网络是否能访问 `https://dav.jianguoyun.com/dav/`。
+- 账号是否启用了坚果云 WebDAV / 第三方应用授权。
+- 授权密码是否复制完整，前后没有多余空格。
+- 免费服务是否达到坚果云当前账号限制。
+
+「测试连接」只校验账号和授权密码，不会创建 `VellumStyle` 目录。如果测试成功但保存后同步失败，再看状态栏 tooltip 或开发者控制台中的 WebDAV HTTP 状态。
+
+### 状态栏显示“同步冲突”
+
+这表示本地和云端都修改过同一份文档。应用会保留本地原文件，并把云端版本保存为带 `坚果云冲突` 后缀的副本。处理方式通常是：
+
+1. 在文档树中打开冲突副本。
+2. 对比原文件和冲突副本。
+3. 手动合并需要保留的内容。
+4. 删除已经处理完的冲突副本。
+
+### 状态栏显示“同步失败”
+
+常见原因：
+
+- 坚果云账号或应用授权密码失效。
+- 网络暂时不可用，或 WebDAV 服务返回 5xx。
+- 云端目录没有写入权限。
+- 本地 `documents/` 中存在异常路径或磁盘写入失败。
+
+同步失败不会影响本地保存。修复账号、网络或目录问题后，下一次保存或重启应用会再次尝试同步。
 
 ### 上传提示“尚未配置微信图床”
 
@@ -602,6 +708,8 @@ Tauri 生产环境 CSP 会给静态 style 注入 nonce。运行时新建 `<style
 ## 发布与安全注意事项
 
 - 微信凭证只应保存在本机应用数据目录，不应提交到仓库。
+- 坚果云账号和应用授权密码同样只保存在本机 `config.local.yaml`，不要提交到仓库，也不要把网页登录密码当作 WebDAV 授权密码使用。
+- 文件同步会把 Markdown 文档内容写入用户配置的坚果云目录；涉及未发布文章或敏感内容时，请按团队的数据权限要求选择是否启用。
 - `src/themes/presets/` 中部分主题样式参考或迁移自 mdnice 在线服务，开源或商业发布前需要再次确认授权边界。
 - 远程图片下载已经做了公网地址限制，但后续如果支持更多媒体类型，需要继续做大小、MIME、重定向和内网地址校验。
 - 复制到微信的 HTML 会经过 DOMPurify 清洗和 CSS 内联，但公众号编辑器仍可能改写部分标签或样式，发布前请在微信后台预览。
