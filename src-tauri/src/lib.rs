@@ -1,5 +1,6 @@
 mod config;
 mod documents;
+mod export_file;
 mod import;
 mod sync;
 mod themes;
@@ -89,6 +90,8 @@ pub fn run() {
             documents::rename_entry,
             documents::delete_entry,
             documents::move_entry,
+            export_file::write_export_file,
+            export_file::export_pdf_file,
             wechat::upload_thumb,
             wechat::upload_remote_thumb,
             wechat::add_draft

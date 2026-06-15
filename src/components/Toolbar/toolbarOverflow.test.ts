@@ -35,3 +35,14 @@ test("宽度不足时从右侧逐步收入更多", () => {
 
   assert.equal(count, 2);
 });
+
+test("导出作为导入旁边的次级按钮参与溢出计算", () => {
+  const count = computeVisibleActionCount({
+    availableWidth: 496,
+    secondaryWidths: [84, 58, 96, 58, 30],
+    primaryWidths: [70, 112],
+    moreWidth: 30,
+  });
+
+  assert.equal(count, 3);
+});
