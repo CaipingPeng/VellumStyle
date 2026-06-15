@@ -1,10 +1,11 @@
 import {useCallback, useLayoutEffect, useRef, useState, type RefObject} from "react";
-import {Copy as CopyIcon, FileInput, ImageUp, MoreHorizontal, Palette, Send, Settings} from "lucide-react";
+import {Copy as CopyIcon, Download, FileInput, ImageUp, MoreHorizontal, Palette, Send, Settings} from "lucide-react";
 import UploadButton, {type UploadButtonHandle} from "../Upload/UploadButton.tsx";
 import ImportButton, {type ImportButtonHandle} from "../Import/ImportButton.tsx";
 import ThemeMenu, {type ThemeMenuHandle} from "../Theme/ThemeMenu.tsx";
 import PublishButton from "../Publish/PublishButton.tsx";
 import CopyButton from "../Copy/CopyButton.tsx";
+import ExportButton, {ExportMenuItems, useExportController} from "../Export/ExportButton.tsx";
 import Button from "../ui/Button.tsx";
 import IconButton from "../ui/IconButton.tsx";
 import Menu, {MenuItem} from "../ui/Menu.tsx";
@@ -17,7 +18,7 @@ interface Props {
   onNeedSettings: () => void;
 }
 
-const SECONDARY_ACTIONS = ["upload", "import", "theme", "settings"] as const;
+const SECONDARY_ACTIONS = ["upload", "import", "export", "theme", "settings"] as const;
 type SecondaryAction = (typeof SECONDARY_ACTIONS)[number];
 const SECONDARY_ACTION_COUNT: number = SECONDARY_ACTIONS.length;
 const MIN_LEFT_TOOLBAR_WIDTH = 30;
@@ -30,6 +31,7 @@ export default function MainToolbar({onPickFile, onPickLocal, onOpenSettings, on
   const uploadRef = useRef<UploadButtonHandle>(null);
   const importRef = useRef<ImportButtonHandle>(null);
   const themeRef = useRef<ThemeMenuHandle>(null);
+  const exportController = useExportController();
 
   const recalcVisible = useCallback(() => {
     const wrap = wrapRef.current;
@@ -95,6 +97,8 @@ export default function MainToolbar({onPickFile, onPickLocal, onOpenSettings, on
         closeMore();
         importRef.current?.open();
         break;
+      case "export":
+        break;
       case "theme":
         closeMore();
         themeRef.current?.open();
@@ -114,6 +118,7 @@ export default function MainToolbar({onPickFile, onPickLocal, onOpenSettings, on
         <UploadButton ref={uploadRef} showTrigger={false} onPickFile={onPickFile} onPickLocal={onPickLocal} />
       )}
       {isVisible("import") ? <ImportButton ref={importRef} variant="toolbar" /> : <ImportButton ref={importRef} showTrigger={false} />}
+      {isVisible("export") && <ExportButton controller={exportController} variant="toolbar" />}
       {isVisible("theme") ? <ThemeMenu ref={themeRef} variant="toolbar" /> : <ThemeMenu ref={themeRef} showTrigger={false} />}
       {isVisible("settings") && (
         <IconButton title="设置" onClick={onOpenSettings} className="text-text-secondary hover:text-text">
@@ -136,9 +141,13 @@ export default function MainToolbar({onPickFile, onPickLocal, onOpenSettings, on
         >
           {hiddenActions.map((action) => {
             return (
-              <MenuItem key={action} onClick={() => runHiddenAction(action)}>
-                {menuLabel(action)}
-              </MenuItem>
+              action === "export" ? (
+                <ExportMenuItems key={action} controller={exportController} onSelect={closeMore} />
+              ) : (
+                <MenuItem key={action} onClick={() => runHiddenAction(action)}>
+                  {menuLabel(action)}
+                </MenuItem>
+              )
             );
           })}
         </Menu>
@@ -154,6 +163,8 @@ function menuLabel(action: SecondaryAction) {
       return "上传图片";
     case "import":
       return "导入";
+    case "export":
+      return "导出";
     case "theme":
       return "主题";
     case "settings":
@@ -175,6 +186,9 @@ function ToolbarMeasure({measureRef}: {measureRef: RefObject<HTMLDivElement>}) {
       </div>
       <div data-measure="settings">
         <IconButton title="设置"><Settings size={16} /></IconButton>
+      </div>
+      <div data-measure="export">
+        <Button variant="secondary" className="w-[92px]"><Download size={14} />导出</Button>
       </div>
       <div data-measure="publish">
         <Button variant="primary"><Send size={14} />发布</Button>
