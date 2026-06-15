@@ -36,6 +36,7 @@
 - **Markdown 文章导入**：选择外部 `.md` / `.markdown` 文件，可以将文章导入，并自动扫描文章中远程图片链接，下载并上传到微信素材库并替换链接；对于本地图片链接，可以自动扫描附件目录，并上传到微信素材库并替换链接。
 - **mmbiz 图片预览代理**：预览时如果不使用代理，永久素材库的图片链接将无法显示（微信会验证图片是不是在微信域名打开的）。因此本工具使用 Tauri 自定义 `wximg` 协议带微信 Referer 拉图，复制前自动还原为原始 mmbiz 链接。
 - **发布到公众号草稿箱**：上传封面图，校验正文图片均已进入微信素材域，再调用 `draft/add` 写入公众号草稿箱。支持从正文已上传图片中选择封面，也可直接从公众号永久素材库中选择已有图片作为封面，避免重复上传生成冗余素材。
+- **文章导出**：工具栏「导出」支持 PNG 长图、HTML 和 A4 PDF。PDF 由 Tauri/WebView2 直接生成，不走系统打印窗口，不携带浏览器页眉页脚，正文文本可选中，并会根据文章标题生成 PDF 大纲/书签。
 - **复制到微信**：如果不想上传到草稿箱，也可以在浏览器打开公众号文章编辑页面，然后点击“复制”，把预览 DOM 转成微信编辑器可识别的 `text/html`，并用 `juice` 将 CSS 内联到元素 `style`。粘贴到编辑页面后将保留在工具中渲染出来的样式。
 - **主题选择与收藏**：内置 41 款排版主题和 250+ Highlight.js/Base16 代码主题，支持搜索、分页、收藏和置顶。
 - **结构化主题模型**：主题不是裸 CSS，而是 `StyleModel`；运行时编译成 CSS，预览元素可点击后在样式面板中调整。
@@ -115,8 +116,8 @@
 
 | 模式 | 命令 | 能力范围 |
 | --- | --- | --- |
-| Web 开发模式 | `npm run dev` 或 `npx vite` | 编辑、预览、主题、复制等纯前端能力；Tauri 命令不可用，文件树使用内存 fallback |
-| 桌面开发模式 | `npm run tauri dev` 或 `npx tauri dev` | 完整能力：本地文件、微信图床、导入、主题目录、草稿箱发布、mmbiz 代理 |
+| Web 开发模式 | `npm run dev` 或 `npx vite` | 编辑、预览、主题、复制、HTML 导出等纯前端能力；Tauri 命令不可用，文件树使用内存 fallback |
+| 桌面开发模式 | `npm run tauri dev` 或 `npx tauri dev` | 完整能力：本地文件、微信图床、导入、PNG/PDF/HTML 导出、主题目录、草稿箱发布、mmbiz 代理 |
 
 推荐开发环境：
 
@@ -185,6 +186,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 │   │   ├── Copy/                     # 复制到微信
 │   │   ├── DocTree/                  # 多文档树与拖拽移动
 │   │   ├── Editor/                   # CodeMirror 编辑器与语法编辑纯函数
+│   │   ├── Export/                   # PNG 长图、HTML、A4 PDF 导出入口
 │   │   ├── Import/                   # Markdown 导入弹窗
 │   │   ├── Preview/                  # 公众号预览区与预览宽度模式
 │   │   ├── Publish/                  # 发布到公众号草稿箱
@@ -221,6 +223,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 │       ├── cloudSync.ts              # 文件同步 Tauri command 封装与状态格式化
 │       ├── clipboard.ts              # text/html 剪贴板写入
 │       ├── documents.ts              # 前端文档树 Tauri command 封装
+│       ├── exportArticle.ts          # PNG/HTML/PDF 导出渲染与保存流程
 │       ├── imageProxy.ts             # mmbiz 预览代理链接转换
 │       ├── markdownImport.ts         # 导入 Markdown 并上传替换媒体
 │       ├── markdownMediaScanner.ts   # Markdown/HTML/Obsidian 媒体扫描
@@ -238,6 +241,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 │       ├── main.rs                   # 桌面入口
 │       ├── config.rs                 # 配置读取与保存
 │       ├── documents.rs              # 文档文件树
+│       ├── export_file.rs            # 文件写入与 WebView2 PDF 导出
 │       ├── import.rs                 # 文件选择与导入媒体解析
 │       ├── sync.rs                   # 坚果云 WebDAV 文档同步
 │       ├── themes.rs                 # 用户主题目录与导入
@@ -315,6 +319,19 @@ Preview DOM
 
 微信编辑器主要识别内联样式，因此最终 HTML 需要尽量把主题 CSS 变成元素上的 `style=""`。
 
+### 导出流水线
+
+```text
+Preview DOM / solveHtml()
+  -> 等待 MathJax idle
+  -> 生成 A4 导出 HTML
+  -> PNG: 克隆预览内容到 A4 宽度隐藏容器，再用 html2canvas 输出长图
+  -> HTML: 写出独立 HTML 文件
+  -> PDF: 隐藏 WebView2 加载导出 HTML，调用 Page.printToPDF 写入 A4 PDF
+```
+
+PDF 导出不调用系统打印窗口，因此不会带 URL、日期、页码等浏览器页眉页脚。标题节点会补充稳定锚点，并通过 Chromium `generateDocumentOutline` 生成 PDF 阅读器侧边栏大纲。非 Tauri Web 模式无法直接访问 WebView2 和本地保存对话框，PDF 导出会退化为下载可打印的 HTML。
+
 ### Tauri 与 Rust 后端
 
 前端通过 `@tauri-apps/api/core` 的 `invoke` 调用 Rust 命令。Rust 侧负责所有需要本机能力或敏感凭证的功能：
@@ -322,6 +339,7 @@ Preview DOM
 - 读取和保存微信凭证。
 - 选择 Markdown 文件、图片文件、资源目录。
 - 维护 `documents/` 文档树。
+- 写入导出文件，并在 Windows 上通过隐藏 WebView2 + Chrome DevTools `Page.printToPDF` 生成干净 A4 PDF。
 - 通过坚果云 WebDAV 同步 `documents/` 下的 Markdown 文档。
 - 维护 `themes/` 用户主题目录。
 - 代理上传图片到微信素材库。
@@ -520,6 +538,7 @@ npm test
 - 自动保存 debounce 与 flush。
 - 文件同步状态格式化与 Web 调试模式 fallback。
 - Markdown 渲染、清洗和导出转换。
+- PNG 长图、HTML 和 A4 PDF 导出文档生成。
 - MathJax 导出后处理。
 - 代码主题作用域化。
 - 主题模型校验与编译。
@@ -608,9 +627,20 @@ server: {
 - 微信图床上传。
 - 公众号草稿箱发布。
 - 本地文档真实文件树。
+- 干净 A4 PDF 直接导出。
 - 坚果云 WebDAV 文件同步。
 - 用户主题目录。
 - mmbiz 图片代理协议。
+
+### PDF 导出没有生成大纲或变成 HTML
+
+干净 PDF 直接导出依赖 Tauri 桌面模式和 Windows WebView2 的 DevTools `Page.printToPDF` 能力。请确认：
+
+- 正在使用 `npm run tauri dev` 或打包后的桌面应用，而不是纯 Web 模式。
+- 文章中使用真实 Markdown 标题（`#`、`##` 等）生成 `h1` 到 `h6`，PDF 大纲会基于这些标题生成。
+- Windows 已安装或更新 WebView2 Runtime。
+
+纯 Web 模式下没有本地 WebView2 和文件保存命令，PDF 导出会退化为下载可打印 HTML，供浏览器或其他工具处理。
 
 ### 文件同步测试连接失败
 
