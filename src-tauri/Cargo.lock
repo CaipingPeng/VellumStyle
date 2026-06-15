@@ -4204,6 +4204,7 @@ checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 name = "vellumstyle"
 version = "1.0.0"
 dependencies = [
+ "base64 0.22.1",
  "http",
  "reqwest 0.12.28",
  "serde",
@@ -4215,6 +4216,8 @@ dependencies = [
  "tokio",
  "url",
  "urlencoding",
+ "webview2-com",
+ "windows",
 ]
 
 [[package]]
