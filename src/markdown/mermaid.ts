@@ -1,9 +1,56 @@
+import {getCodeMirrorCspNonce} from "../utils/cspNonce.ts";
+
 const MERMAID_SELECTOR = 'pre.mermaid[data-mermaid-source="true"]';
+const MERMAID_RUNTIME_STYLE_ATTR = "data-vellumstyle-mermaid-style";
 
 type MermaidRenderer = typeof import("mermaid").default;
 
 let mermaidLoader: Promise<MermaidRenderer> | null = null;
 let renderCounter = 0;
+
+function mountedMermaidStyle(id: string): HTMLStyleElement | null {
+  return (
+    Array.from(document.head.querySelectorAll<HTMLStyleElement>(`style[${MERMAID_RUNTIME_STYLE_ATTR}]`)).find(
+      (style) => style.getAttribute(MERMAID_RUNTIME_STYLE_ATTR) === id,
+    ) ?? null
+  );
+}
+
+function createMermaidStyle(id: string): HTMLStyleElement {
+  const style = document.createElement("style");
+  style.setAttribute(MERMAID_RUNTIME_STYLE_ATTR, id);
+  const nonce = getCodeMirrorCspNonce();
+  if (nonce) {
+    style.nonce = nonce;
+  }
+  document.head.appendChild(style);
+  return style;
+}
+
+export function mountMermaidSvgStylesForRuntime(svg: SVGElement): void {
+  const id = svg.id;
+  const styleText = svg.querySelector("style")?.textContent;
+  if (!id || !styleText) {
+    return;
+  }
+
+  const style = mountedMermaidStyle(id) ?? createMermaidStyle(id);
+  style.textContent = styleText;
+}
+
+export function cleanupMermaidSvgStylesForRuntime(root: ParentNode = document): void {
+  const activeIds = new Set(
+    Array.from(root.querySelectorAll<SVGElement>("pre.mermaid svg[id]"))
+      .map((svg) => svg.id)
+      .filter(Boolean),
+  );
+  for (const style of Array.from(document.head.querySelectorAll<HTMLStyleElement>(`style[${MERMAID_RUNTIME_STYLE_ATTR}]`))) {
+    const id = style.getAttribute(MERMAID_RUNTIME_STYLE_ATTR);
+    if (!id || !activeIds.has(id)) {
+      style.remove();
+    }
+  }
+}
 
 async function loadMermaid(): Promise<MermaidRenderer> {
   if (!mermaidLoader) {
@@ -45,9 +92,14 @@ export async function renderMermaidCharts(root: ParentNode): Promise<void> {
         element.removeAttribute("data-mermaid-error");
         element.classList.remove("mermaid-error");
         element.innerHTML = svg;
+        const renderedSvg = element.querySelector<SVGElement>("svg");
+        if (renderedSvg) {
+          mountMermaidSvgStylesForRuntime(renderedSvg);
+        }
       } catch (error) {
         markError(element, error);
       }
     }),
   );
+  cleanupMermaidSvgStylesForRuntime(root);
 }
