@@ -32,6 +32,7 @@
 # 核心功能
 
 - **Markdown 编辑与实时预览**：左侧使用 CodeMirror 6 编辑，右侧支持实时渲染移动端、web端公众号文章样式。
+- **Mermaid 图表渲染**：支持 `mermaid` 围栏代码块在预览区直接渲染为流程图等 SVG 图表；复制到微信或发布到草稿箱时保留 SVG 结构和可复制文本，不会转成 PNG 图片占用公众号素材库。
 - **微信官方图床**：通过 Tauri Rust 命令代理调用微信公众号永久素材接口，上传成功后获得 `mmbiz.qpic.cn` 链接。这样做规避了mdnice等工具使用第三方图床，带来图床跑路，文章作废的风险。
 - **Markdown 文章导入**：选择外部 `.md` / `.markdown` 文件，可以将文章导入，并自动扫描文章中远程图片链接，下载并上传到微信素材库并替换链接；对于本地图片链接，可以自动扫描附件目录，并上传到微信素材库并替换链接。
 - **mmbiz 图片预览代理**：预览时如果不使用代理，永久素材库的图片链接将无法显示（微信会验证图片是不是在微信域名打开的）。因此本工具使用 Tauri 自定义 `wximg` 协议带微信 Referer 拉图，复制前自动还原为原始 mmbiz 链接。
@@ -103,6 +104,7 @@
 | 样式 | Tailwind CSS 3，禁用 preflight 以避免污染预览区 |
 | Markdown | markdown-it + 自定义插件链 |
 | 数学公式 | MathJax 3 |
+| 图表渲染 | Mermaid 11 |
 | 代码高亮 | highlight.js 主题生成与作用域化 |
 | CSS 内联 | juice |
 | HTML 清洗 | DOMPurify |
@@ -202,6 +204,8 @@ cargo test --manifest-path src-tauri/Cargo.toml
 │   │   ├── converter.ts              # 复制/发布用 HTML 生成与规范化
 │   │   ├── sanitize.ts               # DOMPurify 清洗
 │   │   ├── mathjax.ts                # MathJax 排版等待与触发
+│   │   ├── mermaid.ts                # Mermaid 围栏代码块的浏览器端 SVG 渲染
+│   │   ├── mermaidExport.ts          # 复制/发布前内联 Mermaid SVG 样式并转原生 SVG 文本
 │   │   ├── codeThemes.ts             # 代码主题作用域化与合并
 │   │   ├── generatedHljsThemes.ts    # 生成的代码主题集合
 │   │   └── plugins/                  # 自定义 markdown-it 插件
@@ -284,7 +288,7 @@ Markdown 文本
   -> DOMPurify 清洗
   -> mmbiz 图片代理改写
   -> Preview DOM
-  -> MathJax 排版
+  -> MathJax 排版 / Mermaid SVG 渲染
 ```
 
 插件链主要包括：
@@ -295,6 +299,7 @@ Markdown 文本
 - `==mark==` 高亮。
 - 链接脚注。
 - `[toc]` 目录。
+- Mermaid 围栏代码块。
 - ruby 注音。
 - figure / figcaption。
 - 定义列表。
@@ -313,11 +318,13 @@ Preview DOM
   -> 还原 wximg 代理图片链接
   -> 删除 data-line 和编辑辅助 class
   -> MathJax 节点转微信友好结构
+  -> Mermaid SVG 内联关键样式，并把 foreignObject 标签转为原生 SVG text
   -> juice.inlineContent(html, css)
   -> ClipboardItem(text/html)
 ```
 
 微信编辑器主要识别内联样式，因此最终 HTML 需要尽量把主题 CSS 变成元素上的 `style=""`。
+Mermaid 图表在复制和发布时走 SVG 兼容处理：从预览 DOM 读取真实渲染后的 SVG，内联节点、连线、箭头和文字的关键展示属性，移除不适合微信编辑器的 `style` 节点，并把可能残留的 `foreignObject` HTML 标签转成原生 SVG `<text>` / `<tspan>`。这样文本仍可选中复制，图表也不会被上传成图片素材。
 
 ### 导出流水线
 
@@ -485,6 +492,7 @@ Rust 侧 `documents.rs` 中所有文档路径都是相对 `documents/` 的路径
 
 - HTML 片段输入，并在渲染后经过 DOMPurify 清洗。
 - fenced code block 代码高亮。
+- `mermaid` fenced code block 图表渲染，例如流程图、时序图、状态图等 Mermaid 支持的图表类型。
 - 数学公式。
 - `==高亮==`。
 - 链接转脚注。
@@ -538,6 +546,7 @@ npm test
 - 自动保存 debounce 与 flush。
 - 文件同步状态格式化与 Web 调试模式 fallback。
 - Markdown 渲染、清洗和导出转换。
+- Mermaid 预览渲染标记、微信导出 SVG 样式内联和 `foreignObject` 转原生 SVG 文本。
 - PNG 长图、HTML 和 A4 PDF 导出文档生成。
 - MathJax 导出后处理。
 - 代码主题作用域化。
