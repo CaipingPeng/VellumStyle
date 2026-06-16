@@ -51,6 +51,19 @@ export const parser: MarkdownIt = new MarkdownIt({
   highlight,
 });
 
+const defaultFenceRenderer = parser.renderer.rules.fence;
+parser.renderer.rules.fence = (tokens, idx, options, _env, slf) => {
+  const token = tokens[idx];
+  const lang = token.info.trim().split(/\s+/)[0].toLowerCase();
+  if (lang !== "mermaid") {
+    return defaultFenceRenderer?.(tokens, idx, options, _env, slf) ?? slf.renderToken(tokens, idx, options);
+  }
+
+  token.attrSet("class", "mermaid");
+  token.attrSet("data-mermaid-source", "true");
+  return `<pre${slf.renderAttrs(token)}>${parser.utils.escapeHtml(token.content.replace(/\n$/, ""))}</pre>\n`;
+};
+
 // 插件链顺序与 mdnice 保持一致（顺序影响 token 处理结果）
 parser
   .use(headingSpan) // 1. 标题 span 装饰

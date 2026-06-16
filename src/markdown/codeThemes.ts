@@ -42,6 +42,29 @@ ${ARTICLE_ROOT_SELECTOR} pre.custom code.hljs {
   line-height: 1.55;
   white-space: inherit;
 }
+${ARTICLE_ROOT_SELECTOR} pre.mermaid {
+  box-sizing: border-box;
+  margin: 18px 0;
+  padding: 8px 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  text-align: center;
+  background: transparent;
+}
+${ARTICLE_ROOT_SELECTOR} pre.mermaid svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+${ARTICLE_ROOT_SELECTOR} pre.mermaid.mermaid-error {
+  padding: 12px;
+  border: 1px solid rgba(229, 72, 77, 0.3);
+  border-radius: 8px;
+  color: #9f1239;
+  text-align: left;
+  white-space: pre-wrap;
+}
 `;
 
 function scopeSelector(selector: string): string[] {

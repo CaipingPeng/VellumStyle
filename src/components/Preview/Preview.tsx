@@ -4,6 +4,7 @@ import {useStore, getThemeById} from "../../store/index.ts";
 import {replaceStyle, STYLE_IDS} from "../../utils/style.ts";
 import {toProxyHtml} from "../../utils/imageProxy.ts";
 import {typesetMath} from "../../markdown/mathjax.ts";
+import {renderMermaidCharts} from "../../markdown/mermaid.ts";
 import {modelIdFromElement, SELECTOR_PRIORITY} from "../StylePanel/elementMap.ts";
 import {getPreviewMode} from "./previewModes.ts";
 import {buildMarkdownCss} from "../../markdown/codeThemes.ts";
@@ -138,6 +139,16 @@ const Preview = forwardRef<PreviewHandle, Props>(
       }
       void typesetMath(root).catch((error) => {
         console.error("MathJax 排版失败", error);
+      });
+    }, [html]);
+
+    useEffect(() => {
+      const root = document.getElementById(ARTICLE_ROOT_ID);
+      if (!root || !html.includes("data-mermaid-source")) {
+        return;
+      }
+      void renderMermaidCharts(root).catch((error) => {
+        console.error("Mermaid 图表渲染失败", error);
       });
     }, [html]);
 

@@ -43,3 +43,14 @@ test("image-flow 图片语法中的 alt 不会注入额外属性", () => {
   assert.match(html, /alt="封面&quot; onerror=&quot;alert\(1\)"/);
   assert.doesNotMatch(html, /\sonerror=(["'])/i);
 });
+
+test("mermaid 围栏代码块渲染为图表容器而不是普通代码块", () => {
+  const html = render("```mermaid\ngraph TD\n  A[开始] --> B[结束]\n```");
+
+  assert.match(html, /<pre\b[^>]*class="mermaid"[^>]*>/);
+  assert.match(html, /<pre\b[^>]*data-mermaid-source="true"[^>]*>/);
+  assert.match(html, /<pre\b[^>]*data-line="0"[^>]*>/);
+  assert.match(html, /graph TD\n  A\[开始\] --&gt; B\[结束\]/);
+  assert.doesNotMatch(html, /class="custom"/);
+  assert.doesNotMatch(html, /<code/);
+});

@@ -2,6 +2,7 @@ import juice from "juice";
 import {ARTICLE_BOX_ID} from "../articleRoot.ts";
 import {STYLE_IDS} from "../utils/style.ts";
 import {fromProxyHtml} from "../utils/imageProxy.ts";
+import {inlineMermaidSvgElementStylesForWechat} from "./mermaidExport.ts";
 
 const DISPLAY_MATH_STYLE =
   "display:block;text-align:center;margin:1em 0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch";
@@ -59,6 +60,56 @@ export function stripPreviewEditClasses(html: string): string {
   });
 }
 
+function cloneBoxWithWechatSafeMermaid(box: HTMLElement): HTMLElement {
+  const clone = box.cloneNode(true) as HTMLElement;
+  const sourceSvgs = Array.from(box.querySelectorAll<SVGElement>("pre.mermaid svg"));
+  const cloneSvgs = Array.from(clone.querySelectorAll<SVGElement>("pre.mermaid svg"));
+  cloneSvgs.forEach((svg, index) => {
+    const sourceSvg = sourceSvgs[index];
+    inlineMermaidSvgElementStylesForWechat(svg, sourceSvg ? (element) => {
+      const path = elementPathWithinSvg(svg, element);
+      const sourceElement = path ? elementAtPath(sourceSvg, path) : null;
+      const target = sourceElement ?? element;
+      const style = window.getComputedStyle(target);
+      return {
+        fill: style.fill,
+        stroke: style.stroke,
+        strokeWidth: style.strokeWidth,
+        color: style.color,
+        fontFamily: style.fontFamily,
+        fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
+        fontStyle: style.fontStyle,
+        textAnchor: style.textAnchor,
+        opacity: style.opacity,
+      };
+    } : undefined);
+  });
+  return clone;
+}
+
+function elementPathWithinSvg(svg: SVGElement, element: Element): number[] | null {
+  const path: number[] = [];
+  let current: Element | null = element;
+  while (current && current !== svg) {
+    const parent: Element | null = current.parentElement;
+    if (!parent) return null;
+    path.unshift(Array.from(parent.children).indexOf(current));
+    current = parent;
+  }
+  return current === svg ? path : null;
+}
+
+function elementAtPath(root: Element, path: number[]): Element | null {
+  let current: Element = root;
+  for (const index of path) {
+    const next = current.children.item(index);
+    if (!next) return null;
+    current = next;
+  }
+  return current;
+}
+
 // 生成微信兼容的最终 HTML：
 // 1. 给预览区每个顶层子元素加 data-tool 水印
 // 2. MathJax 节点后处理（行内/块级公式转换、防吞空格）
@@ -75,7 +126,8 @@ export function solveHtml(): string {
     }
   }
 
-  let html = box.innerHTML;
+  const exportBox = cloneBoxWithWechatSafeMermaid(box);
+  let html = exportBox.innerHTML;
   // 预览里 mmbiz 图走了代理 src，复制前还原成原始 mmbiz 链（微信域名下正常显示）
   html = fromProxyHtml(html);
   // 剥离同步滚动用的 data-line，避免污染粘贴到微信的 HTML
