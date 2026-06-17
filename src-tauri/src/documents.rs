@@ -236,6 +236,35 @@ pub fn move_entry(app: AppHandle, src: String, dest_dir: String) -> Result<Strin
     Ok(rel_path(&base, &target))
 }
 
+/// 在系统文件管理器中打开条目所在位置。path 为相对 documents/ 的路径。
+#[tauri::command]
+pub fn open_entry_location(app: AppHandle, path: String) -> Result<(), String> {
+    let full = resolve_in_documents(&app, &path)?;
+    if !full.exists() {
+        return Err("条目不存在".into());
+    }
+
+    #[cfg(target_os = "windows")]
+    let result = std::process::Command::new("explorer")
+        .arg(format!("/select,{}", full.to_string_lossy()))
+        .spawn();
+
+    #[cfg(target_os = "macos")]
+    let result = std::process::Command::new("open").args(["-R"]).arg(&full).spawn();
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let result = {
+        let dir = if full.is_dir() {
+            full.as_path()
+        } else {
+            full.parent().unwrap_or_else(|| full.as_path())
+        };
+        std::process::Command::new("xdg-open").arg(dir).spawn()
+    };
+
+    result.map(|_| ()).map_err(|e| format!("打开文件位置失败：{e}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::is_valid_name;

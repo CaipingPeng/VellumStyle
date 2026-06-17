@@ -1,7 +1,7 @@
 // 文档树操作封装：create/rename/delete + 操作后 loadTree 刷新。
 // 错误统一 toast；删除当前文档后由调用方决定切到哪篇（这里只负责数据）。
 import {scheduleCloudSync, useStore} from "../../store/index.ts";
-import {createDocument, createFolder, renameEntry, deleteEntry, moveEntry} from "../../utils/documents.ts";
+import {createDocument, createFolder, renameEntry, deleteEntry, moveEntry, openEntryLocation} from "../../utils/documents.ts";
 import {toast} from "../Toast/toast.ts";
 
 export function useDocActions() {
@@ -71,6 +71,13 @@ export function useDocActions() {
           useStore.getState().setCurrentDocPath(newPath + cur.slice(src.length));
         }
         scheduleCloudSync();
+      } catch (e) {
+        toast.show(String(e), "error");
+      }
+    },
+    async openLocation(path: string) {
+      try {
+        await openEntryLocation(path);
       } catch (e) {
         toast.show(String(e), "error");
       }

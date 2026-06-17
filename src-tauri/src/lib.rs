@@ -93,6 +93,7 @@ pub fn run() {
             documents::rename_entry,
             documents::delete_entry,
             documents::move_entry,
+            documents::open_entry_location,
             export_file::write_export_file,
             export_file::export_pdf_file,
             wechat::upload_thumb,

@@ -196,6 +196,13 @@ export function moveEntry(src: string, destDir: string): Promise<string> {
   return invoke<string>("move_entry", {src, destDir});
 }
 
+export function openEntryLocation(path: string): Promise<void> {
+  if (!isTauriRuntime()) {
+    return Promise.reject(new Error("Web 调试模式无法打开本地文件位置"));
+  }
+  return invoke("open_entry_location", {path});
+}
+
 // 在树里查某路径是否文件夹。
 export function isFolderPath(nodes: DocNode[], path: string): boolean {
   for (const n of nodes) {

@@ -209,6 +209,7 @@ export default function DocTree() {
                 onSelectFolder={setSelectedPath}
                 onRename={actions.rename}
                 onDelete={handleDelete}
+                onOpenLocation={(path) => void actions.openLocation(path)}
                 onDragStartNode={setDragSrc}
                 onDragOverNode={setDragOverPath}
                 onDropNode={handleDrop}

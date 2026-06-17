@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {ancestorDirsForPath, createDocument, listDocuments, readDocument, writeDocument} from "./documents.ts";
+import {ancestorDirsForPath, createDocument, listDocuments, openEntryLocation, readDocument, writeDocument} from "./documents.ts";
 
 test("非 Tauri 环境下返回可调试的示例文档树和内容", async () => {
   const tree = await listDocuments();
@@ -26,4 +26,8 @@ test("ancestorDirsForPath 返回文档路径中需要展开的父级目录", () 
   assert.deepEqual(ancestorDirsForPath("项目/子目录/文章.md"), ["项目", "项目/子目录"]);
   assert.deepEqual(ancestorDirsForPath("根目录文章.md"), []);
   assert.deepEqual(ancestorDirsForPath(null), []);
+});
+
+test("非 Tauri 环境下打开文件位置给出明确错误", async () => {
+  await assert.rejects(openEntryLocation("示例.md"), /Web 调试模式无法打开本地文件位置/);
 });

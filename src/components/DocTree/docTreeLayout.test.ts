@@ -26,6 +26,14 @@ test("文件树节点 hover 时显示完整名称且操作区不常驻占位", a
   assert.match(source, /group-hover:max-w-12/);
 });
 
+test("文件树节点提供打开文件位置的右键菜单", async () => {
+  const source = await readFile(new URL("./TreeNode.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /onContextMenu=\{openContextMenu\}/);
+  assert.match(source, /打开文件位置/);
+  assert.match(source, /onOpenLocation\(node\.path\)/);
+});
+
 test("文件树拖拽手柄保持细窄的 4px 命中区域", async () => {
   const source = await readFile(new URL("./DocTree.tsx", import.meta.url), "utf8");
 

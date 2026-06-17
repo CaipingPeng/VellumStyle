@@ -252,7 +252,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
         </>
       }
     >
-      <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(300px,0.95fr)_minmax(0,1.05fr)]">
+      <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.05fr)]">
         <div className="flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-bg px-3 py-3">
           <div>
             <label htmlFor="publish-title" className="mb-2 block text-[13px] font-medium text-text-secondary">
@@ -296,21 +296,33 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
               onClick={openThumbPicker}
               disabled={busy}
               aria-label={thumbPreview ? "更换封面图" : "上传封面图"}
-              className="group relative flex min-h-[180px] flex-1 w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-border-strong bg-bg-secondary text-left outline-none transition-all duration-fast ease-smooth hover:border-accent hover:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60"
+              className={`group relative flex aspect-[2.35/1] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-bg-secondary text-left outline-none transition-all duration-fast ease-smooth focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
+                thumbPreview
+                  ? "border border-border shadow-[0_14px_34px_rgba(20,20,30,0.12)]"
+                  : "border border-dashed border-border-strong hover:border-accent hover:bg-accent-subtle"
+              }`}
             >
               {thumbPreview ? (
                 <>
                   <img src={thumbPreview} alt="已选择的封面图预览" className="absolute inset-0 h-full w-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-90 transition-opacity group-hover:opacity-100" />
-                  <div className="relative mt-auto flex w-full items-center justify-between gap-3 p-4 text-white">
-                    <div>
-                      <div className="text-sm font-semibold">封面已上传</div>
-                      <div className="mt-1 text-xs text-white/80">点击此区域可重新选择本地图片</div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/18 to-transparent" />
+                  <span className="absolute right-2 top-2 inline-flex h-8 items-center gap-1.5 rounded-md bg-white/95 px-2.5 text-[12px] font-medium text-text shadow-sm transition-colors group-hover:bg-white">
+                    <UploadCloud size={14} />
+                    更换
+                  </span>
+                  <div className="relative mt-auto w-full p-3.5 text-white">
+                    <div
+                      className="text-[15px] font-semibold leading-5"
+                      style={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {title.trim() || "未命名标题"}
                     </div>
-                    <span className="inline-flex h-9 items-center gap-1.5 rounded-md bg-white/95 px-3 text-[13px] font-medium text-text shadow-sm transition-colors group-hover:bg-white">
-                      <UploadCloud size={15} />
-                      更换
-                    </span>
                   </div>
                 </>
               ) : (
@@ -386,7 +398,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                       type="button"
                       disabled={busy}
                       onClick={() => setPendingCandidateUrl(candidate.url)}
-                      className={`group relative aspect-[16/10] overflow-hidden rounded-md border bg-bg-secondary outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
+                      className={`group relative aspect-[2.35/1] overflow-hidden rounded-md border bg-bg-secondary outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
                         selected ? "border-accent ring-2 ring-[color:var(--ring)]" : "border-border"
                       }`}
                       aria-label={`选择第 ${index + 1} 张文中图片作为封面`}
@@ -418,7 +430,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
               {Array.from({length: 6}).map((_, index) => (
                 <div
                   key={index}
-                  className="flex aspect-[16/10] items-center justify-center rounded-md border border-border bg-bg-secondary text-text-muted"
+                  className="flex aspect-[2.35/1] items-center justify-center rounded-md border border-border bg-bg-secondary text-text-muted"
                 >
                   <Loader2 size={18} className="animate-spin" />
                 </div>
@@ -451,7 +463,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                       type="button"
                       disabled={busy}
                       onClick={() => pickMaterialThumb(item)}
-                      className={`group relative aspect-[16/10] overflow-hidden rounded-md border bg-bg-secondary outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
+                      className={`group relative aspect-[2.35/1] overflow-hidden rounded-md border bg-bg-secondary outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
                         selected ? "border-accent ring-2 ring-[color:var(--ring)]" : "border-border"
                       }`}
                       aria-label={`选择素材库第 ${index + 1} 张图片作为封面：${item.name}`}
@@ -522,7 +534,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
         <div className="space-y-3">
           <div className="overflow-hidden rounded-md border border-border bg-bg-secondary">
             {pendingCandidateUrl && (
-              <img src={toProxyImageUrl(pendingCandidateUrl)} alt="待确认的封面图" className="h-44 w-full object-cover" />
+              <img src={toProxyImageUrl(pendingCandidateUrl)} alt="待确认的封面图" className="aspect-[2.35/1] w-full object-cover" />
             )}
           </div>
           <p className="text-sm leading-6 text-text-secondary">确认后才会获取封面图片 ID，取消不会消耗资源。</p>
