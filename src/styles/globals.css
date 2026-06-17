@@ -151,3 +151,12 @@ body {
 #article .preview-edit-selected {
   outline: 2px solid var(--accent);
 }
+
+/* MathJax：静态兜底，防止 Tauri release WebView 未应用动态注入样式时行间公式失去居中。 */
+#article mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-align: center;
+}

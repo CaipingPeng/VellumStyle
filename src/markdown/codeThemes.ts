@@ -67,6 +67,24 @@ ${ARTICLE_ROOT_SELECTOR} pre.mermaid.mermaid-error {
 }
 `;
 
+const FOOTNOTE_LAYOUT_BASE_CSS = `
+${ARTICLE_ROOT_SELECTOR} .footnotes .footnote-item {
+  display: block !important;
+}
+${ARTICLE_ROOT_SELECTOR} .footnotes .footnote-num {
+  display: inline !important;
+  width: auto !important;
+  min-width: 0 !important;
+  margin-right: 0.25em;
+}
+${ARTICLE_ROOT_SELECTOR} .footnotes .footnote-item p {
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex: initial !important;
+}
+`;
+
 function scopeSelector(selector: string): string[] {
   const trimmed = selector.trim();
   if (!trimmed) return [];
@@ -158,5 +176,5 @@ export function buildCodeThemeCss(codeThemeId?: string | null): string {
 }
 
 export function buildMarkdownCss(markdownThemeCss: string, codeThemeId?: string | null): string {
-  return [markdownThemeCss, buildCodeThemeCss(codeThemeId)].filter(Boolean).join("\n");
+  return [markdownThemeCss, FOOTNOTE_LAYOUT_BASE_CSS, buildCodeThemeCss(codeThemeId)].filter(Boolean).join("\n");
 }

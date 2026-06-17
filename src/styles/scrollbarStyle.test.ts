@@ -30,3 +30,11 @@ test("预览滚动容器提供滚动条样式挂点", async () => {
 
   assert.match(source, /className="editor-preview-scrollbar"/);
 });
+
+test("MathJax 行间公式有静态居中样式兜底", async () => {
+  const css = await readFile(new URL("./globals.css", import.meta.url), "utf8");
+
+  assert.match(css, /#article\s+mjx-container\[jax="SVG"\]\[display="true"\]/);
+  assert.match(css, /text-align:\s*center/);
+  assert.match(css, /margin:\s*1em 0/);
+});

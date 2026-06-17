@@ -16,25 +16,45 @@ declare global {
   }
 }
 
+type MathJaxConfig = MathJaxApi & {
+  startup: {
+    typeset: false;
+  };
+  tex: {
+    inlineMath: string[][];
+    displayMath: string[][];
+    processEscapes: boolean;
+  };
+  options: {
+    enableMenu: false;
+    enableAssistiveMml: false;
+    menuOptions: {
+      settings: Record<string, boolean>;
+    };
+  };
+  svg: {
+    fontCache: "none";
+  };
+};
+
 let loadPromise: Promise<MathJaxApi> | undefined;
 let idlePromise: Promise<void> = Promise.resolve();
 let typesetQueue: Promise<void> = Promise.resolve();
 let jobId = 0;
 
-async function loadMathJax(): Promise<MathJaxApi> {
-  if (!loadPromise) {
-    window.MathJax = {
-      startup: {
-        typeset: false,
-      },
-      tex: {
-        inlineMath: [["$", "$"], ["\\(", "\\)"]],
-        displayMath: [["$$", "$$"], ["\\[", "\\]"]],
-        processEscapes: true,
-      },
-      options: {
-        enableMenu: false,
-      },
+export function createMathJaxConfig(): MathJaxConfig {
+  return {
+    startup: {
+      typeset: false,
+    },
+    tex: {
+      inlineMath: [["$", "$"], ["\\(", "\\)"]],
+      displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+      processEscapes: true,
+    },
+    options: {
+      enableMenu: false,
+      enableAssistiveMml: false,
       menuOptions: {
         settings: {
           enrich: false,
@@ -44,10 +64,16 @@ async function loadMathJax(): Promise<MathJaxApi> {
           explorer: false,
         },
       },
-      svg: {
-        fontCache: "none",
-      },
-    };
+    },
+    svg: {
+      fontCache: "none",
+    },
+  };
+}
+
+async function loadMathJax(): Promise<MathJaxApi> {
+  if (!loadPromise) {
+    window.MathJax = createMathJaxConfig();
 
     loadPromise = import("mathjax/es5/tex-svg.js").then(() => {
       if (!window.MathJax) {
