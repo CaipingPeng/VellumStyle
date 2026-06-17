@@ -313,11 +313,13 @@ export default function App() {
           <IconButton active={outlineOpen} title="大纲" aria-pressed={outlineOpen} onClick={toggleOutline}>
             <ListTree size={16} />
           </IconButton>
-          <SyntaxToolbar editorRef={editorRef} />
+          <SyntaxToolbar
+            editorRef={editorRef}
+            onPickFile={handleUploadFile}
+            onPickLocal={handleUploadLocal}
+          />
         </div>
         <MainToolbar
-          onPickFile={handleUploadFile}
-          onPickLocal={handleUploadLocal}
           onOpenSettings={() => setSettingsOpen(true)}
           onNeedSettings={() => setSettingsOpen(true)}
         />

@@ -2,12 +2,14 @@ import {forwardRef, useCallback, useImperativeHandle, useRef, useState} from "re
 import {ImageUp} from "lucide-react";
 import {pickImageFile} from "../../utils/upload.ts";
 import Button, {type ButtonVariant} from "../ui/Button.tsx";
+import IconButton from "../ui/IconButton.tsx";
 
 interface Props {
   onPickFile: (file: File) => Promise<void>;
   onPickLocal: (path: string) => Promise<void>;
   variant?: ButtonVariant;
   showTrigger?: boolean;
+  display?: "button" | "icon";
 }
 
 export interface UploadButtonHandle {
@@ -15,7 +17,7 @@ export interface UploadButtonHandle {
 }
 
 const UploadButton = forwardRef<UploadButtonHandle, Props>(
-  ({onPickFile, onPickLocal, variant = "secondary", showTrigger = true}, ref) => {
+  ({onPickFile, onPickLocal, variant = "secondary", showTrigger = true, display = "button"}, ref) => {
     const inputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
 
@@ -52,7 +54,12 @@ const UploadButton = forwardRef<UploadButtonHandle, Props>(
     return (
       <>
         <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/gif" style={{display: "none"}} onChange={handleChange} />
-        {showTrigger && (
+        {showTrigger && display === "icon" && (
+          <IconButton title={uploading ? "上传中…" : "上传图片"} disabled={uploading} onClick={() => void handleClick()}>
+            <ImageUp size={16} />
+          </IconButton>
+        )}
+        {showTrigger && display === "button" && (
           <Button variant={variant} disabled={uploading} onClick={() => void handleClick()}>
             <ImageUp size={14} />
             {uploading ? "上传中…" : "上传图片"}

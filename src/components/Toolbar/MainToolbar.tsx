@@ -1,6 +1,5 @@
 import {useCallback, useLayoutEffect, useRef, useState, type RefObject} from "react";
-import {Copy as CopyIcon, Download, FileInput, ImageUp, MoreHorizontal, Palette, Send, Settings} from "lucide-react";
-import UploadButton, {type UploadButtonHandle} from "../Upload/UploadButton.tsx";
+import {Copy as CopyIcon, Download, FileInput, MoreHorizontal, Palette, Send, Settings} from "lucide-react";
 import ImportButton, {type ImportButtonHandle} from "../Import/ImportButton.tsx";
 import ThemeMenu, {type ThemeMenuHandle} from "../Theme/ThemeMenu.tsx";
 import PublishButton from "../Publish/PublishButton.tsx";
@@ -9,26 +8,22 @@ import ExportButton, {ExportMenuItems, useExportController} from "../Export/Expo
 import Button from "../ui/Button.tsx";
 import IconButton from "../ui/IconButton.tsx";
 import Menu, {MenuItem} from "../ui/Menu.tsx";
+import {SECONDARY_ACTIONS, type SecondaryAction} from "./toolbarActions.ts";
 import {computeToolbarAvailableWidth, computeVisibleActionCount} from "./toolbarOverflow.ts";
 
 interface Props {
-  onPickFile: (file: File) => Promise<void>;
-  onPickLocal: (path: string) => Promise<void>;
   onOpenSettings: () => void;
   onNeedSettings: () => void;
 }
 
-const SECONDARY_ACTIONS = ["upload", "import", "export", "theme", "settings"] as const;
-type SecondaryAction = (typeof SECONDARY_ACTIONS)[number];
 const SECONDARY_ACTION_COUNT: number = SECONDARY_ACTIONS.length;
 const MIN_LEFT_TOOLBAR_WIDTH = 30;
 
-export default function MainToolbar({onPickFile, onPickLocal, onOpenSettings, onNeedSettings}: Props) {
+export default function MainToolbar({onOpenSettings, onNeedSettings}: Props) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(SECONDARY_ACTION_COUNT);
   const wrapRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
-  const uploadRef = useRef<UploadButtonHandle>(null);
   const importRef = useRef<ImportButtonHandle>(null);
   const themeRef = useRef<ThemeMenuHandle>(null);
   const exportController = useExportController();
@@ -89,10 +84,6 @@ export default function MainToolbar({onPickFile, onPickLocal, onOpenSettings, on
 
   const runHiddenAction = (action: SecondaryAction) => {
     switch (action) {
-      case "upload":
-        closeMore();
-        void uploadRef.current?.pick();
-        break;
       case "import":
         closeMore();
         importRef.current?.open();
@@ -112,11 +103,6 @@ export default function MainToolbar({onPickFile, onPickLocal, onOpenSettings, on
 
   return (
     <div ref={wrapRef} className="relative flex min-w-0 max-w-full items-center justify-end gap-2">
-      {isVisible("upload") ? (
-        <UploadButton ref={uploadRef} variant="toolbar" onPickFile={onPickFile} onPickLocal={onPickLocal} />
-      ) : (
-        <UploadButton ref={uploadRef} showTrigger={false} onPickFile={onPickFile} onPickLocal={onPickLocal} />
-      )}
       {isVisible("import") ? <ImportButton ref={importRef} variant="toolbar" /> : <ImportButton ref={importRef} showTrigger={false} />}
       {isVisible("export") && <ExportButton controller={exportController} variant="toolbar" />}
       {isVisible("theme") ? <ThemeMenu ref={themeRef} variant="toolbar" /> : <ThemeMenu ref={themeRef} showTrigger={false} />}
@@ -159,8 +145,6 @@ export default function MainToolbar({onPickFile, onPickLocal, onOpenSettings, on
 
 function menuLabel(action: SecondaryAction) {
   switch (action) {
-    case "upload":
-      return "上传图片";
     case "import":
       return "导入";
     case "export":
@@ -175,9 +159,6 @@ function menuLabel(action: SecondaryAction) {
 function ToolbarMeasure({measureRef}: {measureRef: RefObject<HTMLDivElement>}) {
   return (
     <div ref={measureRef} aria-hidden="true" className="pointer-events-none invisible absolute -left-[9999px] top-0 flex items-center gap-2">
-      <div data-measure="upload">
-        <Button variant="toolbar"><ImageUp size={14} />上传图片</Button>
-      </div>
       <div data-measure="import">
         <Button variant="toolbar"><FileInput size={14} />导入</Button>
       </div>
