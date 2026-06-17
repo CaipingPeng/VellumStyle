@@ -58,10 +58,13 @@ export default function TreeNode({
     : dropTarget
       ? "bg-accent-subtle text-text"
       : "text-text hover:bg-bg-tertiary";
+  const actionTone = selected || dropTarget ? "bg-accent-subtle" : "bg-bg-tertiary";
 
   return (
     <div>
       <div
+        title={!editing ? node.name : undefined}
+        aria-label={node.name}
         draggable={!editing}
         onDragStart={(e) => {
           e.stopPropagation();
@@ -103,7 +106,7 @@ export default function TreeNode({
             onSelectDoc(node.path);
           }
         }}
-        className={`group flex items-center gap-1 h-7 pr-1.5 cursor-pointer text-[13px] transition-colors duration-fast ${rowTone}`}
+        className={`group relative flex h-7 cursor-pointer items-center gap-1 overflow-hidden pr-1.5 text-[13px] transition-colors duration-fast ${rowTone}`}
         style={{
           paddingLeft: 8 + depth * 14,
           outline: dropTarget ? "1px dashed var(--accent)" : "none",
@@ -133,12 +136,14 @@ export default function TreeNode({
             style={{flex: 1, fontSize: 13, minWidth: 0}}
           />
         ) : (
-          <span style={{flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>
+          <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap transition-[padding] duration-fast group-hover:pr-12">
             {node.name}
           </span>
         )}
         {!editing && (
-          <span className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-fast">
+          <span
+            className={`pointer-events-none absolute inset-y-0 right-0 flex max-w-0 items-center gap-1 overflow-hidden pl-2 pr-1.5 opacity-0 transition-[max-width,opacity] duration-fast group-hover:pointer-events-auto group-hover:max-w-12 group-hover:opacity-100 ${actionTone}`}
+          >
             <Pencil
               size={13}
               style={{flexShrink: 0}}
