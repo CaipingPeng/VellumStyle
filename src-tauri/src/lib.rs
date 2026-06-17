@@ -69,6 +69,7 @@ pub fn run() {
             wechat::upload_local_image,
             wechat::upload_remote_image,
             import::pick_markdown_file,
+            import::pick_markdown_files,
             import::pick_image_file,
             import::pick_resource_dir,
             import::read_markdown_file,

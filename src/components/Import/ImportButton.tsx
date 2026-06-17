@@ -30,8 +30,9 @@ const ImportButton = forwardRef<ImportButtonHandle, Props>(
     const loadTree = useStore((s) => s.loadTree);
     const openDocument = useStore((s) => s.openDocument);
     const [openDialog, setOpenDialog] = useState(false);
-    const [markdownPath, setMarkdownPath] = useState("");
+    const [markdownPaths, setMarkdownPaths] = useState<string[]>([]);
     const [resourceRoot, setResourceRoot] = useState("");
+    const [showResourceRoot, setShowResourceRoot] = useState(false);
     const [progress, setProgress] = useState<ImportMarkdownProgress | null>(null);
     const [result, setResult] = useState<ImportMarkdownResult | null>(null);
     const [error, setError] = useState("");
@@ -40,9 +41,9 @@ const ImportButton = forwardRef<ImportButtonHandle, Props>(
     useImperativeHandle(ref, () => ({open: () => setOpenDialog(true)}), []);
 
     const pickMarkdown = async () => {
-      const selected = await invoke<string | null>("pick_markdown_file");
-      if (typeof selected === "string") {
-        setMarkdownPath(selected);
+      const selected = await invoke<string[] | null>("pick_markdown_files");
+      if (Array.isArray(selected) && selected.length > 0) {
+        setMarkdownPaths(selected);
         setResult(null);
         setError("");
       }
@@ -57,34 +58,63 @@ const ImportButton = forwardRef<ImportButtonHandle, Props>(
       }
     };
 
+    const toggleResourceRoot = (checked: boolean) => {
+      setShowResourceRoot(checked);
+      if (!checked) setResourceRoot("");
+      setResult(null);
+      setError("");
+    };
+
     const startImport = async () => {
-      if (!markdownPath || importing) return;
+      if (markdownPaths.length === 0 || importing) return;
       setImporting(true);
       setError("");
       setResult(null);
       try {
-        const next = await importMarkdownFile(
-          {markdownPath, resourceRoot: resourceRoot || null},
-          setProgress,
-        );
-        setResult(next);
-        const needsImportReview = next.failed.length > 0 || next.unsupported.length > 0;
-
-        // 不覆盖当前文档：在目录树落点新建（或覆盖）同名文档并打开。
-        const name = docNameFromPath(next.markdownPath);
         const dir = targetDirFor(tree, selectedPath);
-        const target = dir ? `${dir}/${name}.md` : `${name}.md`;
-        let newPath: string;
-        if (treeHasPath(tree, target)) {
-          await writeDocument(target, next.content);
-          newPath = target;
-        } else {
-          newPath = await createDocument(dir, name);
-          await writeDocument(newPath, next.content);
+        const importedTargets = new Set<string>();
+        const manualResourceRoot = showResourceRoot ? resourceRoot || null : null;
+        let needsImportReview = false;
+        let newPath = "";
+        let lastName = "";
+
+        for (const [index, markdownPath] of markdownPaths.entries()) {
+          if (markdownPaths.length > 1) {
+            setProgress({
+              phase: "reading",
+              current: `(${index + 1}/${markdownPaths.length}) ${markdownPath}`,
+              completed: index,
+              total: markdownPaths.length,
+            });
+          }
+
+          const next = await importMarkdownFile(
+            {markdownPath, resourceRoot: manualResourceRoot},
+            setProgress,
+          );
+          setResult(next);
+          needsImportReview = needsImportReview || next.failed.length > 0 || next.unsupported.length > 0;
+
+          // 不覆盖当前文档：在目录树落点新建（或覆盖）同名文档并打开。
+          const name = docNameFromPath(next.markdownPath);
+          const target = dir ? `${dir}/${name}.md` : `${name}.md`;
+          if (treeHasPath(tree, target) || importedTargets.has(target)) {
+            await writeDocument(target, next.content);
+            newPath = target;
+          } else {
+            newPath = await createDocument(dir, name);
+            await writeDocument(newPath, next.content);
+          }
+          importedTargets.add(newPath);
+          lastName = name;
         }
+
         await loadTree();
-        await openDocument(newPath);
-        toast.show(`已导入到「${name}」`, "info");
+        if (newPath) await openDocument(newPath);
+        toast.show(
+          markdownPaths.length > 1 ? `已导入 ${markdownPaths.length} 个 Markdown 文件` : `已导入到「${lastName}」`,
+          "info",
+        );
         if (!needsImportReview) {
           setOpenDialog(false);
         }
@@ -106,14 +136,16 @@ const ImportButton = forwardRef<ImportButtonHandle, Props>(
         )}
         <ImportMarkdownDialog
           open={openDialog}
-          markdownPath={markdownPath}
+          markdownPaths={markdownPaths}
           resourceRoot={resourceRoot}
+          showResourceRoot={showResourceRoot}
           progress={progress}
           result={result}
           error={error}
           importing={importing}
           onPickMarkdown={pickMarkdown}
           onPickResourceRoot={pickResourceRoot}
+          onToggleResourceRoot={toggleResourceRoot}
           onStart={startImport}
           onClose={() => setOpenDialog(false)}
         />

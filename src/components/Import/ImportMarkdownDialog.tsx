@@ -5,14 +5,16 @@ import Dialog from "../ui/Dialog.tsx";
 
 interface Props {
   open: boolean;
-  markdownPath: string;
+  markdownPaths: string[];
   resourceRoot: string;
+  showResourceRoot: boolean;
   progress: ImportMarkdownProgress | null;
   result: ImportMarkdownResult | null;
   error: string;
   importing: boolean;
   onPickMarkdown: () => void;
   onPickResourceRoot: () => void;
+  onToggleResourceRoot: (checked: boolean) => void;
   onStart: () => void;
   onClose: () => void;
 }
@@ -44,6 +46,11 @@ const pickerButtonClass =
   "active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] " +
   "disabled:cursor-default disabled:opacity-50 disabled:shadow-none disabled:hover:text-text";
 
+const headerOptionClass =
+  "inline-flex min-h-6 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-1 " +
+  "text-xs font-medium text-text-muted transition-[background,color] duration-fast ease-smooth " +
+  "hover:bg-[#f3f4f8] hover:text-text";
+
 const footerButtonBase =
   "inline-flex h-9 min-w-[88px] items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-0 px-4 " +
   "text-[13px] font-semibold leading-none cursor-pointer transition-[background,box-shadow,transform,color] duration-fast ease-smooth " +
@@ -62,18 +69,21 @@ const footerPrimaryButton =
 
 export default function ImportMarkdownDialog({
   open,
-  markdownPath,
+  markdownPaths,
   resourceRoot,
+  showResourceRoot,
   progress,
   result,
   error,
   importing,
   onPickMarkdown,
   onPickResourceRoot,
+  onToggleResourceRoot,
   onStart,
   onClose,
 }: Props) {
-  const canStart = Boolean(markdownPath) && !importing;
+  const canStart = markdownPaths.length > 0 && !importing;
+  const markdownValue = formatMarkdownSelection(markdownPaths);
   const totalUploaded = result ? result.uploadedLocal.length + result.uploadedRemote.length : 0;
   const totalFailed = result ? result.failed.length : 0;
   const totalUnsupported = result ? result.unsupported.length : 0;
@@ -113,36 +123,50 @@ export default function ImportMarkdownDialog({
       <div className="flex flex-col gap-4">
         <div className="rounded-md bg-[#f8f9fc] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
           <p className="m-0 text-[13px] leading-[1.7] text-text-secondary">
-            选择 Markdown 文件后，会识别本地和在线图片，上传到公众号永久素材库并替换为微信素材链接。Obsidian 的 <code>![[...]]</code> 图片语法也会转换成标准 Markdown 图片。
+            选择一个或多个 Markdown 文件后，会识别本地和在线图片，上传到公众号永久素材库并替换为微信素材链接。Obsidian 的 <code>![[...]]</code> 图片语法也会转换成标准 Markdown 图片。
           </p>
           <p className="m-0 mt-1 text-xs leading-relaxed text-text-muted">
-            导入成功后会在目录树当前位置新建同名文档（已存在则覆盖）并打开，不影响当前文档；视频会被识别但暂不自动上传。
+            导入成功后会在目录树当前位置为每个文件新建同名文档（已存在则覆盖）并打开最后一个导入文档；视频会被识别但暂不自动上传。
           </p>
         </div>
 
         <FieldPicker
           label="Markdown 文件"
-          hint=".md / .markdown"
-          value={markdownPath}
-          placeholder="请选择 Markdown 文件"
+          hint={markdownPaths.length > 1 ? `已选 ${markdownPaths.length} 个` : ".md / .markdown"}
+          value={markdownValue}
+          placeholder="请选择一个或多个 Markdown 文件"
           icon={<FileText size={16} />}
           buttonIcon={<FileText size={14} />}
           buttonLabel="选择文件"
           disabled={importing}
           onClick={onPickMarkdown}
+          headerAction={
+            <label className={headerOptionClass}>
+              <input
+                type="checkbox"
+                checked={showResourceRoot}
+                disabled={importing}
+                onChange={(event) => onToggleResourceRoot(event.currentTarget.checked)}
+                className="h-3.5 w-3.5 cursor-pointer accent-[var(--accent)] disabled:cursor-default"
+              />
+              手动指定资源目录
+            </label>
+          }
         />
 
-        <FieldPicker
-          label="资源根目录"
-          hint="可选"
-          value={resourceRoot}
-          placeholder="Obsidian 附件较分散时选择 vault 或附件目录"
-          icon={<FolderOpen size={16} />}
-          buttonIcon={<FolderOpen size={14} />}
-          buttonLabel="选择目录"
-          disabled={importing}
-          onClick={onPickResourceRoot}
-        />
+        {showResourceRoot && (
+          <FieldPicker
+            label="资源根目录"
+            hint="可选"
+            value={resourceRoot}
+            placeholder="Obsidian 附件较分散时选择 vault 或附件目录"
+            icon={<FolderOpen size={16} />}
+            buttonIcon={<FolderOpen size={14} />}
+            buttonLabel="选择目录"
+            disabled={importing}
+            onClick={onPickResourceRoot}
+          />
+        )}
 
         {progress && (
           <div className={statusClass}>
@@ -180,6 +204,12 @@ export default function ImportMarkdownDialog({
   );
 }
 
+function formatMarkdownSelection(paths: string[]): string {
+  if (paths.length === 0) return "";
+  if (paths.length === 1) return paths[0];
+  return `${paths[0]} 等 ${paths.length} 个文件`;
+}
+
 function FieldPicker({
   label,
   hint,
@@ -190,6 +220,7 @@ function FieldPicker({
   buttonLabel,
   disabled,
   onClick,
+  headerAction,
 }: {
   label: string;
   hint: string;
@@ -200,12 +231,16 @@ function FieldPicker({
   buttonLabel: string;
   disabled: boolean;
   onClick: () => void;
+  headerAction?: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-3">
         <div className="text-[13px] font-semibold text-text">{label}</div>
-        <div className="text-xs text-text-muted">{hint}</div>
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="text-xs text-text-muted">{hint}</div>
+          {headerAction}
+        </div>
       </div>
       <div className={fieldShellClass}>
         <div className="flex h-full w-11 flex-none items-center justify-center text-text-muted transition-colors duration-fast group-focus-within:text-accent">

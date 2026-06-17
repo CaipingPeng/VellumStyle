@@ -33,6 +33,21 @@ pub fn pick_markdown_file(app: tauri::AppHandle) -> Result<Option<String>, Strin
 }
 
 #[tauri::command]
+pub fn pick_markdown_files(app: tauri::AppHandle) -> Result<Option<Vec<String>>, String> {
+    let paths = app
+        .dialog()
+        .file()
+        .add_filter("Markdown", &["md", "markdown"])
+        .blocking_pick_files();
+    Ok(paths.map(|paths| {
+        paths
+            .into_iter()
+            .filter_map(|p| p.as_path().map(path_to_string))
+            .collect()
+    }))
+}
+
+#[tauri::command]
 pub fn pick_image_file(app: tauri::AppHandle) -> Result<Option<String>, String> {
     let path = app
         .dialog()
