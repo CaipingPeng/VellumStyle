@@ -1,6 +1,7 @@
 mod config;
 mod documents;
 mod export_file;
+mod external;
 mod import;
 mod sync;
 mod themes;
@@ -83,6 +84,7 @@ pub fn run() {
             themes::import_theme_model,
             themes::ensure_themes_dir,
             themes::open_themes_dir,
+            external::open_external_url,
             documents::list_documents,
             documents::read_document,
             documents::write_document,

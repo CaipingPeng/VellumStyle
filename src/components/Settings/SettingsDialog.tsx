@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {type MouseEvent, useEffect, useState} from "react";
 import {invoke} from "@tauri-apps/api/core";
 import {Check, Cloud, Copy, Eye, EyeOff, FolderSync, KeyRound, LockKeyhole, Network, RefreshCw, Save, ShieldCheck, UserRound} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
@@ -6,6 +6,7 @@ import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
 import {rememberOutboundIp} from "../../utils/outboundIpMonitor.ts";
 import {testSyncConnection} from "../../utils/cloudSync.ts";
+import {isTauriRuntime} from "../../utils/tauriEnv.ts";
 
 interface Props {
   open: boolean;
@@ -33,6 +34,7 @@ const inputShellClass =
   "group flex h-10 items-center gap-2 rounded-md border border-border bg-bg px-3 text-text-muted shadow-sm transition-all duration-fast ease-smooth focus-within:border-accent focus-within:bg-bg-secondary focus-within:ring-2 focus-within:ring-[color:var(--ring)] hover:border-border-strong has-[:disabled]:bg-bg-secondary has-[:disabled]:opacity-70";
 
 const labelClass = "mb-1.5 block text-[13px] font-medium text-text";
+const helpDocumentUrl = "https://my.feishu.cn/docx/RUDpd1zWnoWuuyx0uFxcahIGnmC";
 
 type IpStatus = "idle" | "loading" | "ok" | "error";
 type CopyStatus = "idle" | "ok" | "fail";
@@ -178,6 +180,20 @@ export default function SettingsDialog({open, onClose}: Props) {
     setCopyStatus(ok ? "ok" : "fail");
     toast.show(ok ? "出口 IP 已复制" : "复制出口 IP 失败", ok ? "info" : "error");
     window.setTimeout(() => setCopyStatus("idle"), 1800);
+  };
+
+  const handleOpenHelpDocument = async (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    try {
+      if (isTauriRuntime(window)) {
+        await invoke("open_external_url", {url: helpDocumentUrl});
+      } else {
+        window.open(helpDocumentUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (e) {
+      const msg = typeof e === "string" ? e : (e as Error)?.message || "打开帮助文档失败";
+      toast.show(msg, "error");
+    }
   };
 
   return (
@@ -457,12 +473,23 @@ export default function SettingsDialog({open, onClose}: Props) {
                 <div className="min-w-0 flex-1">
                   <h2 className="m-0 text-[16px] font-semibold leading-6 text-text">IP 白名单辅助</h2>
                   <p className="m-0 mt-1 text-xs leading-5 text-text-secondary">
-                    可在「微信公众平台 → 设置与开发 → 基本配置」查看凭证，并把当前出口 IP 填入白名单。
+                    可在「微信开发者平台 → 登录并点击右上角头像 → 账号管理 → 公众号 → 前往公众号详情页 → 基础信息」即可看到开发密钥栏的，API IP 白名单，点击编辑并把当前出口 IP
+                    填入白名单。如果不会操作，可打开{" "}
+                    <a
+                      href={helpDocumentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(event) => void handleOpenHelpDocument(event)}
+                      className="font-medium text-accent underline decoration-[color:var(--accent)]/40 underline-offset-2 transition-colors duration-fast hover:text-accent-hover"
+                    >
+                      VellumStyle-文澜排版帮助文档
+                    </a>
+                    ，里面有详细的操作步骤。
                   </p>
                 </div>
               </div>
 
-              <div className="grid max-w-[320px] gap-3">
+              <div className="grid w-full min-w-0 gap-3">
                 <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_2.25rem] items-center gap-2">
                   <span
                     className={`box-border inline-flex h-9 w-full min-w-0 items-center rounded-sm border border-border bg-bg-secondary px-2 font-mono text-[12px] leading-none tabular-nums ${
