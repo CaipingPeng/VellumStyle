@@ -135,7 +135,7 @@ test("clicking the help guide link asks Tauri to open it externally", async () =
     });
     await Promise.resolve();
 
-    assert.deepEqual(calls.at(-1), {cmd: "open_external_url", args: {url: helpUrl}});
+    assert.deepEqual(calls[calls.length - 1], {cmd: "open_external_url", args: {url: helpUrl}});
   } finally {
     cleanup();
     delete tauriWindow.__TAURI_INTERNALS__;

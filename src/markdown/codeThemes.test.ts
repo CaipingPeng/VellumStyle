@@ -42,8 +42,8 @@ ${ARTICLE_ROOT_SELECTOR} .footnotes .footnote-num { width: 10%; }`;
   const css = buildMarkdownCss(legacyFootnoteCss);
   const itemRules = css.match(/#article \.footnotes \.footnote-item \{[^}]*\}/g) ?? [];
   const numRules = css.match(/#article \.footnotes \.footnote-num \{[^}]*\}/g) ?? [];
-  const itemOverride = itemRules.at(-1) ?? "";
-  const numOverride = numRules.at(-1) ?? "";
+  const itemOverride = itemRules[itemRules.length - 1] ?? "";
+  const numOverride = numRules[numRules.length - 1] ?? "";
 
   assert.ok(css.lastIndexOf(`${ARTICLE_ROOT_SELECTOR} .footnotes .footnote-item`) > css.indexOf(`${ARTICLE_ROOT_SELECTOR} .footnote-item { display: flex; }`));
   assert.match(itemOverride, /display:\s*block !important/);
