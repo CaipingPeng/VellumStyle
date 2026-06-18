@@ -2,17 +2,17 @@ import assert from "node:assert/strict";
 import {test} from "node:test";
 import React, {act} from "react";
 import {createRoot} from "react-dom/client";
-import SettingsDialog from "./SettingsDialog.tsx";
+import SettingsDialog, {type SettingsUpdateState} from "./SettingsDialog.tsx";
 
 const helpUrl = "https://my.feishu.cn/docx/RUDpd1zWnoWuuyx0uFxcahIGnmC";
 
-function renderSettingsDialog() {
+function renderSettingsDialog(updateState?: SettingsUpdateState) {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
 
   act(() => {
-    root.render(React.createElement(SettingsDialog, {open: true, onClose: () => {}}));
+    root.render(React.createElement(SettingsDialog, {open: true, onClose: () => {}, updateState}));
   });
 
   return {
@@ -23,6 +23,50 @@ function renderSettingsDialog() {
     },
   };
 }
+
+test("about page shows pending update details and install action", () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const tauriWindow = window as typeof window & {
+    __TAURI_INTERNALS__?: {invoke: () => Promise<unknown>; transformCallback: () => number};
+  };
+  tauriWindow.__TAURI_INTERNALS__ = {
+    invoke: () => Promise.resolve({wechat: {app_id: "", app_secret: ""}}),
+    transformCallback: () => 0,
+  };
+
+  const {cleanup} = renderSettingsDialog({
+    status: "available",
+    currentVersion: "1.4.3",
+    version: "1.5.0",
+    installing: false,
+    checking: false,
+    message: "",
+    onCheck: () => {},
+    onInstall: () => {},
+  });
+
+  try {
+    const aboutTab = Array.from(document.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("关于"),
+    );
+    assert.ok(aboutTab, "about settings tab should render");
+
+    act(() => {
+      aboutTab.click();
+    });
+
+    assert.match(document.body.textContent || "", /发现新版本/);
+    assert.match(document.body.textContent || "", /1\.4\.3/);
+    assert.match(document.body.textContent || "", /1\.5\.0/);
+    const installButton = Array.from(document.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("立即更新"),
+    );
+    assert.ok(installButton, "install update button should render");
+  } finally {
+    cleanup();
+    delete tauriWindow.__TAURI_INTERNALS__;
+  }
+});
 
 test("network helper links to the operation guide with readable text", () => {
   (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;

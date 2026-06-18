@@ -9,6 +9,8 @@ import MainToolbar from "./components/Toolbar/MainToolbar.tsx";
 import DocTree from "./components/DocTree/DocTree.tsx";
 import OutlineNav from "./components/Outline/OutlineNav.tsx";
 import IconButton from "./components/ui/IconButton.tsx";
+import Button from "./components/ui/Button.tsx";
+import Dialog from "./components/ui/Dialog.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
 import {toast} from "./components/Toast/toast.ts";
 import {useStore, getThemeById, flushSave} from "./store/index.ts";
@@ -21,6 +23,13 @@ import {createScrollSync} from "./utils/syncScroll.ts";
 import {createDocument, writeDocument, type DocNode} from "./utils/documents.ts";
 import {formatSyncStatus as formatCloudSyncStatus, syncStatusTone, type CloudSyncTone} from "./utils/cloudSync.ts";
 import {isTauriRuntime} from "./utils/tauriEnv.ts";
+import {
+  checkForAppUpdate,
+  formatAppUpdateError,
+  getCurrentAppVersion,
+  installAppUpdate,
+  type AppUpdateCandidate,
+} from "./utils/appUpdater.ts";
 import {
   checkStartupOutboundIp,
   formatOutboundIpChangedMessage,
@@ -74,6 +83,13 @@ function syncStatusClass(tone: CloudSyncTone): string {
 export default function App() {
   const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, outlineOpen, saveStatus, lastSavedAt, syncStatus, lastSyncedAt, syncMessage, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar, toggleOutline} = useStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [startupUpdatePromptOpen, setStartupUpdatePromptOpen] = useState(false);
+  const [availableUpdate, setAvailableUpdate] = useState<AppUpdateCandidate | null>(null);
+  const [currentVersion, setCurrentVersion] = useState("");
+  const [updateChecking, setUpdateChecking] = useState(false);
+  const [updateInstalling, setUpdateInstalling] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState<"idle" | "checking" | "available" | "none" | "installing" | "error" | "unsupported">("idle");
+  const [updateMessage, setUpdateMessage] = useState("");
   const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
@@ -114,6 +130,84 @@ export default function App() {
     setActiveOutlineLine(line);
     previewRef.current?.scrollToLine(line);
   }, []);
+
+  const handleCheckForUpdates = useCallback(async (options?: {silent?: boolean}) => {
+    if (updateChecking || updateInstalling) return;
+    setUpdateChecking(true);
+    setUpdateStatus("checking");
+    if (!options?.silent) {
+      setUpdateMessage("");
+    }
+    try {
+      const result = await checkForAppUpdate();
+      if (result.status === "available") {
+        setAvailableUpdate(result.update);
+        setCurrentVersion(result.update.currentVersion);
+        setUpdateStatus("available");
+        setUpdateMessage(`新版本 ${result.update.version} 已准备好下载。`);
+        if (options?.silent) {
+          setStartupUpdatePromptOpen(true);
+        }
+        return;
+      }
+
+      setAvailableUpdate(null);
+      setCurrentVersion(result.currentVersion);
+      setUpdateStatus(result.status === "unsupported" ? "unsupported" : "none");
+      if (!options?.silent) {
+        setUpdateMessage(result.status === "unsupported" ? "当前运行环境不支持自动更新。" : "当前已是最新版本。");
+      }
+    } catch (err) {
+      const message = formatAppUpdateError(err);
+      setUpdateStatus("error");
+      if (options?.silent) {
+        console.warn("启动时自动检查更新失败：", err);
+      } else {
+        setUpdateMessage(message);
+        toast.show(message, "error");
+      }
+    } finally {
+      setUpdateChecking(false);
+    }
+  }, [updateChecking, updateInstalling]);
+
+  const handleInstallUpdate = useCallback(async () => {
+    if (!availableUpdate || updateInstalling) return;
+    setUpdateInstalling(true);
+    setUpdateStatus("installing");
+    setUpdateMessage("正在下载更新…");
+    try {
+      let downloaded = 0;
+      await installAppUpdate(availableUpdate, (event) => {
+        if (event.event === "Started") {
+          setUpdateMessage(event.data.contentLength ? `正在下载更新包，共 ${formatBytes(event.data.contentLength)}。` : "正在下载更新包。");
+        } else if (event.event === "Progress") {
+          downloaded += event.data.chunkLength;
+          setUpdateMessage(`正在下载更新包，已下载 ${formatBytes(downloaded)}。`);
+        } else if (event.event === "Finished") {
+          setUpdateMessage("下载完成，正在安装并重启。");
+        }
+      });
+    } catch (err) {
+      const message = formatAppUpdateError(err);
+      setUpdateStatus("available");
+      setUpdateMessage(message);
+      toast.show(message, "error");
+    } finally {
+      setUpdateInstalling(false);
+    }
+  }, [availableUpdate, updateInstalling]);
+
+  const updateState = useMemo(() => ({
+    status: updateStatus,
+    currentVersion,
+    version: availableUpdate?.version,
+    checking: updateChecking,
+    installing: updateInstalling,
+    message: updateMessage,
+    onCheck: () => void handleCheckForUpdates(),
+    onInstall: () => void handleInstallUpdate(),
+  }), [availableUpdate?.version, currentVersion, handleCheckForUpdates, handleInstallUpdate, updateChecking, updateInstalling, updateMessage, updateStatus]);
 
   // 启动扫描主题：内置（编译进包）+ 用户目录 *.json 合并。
   // 合并后若当前 markdownThemeId 已不存在（如 localStorage 残留旧主题 id），
@@ -227,6 +321,26 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+
+    let cancelled = false;
+    void getCurrentAppVersion()
+      .then((version) => {
+        if (!cancelled) setCurrentVersion(version);
+      })
+      .catch(() => {});
+    void handleCheckForUpdates({silent: true});
+
+    return () => {
+      cancelled = true;
+    };
+    // Run once after the update handlers have their initial closures.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 桌面端完整启动后后台检查一次出口 IP；变化时提醒用户更新公众号 IP 白名单。
   useEffect(() => {
     if (!isTauriRuntime() || !shouldRunStartupOutboundIpCheck()) {
@@ -322,6 +436,7 @@ export default function App() {
         <MainToolbar
           onOpenSettings={() => setSettingsOpen(true)}
           onNeedSettings={() => setSettingsOpen(true)}
+          hasUpdateNotification={Boolean(availableUpdate)}
         />
       </header>
 
@@ -377,8 +492,49 @@ export default function App() {
         </div>
       </footer>
 
-      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} updateState={updateState} />
+      <Dialog
+        open={startupUpdatePromptOpen}
+        title="发现新版本"
+        width={460}
+        closeOnOverlay={!updateInstalling}
+        onClose={() => {
+          if (!updateInstalling) setStartupUpdatePromptOpen(false);
+        }}
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setStartupUpdatePromptOpen(false)} disabled={updateInstalling}>
+              稍后再说
+            </Button>
+            <Button type="button" variant="primary" onClick={() => void handleInstallUpdate()} disabled={updateInstalling} className="gap-2">
+              {updateInstalling ? "更新中…" : "立即更新"}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-3">
+          <p className="m-0 text-sm leading-6 text-text">
+            VellumStyle 有新版本 {availableUpdate?.version} 可用。
+          </p>
+          <p className="m-0 text-xs leading-5 text-text-secondary">
+            当前版本 {availableUpdate?.currentVersion || currentVersion || "读取中"}。选择立即更新后会自动下载安装，完成后应用会重启。
+          </p>
+          {updateMessage && <p className="m-0 rounded-md border border-border bg-bg-secondary px-3 py-2 text-xs leading-5 text-text-secondary">{updateMessage}</p>}
+        </div>
+      </Dialog>
       <Toaster />
     </div>
   );
+}
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
 }

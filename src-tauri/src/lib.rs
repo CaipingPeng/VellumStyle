@@ -62,6 +62,8 @@ fn handle_wximg<R: tauri::Runtime>(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .register_asynchronous_uri_scheme_protocol("wximg", handle_wximg)
         .invoke_handler(tauri::generate_handler![
             wechat::upload_image,

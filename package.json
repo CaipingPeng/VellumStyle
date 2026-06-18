@@ -1,7 +1,7 @@
 {
   "name": "vellumstyle",
   "private": true,
-  "version": "1.4.3",
+  "version": "1.4.4",
   "description": "文澜排版：本地优先的 Markdown 到微信公众号排版桌面工具",
   "author": "pengcaiping",
   "license": "MIT",
@@ -22,6 +22,8 @@
     "@codemirror/view": "^6.36.1",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.7.1",
+    "@tauri-apps/plugin-process": "^2.3.1",
+    "@tauri-apps/plugin-updater": "^2.10.1",
     "@uiw/react-codemirror": "^4.23.7",
     "codemirror": "^6.0.1",
     "dompurify": "^3.4.9",

@@ -1,6 +1,6 @@
 import {type MouseEvent, useEffect, useState} from "react";
 import {invoke} from "@tauri-apps/api/core";
-import {Check, Cloud, Copy, Eye, EyeOff, FolderSync, KeyRound, LockKeyhole, Network, RefreshCw, Save, ShieldCheck, UserRound} from "lucide-react";
+import {Check, Cloud, Copy, Download, Eye, EyeOff, FolderSync, Info, KeyRound, LockKeyhole, Network, RefreshCw, Save, ShieldCheck, UserRound} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
@@ -11,6 +11,7 @@ import {isTauriRuntime} from "../../utils/tauriEnv.ts";
 interface Props {
   open: boolean;
   onClose: () => void;
+  updateState?: SettingsUpdateState;
 }
 
 interface AppConfig {
@@ -38,8 +39,19 @@ const helpDocumentUrl = "https://my.feishu.cn/docx/RUDpd1zWnoWuuyx0uFxcahIGnmC";
 
 type IpStatus = "idle" | "loading" | "ok" | "error";
 type CopyStatus = "idle" | "ok" | "fail";
-type SettingsSection = "wechat" | "sync" | "network";
+type SettingsSection = "wechat" | "sync" | "network" | "about";
 type ConnectionStatus = "idle" | "loading" | "ok" | "error";
+
+export interface SettingsUpdateState {
+  status: "idle" | "checking" | "available" | "none" | "installing" | "error" | "unsupported";
+  currentVersion: string;
+  version?: string;
+  checking: boolean;
+  installing: boolean;
+  message: string;
+  onCheck: () => void;
+  onInstall: () => void;
+}
 
 async function copyPlainText(text: string): Promise<boolean> {
   if (navigator.clipboard?.writeText) {
@@ -70,7 +82,7 @@ async function copyPlainText(text: string): Promise<boolean> {
 }
 
 // 设置弹窗：读 get_config 回显，保存调 save_config（写 config.local.yaml；微信凭证变更会清 token 缓存）。
-export default function SettingsDialog({open, onClose}: Props) {
+export default function SettingsDialog({open, onClose, updateState}: Props) {
   const [activeSection, setActiveSection] = useState<SettingsSection>("wechat");
   const [appId, setAppId] = useState("");
   const [appSecret, setAppSecret] = useState("");
@@ -92,7 +104,7 @@ export default function SettingsDialog({open, onClose}: Props) {
   useEffect(() => {
     if (!open) return;
     setLoaded(false);
-    setActiveSection("wechat");
+    setActiveSection(updateState?.status === "available" ? "about" : "wechat");
     setShowSecret(false);
     setShowSyncPassword(false);
     setConnectionStatus("idle");
@@ -226,6 +238,12 @@ export default function SettingsDialog({open, onClose}: Props) {
             {id: "wechat" as const, label: "微信配置", hint: "素材上传", icon: ShieldCheck},
             {id: "sync" as const, label: "文件同步", hint: syncEnabled ? "坚果云 WebDAV" : "未启用", icon: Cloud},
             {id: "network" as const, label: "网络辅助", hint: "IP 白名单", icon: Network},
+            {
+              id: "about" as const,
+              label: "关于",
+              hint: updateState?.status === "available" ? "有新版本" : "版本更新",
+              icon: Info,
+            },
           ].map((item) => {
             const Icon = item.icon;
             const active = activeSection === item.id;
@@ -241,7 +259,12 @@ export default function SettingsDialog({open, onClose}: Props) {
               >
                 <Icon size={16} className="flex-none" />
                 <span className="min-w-0">
-                  <span className="block text-[13px] font-semibold leading-5">{item.label}</span>
+                  <span className="flex items-center gap-1.5 text-[13px] font-semibold leading-5">
+                    {item.label}
+                    {item.id === "about" && updateState?.status === "available" && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-danger" aria-label="有可用更新" />
+                    )}
+                  </span>
                   <span className="block truncate text-[11px] font-normal leading-4 text-text-muted">{item.hint}</span>
                 </span>
               </button>
@@ -525,8 +548,112 @@ export default function SettingsDialog({open, onClose}: Props) {
               </div>
             </div>
           )}
+
+          {activeSection === "about" && (
+            <div className="mx-auto flex max-w-[520px] flex-col gap-5">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-md bg-accent-subtle text-accent">
+                  <Info size={18} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="m-0 text-[16px] font-semibold leading-6 text-text">关于 VellumStyle</h2>
+                    <span className="rounded-sm bg-bg-secondary px-2 py-0.5 text-[11px] font-medium text-text-muted">
+                      文澜排版
+                    </span>
+                  </div>
+                  <p className="m-0 mt-1 text-xs leading-5 text-text-secondary">
+                    本地优先的 Markdown 到微信公众号排版桌面工具。
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 rounded-md border border-border bg-bg-secondary p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[13px] font-medium text-text-secondary">当前版本</span>
+                  <span className="font-mono text-[13px] text-text">{updateState?.currentVersion || "读取中"}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[13px] font-medium text-text-secondary">更新状态</span>
+                  <span className={`text-[13px] font-medium ${updateState?.status === "available" ? "text-danger" : "text-text"}`}>
+                    {formatUpdateStatus(updateState)}
+                  </span>
+                </div>
+                {updateState?.version && (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[13px] font-medium text-text-secondary">最新版本</span>
+                    <span className="font-mono text-[13px] text-text">{updateState.version}</span>
+                  </div>
+                )}
+              </div>
+
+              {updateState?.status === "available" && (
+                <div className="rounded-md border border-danger/25 bg-danger/5 px-3 py-3">
+                  <div className="text-[13px] font-semibold leading-5 text-danger">发现新版本</div>
+                  <p className="m-0 mt-1 text-xs leading-5 text-text-secondary">
+                    可以立即下载并安装，安装完成后应用会自动重启。
+                  </p>
+                  {updateState.message && <p className="m-0 mt-2 text-xs leading-5 text-text-secondary">{updateState.message}</p>}
+                </div>
+              )}
+
+              {updateState?.message && updateState.status !== "available" && (
+                <p
+                  className={`m-0 rounded-md border px-3 py-2 text-xs leading-5 ${
+                    updateState.status === "error" ? "border-danger/25 bg-danger/5 text-danger" : "border-border bg-bg-secondary text-text-secondary"
+                  }`}
+                  role={updateState.status === "error" ? "alert" : undefined}
+                >
+                  {updateState.message}
+                </p>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={updateState?.onCheck}
+                  disabled={!updateState || updateState.checking || updateState.installing}
+                  className="gap-2"
+                >
+                  <RefreshCw size={14} className={updateState?.checking ? "animate-spin" : ""} />
+                  {updateState?.checking ? "检查中…" : "检查更新"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={updateState?.onInstall}
+                  disabled={!updateState || updateState.status !== "available" || updateState.installing}
+                  className="gap-2"
+                >
+                  <Download size={14} className={updateState?.installing ? "animate-pulse" : ""} />
+                  {updateState?.installing ? "更新中…" : "立即更新"}
+                </Button>
+              </div>
+            </div>
+          )}
         </section>
       </div>
     </Dialog>
   );
+}
+
+function formatUpdateStatus(updateState?: SettingsUpdateState): string {
+  if (!updateState) return "未检查";
+  switch (updateState.status) {
+    case "checking":
+      return "正在检查";
+    case "available":
+      return "发现新版本";
+    case "installing":
+      return "正在更新";
+    case "none":
+      return "已是最新版本";
+    case "error":
+      return "检查失败";
+    case "unsupported":
+      return "当前环境不支持";
+    case "idle":
+      return "未检查";
+  }
 }

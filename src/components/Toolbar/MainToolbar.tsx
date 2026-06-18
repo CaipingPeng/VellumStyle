@@ -14,12 +14,13 @@ import {computeToolbarAvailableWidth, computeVisibleActionCount} from "./toolbar
 interface Props {
   onOpenSettings: () => void;
   onNeedSettings: () => void;
+  hasUpdateNotification?: boolean;
 }
 
 const SECONDARY_ACTION_COUNT: number = SECONDARY_ACTIONS.length;
 const MIN_LEFT_TOOLBAR_WIDTH = 30;
 
-export default function MainToolbar({onOpenSettings, onNeedSettings}: Props) {
+export default function MainToolbar({onOpenSettings, onNeedSettings, hasUpdateNotification = false}: Props) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(SECONDARY_ACTION_COUNT);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -107,9 +108,14 @@ export default function MainToolbar({onOpenSettings, onNeedSettings}: Props) {
       {isVisible("export") && <ExportButton controller={exportController} variant="toolbar" />}
       {isVisible("theme") ? <ThemeMenu ref={themeRef} variant="toolbar" /> : <ThemeMenu ref={themeRef} showTrigger={false} />}
       {isVisible("settings") && (
-        <IconButton title="设置" onClick={onOpenSettings} className="text-text-secondary hover:text-text">
-          <Settings size={16} />
-        </IconButton>
+        <span className="relative inline-flex">
+          <IconButton title="设置" onClick={onOpenSettings} className="text-text-secondary hover:text-text">
+            <Settings size={16} />
+          </IconButton>
+          {hasUpdateNotification && (
+            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-danger ring-2 ring-bg" aria-label="设置有新消息" />
+          )}
+        </span>
       )}
       <PublishButton onNeedSettings={onNeedSettings} />
       <CopyButton />
@@ -120,9 +126,14 @@ export default function MainToolbar({onOpenSettings, onNeedSettings}: Props) {
           minWidth={132}
           align="end"
           trigger={
-            <IconButton title="更多" active={moreOpen} onClick={() => setMoreOpen((o) => !o)}>
-              <MoreHorizontal size={16} />
-            </IconButton>
+            <span className="relative inline-flex">
+              <IconButton title="更多" active={moreOpen} onClick={() => setMoreOpen((o) => !o)}>
+                <MoreHorizontal size={16} />
+              </IconButton>
+              {hasUpdateNotification && hiddenActions.includes("settings") && (
+                <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-danger ring-2 ring-bg" aria-label="更多菜单有新消息" />
+              )}
+            </span>
           }
         >
           {hiddenActions.map((action) => {
