@@ -9,7 +9,7 @@ test("formatSyncStatus formats disabled, active, success, conflict, and error st
   assert.equal(formatSyncStatus({status: "conflict", lastSyncedAt: null}), "同步冲突");
   assert.equal(formatSyncStatus({status: "error", lastSyncedAt: null}), "同步失败");
 
-  const at = new Date("2026-06-14T09:08:00+08:00").getTime();
+  const at = new Date(2026, 5, 14, 9, 8, 0).getTime();
   assert.equal(formatSyncStatus({status: "synced", lastSyncedAt: at}), "已同步 09:08");
 });
 
