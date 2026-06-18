@@ -1,6 +1,13 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {wrapSelection, insertLink, prefixLines, insertCodeBlock} from "./editing.ts";
+import {
+  wrapSelection,
+  insertLink,
+  prefixLines,
+  insertCodeBlock,
+  shouldReplaceEditorDoc,
+  shouldQueueExternalValueDuringComposition,
+} from "./editing.ts";
 
 test("wrap 有选区：包裹并选中原文字", () => {
   const doc = "你好世界";
@@ -83,4 +90,109 @@ test("codeBlock 有选区：选区文字进围栏，选中该文字", () => {
   const start = "\n```\n".length;
   assert.equal(r.selFrom, start);
   assert.equal(r.selTo, start + "代码".length);
+});
+
+test("编辑器组合输入期间不使用外部 value 覆盖当前文档", () => {
+  assert.equal(
+    shouldReplaceEditorDoc({
+      currentDoc: "你好，",
+      incomingValue: "你好",
+      composing: true,
+    }),
+    false,
+  );
+});
+
+test("编辑器组合输入刚结束时不使用旧 value 覆盖中文标点", () => {
+  assert.equal(
+    shouldReplaceEditorDoc({
+      currentDoc: "你好，",
+      incomingValue: "你好",
+      composing: false,
+      compositionSettling: true,
+    } as Parameters<typeof shouldReplaceEditorDoc>[0]),
+    false,
+  );
+});
+
+test("编辑器仅在外部文档内容不同且未组合输入时同步", () => {
+  assert.equal(
+    shouldReplaceEditorDoc({
+      currentDoc: "旧文档",
+      incomingValue: "新文档",
+      composing: false,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldReplaceEditorDoc({
+      currentDoc: "同一文档",
+      incomingValue: "同一文档",
+      composing: false,
+    }),
+    false,
+  );
+});
+
+test("编辑器不把旧外部值回写覆盖刚提交的中文标点", () => {
+  assert.equal(
+    shouldReplaceEditorDoc({
+      currentDoc: "你好，",
+      incomingValue: "你好",
+      composing: false,
+      externalUpdate: false,
+      lastEmittedValue: "你好，",
+    } as Parameters<typeof shouldReplaceEditorDoc>[0]),
+    false,
+  );
+});
+
+test("编辑器忽略父级落后回声，避免覆盖后续中文输入", () => {
+  assert.equal(
+    shouldReplaceEditorDoc({
+      currentDoc: "你好，世界",
+      incomingValue: "你好，",
+      composing: false,
+      externalUpdate: true,
+      lastEmittedValue: "你好，",
+    } as Parameters<typeof shouldReplaceEditorDoc>[0]),
+    false,
+  );
+});
+
+test("编辑器收到真正外部文档变化时仍替换内容", () => {
+  assert.equal(
+    shouldReplaceEditorDoc({
+      currentDoc: "当前文档",
+      incomingValue: "新打开的文档",
+      composing: false,
+      externalUpdate: true,
+      lastEmittedValue: "当前文档",
+    } as Parameters<typeof shouldReplaceEditorDoc>[0]),
+    true,
+  );
+});
+
+test("编辑器组合输入期间不把组合开始前的旧 value 排队为外部更新", () => {
+  assert.equal(
+    shouldQueueExternalValueDuringComposition({
+      incomingValue: "你好",
+      currentDoc: "你好，",
+      compositionStartValue: "你好",
+      lastEmittedValue: "你好，",
+    }),
+    false,
+  );
+});
+
+test("编辑器组合输入期间保留真正的外部文档更新", () => {
+  assert.equal(
+    shouldQueueExternalValueDuringComposition({
+      incomingValue: "新打开的文档",
+      currentDoc: "你好，",
+      compositionStartValue: "你好",
+      lastEmittedValue: "你好，",
+    }),
+    true,
+  );
 });

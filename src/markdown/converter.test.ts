@@ -2,7 +2,13 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import {ARTICLE_BOX_ID} from "../articleRoot.ts";
 import {STYLE_IDS} from "../utils/style.ts";
-import {normalizeMathJaxForWechat, solveHtml, stripPreviewEditClasses} from "./converter.ts";
+import {
+  normalizeDraftLists,
+  normalizeLinksForWechat,
+  normalizeMathJaxForWechat,
+  solveHtml,
+  stripPreviewEditClasses,
+} from "./converter.ts";
 
 test("行间 MathJax 导出为居中的 section", () => {
   const html = normalizeMathJaxForWechat('<mjx-container class="MathJax" jax="SVG" display="true"><svg></svg></mjx-container>');
@@ -51,6 +57,65 @@ test("导出前剥离预览编辑辅助 class 但保留业务 class", () => {
   const html = stripPreviewEditClasses('<h1 class="title preview-edit-hover preview-edit-selected">标题</h1>');
 
   assert.equal(html, '<h1 class="title">标题</h1>');
+});
+
+test("发布到草稿箱保留列表项 section 包裹，避免微信把冒号后的正文拆到下一行", () => {
+  const html = normalizeDraftLists('<ul><li><section><strong>good</strong>：describing something nice</section></li></ul>');
+
+  assert.match(html, /<li><section><strong>good<\/strong>：describing something nice<\/section><\/li>/);
+  assert.doesNotMatch(html, /<li><strong>good<\/strong><section>/);
+});
+
+test("发布到草稿箱清理列表内空白节点，避免微信生成首个空项目", () => {
+  const html = normalizeDraftLists(
+    '<ul>\n<li><section><strong>good</strong>：describing something nice</section></li>\n<li><section><strong>bad</strong>：describing something unexpected</section></li>\n</ul>',
+  );
+
+  assert.equal(
+    html,
+    '<ul><li><section><strong>good</strong>：describing something nice</section></li><li><section><strong>bad</strong>：describing something unexpected</section></li></ul>',
+  );
+});
+
+test("发布到草稿箱移除微信回写形态里的空列表项", () => {
+  const html = normalizeDraftLists(
+    '<ul><li><section><span leaf=""><br class="ProseMirror-trailingBreak"></span></section></li><li><section>good</section></li></ul>',
+  );
+
+  assert.equal(html, '<ul><li><section>good</section></li></ul>');
+});
+
+test("发布到草稿箱保留列表项内链接的 href", () => {
+  const html = normalizeDraftLists('<ul><li><section><a href="https://example.com">Example</a></section></li></ul>');
+
+  assert.match(html, /<a href="https:\/\/example\.com">Example<\/a>/);
+});
+
+test("导出链接带上微信编辑器识别的文本链接属性", () => {
+  const html = normalizeLinksForWechat('<p><a href="https://example.com">Example</a></p>');
+
+  assert.match(html, /<a\b[^>]*href="https:\/\/example\.com"/);
+  assert.match(html, /data-linktype="2"/);
+  assert.match(html, /linktype="text"/);
+  assert.match(html, /target="_blank"/);
+  assert.match(html, /tab="outerlink"/);
+  assert.match(html, /textvalue="Example"/);
+});
+
+test("导出微信公众号文章链接带上文章链接识别属性", () => {
+  const html = normalizeLinksForWechat('<p><a href="https://mp.weixin.qq.com/s?__biz=abc&amp;mid=1">微信文章</a></p>');
+
+  assert.match(html, /class="[^"]*\bnormal_text_link\b[^"]*\bmp_article_text_link\b[^"]*"/);
+  assert.match(html, /hasload="1"/);
+  assert.doesNotMatch(html, /tab="outerlink"/);
+});
+
+test("导出链接包在微信编辑器可识别的 leaf 节点里", () => {
+  const html = normalizeLinksForWechat('<p>项目地址：<a href="https://github.com/CaipingPeng/VellumStyle">CaipingPeng/VellumStyle</a>。</p>');
+
+  assert.match(html, /<span leaf=""><a\b[^>]*href="https:\/\/github\.com\/CaipingPeng\/VellumStyle"/);
+  assert.match(html, /class="normal_text_link"/);
+  assert.match(html, /textvalue="CaipingPeng\/VellumStyle"/);
 });
 
 test("solveHtml 导出 Mermaid SVG 时内联关键样式且移除 SVG style", () => {

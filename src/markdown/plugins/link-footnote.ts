@@ -66,6 +66,22 @@ function normalizeReference(str: string): string {
     .toUpperCase();
 }
 
+function ensureFootnoteList(env: any): any[] {
+  if (!env.footnotes) {
+    env.footnotes = {};
+  }
+  if (!env.footnotes.list) {
+    env.footnotes.list = [];
+  }
+  return env.footnotes.list;
+}
+
+function createTextToken(state: StateInline, content: string): Token {
+  const token = new (state as any).Token("text", "", 0) as Token;
+  token.content = content;
+  return token;
+}
+
 function footnoteDef(state: StateBlock, startLine: number, endLine: number, silent: boolean): boolean {
   const start = state.bMarks[startLine] + state.tShift[startLine];
   const max = state.eMarks[startLine];
@@ -325,21 +341,16 @@ function linkFoot(state: StateInline, silent: boolean): boolean {
     }
     href = ref.href;
     title = ref.title;
+    footnoteContent = ref.href;
   }
 
   if (!silent) {
+    state.pos = labelStart;
+    state.posMax = labelEnd;
+
     if (title) {
-      state.pos = labelStart;
-      state.posMax = labelEnd;
-
-      if (!state.env.footnotes) {
-        state.env.footnotes = {};
-      }
-      if (!state.env.footnotes.list) {
-        state.env.footnotes.list = [];
-      }
-
-      const footnoteId = state.env.footnotes.list.length;
+      const footnoteList = ensureFootnoteList(state.env);
+      const footnoteId = footnoteList.length;
       const tokens: Token[] = [];
       // *用来让链接倾斜
       state.md.inline.parse(`${title}: *${footnoteContent}*`, state.md, state.env, tokens);
@@ -350,17 +361,29 @@ function linkFoot(state: StateInline, silent: boolean): boolean {
       token = state.push("footnote_ref", "", 0);
       token.meta = {id: footnoteId};
 
-      state.env.footnotes.list[footnoteId] = {tokens};
+      footnoteList[footnoteId] = {tokens};
     } else {
-      state.pos = labelStart;
-      state.posMax = labelEnd;
+      const footnoteList = ensureFootnoteList(state.env);
+      const footnoteId = footnoteList.length;
+      const tokens = [createTextToken(state, footnoteContent || href)];
 
-      token = state.push("link_open", "a", 1);
-      token.attrs = [["href", href]];
+      token = state.push("footnote_word_open", "span", 1);
+      token.attrs = [["class", "footnote-word"]];
+
+      token = state.push("text", "", 0);
+      token.content = "⌈";
 
       state.md.inline.tokenize(state);
 
-      token = state.push("link_close", "a", -1);
+      token = state.push("text", "", 0);
+      token.content = "⌋";
+
+      state.push("footnote_word_close", "span", -1);
+
+      token = state.push("footnote_ref", "", 0);
+      token.meta = {id: footnoteId};
+
+      footnoteList[footnoteId] = {tokens};
     }
   }
 

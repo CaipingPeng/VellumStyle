@@ -53,6 +53,62 @@ export function normalizeMathJaxForWechat(html: string): string {
     .replace(/svg><\/span>\s/g, "svg></span>&nbsp;");
 }
 
+export function normalizeLinksForWechat(html: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  for (const link of Array.from(doc.querySelectorAll<HTMLAnchorElement>("a[href]"))) {
+    const href = link.getAttribute("href")?.trim();
+    if (!href) {
+      continue;
+    }
+    const text = link.textContent?.trim();
+    if (!text || link.querySelector("img,svg,video")) {
+      continue;
+    }
+
+    link.setAttribute("href", href);
+    link.setAttribute("target", "_blank");
+    link.setAttribute("data-linktype", "2");
+    link.setAttribute("data-itemshowtype", "0");
+    link.setAttribute("linktype", "text");
+    link.setAttribute("textvalue", text);
+    if (!link.classList.contains("normal_text_link")) {
+      link.classList.add("normal_text_link");
+    }
+    if (isWechatArticleUrl(href)) {
+      link.classList.add("mp_article_text_link");
+      link.setAttribute("hasload", "1");
+      link.removeAttribute("tab");
+    } else if (isHttpUrl(href)) {
+      link.setAttribute("tab", "outerlink");
+    }
+    if (link.parentElement?.getAttribute("leaf") !== "") {
+      const leaf = doc.createElement("span");
+      leaf.setAttribute("leaf", "");
+      link.replaceWith(leaf);
+      leaf.appendChild(link);
+    }
+  }
+  return doc.body.innerHTML;
+}
+
+function isHttpUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isWechatArticleUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.toLowerCase() === "mp.weixin.qq.com" && parsed.pathname.replace(/\/+$/, "") === "/s";
+  } catch {
+    return false;
+  }
+}
+
 export function stripPreviewEditClasses(html: string): string {
   return html.replace(/\sclass=(['"])([\s\S]*?)\1/g, (_match, quote: string, value: string) => {
     const classes = value.split(/\s+/).filter((cls) => cls && cls !== "preview-edit-hover" && cls !== "preview-edit-selected");
@@ -140,10 +196,11 @@ export function solveHtml(): string {
   const allCss = readStyle(STYLE_IDS.markdown);
 
   try {
-    return juice.inlineContent(html, allCss, {
+    const inlined = juice.inlineContent(html, allCss, {
       inlinePseudoElements: true,
       preserveImportant: true,
     });
+    return normalizeLinksForWechat(inlined);
   } catch (e) {
     console.error("CSS 内联失败，请检查 CSS 是否正确", e);
     return "";
@@ -156,37 +213,8 @@ export function solveDraftHtml(): string {
 
 export function normalizeDraftLists(html: string): string {
   const doc = new DOMParser().parseFromString(html, "text/html");
-  for (const section of Array.from(doc.querySelectorAll("li > section:first-child"))) {
-    const li = section.parentElement;
-    if (!li || li.tagName.toLowerCase() !== "li") {
-      continue;
-    }
-
-    const extraNodes = Array.from(li.childNodes).filter((node) => {
-      if (node === section) {
-        return false;
-      }
-      return node.nodeType !== Node.TEXT_NODE || node.textContent?.trim();
-    });
-    if (extraNodes.length > 0) {
-      continue;
-    }
-
-    const sourceStyle = (section as HTMLElement).style;
-    const targetStyle = li.style;
-    for (let i = 0; i < sourceStyle.length; i += 1) {
-      const name = sourceStyle.item(i);
-      targetStyle.setProperty(name, sourceStyle.getPropertyValue(name), sourceStyle.getPropertyPriority(name));
-    }
-
-    while (section.firstChild) {
-      li.insertBefore(section.firstChild, section);
-    }
-    section.remove();
-  }
-
   for (const li of Array.from(doc.querySelectorAll("li"))) {
-    if (!li.textContent?.trim() && li.children.length === 0) {
+    if (!hasMeaningfulListContent(li)) {
       li.remove();
     }
   }
@@ -197,4 +225,23 @@ export function normalizeDraftLists(html: string): string {
   }
 
   return doc.body.innerHTML;
+}
+
+function hasMeaningfulListContent(node: Node): boolean {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return Boolean(node.textContent?.trim());
+  }
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return false;
+  }
+
+  const element = node as Element;
+  const tag = element.tagName.toLowerCase();
+  if (tag === "br") {
+    return false;
+  }
+  if (["img", "svg", "video", "table"].includes(tag)) {
+    return true;
+  }
+  return Array.from(element.childNodes).some(hasMeaningfulListContent);
 }

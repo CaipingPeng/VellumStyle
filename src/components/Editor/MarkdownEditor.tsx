@@ -1,10 +1,17 @@
-import {forwardRef, useImperativeHandle, useMemo, useRef} from "react";
-import CodeMirror, {type ReactCodeMirrorRef} from "@uiw/react-codemirror";
+import {forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef} from "react";
+import {useCodeMirror} from "@uiw/react-codemirror";
 import {markdown, markdownLanguage} from "@codemirror/lang-markdown";
 import {languages} from "@codemirror/language-data";
 import {EditorView} from "@codemirror/view";
 import {undo, redo} from "@codemirror/commands";
-import {wrapSelection as wrapSel, insertLink as insLink, prefixLines as prefixLn, insertCodeBlock as insCode} from "./editing.ts";
+import {
+  wrapSelection as wrapSel,
+  insertLink as insLink,
+  prefixLines as prefixLn,
+  insertCodeBlock as insCode,
+  shouldReplaceEditorDoc,
+  shouldQueueExternalValueDuringComposition,
+} from "./editing.ts";
 import {getCodeMirrorCspNonce} from "../../utils/cspNonce.ts";
 
 export interface MarkdownEditorHandle {
@@ -39,12 +46,73 @@ interface Props {
 // Markdown 编辑器：CodeMirror 6，自动换行、无行号，支持光标插入与粘贴图片。
 const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
   ({value, onChange, onPasteImage}, ref) => {
-    const cmRef = useRef<ReactCodeMirrorRef>(null);
+    const viewRef = useRef<EditorView | null>(null);
     const cspNonce = useMemo(() => getCodeMirrorCspNonce(), []);
+    const composingRef = useRef(false);
+    const compositionSettlingRef = useRef(false);
+    const compositionEndFrameRef = useRef(0);
+    const suppressChangeRef = useRef(false);
+    const latestPropValueRef = useRef(value);
+    const lastEmittedValueRef = useRef<string | null>(null);
+    const pendingExternalValueRef = useRef<string | null>(null);
+    const compositionStartValueRef = useRef<string | null>(null);
+    const onChangeRef = useRef(onChange);
+
+    latestPropValueRef.current = value;
+    onChangeRef.current = onChange;
+
+    const syncEditorWithValue = useCallback((incomingValue: string, externalUpdate = true) => {
+      const view = viewRef.current;
+      if (!view) {
+        return false;
+      }
+      const currentDoc = view.state.doc.toString();
+      if (!shouldReplaceEditorDoc({
+        currentDoc,
+        incomingValue,
+        composing: composingRef.current,
+        compositionSettling: compositionSettlingRef.current,
+        externalUpdate,
+        lastEmittedValue: lastEmittedValueRef.current,
+        latestKnownValue: latestPropValueRef.current,
+      })) {
+        return true;
+      }
+      suppressChangeRef.current = true;
+      try {
+        view.dispatch({
+          changes: {from: 0, to: currentDoc.length, insert: incomingValue},
+        });
+      } finally {
+        suppressChangeRef.current = false;
+      }
+      return true;
+    }, []);
+
+    const emitCurrentEditorDoc = useCallback(() => {
+      const view = viewRef.current;
+      if (!view) {
+        return;
+      }
+      const currentDoc = view.state.doc.toString();
+      if (currentDoc === lastEmittedValueRef.current || currentDoc === latestPropValueRef.current) {
+        return;
+      }
+      lastEmittedValueRef.current = currentDoc;
+      onChangeRef.current(currentDoc);
+    }, []);
+
+    const handleChange = useCallback((nextValue: string) => {
+      if (suppressChangeRef.current) {
+        return;
+      }
+      lastEmittedValueRef.current = nextValue;
+      onChange(nextValue);
+    }, [onChange]);
 
     useImperativeHandle(ref, () => ({
       insertAtCursor: (text) => {
-        const view = cmRef.current?.view;
+        const view = viewRef.current;
         if (!view) {
           return;
         }
@@ -52,7 +120,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         view.focus();
       },
       wrapSelection: (before, after, placeholder) => {
-        const view = cmRef.current?.view;
+        const view = viewRef.current;
         if (!view) return;
         const {from, to} = view.state.selection.main;
         const doc = view.state.doc.toString();
@@ -64,7 +132,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         view.focus();
       },
       insertLink: () => {
-        const view = cmRef.current?.view;
+        const view = viewRef.current;
         if (!view) return;
         const {from, to} = view.state.selection.main;
         const doc = view.state.doc.toString();
@@ -76,7 +144,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         view.focus();
       },
       prefixLines: (prefix) => {
-        const view = cmRef.current?.view;
+        const view = viewRef.current;
         if (!view) return;
         const {from, to} = view.state.selection.main;
         const doc = view.state.doc.toString();
@@ -88,7 +156,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         view.focus();
       },
       insertCodeBlock: () => {
-        const view = cmRef.current?.view;
+        const view = viewRef.current;
         if (!view) return;
         const {from, to} = view.state.selection.main;
         const doc = view.state.doc.toString();
@@ -100,20 +168,20 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         view.focus();
       },
       undo: () => {
-        const view = cmRef.current?.view;
+        const view = viewRef.current;
         if (!view) return;
         undo(view);
         view.focus();
       },
       redo: () => {
-        const view = cmRef.current?.view;
+        const view = viewRef.current;
         if (!view) return;
         redo(view);
         view.focus();
       },
-      getScroller: () => cmRef.current?.view?.scrollDOM ?? null,
+      getScroller: () => viewRef.current?.scrollDOM ?? null,
       getTopLine: () => {
-        const view = cmRef.current?.view;
+        const view = viewRef.current;
         if (!view) {
           return 0;
         }
@@ -123,7 +191,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         return view.state.doc.lineAt(blockInfo.from).number - 1;
       },
       scrollToLine: (line) => {
-        const view = cmRef.current?.view;
+        const view = viewRef.current;
         if (!view) {
           return;
         }
@@ -144,6 +212,32 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
           ".cm-content": {minHeight: "100%"},
         }),
         EditorView.domEventHandlers({
+          compositionstart() {
+            if (compositionEndFrameRef.current) {
+              cancelAnimationFrame(compositionEndFrameRef.current);
+              compositionEndFrameRef.current = 0;
+            }
+            composingRef.current = true;
+            compositionSettlingRef.current = false;
+            compositionStartValueRef.current = latestPropValueRef.current;
+            return false;
+          },
+          compositionend() {
+            compositionSettlingRef.current = true;
+            compositionEndFrameRef.current = requestAnimationFrame(() => {
+              compositionEndFrameRef.current = 0;
+              emitCurrentEditorDoc();
+              composingRef.current = false;
+              compositionSettlingRef.current = false;
+              compositionStartValueRef.current = null;
+              const pendingExternalValue = pendingExternalValueRef.current;
+              if (pendingExternalValue !== null) {
+                pendingExternalValueRef.current = null;
+                syncEditorWithValue(pendingExternalValue, true);
+              }
+            });
+            return false;
+          },
           paste(event) {
             if (!onPasteImage) {
               return false;
@@ -166,22 +260,66 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
           },
         }),
       ],
-      [cspNonce, onPasteImage],
+      [cspNonce, emitCurrentEditorDoc, onPasteImage, syncEditorWithValue],
     );
 
+    const {view, setContainer} = useCodeMirror({
+      value: undefined,
+      height: "100%",
+      extensions,
+      onChange: handleChange,
+      basicSetup: {
+        lineNumbers: false,
+        foldGutter: false,
+        highlightActiveLine: true,
+      },
+    });
+
+    viewRef.current = view ?? null;
+
+    useEffect(() => {
+      latestPropValueRef.current = value;
+      let raf = 0;
+      const sync = () => {
+        if (!viewRef.current) {
+          raf = requestAnimationFrame(sync);
+          return;
+        }
+        if (composingRef.current || compositionSettlingRef.current) {
+          const currentDoc = viewRef.current.state.doc.toString();
+          if (shouldQueueExternalValueDuringComposition({
+            currentDoc,
+            incomingValue: value,
+            compositionStartValue: compositionStartValueRef.current,
+            lastEmittedValue: lastEmittedValueRef.current,
+          })) {
+            pendingExternalValueRef.current = value;
+          }
+          return;
+        }
+        syncEditorWithValue(value, true);
+      };
+      sync();
+      return () => cancelAnimationFrame(raf);
+    }, [syncEditorWithValue, value, view]);
+
+    useEffect(() => {
+      return () => {
+        if (compositionEndFrameRef.current) {
+          cancelAnimationFrame(compositionEndFrameRef.current);
+        }
+      };
+    }, []);
+
+    const setEditorContainer = useCallback((element: HTMLDivElement | null) => {
+      setContainer(element);
+    }, [setContainer]);
+
     return (
-      <CodeMirror
-        ref={cmRef}
-        value={value}
-        height="100%"
+      <div
+        ref={setEditorContainer}
+        className="cm-theme-light"
         style={{height: "100%", fontSize: 14}}
-        extensions={extensions}
-        onChange={onChange}
-        basicSetup={{
-          lineNumbers: false,
-          foldGutter: false,
-          highlightActiveLine: true,
-        }}
       />
     );
   },

@@ -237,6 +237,11 @@ pub fn move_entry(app: AppHandle, src: String, dest_dir: String) -> Result<Strin
 }
 
 /// 在系统文件管理器中打开条目所在位置。path 为相对 documents/ 的路径。
+#[cfg(target_os = "windows")]
+fn explorer_select_args(path: &Path) -> [std::ffi::OsString; 2] {
+    ["/select,".into(), path.as_os_str().to_os_string()]
+}
+
 #[tauri::command]
 pub fn open_entry_location(app: AppHandle, path: String) -> Result<(), String> {
     let full = resolve_in_documents(&app, &path)?;
@@ -246,7 +251,7 @@ pub fn open_entry_location(app: AppHandle, path: String) -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     let result = std::process::Command::new("explorer")
-        .arg(format!("/select,{}", full.to_string_lossy()))
+        .args(explorer_select_args(&full))
         .spawn();
 
     #[cfg(target_os = "macos")]
@@ -278,5 +283,22 @@ mod tests {
         assert!(!is_valid_name("a:b"));
         assert!(is_valid_name("周报"));
         assert!(is_valid_name("2026-周报_v1"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn explorer_select_args_keep_switch_and_path_separate() {
+        use super::explorer_select_args;
+        use std::ffi::OsString;
+        use std::path::PathBuf;
+
+        let path = PathBuf::from(
+            r"C:\Users\Administrator\AppData\Roaming\com.vellumstyle.desktop\documents\开源相关\VellumStyle v1.4.5（文澜排版——微信公众号排版工具）相较v1.0.0大幅度优化、功能增强.md",
+        );
+        let args = explorer_select_args(&path);
+
+        assert_eq!(args[0], OsString::from("/select,"));
+        assert_eq!(args[1], path.as_os_str());
+        assert!(!args[0].to_string_lossy().contains("VellumStyle"));
     }
 }

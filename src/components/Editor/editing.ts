@@ -4,6 +4,61 @@ export interface EditResult {
   selTo: number;
 }
 
+export interface EditorDocSyncInput {
+  currentDoc: string;
+  incomingValue: string;
+  composing: boolean;
+  compositionSettling?: boolean;
+  externalUpdate?: boolean;
+  lastEmittedValue?: string | null;
+  latestKnownValue?: string | null;
+}
+
+export function shouldReplaceEditorDoc({
+  currentDoc,
+  incomingValue,
+  composing,
+  compositionSettling = false,
+  externalUpdate = true,
+  lastEmittedValue = null,
+  latestKnownValue = null,
+}: EditorDocSyncInput): boolean {
+  if (composing || compositionSettling || currentDoc === incomingValue) {
+    return false;
+  }
+
+  if (latestKnownValue !== null && incomingValue !== latestKnownValue) {
+    return false;
+  }
+
+  if (lastEmittedValue !== null) {
+    if (!externalUpdate && currentDoc === lastEmittedValue) {
+      return false;
+    }
+    if (externalUpdate && incomingValue === lastEmittedValue) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export interface EditorCompositionQueueInput {
+  currentDoc: string;
+  incomingValue: string;
+  compositionStartValue?: string | null;
+  lastEmittedValue?: string | null;
+}
+
+export function shouldQueueExternalValueDuringComposition({
+  currentDoc,
+  incomingValue,
+  compositionStartValue = null,
+  lastEmittedValue = null,
+}: EditorCompositionQueueInput): boolean {
+  return incomingValue !== currentDoc && incomingValue !== lastEmittedValue && incomingValue !== compositionStartValue;
+}
+
 // 行内包裹：有选区包裹选区文字（结果仍选中文字）；无选区插占位符并选中它。
 export function wrapSelection(
   doc: string,
