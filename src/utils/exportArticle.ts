@@ -4,7 +4,7 @@ import {solveHtml} from "../markdown/converter.ts";
 import {ARTICLE_BOX_ID} from "../articleRoot.ts";
 import {isTauriRuntime} from "./tauriEnv.ts";
 
-export type ExportFormat = "png" | "pdf" | "html";
+export type ExportFormat = "png" | "pdf" | "html" | "markdown";
 
 export interface ExportFormatMeta {
   extension: string;
@@ -34,6 +34,7 @@ export interface ExportRenderTarget {
 
 export interface ExportArticleDependencies {
   waitForMathJaxIdle: () => Promise<void> | void;
+  readMarkdownSource: () => string;
   readArticleHtml: () => string;
   renderArticleCanvas: () => Promise<HTMLCanvasElement>;
   saveExportBlob: (blob: Blob, format: ExportFormat, fileName: string) => Promise<ExportResult>;
@@ -62,6 +63,11 @@ const EXPORT_FORMATS: Record<ExportFormat, ExportFormatMeta> = {
     extension: "html",
     mimeType: "text/html;charset=utf-8",
     label: "HTML",
+  },
+  markdown: {
+    extension: "md",
+    mimeType: "text/markdown;charset=utf-8",
+    label: "Markdown",
   },
 };
 
@@ -103,8 +109,15 @@ export async function exportArticle(
   dependencyOverrides: Partial<ExportArticleDependencies> = {},
 ): Promise<ExportResult> {
   const dependencies = createExportArticleDependencies(dependencyOverrides);
-  await dependencies.waitForMathJaxIdle();
   const fileName = buildDefaultExportName(docPath, format);
+
+  if (format === "markdown") {
+    const meta = getExportFormatMeta(format);
+    const blob = new Blob([dependencies.readMarkdownSource()], {type: meta.mimeType});
+    return dependencies.saveExportBlob(blob, format, fileName);
+  }
+
+  await dependencies.waitForMathJaxIdle();
 
   if (format === "html") {
     const html = dependencies.readArticleHtml();
@@ -143,6 +156,7 @@ export async function exportArticle(
 function createExportArticleDependencies(overrides: Partial<ExportArticleDependencies>): ExportArticleDependencies {
   return {
     waitForMathJaxIdle,
+    readMarkdownSource: () => "",
     readArticleHtml: solveHtml,
     renderArticleCanvas,
     saveExportBlob,

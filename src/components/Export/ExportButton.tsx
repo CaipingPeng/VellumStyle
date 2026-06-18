@@ -1,5 +1,5 @@
 import {useState} from "react";
-import {Code2, Download, FileImage, FileText, Loader2} from "lucide-react";
+import {Code2, Download, FileCode, FileImage, FileText, Loader2} from "lucide-react";
 import {useStore} from "../../store/index.ts";
 import {exportArticle, getExportFormatMeta, type ExportFormat} from "../../utils/exportArticle.ts";
 import Button, {type ButtonVariant} from "../ui/Button.tsx";
@@ -14,6 +14,7 @@ const EXPORT_ITEMS: Array<{
   {format: "png", icon: FileImage, label: "PNG 长图"},
   {format: "pdf", icon: FileText, label: "PDF"},
   {format: "html", icon: Code2, label: "HTML"},
+  {format: "markdown", icon: FileCode, label: "Markdown"},
 ];
 
 export interface ExportController {
@@ -28,13 +29,16 @@ interface ExportButtonProps {
 
 export function useExportController(): ExportController {
   const currentDocPath = useStore((s) => s.currentDocPath);
+  const content = useStore((s) => s.content);
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
 
   const runExport = async (format: ExportFormat) => {
     if (exporting) return;
     setExporting(format);
     try {
-      const result = await exportArticle(format, currentDocPath);
+      const result = await exportArticle(format, currentDocPath, {
+        readMarkdownSource: () => content,
+      });
       if (result.status !== "cancelled") {
         const fileName = result.path?.split(/[\\/]/).pop() || result.fileName;
         const action = result.status === "saved" ? "已导出" : "已下载";

@@ -28,7 +28,7 @@
 
   ![主题系统](assets/readme/theme-gallery.png)
 
-- **导出**：支持 PNG 长图、独立 HTML、A4 PDF。
+- **导出**：支持 PNG 长图、独立 HTML、A4 PDF、Markdown 原文。
 
 - **增强 Markdown**：支持 Mermaid、MathJax、`==高亮==`、链接脚注、`[toc]`、ruby 注音、图片尺寸语法等。
 

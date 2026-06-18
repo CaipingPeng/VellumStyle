@@ -9,7 +9,7 @@ import {
   getExportFormatMeta,
 } from "./exportArticle.ts";
 
-test("导出格式元信息包含 PNG 长图、PDF 和 HTML", () => {
+test("导出格式元信息包含 PNG 长图、PDF、HTML 和 Markdown", () => {
   assert.deepEqual(getExportFormatMeta("png"), {
     extension: "png",
     mimeType: "image/png",
@@ -25,12 +25,46 @@ test("导出格式元信息包含 PNG 长图、PDF 和 HTML", () => {
     mimeType: "text/html;charset=utf-8",
     label: "HTML",
   });
+  assert.deepEqual(getExportFormatMeta("markdown"), {
+    extension: "md",
+    mimeType: "text/markdown;charset=utf-8",
+    label: "Markdown",
+  });
 });
 
 test("默认导出文件名来自当前文档名，并清理 Windows 不安全字符", () => {
   assert.equal(buildDefaultExportName("选题/增长:复盘?.md", "png"), "增长_复盘_.png");
   assert.equal(buildDefaultExportName("草稿.md", "pdf"), "草稿.pdf");
   assert.equal(buildDefaultExportName(null, "html"), "文澜排版导出.html");
+  assert.equal(buildDefaultExportName("草稿.markdown", "markdown"), "草稿.md");
+});
+
+test("Markdown 导出原样保存当前源文本，不读取预览 HTML", async () => {
+  const source = "# 标题\n\n原样 **Markdown**。\n";
+  let capturedBlobType: string | null = null;
+  let capturedBlobText: string | null = null;
+
+  const result = await exportArticle("markdown", "草稿.md", {
+    waitForMathJaxIdle: () => {
+      throw new Error("Markdown 导出不应等待预览渲染");
+    },
+    readMarkdownSource: () => source,
+    readArticleHtml: () => {
+      throw new Error("Markdown 导出不应读取预览 HTML");
+    },
+    saveExportBlob: async (blob, format, fileName) => {
+      capturedBlobType = blob.type;
+      capturedBlobText = await blob.text();
+      assert.equal(format, "markdown");
+      assert.equal(fileName, "草稿.md");
+      return {status: "downloaded", fileName};
+    },
+  });
+
+  assert.equal(result.status, "downloaded");
+  assert.equal(result.fileName, "草稿.md");
+  assert.equal(capturedBlobType, "text/markdown;charset=utf-8");
+  assert.equal(capturedBlobText, source);
 });
 
 test("PDF 打印文档使用 A4 版式并保留真实正文 HTML", () => {
