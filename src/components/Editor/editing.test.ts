@@ -7,6 +7,10 @@ import {
   insertCodeBlock,
   shouldReplaceEditorDoc,
   shouldQueueExternalValueDuringComposition,
+  shouldHandleDirectTextInput,
+  shouldRecoverCompositionTextInput,
+  getFallbackChineseSymbolFromKey,
+  getSelectionAfterRecoveredTextInput,
 } from "./editing.ts";
 
 test("wrap 有选区：包裹并选中原文字", () => {
@@ -195,4 +199,41 @@ test("编辑器组合输入期间保留真正的外部文档更新", () => {
     }),
     true,
   );
+});
+
+test("编辑器直接接管单个标点和符号输入，避开输入法首键丢失", () => {
+  assert.equal(shouldHandleDirectTextInput({data: "，", inputType: "insertText"}), true);
+  assert.equal(shouldHandleDirectTextInput({data: ",", inputType: "insertText"}), true);
+  assert.equal(shouldHandleDirectTextInput({data: "￥", inputType: "insertText"}), true);
+  assert.equal(shouldHandleDirectTextInput({data: "a", inputType: "insertText"}), false);
+  assert.equal(shouldHandleDirectTextInput({data: "中", inputType: "insertText"}), false);
+  assert.equal(shouldHandleDirectTextInput({data: " ", inputType: "insertText"}), false);
+  assert.equal(shouldHandleDirectTextInput({data: "，。", inputType: "insertText"}), false);
+  assert.equal(shouldHandleDirectTextInput({data: "，", inputType: "insertCompositionText"}), true);
+  assert.equal(shouldHandleDirectTextInput({data: "中", inputType: "insertCompositionText"}), false);
+});
+
+test("编辑器在组合结束时恢复未落盘的单个标点和符号", () => {
+  assert.equal(shouldRecoverCompositionTextInput({data: "，", startDoc: "你好", currentDoc: "你好"}), true);
+  assert.equal(shouldRecoverCompositionTextInput({data: "。", startDoc: "你好", currentDoc: "你好"}), true);
+  assert.equal(shouldRecoverCompositionTextInput({data: "￥", startDoc: "你好", currentDoc: "你好"}), true);
+  assert.equal(shouldRecoverCompositionTextInput({data: "中", startDoc: "你好", currentDoc: "你好"}), false);
+  assert.equal(shouldRecoverCompositionTextInput({data: "", startDoc: "你好", currentDoc: "你好"}), false);
+  assert.equal(shouldRecoverCompositionTextInput({data: "，。", startDoc: "你好", currentDoc: "你好"}), false);
+  assert.equal(shouldRecoverCompositionTextInput({data: "，", startDoc: "你好", currentDoc: "你好，"}), false);
+});
+
+test("编辑器从被输入法吞掉的符号 keyup 中恢复中文标点", () => {
+  assert.equal(getFallbackChineseSymbolFromKey({key: ",", ctrlKey: false, altKey: false, metaKey: false}), "，");
+  assert.equal(getFallbackChineseSymbolFromKey({key: ".", ctrlKey: false, altKey: false, metaKey: false}), "。");
+  assert.equal(getFallbackChineseSymbolFromKey({key: "?", ctrlKey: false, altKey: false, metaKey: false}), "？");
+  assert.equal(getFallbackChineseSymbolFromKey({key: "$", ctrlKey: false, altKey: false, metaKey: false}), "￥");
+  assert.equal(getFallbackChineseSymbolFromKey({key: "a", ctrlKey: false, altKey: false, metaKey: false}), null);
+  assert.equal(getFallbackChineseSymbolFromKey({key: ",", ctrlKey: true, altKey: false, metaKey: false}), null);
+});
+
+test("编辑器恢复符号输入后把光标放到新字符后面", () => {
+  assert.equal(getSelectionAfterRecoveredTextInput({from: 2, text: "，"}), 3);
+  assert.equal(getSelectionAfterRecoveredTextInput({from: 2, text: "￥"}), 3);
+  assert.equal(getSelectionAfterRecoveredTextInput({from: 2, text: "🙂"}), 4);
 });

@@ -59,6 +59,84 @@ export function shouldQueueExternalValueDuringComposition({
   return incomingValue !== currentDoc && incomingValue !== lastEmittedValue && incomingValue !== compositionStartValue;
 }
 
+export interface DirectTextInput {
+  data: string | null;
+  inputType: string;
+}
+
+function isSingleSymbolInput(data: string | null): data is string {
+  return !!data && Array.from(data).length === 1 && !/[\p{L}\p{N}\s]/u.test(data);
+}
+
+export function shouldHandleDirectTextInput({data, inputType}: DirectTextInput): boolean {
+  if (!["insertText", "insertCompositionText"].includes(inputType)) {
+    return false;
+  }
+  return isSingleSymbolInput(data);
+}
+
+export interface RecoverCompositionTextInput {
+  data: string | null;
+  startDoc: string | null;
+  currentDoc: string;
+}
+
+export function shouldRecoverCompositionTextInput({
+  data,
+  startDoc,
+  currentDoc,
+}: RecoverCompositionTextInput): boolean {
+  return isSingleSymbolInput(data) && startDoc !== null && currentDoc === startDoc;
+}
+
+export interface FallbackChineseSymbolKey {
+  key: string;
+  ctrlKey: boolean;
+  altKey: boolean;
+  metaKey: boolean;
+}
+
+const fallbackChineseSymbolByKey: Record<string, string> = {
+  ",": "，",
+  ".": "。",
+  ";": "；",
+  ":": "：",
+  "?": "？",
+  "!": "！",
+  "(": "（",
+  ")": "）",
+  "[": "【",
+  "]": "】",
+  "<": "《",
+  ">": "》",
+  "/": "、",
+  "\\": "、",
+  "$": "￥",
+  "\"": "”",
+  "'": "’",
+};
+
+export function getFallbackChineseSymbolFromKey({
+  key,
+  ctrlKey,
+  altKey,
+  metaKey,
+}: FallbackChineseSymbolKey): string | null {
+  if (ctrlKey || altKey || metaKey) {
+    return null;
+  }
+  return fallbackChineseSymbolByKey[key] ?? null;
+}
+
+export interface RecoveredTextSelectionInput {
+  from: number;
+  text: string;
+}
+
+export function getSelectionAfterRecoveredTextInput({from, text}: RecoveredTextSelectionInput): number {
+  return from + text.length;
+}
+
 // 行内包裹：有选区包裹选区文字（结果仍选中文字）；无选区插占位符并选中它。
 export function wrapSelection(
   doc: string,
