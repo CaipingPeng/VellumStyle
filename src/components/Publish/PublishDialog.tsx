@@ -12,8 +12,13 @@ import {
   uploadRemoteThumb,
   uploadThumb,
 } from "../../utils/publish.ts";
+import {
+  loadPublishSettings,
+  savePublishSettings,
+  type CommentFlag,
+} from "../../utils/publishSettings.ts";
 import {toast} from "../Toast/toast.ts";
-import {FileText, ImageIcon, Images, Library, Loader2, RefreshCw, UploadCloud} from "lucide-react";
+import {FileText, Globe2, ImageIcon, Images, Library, Loader2, MessageCircle, MessageCircleOff, RefreshCw, UploadCloud, UserRound, Users} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import Button from "../ui/Button.tsx";
 
@@ -32,6 +37,20 @@ const titleInputShellClass =
 
 const titleInputClass =
   "h-full min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 font-[inherit] text-[15px] text-text outline-none placeholder:text-text-muted";
+
+const segmentedButtonClass = (active: boolean) =>
+  `inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md border px-2.5 text-[13px] font-semibold outline-none transition-all duration-fast ease-smooth focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+    active
+      ? "border-[rgba(94,106,210,0.42)] bg-bg text-accent shadow-[0_8px_18px_rgba(94,106,210,0.12)]"
+      : "border-transparent bg-transparent text-text-secondary hover:bg-bg hover:text-text"
+  }`;
+
+const sourceButtonClass = (active: boolean) =>
+  `inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-md border px-3 text-[13px] font-semibold outline-none transition-all duration-fast ease-smooth focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+    active
+      ? "border-[rgba(94,106,210,0.48)] bg-bg text-accent shadow-[0_10px_24px_rgba(94,106,210,0.14)]"
+      : "border-transparent bg-transparent text-text-secondary hover:bg-bg/80 hover:text-text"
+  }`;
 
 function revokePreview(url: string | null) {
   if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
@@ -60,6 +79,9 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     ? currentDocPath.split("/").pop()!.replace(/\.md$/, "")
     : "未命名";
   const [title, setTitle] = useState(defaultTitle);
+  const [author, setAuthor] = useState("");
+  const [needOpenComment, setNeedOpenComment] = useState<CommentFlag>(0);
+  const [onlyFansCanComment, setOnlyFansCanComment] = useState<CommentFlag>(0);
   const [thumbId, setThumbId] = useState<string | null>(null);
   const [thumbPreview, setThumbPreview] = useState<string | null>(null);
   const [coverSource, setCoverSource] = useState<CoverSource>("article");
@@ -75,6 +97,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<string | null>(null);
   const coverCandidates = useMemo(() => getCoverCandidates(content), [content]);
+  const commentsEnabled = needOpenComment === 1;
   previewRef.current = thumbPreview;
 
   const loadMaterialLibrary = useCallback(async (offset = 0) => {
@@ -105,7 +128,11 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       setPendingCandidateUrl(null);
       return;
     }
+    const publishSettings = loadPublishSettings();
     setTitle(defaultTitle);
+    setAuthor(publishSettings.author);
+    setNeedOpenComment(publishSettings.needOpenComment);
+    setOnlyFansCanComment(publishSettings.needOpenComment === 1 ? publishSettings.onlyFansCanComment : 0);
     setThumbId(null);
     setCoverSource("article");
     setSelectedCandidateUrl(null);
@@ -215,7 +242,13 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     try {
       await waitForMathJaxIdle();
       const html = solveDraftHtml();
-      await addDraft(title.trim(), html, thumbId);
+      const publishSettings = {
+        author: author.trim(),
+        needOpenComment,
+        onlyFansCanComment: commentsEnabled ? onlyFansCanComment : 0,
+      };
+      savePublishSettings(publishSettings);
+      await addDraft(title.trim(), html, thumbId, publishSettings);
       toast.show("已发到公众号草稿箱，请在后台确认排版后发送", "info", 4000);
       onClose();
     } catch (e) {
@@ -253,7 +286,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       }
     >
       <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.05fr)]">
-        <div className="flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-bg px-3 py-3">
+        <div className="flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-[linear-gradient(180deg,#fff_0%,#fbfbfd_100%)] p-4 shadow-[0_14px_34px_rgba(20,20,30,0.06)]">
           <div>
             <label htmlFor="publish-title" className="mb-2 block text-[13px] font-medium text-text-secondary">
               文章标题
@@ -267,6 +300,83 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                 className={titleInputClass}
                 placeholder="输入公众号文章标题"
               />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="publish-author" className="mb-2 block text-[13px] font-medium text-text-secondary">
+                作者
+              </label>
+              <div className={titleInputShellClass}>
+                <UserRound size={16} className="flex-none transition-colors duration-fast group-focus-within:text-accent" />
+                <input
+                  id="publish-author"
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
+                  className={titleInputClass}
+                  placeholder="可留空"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <fieldset className="m-0 min-w-0 border-0 p-0">
+                <legend className="mb-2 block text-[13px] font-medium text-text-secondary">评论</legend>
+                <div className="flex rounded-lg border border-border bg-bg-secondary p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
+                  <button
+                    type="button"
+                    aria-pressed={needOpenComment === 0}
+                    onClick={() => {
+                      setNeedOpenComment(0);
+                      setOnlyFansCanComment(0);
+                    }}
+                    className={segmentedButtonClass(needOpenComment === 0)}
+                  >
+                    <MessageCircleOff size={15} />
+                    关闭
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={needOpenComment === 1}
+                    onClick={() => setNeedOpenComment(1)}
+                    className={segmentedButtonClass(needOpenComment === 1)}
+                  >
+                    <MessageCircle size={15} />
+                    打开
+                  </button>
+                </div>
+              </fieldset>
+
+              <fieldset className="m-0 min-w-0 border-0 p-0">
+                <legend className="mb-2 block text-[13px] font-medium text-text-secondary">评论范围</legend>
+                <div
+                  className={`flex rounded-lg border border-border bg-bg-secondary p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] transition-opacity duration-fast ${
+                    commentsEnabled ? "opacity-100" : "opacity-55"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    aria-pressed={onlyFansCanComment === 0}
+                    disabled={!commentsEnabled}
+                    onClick={() => setOnlyFansCanComment(0)}
+                    className={`${segmentedButtonClass(onlyFansCanComment === 0)} disabled:cursor-default`}
+                  >
+                    <Globe2 size={15} />
+                    所有人
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={onlyFansCanComment === 1}
+                    disabled={!commentsEnabled}
+                    onClick={() => setOnlyFansCanComment(1)}
+                    className={`${segmentedButtonClass(onlyFansCanComment === 1)} disabled:cursor-default`}
+                  >
+                    <Users size={15} />
+                    粉丝
+                  </button>
+                </div>
+              </fieldset>
             </div>
           </div>
 
@@ -338,16 +448,14 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
           </div>
         </div>
 
-        <div className="min-w-0 rounded-lg border border-border bg-bg px-3 py-3">
+        <div className="min-w-0 rounded-lg border border-border bg-[linear-gradient(180deg,#fff_0%,#fbfbfd_100%)] p-4 shadow-[0_14px_34px_rgba(20,20,30,0.06)]">
           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="inline-flex w-fit rounded-md bg-bg-secondary p-1">
+            <div className="flex w-full rounded-lg border border-border bg-bg-secondary p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] sm:w-[260px]">
               <button
                 type="button"
                 aria-pressed={coverSource === "article"}
                 onClick={() => setCoverSource("article")}
-                className={`inline-flex h-8 items-center gap-1.5 rounded px-2.5 text-[13px] font-medium outline-none transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
-                  coverSource === "article" ? "bg-bg text-text shadow-sm" : "text-text-secondary hover:bg-bg-tertiary hover:text-text"
-                }`}
+                className={sourceButtonClass(coverSource === "article")}
               >
                 <Images size={15} />
                 文中图片
@@ -356,9 +464,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                 type="button"
                 aria-pressed={coverSource === "material"}
                 onClick={() => setCoverSource("material")}
-                className={`inline-flex h-8 items-center gap-1.5 rounded px-2.5 text-[13px] font-medium outline-none transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
-                  coverSource === "material" ? "bg-bg text-text shadow-sm" : "text-text-secondary hover:bg-bg-tertiary hover:text-text"
-                }`}
+                className={sourceButtonClass(coverSource === "material")}
               >
                 <Library size={15} />
                 素材库

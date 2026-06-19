@@ -781,17 +781,18 @@ async fn add_draft_inner(
     title: &str,
     content: &str,
     thumb_media_id: &str,
+    author: &str,
+    need_open_comment: u8,
+    only_fans_can_comment: u8,
 ) -> Result<String, (Option<i64>, String)> {
-    let body = serde_json::json!({
-        "articles": [{
-            "title": title,
-            "content": content,
-            "thumb_media_id": thumb_media_id,
-            "author": "",
-            "digest": "",
-            "content_source_url": ""
-        }]
-    });
+    let body = build_add_draft_body(
+        title,
+        content,
+        thumb_media_id,
+        author,
+        need_open_comment,
+        only_fans_can_comment,
+    );
     let url = format!("https://api.weixin.qq.com/cgi-bin/draft/add?access_token={token}");
     let resp = reqwest::Client::new()
         .post(&url)
@@ -816,7 +817,37 @@ async fn add_draft_inner(
     }
 }
 
-/// 发布到公众号草稿箱（draft/add）。author/digest/content_source_url 暂空。
+fn build_add_draft_body(
+    title: &str,
+    content: &str,
+    thumb_media_id: &str,
+    author: &str,
+    need_open_comment: u8,
+    only_fans_can_comment: u8,
+) -> serde_json::Value {
+    serde_json::json!({
+        "articles": [{
+            "title": title,
+            "content": content,
+            "thumb_media_id": thumb_media_id,
+            "author": author,
+            "digest": "",
+            "content_source_url": "",
+            "need_open_comment": normalize_comment_flag(need_open_comment),
+            "only_fans_can_comment": normalize_comment_flag(only_fans_can_comment)
+        }]
+    })
+}
+
+fn normalize_comment_flag(value: u8) -> u8 {
+    if value == 1 {
+        1
+    } else {
+        0
+    }
+}
+
+/// 发布到公众号草稿箱（draft/add）。
 /// 返回草稿 media_id。未配置返回 "NOT_CONFIGURED"。
 #[tauri::command]
 pub async fn add_draft(
@@ -824,21 +855,42 @@ pub async fn add_draft(
     title: String,
     content: String,
     thumb_media_id: String,
+    author: String,
+    need_open_comment: u8,
+    only_fans_can_comment: u8,
 ) -> Result<String, String> {
     let cfg = load_wechat_config(&app);
     if !cfg.is_configured() {
         return Err("NOT_CONFIGURED".into());
     }
     let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
-    match add_draft_inner(&token, &title, &content, &thumb_media_id).await {
+    match add_draft_inner(
+        &token,
+        &title,
+        &content,
+        &thumb_media_id,
+        &author,
+        need_open_comment,
+        only_fans_can_comment,
+    )
+    .await
+    {
         Ok(id) => Ok(id),
         Err((errcode, msg)) => {
             if matches!(errcode, Some(40001) | Some(42001) | Some(40014)) {
                 clear_token_blocking();
                 let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
-                add_draft_inner(&token, &title, &content, &thumb_media_id)
-                    .await
-                    .map_err(|(_, m)| m)
+                add_draft_inner(
+                    &token,
+                    &title,
+                    &content,
+                    &thumb_media_id,
+                    &author,
+                    need_open_comment,
+                    only_fans_can_comment,
+                )
+                .await
+                .map_err(|(_, m)| m)
             } else {
                 Err(msg)
             }
@@ -849,7 +901,7 @@ pub async fn add_draft(
 #[cfg(test)]
 mod tests {
     use super::{
-        format_wechat_error, get_outbound_ip, is_allowed_redirect_target,
+        build_add_draft_body, format_wechat_error, get_outbound_ip, is_allowed_redirect_target,
         parse_material_page_response, parse_outbound_ip_response, OUTBOUND_IP_ENDPOINTS,
     };
 
@@ -946,6 +998,27 @@ mod tests {
         assert_eq!(json["items"][0]["mediaId"], "MEDIA_ID_1");
         assert_eq!(json["items"][0]["updateTime"], 1780000000);
         assert!(json["items"][0]["media_id"].is_null());
+    }
+
+    #[test]
+    fn draft_body_includes_author_and_comment_settings() {
+        let body = build_add_draft_body("标题", "<p>正文</p>", "THUMB_ID", "作者名", 1, 1);
+
+        assert_eq!(
+            body,
+            serde_json::json!({
+                "articles": [{
+                    "title": "标题",
+                    "content": "<p>正文</p>",
+                    "thumb_media_id": "THUMB_ID",
+                    "author": "作者名",
+                    "digest": "",
+                    "content_source_url": "",
+                    "need_open_comment": 1,
+                    "only_fans_can_comment": 1
+                }]
+            })
+        );
     }
 
     #[cfg(windows)]

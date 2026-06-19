@@ -2,6 +2,7 @@
 import {invoke} from "@tauri-apps/api/core";
 import type {MediaRef} from "./markdownMediaScanner.ts";
 import {scanMarkdownMedia} from "./markdownMediaScanner.ts";
+import {DEFAULT_PUBLISH_SETTINGS, type PublishSettings} from "./publishSettings.ts";
 
 const MMBIZ_HOSTS = ["mmbiz.qpic.cn", "mmbiz.qlogo.cn"];
 
@@ -70,8 +71,20 @@ export function listImageMaterials(offset: number, count: number): Promise<Mater
   return invoke<MaterialImagePage>("list_image_materials", {offset, count});
 }
 
-export function addDraft(title: string, content: string, thumbMediaId: string): Promise<string> {
-  return invoke<string>("add_draft", {title, content, thumbMediaId});
+export function addDraft(
+  title: string,
+  content: string,
+  thumbMediaId: string,
+  settings: PublishSettings = DEFAULT_PUBLISH_SETTINGS,
+): Promise<string> {
+  return invoke<string>("add_draft", {
+    title,
+    content,
+    thumbMediaId,
+    author: settings.author,
+    needOpenComment: settings.needOpenComment,
+    onlyFansCanComment: settings.onlyFansCanComment,
+  });
 }
 
 function normalizeRemoteImageUrl(url: string): string | null {
