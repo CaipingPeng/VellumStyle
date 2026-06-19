@@ -183,19 +183,33 @@ pub fn rename_entry(app: AppHandle, path: String, new_name: String) -> Result<St
 }
 
 #[tauri::command]
-pub fn delete_entry(app: AppHandle, path: String) -> Result<(), String> {
+pub fn delete_entry(app: AppHandle, path: String, recursive: Option<bool>) -> Result<(), String> {
+    if path.trim().is_empty() {
+        return Err("不能删除文档根目录".into());
+    }
+    let base = documents_dir(&app)?;
     let full = resolve_in_documents(&app, &path)?;
     if !full.exists() {
         return Err("条目不存在".into());
     }
+    let canon_base = std::fs::canonicalize(&base).map_err(|e| format!("{e}"))?;
+    let canon_full = std::fs::canonicalize(&full).map_err(|e| format!("{e}"))?;
+    if canon_full == canon_base || !canon_full.starts_with(&canon_base) {
+        return Err("非法路径".into());
+    }
+
     if full.is_dir() {
         let empty = std::fs::read_dir(&full)
             .map(|mut e| e.next().is_none())
             .unwrap_or(false);
-        if !empty {
-            return Err("文件夹非空，请先清空".into());
+        if !empty && !recursive.unwrap_or(false) {
+            return Err("文件夹非空，请确认后递归删除".into());
         }
-        std::fs::remove_dir(&full).map_err(|e| format!("删除失败：{e}"))
+        if empty {
+            std::fs::remove_dir(&full).map_err(|e| format!("删除失败：{e}"))
+        } else {
+            std::fs::remove_dir_all(&full).map_err(|e| format!("删除失败：{e}"))
+        }
     } else {
         std::fs::remove_file(&full).map_err(|e| format!("删除失败：{e}"))
     }

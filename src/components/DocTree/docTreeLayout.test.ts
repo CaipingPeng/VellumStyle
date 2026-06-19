@@ -40,3 +40,13 @@ test("文件树拖拽手柄保持细窄的 4px 命中区域", async () => {
   assert.match(source, /aria-label="调整文件树宽度"/);
   assert.match(source, /w-1 cursor-col-resize/);
 });
+
+test("文件树删除使用应用内确认弹窗，避免系统确认框和提示音", async () => {
+  const source = await readFile(new URL("./DocTree.tsx", import.meta.url), "utf8");
+  const confirmSource = await readFile(new URL("./deleteConfirmation.ts", import.meta.url), "utf8");
+
+  assert.match(source, /DeleteConfirmDialog/);
+  assert.doesNotMatch(source, /requestDeleteConfirmation/);
+  assert.doesNotMatch(source, /window\.confirm/);
+  assert.doesNotMatch(confirmSource, /plugin-dialog/);
+});

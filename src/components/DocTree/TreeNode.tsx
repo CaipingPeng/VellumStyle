@@ -22,7 +22,7 @@ interface Props {
   onSelectDoc: (path: string) => void; // 点文档：选中并打开到编辑器
   onSelectFolder: (path: string) => void; // 点文件夹：仅选中（+展开），不打开文件
   onRename: (path: string, newName: string) => void;
-  onDelete: (path: string) => void;
+  onDelete: (node: DocNode) => void;
   onOpenLocation: (path: string) => void;
   onDragStartNode: (path: string) => void;
   onDragOverNode: (path: string | null) => void;
@@ -189,7 +189,7 @@ export default function TreeNode({
               style={{flexShrink: 0}}
               onClick={(e) => {
                 e.stopPropagation();
-                onDelete(node.path);
+                onDelete(node);
               }}
             />
           </span>

@@ -8,12 +8,17 @@ import DraftInput from "./DraftInput.tsx";
 import IconButton from "../ui/IconButton.tsx";
 import {useDocActions} from "./useDocActions.ts";
 import {DEFAULT_DOC_TREE_WIDTH, resizeDocTreeWidth} from "./docTreeLayout.ts";
+import {isRecursiveDelete} from "./deleteConfirmation.ts";
+import DeleteConfirmDialog from "./DeleteConfirmDialog.tsx";
 
 // 取树里第一篇文档路径（深度优先），删当前文档后回退用。
-function firstDocPath(nodes: DocNode[]): string | null {
+function firstDocPath(nodes: DocNode[], excludedPath?: string): string | null {
   for (const n of nodes) {
+    if (excludedPath && (n.path === excludedPath || n.path.startsWith(`${excludedPath}/`))) {
+      continue;
+    }
     if (!n.isDir) return n.path;
-    const inChild = firstDocPath(n.children);
+    const inChild = firstDocPath(n.children, excludedPath);
     if (inChild) return inChild;
   }
   return null;
@@ -33,6 +38,7 @@ export default function DocTree() {
   const [rootDragOver, setRootDragOver] = useState(false);
   const [focused, setFocused] = useState(false);
   const [treeWidth, setTreeWidth] = useState(DEFAULT_DOC_TREE_WIDTH);
+  const [pendingDelete, setPendingDelete] = useState<DocNode | null>(null);
   const resizeStartRef = useRef<{x: number; width: number} | null>(null);
   const cleanupResizeRef = useRef<(() => void) | null>(null);
 
@@ -101,9 +107,13 @@ export default function DocTree() {
   const draftChange = (v: string) =>
     setCreating((c) => (c ? {...c, value: v} : c));
 
-  const handleDelete = (path: string) => {
-    if (!window.confirm("确定删除？")) return;
-    void actions.remove(path, firstDocPath(tree));
+  const handleDelete = (node: DocNode) => setPendingDelete(node);
+
+  const confirmDelete = async () => {
+    const node = pendingDelete;
+    if (!node) return;
+    setPendingDelete(null);
+    await actions.remove(node.path, firstDocPath(tree, node.path), {recursive: isRecursiveDelete(node)});
   };
 
   const handleDrop = (destDir: string) => {
@@ -142,107 +152,115 @@ export default function DocTree() {
   };
 
   return (
-    <div
-      tabIndex={-1}
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
-      className="relative flex flex-shrink-0 flex-col overflow-hidden border-r border-border bg-bg-tertiary outline-none"
-      style={{width: treeWidth}}
-    >
-      <div className="flex gap-1 p-2 border-b border-border">
-        <IconButton title="新建文档" onClick={() => startCreate("doc")}>
-          <FilePlus size={15} />
-        </IconButton>
-        <IconButton title="新建文件夹" onClick={() => startCreate("folder")}>
-          <FolderPlus size={15} />
-        </IconButton>
-      </div>
-
-      {/* 根区域：点空白取消选中；拖拽释放到此移到根目录 */}
+    <>
       <div
-        className={`flex-1 overflow-y-auto pt-1${rootDragOver ? " bg-accent-subtle" : ""}`}
-        onClick={() => setSelectedPath(null)}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setRootDragOver(true);
-          setDragOverPath(null);
-        }}
-        onDragLeave={() => setRootDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          handleDrop("");
-        }}
+        tabIndex={-1}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        className="relative flex flex-shrink-0 flex-col overflow-hidden border-r border-border bg-bg-tertiary outline-none"
+        style={{width: treeWidth}}
       >
-        {/* 根级草稿输入行 */}
-        {creating && creating.dir === "" && (
-          <DraftInput
-            mode={creating.mode}
-            depth={0}
-            value={creating.value}
-            onChange={draftChange}
-            onCommit={() => void commitCreate()}
-            onCancel={() => setCreating(null)}
-          />
-        )}
-        {tree.length === 0 && !creating ? (
-          <div className="p-4 text-xs leading-relaxed text-text-muted">
-            点击上方 + 新建第一篇文档
-          </div>
-        ) : (
-          tree.map((node, i) => (
-            <motion.div
-              key={node.path}
-              initial={{opacity: 0, y: 4}}
-              animate={{opacity: 1, y: 0}}
-              transition={{duration: 0.16, delay: i * 0.02, ease: [0.16, 1, 0.3, 1]}}
-            >
-              <TreeNode
-                node={node}
-                depth={0}
-                selectedPath={selectedPath}
-                sidebarFocused={focused}
-                expanded={expanded}
-                dragOverPath={dragOverPath}
-                creating={creating}
-                onToggle={toggle}
-                onSelectDoc={openDocument}
-                onSelectFolder={setSelectedPath}
-                onRename={actions.rename}
-                onDelete={handleDelete}
-                onOpenLocation={(path) => void actions.openLocation(path)}
-                onDragStartNode={setDragSrc}
-                onDragOverNode={setDragOverPath}
-                onDropNode={handleDrop}
-                onDraftChange={draftChange}
-                onDraftCommit={() => void commitCreate()}
-                onDraftCancel={() => setCreating(null)}
-              />
-            </motion.div>
-          ))
-        )}
+        <div className="flex gap-1 p-2 border-b border-border">
+          <IconButton title="新建文档" onClick={() => startCreate("doc")}>
+            <FilePlus size={15} />
+          </IconButton>
+          <IconButton title="新建文件夹" onClick={() => startCreate("folder")}>
+            <FolderPlus size={15} />
+          </IconButton>
+        </div>
+
+        {/* 根区域：点空白取消选中；拖拽释放到此移到根目录 */}
+        <div
+          className={`flex-1 overflow-y-auto pt-1${rootDragOver ? " bg-accent-subtle" : ""}`}
+          onClick={() => setSelectedPath(null)}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setRootDragOver(true);
+            setDragOverPath(null);
+          }}
+          onDragLeave={() => setRootDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            handleDrop("");
+          }}
+        >
+          {/* 根级草稿输入行 */}
+          {creating && creating.dir === "" && (
+            <DraftInput
+              mode={creating.mode}
+              depth={0}
+              value={creating.value}
+              onChange={draftChange}
+              onCommit={() => void commitCreate()}
+              onCancel={() => setCreating(null)}
+            />
+          )}
+          {tree.length === 0 && !creating ? (
+            <div className="p-4 text-xs leading-relaxed text-text-muted">
+              点击上方 + 新建第一篇文档
+            </div>
+          ) : (
+            tree.map((node, i) => (
+              <motion.div
+                key={node.path}
+                initial={{opacity: 0, y: 4}}
+                animate={{opacity: 1, y: 0}}
+                transition={{duration: 0.16, delay: i * 0.02, ease: [0.16, 1, 0.3, 1]}}
+              >
+                <TreeNode
+                  node={node}
+                  depth={0}
+                  selectedPath={selectedPath}
+                  sidebarFocused={focused}
+                  expanded={expanded}
+                  dragOverPath={dragOverPath}
+                  creating={creating}
+                  onToggle={toggle}
+                  onSelectDoc={openDocument}
+                  onSelectFolder={setSelectedPath}
+                  onRename={actions.rename}
+                  onDelete={handleDelete}
+                  onOpenLocation={(path) => void actions.openLocation(path)}
+                  onDragStartNode={setDragSrc}
+                  onDragOverNode={setDragOverPath}
+                  onDropNode={handleDrop}
+                  onDraftChange={draftChange}
+                  onDraftCommit={() => void commitCreate()}
+                  onDraftCancel={() => setCreating(null)}
+                />
+              </motion.div>
+            ))
+          )}
+        </div>
+        <div
+          role="separator"
+          aria-label="调整文件树宽度"
+          aria-orientation="vertical"
+          tabIndex={0}
+          className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-transparent transition-colors duration-fast hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startResize(e.clientX);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowLeft") {
+              e.preventDefault();
+              setTreeWidth((width) => resizeDocTreeWidth(width, 0, -16));
+            }
+            if (e.key === "ArrowRight") {
+              e.preventDefault();
+              setTreeWidth((width) => resizeDocTreeWidth(width, 0, 16));
+            }
+          }}
+        />
       </div>
-      <div
-        role="separator"
-        aria-label="调整文件树宽度"
-        aria-orientation="vertical"
-        tabIndex={0}
-        className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-transparent transition-colors duration-fast hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
-        onPointerDown={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          startResize(e.clientX);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "ArrowLeft") {
-            e.preventDefault();
-            setTreeWidth((width) => resizeDocTreeWidth(width, 0, -16));
-          }
-          if (e.key === "ArrowRight") {
-            e.preventDefault();
-            setTreeWidth((width) => resizeDocTreeWidth(width, 0, 16));
-          }
-        }}
+      <DeleteConfirmDialog
+        open={pendingDelete !== null}
+        node={pendingDelete}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => void confirmDelete()}
       />
-    </div>
+    </>
   );
 }

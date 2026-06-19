@@ -167,15 +167,30 @@ export function renameEntry(path: string, newName: string): Promise<string> {
   return invoke<string>("rename_entry", {path, newName});
 }
 
-export function deleteEntry(path: string): Promise<void> {
+export function deleteEntry(path: string, options: {recursive?: boolean} = {}): Promise<void> {
   if (!isTauriRuntime()) {
-    webFiles.delete(path);
+    if (!path.trim()) {
+      return Promise.reject(new Error("不能删除文档根目录"));
+    }
+    if (!pathExists(path)) {
+      return Promise.reject(new Error("条目不存在"));
+    }
+
     const prefix = `${path}/`;
+    const isDir = webDirs.has(path);
+    const hasChildren = Array.from(webDirs).some((dirPath) => dirPath.startsWith(prefix))
+      || Array.from(webFiles.keys()).some((filePath) => filePath.startsWith(prefix));
+
+    if (isDir && hasChildren && !options.recursive) {
+      return Promise.reject(new Error("文件夹非空，请确认后递归删除"));
+    }
+
+    webFiles.delete(path);
     webDirs = new Set(Array.from(webDirs).filter((dirPath) => dirPath !== path && !dirPath.startsWith(prefix)));
     webFiles = new Map(Array.from(webFiles).filter(([filePath]) => !filePath.startsWith(prefix)));
     return Promise.resolve();
   }
-  return invoke("delete_entry", {path});
+  return invoke("delete_entry", {path, recursive: Boolean(options.recursive)});
 }
 
 export function moveEntry(src: string, destDir: string): Promise<string> {

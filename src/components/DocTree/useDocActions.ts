@@ -41,11 +41,12 @@ export function useDocActions() {
         toast.show(String(e), "error");
       }
     },
-    async remove(path: string, firstDocPath: string | null) {
+    async remove(path: string, firstDocPath: string | null, options: {recursive?: boolean} = {}) {
       try {
-        await deleteEntry(path);
+        const previousDocPath = useStore.getState().currentDocPath;
+        await deleteEntry(path, {recursive: options.recursive});
         await loadTree();
-        if (useStore.getState().currentDocPath === path) {
+        if (previousDocPath === path || previousDocPath?.startsWith(`${path}/`)) {
           if (firstDocPath) {
             await openDocument(firstDocPath);
           } else {
