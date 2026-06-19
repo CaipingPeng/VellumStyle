@@ -80,7 +80,6 @@ export default function UpdatePromptDialog({
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 editor-preview-scrollbar">
               {trimmedNotes && (
                 <section>
-                  <div className="mb-2 text-[13px] font-semibold leading-5 text-text">更新内容</div>
                   <div className="max-h-52 overflow-y-auto rounded-md border border-border bg-bg-secondary px-4 py-3 editor-preview-scrollbar">
                     <ReleaseNotesView markdown={trimmedNotes} />
                   </div>
