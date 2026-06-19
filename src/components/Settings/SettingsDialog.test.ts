@@ -75,6 +75,44 @@ test("about page shows pending update details and install action", () => {
   }
 });
 
+test("about page hides redundant latest-version update message", () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const tauriWindow = window as typeof window & {
+    __TAURI_INTERNALS__?: {invoke: () => Promise<unknown>; transformCallback: () => number};
+  };
+  tauriWindow.__TAURI_INTERNALS__ = {
+    invoke: () => Promise.resolve({wechat: {app_id: "", app_secret: ""}}),
+    transformCallback: () => 0,
+  };
+
+  const {cleanup} = renderSettingsDialog({
+    status: "none",
+    currentVersion: "1.5.3",
+    installing: false,
+    checking: false,
+    message: "当前已是最新版本。",
+    onCheck: () => {},
+    onInstall: () => {},
+  });
+
+  try {
+    const aboutTab = Array.from(document.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("关于"),
+    );
+    assert.ok(aboutTab, "about settings tab should render");
+
+    act(() => {
+      aboutTab.click();
+    });
+
+    assert.match(document.body.textContent || "", /已是最新版本/);
+    assert.doesNotMatch(document.body.textContent || "", /当前已是最新版本。/);
+  } finally {
+    cleanup();
+    delete tauriWindow.__TAURI_INTERNALS__;
+  }
+});
+
 test("network helper links to the operation guide with readable text", () => {
   (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
   const tauriWindow = window as typeof window & {

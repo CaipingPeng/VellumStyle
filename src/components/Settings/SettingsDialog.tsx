@@ -210,6 +210,9 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
     }
   };
   const releaseNotes = updateState?.body?.trim();
+  const showUpdateMessage =
+    updateState?.message &&
+    (updateState.status === "error" || updateState.status === "unsupported" || updateState.status === "installing");
 
   return (
     <Dialog
@@ -609,7 +612,7 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
                 </div>
               )}
 
-              {updateState?.message && updateState.status !== "available" && (
+              {showUpdateMessage && (
                 <p
                   className={`m-0 rounded-md border px-3 py-2 text-xs leading-5 ${
                     updateState.status === "error" ? "border-danger/25 bg-danger/5 text-danger" : "border-border bg-bg-secondary text-text-secondary"
