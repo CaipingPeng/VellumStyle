@@ -61,6 +61,10 @@ test("about page shows pending update details and install action", () => {
     assert.match(document.body.textContent || "", /1\.5\.0/);
     assert.match(document.body.textContent || "", /更新内容/);
     assert.match(document.body.textContent || "", /新增：更新说明展示/);
+    const releaseNotes = document.querySelector(".update-release-notes");
+    assert.ok(releaseNotes, "release notes should use the shared markdown renderer");
+    assert.ok(releaseNotes.querySelector("h2"), "release notes markdown heading should render as a heading");
+    assert.doesNotMatch(releaseNotes.textContent || "", /## 更新内容/);
     const installButton = Array.from(document.querySelectorAll("button")).find((button) =>
       button.textContent?.includes("立即更新"),
     );

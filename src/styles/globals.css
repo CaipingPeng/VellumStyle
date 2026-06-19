@@ -152,6 +152,86 @@ body {
   outline: 2px solid var(--accent);
 }
 
+.update-release-notes {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.update-release-notes > :first-child {
+  margin-top: 0;
+}
+
+.update-release-notes > :last-child {
+  margin-bottom: 0;
+}
+
+.update-release-notes h1,
+.update-release-notes h2,
+.update-release-notes h3,
+.update-release-notes h4,
+.update-release-notes h5,
+.update-release-notes h6 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.update-release-notes h1 {
+  font-size: 15px;
+}
+
+.update-release-notes p,
+.update-release-notes blockquote,
+.update-release-notes pre,
+.update-release-notes table {
+  margin: 0 0 10px;
+}
+
+.update-release-notes ul,
+.update-release-notes ol {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding-left: 19px;
+}
+
+.update-release-notes li {
+  margin: 0;
+  padding-left: 2px;
+}
+
+.update-release-notes li > section > :first-child {
+  margin-top: 0;
+}
+
+.update-release-notes li > section > :last-child {
+  margin-bottom: 0;
+}
+
+.update-release-notes code {
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  padding: 1px 4px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.update-release-notes pre {
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  padding: 10px;
+}
+
+.update-release-notes pre code {
+  background: transparent;
+  padding: 0;
+}
+
 /* MathJax：静态兜底，防止 Tauri release WebView 未应用动态注入样式时行间公式失去居中。 */
 #article mjx-container[jax="SVG"][display="true"] {
   display: block;
