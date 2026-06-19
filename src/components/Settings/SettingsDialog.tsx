@@ -7,6 +7,7 @@ import Button from "../ui/Button.tsx";
 import {rememberOutboundIp} from "../../utils/outboundIpMonitor.ts";
 import {testSyncConnection} from "../../utils/cloudSync.ts";
 import {isTauriRuntime} from "../../utils/tauriEnv.ts";
+import ReleaseNotesView from "../Update/ReleaseNotesView.tsx";
 
 interface Props {
   open: boolean;
@@ -602,8 +603,8 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
               {updateState?.status === "available" && releaseNotes && (
                 <div className="rounded-md border border-border bg-bg-secondary px-3 py-3">
                   <div className="text-[13px] font-semibold leading-5 text-text">更新内容</div>
-                  <div className="mt-2 max-h-44 overflow-y-auto whitespace-pre-wrap break-words rounded-sm bg-bg px-3 py-2 text-xs leading-5 text-text-secondary">
-                    {releaseNotes}
+                  <div className="mt-2 max-h-44 overflow-y-auto rounded-sm bg-bg px-3 py-2 editor-preview-scrollbar">
+                    <ReleaseNotesView markdown={releaseNotes} />
                   </div>
                 </div>
               )}

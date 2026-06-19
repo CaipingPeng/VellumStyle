@@ -8,9 +8,8 @@ import SyntaxToolbar from "./components/Toolbar/SyntaxToolbar.tsx";
 import MainToolbar from "./components/Toolbar/MainToolbar.tsx";
 import DocTree from "./components/DocTree/DocTree.tsx";
 import OutlineNav from "./components/Outline/OutlineNav.tsx";
+import UpdatePromptDialog from "./components/Update/UpdatePromptDialog.tsx";
 import IconButton from "./components/ui/IconButton.tsx";
-import Button from "./components/ui/Button.tsx";
-import Dialog from "./components/ui/Dialog.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
 import {toast} from "./components/Toast/toast.ts";
 import {useStore, getThemeById, flushSave} from "./store/index.ts";
@@ -495,43 +494,18 @@ export default function App() {
       </footer>
 
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} updateState={updateState} />
-      <Dialog
+      <UpdatePromptDialog
         open={startupUpdatePromptOpen}
-        title="发现新版本"
-        width={520}
-        closeOnOverlay={!updateInstalling}
+        version={availableUpdate?.version}
+        currentVersion={availableUpdate?.currentVersion || currentVersion}
+        releaseNotes={startupReleaseNotes}
+        message={updateMessage}
+        installing={updateInstalling}
         onClose={() => {
           if (!updateInstalling) setStartupUpdatePromptOpen(false);
         }}
-        footer={
-          <>
-            <Button type="button" variant="secondary" onClick={() => setStartupUpdatePromptOpen(false)} disabled={updateInstalling}>
-              稍后再说
-            </Button>
-            <Button type="button" variant="primary" onClick={() => void handleInstallUpdate()} disabled={updateInstalling} className="gap-2">
-              {updateInstalling ? "更新中…" : "立即更新"}
-            </Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-3">
-          <p className="m-0 text-sm leading-6 text-text">
-            VellumStyle 有新版本 {availableUpdate?.version} 可用。
-          </p>
-          <p className="m-0 text-xs leading-5 text-text-secondary">
-            当前版本 {availableUpdate?.currentVersion || currentVersion || "读取中"}。选择立即更新后会自动下载安装，完成后应用会重启。
-          </p>
-          {startupReleaseNotes && (
-            <div className="rounded-md border border-border bg-bg-secondary px-3 py-3">
-              <div className="text-[13px] font-semibold leading-5 text-text">更新内容</div>
-              <div className="mt-2 max-h-44 overflow-y-auto whitespace-pre-wrap break-words rounded-sm bg-bg px-3 py-2 text-xs leading-5 text-text-secondary">
-                {startupReleaseNotes}
-              </div>
-            </div>
-          )}
-          {updateMessage && <p className="m-0 rounded-md border border-border bg-bg-secondary px-3 py-2 text-xs leading-5 text-text-secondary">{updateMessage}</p>}
-        </div>
-      </Dialog>
+        onInstall={() => void handleInstallUpdate()}
+      />
       <Toaster />
     </div>
   );
