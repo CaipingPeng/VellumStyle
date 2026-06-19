@@ -38,6 +38,7 @@ test("about page shows pending update details and install action", () => {
     status: "available",
     currentVersion: "1.4.3",
     version: "1.5.0",
+    body: "## 更新内容\n- 新增：更新说明展示\n- 修复：发布页正文同步",
     installing: false,
     checking: false,
     message: "",
@@ -58,6 +59,8 @@ test("about page shows pending update details and install action", () => {
     assert.match(document.body.textContent || "", /发现新版本/);
     assert.match(document.body.textContent || "", /1\.4\.3/);
     assert.match(document.body.textContent || "", /1\.5\.0/);
+    assert.match(document.body.textContent || "", /更新内容/);
+    assert.match(document.body.textContent || "", /新增：更新说明展示/);
     const installButton = Array.from(document.querySelectorAll("button")).find((button) =>
       button.textContent?.includes("立即更新"),
     );

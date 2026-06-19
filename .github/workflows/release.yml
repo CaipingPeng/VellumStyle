@@ -33,6 +33,28 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Read release notes
+        id: release_notes
+        shell: pwsh
+        run: |
+          $notesPath = "release-notes.md"
+          if (-not (Test-Path $notesPath)) {
+            throw "Missing release notes file: $notesPath"
+          }
+
+          $notes = (Get-Content -Raw -Path $notesPath).Trim()
+          if ([string]::IsNullOrWhiteSpace($notes)) {
+            throw "release-notes.md is empty"
+          }
+          if ($notes -match "vX\.X\.X|X\.X\.X|TODO|待补充") {
+            throw "release-notes.md still contains placeholder content"
+          }
+
+          $delimiter = "RELEASE_NOTES_$([guid]::NewGuid().ToString('N'))"
+          "body<<$delimiter" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $notes | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $delimiter | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
       - name: Build and publish Tauri app
         uses: tauri-apps/tauri-action@v0.6.2
         env:
@@ -42,7 +64,8 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: "VellumStyle v__VERSION__"
-          releaseBody: "See the assets below to download and install this version."
+          releaseBody: ${{ steps.release_notes.outputs.body }}
+          generateReleaseNotes: true
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true

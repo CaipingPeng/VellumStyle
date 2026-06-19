@@ -202,12 +202,13 @@ export default function App() {
     status: updateStatus,
     currentVersion,
     version: availableUpdate?.version,
+    body: availableUpdate?.body,
     checking: updateChecking,
     installing: updateInstalling,
     message: updateMessage,
     onCheck: () => void handleCheckForUpdates(),
     onInstall: () => void handleInstallUpdate(),
-  }), [availableUpdate?.version, currentVersion, handleCheckForUpdates, handleInstallUpdate, updateChecking, updateInstalling, updateMessage, updateStatus]);
+  }), [availableUpdate?.body, availableUpdate?.version, currentVersion, handleCheckForUpdates, handleInstallUpdate, updateChecking, updateInstalling, updateMessage, updateStatus]);
 
   // 启动扫描主题：内置（编译进包）+ 用户目录 *.json 合并。
   // 合并后若当前 markdownThemeId 已不存在（如 localStorage 残留旧主题 id），
@@ -415,6 +416,7 @@ export default function App() {
 
   const lineCount = content ? content.split("\n").length : 0;
   const charCount = content.length;
+  const startupReleaseNotes = availableUpdate?.body?.trim();
 
   return (
     <div style={{display: "flex", flexDirection: "column", height: "100%"}}>
@@ -496,7 +498,7 @@ export default function App() {
       <Dialog
         open={startupUpdatePromptOpen}
         title="发现新版本"
-        width={460}
+        width={520}
         closeOnOverlay={!updateInstalling}
         onClose={() => {
           if (!updateInstalling) setStartupUpdatePromptOpen(false);
@@ -519,6 +521,14 @@ export default function App() {
           <p className="m-0 text-xs leading-5 text-text-secondary">
             当前版本 {availableUpdate?.currentVersion || currentVersion || "读取中"}。选择立即更新后会自动下载安装，完成后应用会重启。
           </p>
+          {startupReleaseNotes && (
+            <div className="rounded-md border border-border bg-bg-secondary px-3 py-3">
+              <div className="text-[13px] font-semibold leading-5 text-text">更新内容</div>
+              <div className="mt-2 max-h-44 overflow-y-auto whitespace-pre-wrap break-words rounded-sm bg-bg px-3 py-2 text-xs leading-5 text-text-secondary">
+                {startupReleaseNotes}
+              </div>
+            </div>
+          )}
           {updateMessage && <p className="m-0 rounded-md border border-border bg-bg-secondary px-3 py-2 text-xs leading-5 text-text-secondary">{updateMessage}</p>}
         </div>
       </Dialog>

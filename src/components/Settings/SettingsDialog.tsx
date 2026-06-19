@@ -46,6 +46,7 @@ export interface SettingsUpdateState {
   status: "idle" | "checking" | "available" | "none" | "installing" | "error" | "unsupported";
   currentVersion: string;
   version?: string;
+  body?: string;
   checking: boolean;
   installing: boolean;
   message: string;
@@ -207,6 +208,7 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
       toast.show(msg, "error");
     }
   };
+  const releaseNotes = updateState?.body?.trim();
 
   return (
     <Dialog
@@ -594,6 +596,15 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
                     可以立即下载并安装，安装完成后应用会自动重启。
                   </p>
                   {updateState.message && <p className="m-0 mt-2 text-xs leading-5 text-text-secondary">{updateState.message}</p>}
+                </div>
+              )}
+
+              {updateState?.status === "available" && releaseNotes && (
+                <div className="rounded-md border border-border bg-bg-secondary px-3 py-3">
+                  <div className="text-[13px] font-semibold leading-5 text-text">更新内容</div>
+                  <div className="mt-2 max-h-44 overflow-y-auto whitespace-pre-wrap break-words rounded-sm bg-bg px-3 py-2 text-xs leading-5 text-text-secondary">
+                    {releaseNotes}
+                  </div>
                 </div>
               )}
 
