@@ -42,6 +42,7 @@ export interface MarkdownEditorHandle {
 
 interface Props {
   value: string;
+  documentKey?: string | null;
   onChange: (value: string) => void;
   // 粘贴图片时触发；返回的 Promise 完成后编辑器无需额外处理（插入由回调内部完成）。
   onPasteImage?: (file: File) => void;
@@ -49,7 +50,7 @@ interface Props {
 
 // Markdown 编辑器：CodeMirror 6，自动换行、无行号，支持光标插入与粘贴图片。
 const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
-  ({value, onChange, onPasteImage}, ref) => {
+  ({value, documentKey = null, onChange, onPasteImage}, ref) => {
     const viewRef = useRef<EditorView | null>(null);
     const cspNonce = useMemo(() => getCodeMirrorCspNonce(), []);
     const composingRef = useRef(false);
@@ -59,6 +60,8 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     const latestPropValueRef = useRef(value);
     const lastEmittedValueRef = useRef<string | null>(null);
     const pendingExternalValueRef = useRef<string | null>(null);
+    const pendingExternalDocumentChangedRef = useRef(false);
+    const lastDocumentKeyRef = useRef<string | null>(documentKey);
     const compositionStartValueRef = useRef<string | null>(null);
     const compositionStartDocRef = useRef<string | null>(null);
     const compositionStartSelectionRef = useRef<{from: number; to: number} | null>(null);
@@ -70,7 +73,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     latestPropValueRef.current = value;
     onChangeRef.current = onChange;
 
-    const syncEditorWithValue = useCallback((incomingValue: string, externalUpdate = true) => {
+    const syncEditorWithValue = useCallback((incomingValue: string, externalUpdate = true, documentChanged = false) => {
       const view = viewRef.current;
       if (!view) {
         return false;
@@ -84,6 +87,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         externalUpdate,
         lastEmittedValue: lastEmittedValueRef.current,
         latestKnownValue: latestPropValueRef.current,
+        documentChanged,
       })) {
         return true;
       }
@@ -316,9 +320,11 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
               compositionStartDocRef.current = null;
               compositionStartSelectionRef.current = null;
               const pendingExternalValue = pendingExternalValueRef.current;
+              const pendingExternalDocumentChanged = pendingExternalDocumentChangedRef.current;
               if (pendingExternalValue !== null) {
                 pendingExternalValueRef.current = null;
-                syncEditorWithValue(pendingExternalValue, true);
+                pendingExternalDocumentChangedRef.current = false;
+                syncEditorWithValue(pendingExternalValue, true, pendingExternalDocumentChanged);
               }
             });
             return false;
@@ -363,6 +369,11 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     viewRef.current = view ?? null;
 
     useEffect(() => {
+      const nextDocumentKey = documentKey ?? null;
+      const documentChanged = lastDocumentKeyRef.current !== nextDocumentKey;
+      if (documentChanged) {
+        lastDocumentKeyRef.current = nextDocumentKey;
+      }
       latestPropValueRef.current = value;
       let raf = 0;
       const sync = () => {
@@ -379,14 +390,15 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
             lastEmittedValue: lastEmittedValueRef.current,
           })) {
             pendingExternalValueRef.current = value;
+            pendingExternalDocumentChangedRef.current = pendingExternalDocumentChangedRef.current || documentChanged;
           }
           return;
         }
-        syncEditorWithValue(value, true);
+        syncEditorWithValue(value, true, documentChanged);
       };
       sync();
       return () => cancelAnimationFrame(raf);
-    }, [syncEditorWithValue, value, view]);
+    }, [documentKey, syncEditorWithValue, value, view]);
 
     useEffect(() => {
       return () => {

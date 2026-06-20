@@ -177,6 +177,20 @@ test("编辑器收到真正外部文档变化时仍替换内容", () => {
   );
 });
 
+test("编辑器切换文档时不把目标文档内容误判为父级回声", () => {
+  assert.equal(
+    shouldReplaceEditorDoc({
+      currentDoc: "另一篇文档",
+      incomingValue: "刚编辑过的目标文档",
+      composing: false,
+      externalUpdate: true,
+      lastEmittedValue: "刚编辑过的目标文档",
+      documentChanged: true,
+    }),
+    true,
+  );
+});
+
 test("编辑器组合输入期间不把组合开始前的旧 value 排队为外部更新", () => {
   assert.equal(
     shouldQueueExternalValueDuringComposition({

@@ -12,6 +12,7 @@ export interface EditorDocSyncInput {
   externalUpdate?: boolean;
   lastEmittedValue?: string | null;
   latestKnownValue?: string | null;
+  documentChanged?: boolean;
 }
 
 export function shouldReplaceEditorDoc({
@@ -22,6 +23,7 @@ export function shouldReplaceEditorDoc({
   externalUpdate = true,
   lastEmittedValue = null,
   latestKnownValue = null,
+  documentChanged = false,
 }: EditorDocSyncInput): boolean {
   if (composing || compositionSettling || currentDoc === incomingValue) {
     return false;
@@ -31,7 +33,7 @@ export function shouldReplaceEditorDoc({
     return false;
   }
 
-  if (lastEmittedValue !== null) {
+  if (lastEmittedValue !== null && !documentChanged) {
     if (!externalUpdate && currentDoc === lastEmittedValue) {
       return false;
     }

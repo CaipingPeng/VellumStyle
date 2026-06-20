@@ -455,6 +455,7 @@ export default function App() {
           <MarkdownEditor
             ref={editorRef}
             value={content}
+            documentKey={currentDocPath}
             onChange={setContent}
             onPasteImage={handleUploadFile}
           />
