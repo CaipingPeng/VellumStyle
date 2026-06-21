@@ -247,6 +247,7 @@ export function inlineMermaidSvgStylesForWechat(html: string, readStyle: StyleRe
   for (const chart of Array.from(charts)) {
     chart.removeAttribute("data-mermaid-source");
     chart.removeAttribute("data-mermaid-error");
+    chart.removeAttribute("data-mermaid-rendered-source");
     const svg = chart.querySelector<SVGElement>("svg");
     if (!svg) continue;
     inlineMermaidSvgElementStylesForWechat(svg, readStyle);

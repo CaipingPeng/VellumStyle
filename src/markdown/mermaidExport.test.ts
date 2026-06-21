@@ -2,6 +2,19 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import {inlineMermaidSvgStylesForWechat} from "./mermaidExport.ts";
 
+test("导出 Mermaid SVG 时移除预览复用缓存属性", () => {
+  const html = [
+    '<pre class="mermaid" data-mermaid-rendered-source="graph TD&#10;A--&gt;B">',
+    '<svg id="chart"><g><text>A</text></g></svg>',
+    "</pre>",
+  ].join("");
+
+  const result = inlineMermaidSvgStylesForWechat(html, () => ({}));
+
+  assert.doesNotMatch(result, /data-mermaid-rendered-source/);
+  assert.match(result, /<svg id="chart"/);
+});
+
 test("导出 Mermaid SVG 前内联关键样式，避免微信清洗 style 后丢字和丢色", () => {
   const html = [
     '<pre class="mermaid" data-line="1">',

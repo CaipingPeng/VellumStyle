@@ -4,7 +4,7 @@ import {useStore, getThemeById} from "../../store/index.ts";
 import {replaceStyle, STYLE_IDS} from "../../utils/style.ts";
 import {toProxyHtml} from "../../utils/imageProxy.ts";
 import {typesetMath} from "../../markdown/mathjax.ts";
-import {renderMermaidCharts} from "../../markdown/mermaid.ts";
+import {renderMermaidCharts, reuseRenderedMermaidCharts} from "../../markdown/mermaid.ts";
 import {modelIdFromElement, SELECTOR_PRIORITY} from "../StylePanel/elementMap.ts";
 import {getPreviewMode} from "./previewModes.ts";
 import {buildMarkdownCss} from "../../markdown/codeThemes.ts";
@@ -121,7 +121,9 @@ const Preview = forwardRef<PreviewHandle, Props>(
       }
       timer.current = window.setTimeout(() => {
         // mmbiz 图片走代理显示（绕防盗链），复制时由 converter 还原成原链
-        setHtml(toProxyHtml(render(content)));
+        const root = document.getElementById(ARTICLE_ROOT_ID);
+        const renderedHtml = toProxyHtml(render(content));
+        setHtml(reuseRenderedMermaidCharts(renderedHtml, root));
         hoverEl.current = null;
         selectedEl.current = null;
       }, RENDER_THROTTLE_MS);
