@@ -11,10 +11,6 @@ import {
   insertCodeBlock as insCode,
   shouldReplaceEditorDoc,
   shouldQueueExternalValueDuringComposition,
-  shouldHandleDirectTextInput,
-  shouldRecoverCompositionTextInput,
-  getFallbackChineseSymbolFromKey,
-  getSelectionAfterRecoveredTextInput,
 } from "./editing.ts";
 import {getCodeMirrorCspNonce} from "../../utils/cspNonce.ts";
 
@@ -63,11 +59,6 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     const pendingExternalDocumentChangedRef = useRef(false);
     const lastDocumentKeyRef = useRef<string | null>(documentKey);
     const compositionStartValueRef = useRef<string | null>(null);
-    const compositionStartDocRef = useRef<string | null>(null);
-    const compositionStartSelectionRef = useRef<{from: number; to: number} | null>(null);
-    const lastDirectTextInputAtRef = useRef(0);
-    const fallbackInsertionsRef = useRef<Array<{symbol: string; insertedAt: number}>>([]);
-    const keyFallbackFrameRef = useRef(0);
     const onChangeRef = useRef(onChange);
 
     latestPropValueRef.current = value;
@@ -225,100 +216,24 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
           ".cm-content": {minHeight: "100%"},
         }),
         EditorView.domEventHandlers({
-          beforeinput(event) {
-            const now = performance.now();
-            lastDirectTextInputAtRef.current = now;
-            fallbackInsertionsRef.current = fallbackInsertionsRef.current.filter((item) => now - item.insertedAt < 1500);
-            const fallbackIndex = fallbackInsertionsRef.current.findIndex((item) => item.symbol === event.data);
-            if (fallbackIndex !== -1) {
-              fallbackInsertionsRef.current.splice(fallbackIndex, 1);
-              event.preventDefault();
-              return true;
-            }
-            if (!shouldHandleDirectTextInput({data: event.data, inputType: event.inputType})) {
-              return false;
-            }
-            const view = viewRef.current;
-            if (!view) {
-              return false;
-            }
-            event.preventDefault();
-            view.dispatch(view.state.replaceSelection(event.data ?? ""));
-            return true;
-          },
-          keyup(event) {
-            const symbol = getFallbackChineseSymbolFromKey({
-              key: event.key,
-              ctrlKey: event.ctrlKey,
-              altKey: event.altKey,
-              metaKey: event.metaKey,
-            });
-            const view = viewRef.current;
-            if (!symbol || !view) {
-              return false;
-            }
-            const eventAt = performance.now();
-            if (eventAt - lastDirectTextInputAtRef.current < 120) {
-              return false;
-            }
-            const startDoc = view.state.doc.toString();
-            const {from, to} = view.state.selection.main;
-            if (keyFallbackFrameRef.current) {
-              cancelAnimationFrame(keyFallbackFrameRef.current);
-            }
-            keyFallbackFrameRef.current = requestAnimationFrame(() => {
-              keyFallbackFrameRef.current = 0;
-              const currentView = viewRef.current;
-              if (!currentView || lastDirectTextInputAtRef.current >= eventAt || currentView.state.doc.toString() !== startDoc) {
-                return;
-              }
-              currentView.dispatch({
-                changes: {from, to, insert: symbol},
-                selection: {anchor: getSelectionAfterRecoveredTextInput({from, text: symbol})},
-              });
-              fallbackInsertionsRef.current.push({symbol, insertedAt: performance.now()});
-            });
-            return false;
-          },
           compositionstart() {
             if (compositionEndFrameRef.current) {
               cancelAnimationFrame(compositionEndFrameRef.current);
               compositionEndFrameRef.current = 0;
             }
-            const view = viewRef.current;
-            const selection = view?.state.selection.main;
             composingRef.current = true;
             compositionSettlingRef.current = false;
             compositionStartValueRef.current = latestPropValueRef.current;
-            compositionStartDocRef.current = view?.state.doc.toString() ?? null;
-            compositionStartSelectionRef.current = selection ? {from: selection.from, to: selection.to} : null;
             return false;
           },
-          compositionend(event) {
-            const compositionData = event.data;
+          compositionend() {
             compositionSettlingRef.current = true;
             compositionEndFrameRef.current = requestAnimationFrame(() => {
               compositionEndFrameRef.current = 0;
-              const view = viewRef.current;
-              if (view && shouldRecoverCompositionTextInput({
-                data: compositionData,
-                startDoc: compositionStartDocRef.current,
-                currentDoc: view.state.doc.toString(),
-              })) {
-                const selection = compositionStartSelectionRef.current;
-                const from = selection?.from ?? view.state.selection.main.from;
-                const to = selection?.to ?? view.state.selection.main.to;
-                view.dispatch({
-                  changes: {from, to, insert: compositionData},
-                  selection: {anchor: getSelectionAfterRecoveredTextInput({from, text: compositionData})},
-                });
-              }
               emitCurrentEditorDoc();
               composingRef.current = false;
               compositionSettlingRef.current = false;
               compositionStartValueRef.current = null;
-              compositionStartDocRef.current = null;
-              compositionStartSelectionRef.current = null;
               const pendingExternalValue = pendingExternalValueRef.current;
               const pendingExternalDocumentChanged = pendingExternalDocumentChangedRef.current;
               if (pendingExternalValue !== null) {
@@ -404,9 +319,6 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       return () => {
         if (compositionEndFrameRef.current) {
           cancelAnimationFrame(compositionEndFrameRef.current);
-        }
-        if (keyFallbackFrameRef.current) {
-          cancelAnimationFrame(keyFallbackFrameRef.current);
         }
       };
     }, []);

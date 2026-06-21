@@ -66,15 +66,9 @@ export interface DirectTextInput {
   inputType: string;
 }
 
-function isSingleSymbolInput(data: string | null): data is string {
-  return !!data && Array.from(data).length === 1 && !/[\p{L}\p{N}\s]/u.test(data);
-}
-
-export function shouldHandleDirectTextInput({data, inputType}: DirectTextInput): boolean {
-  if (!["insertText", "insertCompositionText"].includes(inputType)) {
-    return false;
-  }
-  return isSingleSymbolInput(data);
+// 旧版 WebView 的中文符号补偿已停用，避免与 CodeMirror 原生输入重复写入。
+export function shouldHandleDirectTextInput(_input: DirectTextInput): boolean {
+  return false;
 }
 
 export interface RecoverCompositionTextInput {
@@ -84,11 +78,11 @@ export interface RecoverCompositionTextInput {
 }
 
 export function shouldRecoverCompositionTextInput({
-  data,
-  startDoc,
-  currentDoc,
+  data: _data,
+  startDoc: _startDoc,
+  currentDoc: _currentDoc,
 }: RecoverCompositionTextInput): boolean {
-  return isSingleSymbolInput(data) && startDoc !== null && currentDoc === startDoc;
+  return false;
 }
 
 export interface FallbackChineseSymbolKey {
@@ -98,45 +92,13 @@ export interface FallbackChineseSymbolKey {
   metaKey: boolean;
 }
 
-const fallbackChineseSymbolByKey: Record<string, string> = {
-  ",": "，",
-  ".": "。",
-  ";": "；",
-  ":": "：",
-  "?": "？",
-  "!": "！",
-  "(": "（",
-  ")": "）",
-  "[": "【",
-  "]": "】",
-  "<": "《",
-  ">": "》",
-  "/": "、",
-  "\\": "、",
-  "$": "￥",
-  "\"": "”",
-  "'": "’",
-};
-
 export function getFallbackChineseSymbolFromKey({
-  key,
-  ctrlKey,
-  altKey,
-  metaKey,
+  key: _key,
+  ctrlKey: _ctrlKey,
+  altKey: _altKey,
+  metaKey: _metaKey,
 }: FallbackChineseSymbolKey): string | null {
-  if (ctrlKey || altKey || metaKey) {
-    return null;
-  }
-  return fallbackChineseSymbolByKey[key] ?? null;
-}
-
-export interface RecoveredTextSelectionInput {
-  from: number;
-  text: string;
-}
-
-export function getSelectionAfterRecoveredTextInput({from, text}: RecoveredTextSelectionInput): number {
-  return from + text.length;
+  return null;
 }
 
 // 行内包裹：有选区包裹选区文字（结果仍选中文字）；无选区插占位符并选中它。
