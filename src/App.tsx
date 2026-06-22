@@ -9,6 +9,7 @@ import MainToolbar from "./components/Toolbar/MainToolbar.tsx";
 import DocTree from "./components/DocTree/DocTree.tsx";
 import OutlineNav from "./components/Outline/OutlineNav.tsx";
 import UpdatePromptDialog from "./components/Update/UpdatePromptDialog.tsx";
+import IpChangedDialog from "./components/Update/IpChangedDialog.tsx";
 import IconButton from "./components/ui/IconButton.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
 import {toast} from "./components/Toast/toast.ts";
@@ -31,7 +32,6 @@ import {
 } from "./utils/appUpdater.ts";
 import {
   checkStartupOutboundIp,
-  formatOutboundIpChangedMessage,
   shouldRunStartupOutboundIpCheck,
 } from "./utils/outboundIpMonitor.ts";
 import {defaultWindowIcon} from "@tauri-apps/api/app";
@@ -90,6 +90,7 @@ export default function App() {
   const [updateStatus, setUpdateStatus] = useState<"idle" | "checking" | "available" | "none" | "installing" | "error" | "unsupported">("idle");
   const [updateMessage, setUpdateMessage] = useState("");
   const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null);
+  const [ipChanged, setIpChanged] = useState<{previousIp: string; currentIp: string} | null>(null);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
   const outlineItems = useMemo(() => parseMarkdownOutline(content), [content]);
@@ -352,7 +353,7 @@ export default function App() {
       try {
         const result = await checkStartupOutboundIp(() => invoke<string>("get_outbound_ip"));
         if (!cancelled && result.status === "changed") {
-          window.alert(formatOutboundIpChangedMessage(result.previousIp, result.currentIp));
+          setIpChanged({previousIp: result.previousIp, currentIp: result.currentIp});
         }
       } catch (err) {
         console.warn("启动时自动检测出口 IP 失败：", err);
@@ -506,6 +507,12 @@ export default function App() {
           if (!updateInstalling) setStartupUpdatePromptOpen(false);
         }}
         onInstall={() => void handleInstallUpdate()}
+      />
+      <IpChangedDialog
+        open={ipChanged !== null}
+        previousIp={ipChanged?.previousIp ?? ""}
+        currentIp={ipChanged?.currentIp ?? ""}
+        onClose={() => setIpChanged(null)}
       />
       <Toaster />
     </div>

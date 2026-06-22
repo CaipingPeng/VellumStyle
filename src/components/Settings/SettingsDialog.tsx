@@ -5,6 +5,7 @@ import Dialog from "../ui/Dialog.tsx";
 import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
 import {rememberOutboundIp} from "../../utils/outboundIpMonitor.ts";
+import {copyPlainText} from "../../utils/clipboard.ts";
 import {testSyncConnection} from "../../utils/cloudSync.ts";
 import {isTauriRuntime} from "../../utils/tauriEnv.ts";
 import ReleaseNotesView from "../Update/ReleaseNotesView.tsx";
@@ -53,34 +54,6 @@ export interface SettingsUpdateState {
   message: string;
   onCheck: () => void;
   onInstall: () => void;
-}
-
-async function copyPlainText(text: string): Promise<boolean> {
-  if (navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch {
-      // Continue to the selection fallback below.
-    }
-  }
-
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.setAttribute("readonly", "true");
-  textarea.style.position = "fixed";
-  textarea.style.left = "-1000px";
-  textarea.style.top = "-1000px";
-  document.body.appendChild(textarea);
-  textarea.focus();
-  textarea.select();
-  try {
-    return document.execCommand("copy");
-  } catch {
-    return false;
-  } finally {
-    document.body.removeChild(textarea);
-  }
 }
 
 // 设置弹窗：读 get_config 回显，保存调 save_config（写 config.local.yaml；微信凭证变更会清 token 缓存）。

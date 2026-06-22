@@ -63,5 +63,5 @@ export function shouldRunStartupOutboundIpCheck(storage: StorageLike = window.se
 }
 
 export function formatOutboundIpChangedMessage(previousIp: string, currentIp: string): string {
-  return `检测到当前出口 IP 已从 ${previousIp} 变为 ${currentIp}。\n\n请前往微信公众平台「设置与开发 → 基本配置 → IP 白名单」更换白名单 IP。`;
+  return `检测到当前出口 IP 已从 ${previousIp} 变为 ${currentIp}。\n\n请前往微信公众平台「微信开发者平台 → 登录并点击右上角头像 → 账号管理 → 公众号 → 前往公众号详情页 → 基础信息 → IP 白名单」更换白名单 IP。`;
 }

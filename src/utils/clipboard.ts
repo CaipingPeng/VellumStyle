@@ -43,3 +43,33 @@ function copyViaExecCommand(html: string): boolean {
   document.execCommand("copy");
   return ok;
 }
+
+
+// 把纯文本写入剪贴板，用于复制出口 IP、密钥等无格式片段。
+export async function copyPlainText(text: string): Promise<boolean> {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Continue to the selection fallback below.
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-1000px";
+  textarea.style.top = "-1000px";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  try {
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
