@@ -38,8 +38,8 @@ test("update prompt renders release notes markdown and hides redundant ready sta
   const {cleanup} = renderUpdatePrompt();
 
   try {
-    assert.match(document.body.textContent || "", /新版本已准备好/);
-    assert.match(document.body.textContent || "", /VellumStyle v1\.4\.9/);
+    assert.match(document.body.textContent || "", /发现新版本/);
+    assert.match(document.body.textContent || "", /当前 v1\.4\.8 → 最新 v1\.4\.9/);
     assert.ok(document.querySelector(".update-release-notes li"), "markdown list items should render as li");
     assert.equal(document.querySelector(".update-release-notes h1"), null);
     assert.doesNotMatch(document.querySelector(".update-release-notes")?.textContent || "", /^# VellumStyle/m);

@@ -90,6 +90,19 @@ const Preview = forwardRef<PreviewHandle, Props>(
     const setSelectedModel = useStore((s) => s.setSelectedModel);
     const mode = getPreviewMode(previewMode);
 
+    // 主题切换时文章容器短暂淡入淡出，避免 CSS 整体替换的突兀感（首次进入不触发）
+    const [themeSwitching, setThemeSwitching] = useState(false);
+    const skipFirstTheme = useRef(true);
+    useEffect(() => {
+      if (skipFirstTheme.current) {
+        skipFirstTheme.current = false;
+        return;
+      }
+      setThemeSwitching(true);
+      const t = window.setTimeout(() => setThemeSwitching(false), 160);
+      return () => window.clearTimeout(t);
+    }, [markdownThemeId]);
+
     useImperativeHandle(ref, () => ({
       getScroller: () => scrollRef.current,
       scrollToLine: (line) => {
@@ -212,6 +225,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
       >
         <div
           id={ARTICLE_BOX_ID}
+          className="vs-theme-fade"
           style={{
             boxSizing: "border-box",
             width: mode.width ? `${mode.width}px` : "100%",
@@ -220,17 +234,37 @@ const Preview = forwardRef<PreviewHandle, Props>(
             padding: "24px 32px",
             minHeight: "100%",
             background: "#fff",
+            opacity: themeSwitching ? 0.55 : 1,
           }}
           onClick={onClick}
           onMouseMove={onMouseMove}
           onMouseLeave={onMouseLeave}
         >
-          <section id={ARTICLE_ROOT_ID} dangerouslySetInnerHTML={{__html: html}} />
+          {html ? (
+            <section id={ARTICLE_ROOT_ID} dangerouslySetInnerHTML={{__html: html}} />
+          ) : (
+            <PreviewSkeleton />
+          )}
         </div>
       </div>
     );
   },
 );
+
+// 首屏/切文档瞬间文章尚未渲染时的骨架占位
+function PreviewSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <div className="vs-skel" style={{height: 26, width: "58%", marginBottom: 20}} />
+      <div className="vs-skel" style={{height: 14, marginBottom: 10}} />
+      <div className="vs-skel" style={{height: 14, marginBottom: 10}} />
+      <div className="vs-skel" style={{height: 14, width: "82%", marginBottom: 26}} />
+      <div className="vs-skel" style={{height: 18, width: "38%", marginBottom: 16}} />
+      <div className="vs-skel" style={{height: 14, marginBottom: 10}} />
+      <div className="vs-skel" style={{height: 14, width: "70%"}} />
+    </div>
+  );
+}
 
 Preview.displayName = "Preview";
 

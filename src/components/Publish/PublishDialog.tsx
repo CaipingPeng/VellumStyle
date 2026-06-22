@@ -20,7 +20,7 @@ import {
 import {toast} from "../Toast/toast.ts";
 import {FileText, Globe2, ImageIcon, Images, Library, Loader2, MessageCircle, MessageCircleOff, RefreshCw, UploadCloud, UserRound, Users} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
-import Button from "../ui/Button.tsx";
+import Button, {type ButtonState} from "../ui/Button.tsx";
 
 interface Props {
   open: boolean;
@@ -94,6 +94,8 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const [materialLoading, setMaterialLoading] = useState(false);
   const [materialError, setMaterialError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // 发布结果态：发布动作的 loading/success/error 由它 + busy 推导，封面操作仍走 busy
+  const [pubResult, setPubResult] = useState<"none" | "ok" | "fail">("none");
   const fileRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<string | null>(null);
   const coverCandidates = useMemo(() => getCoverCandidates(content), [content]);
@@ -148,6 +150,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       return null;
     });
     setBusy(false);
+    setPubResult("none");
     if (fileRef.current) fileRef.current.value = "";
   }, [open, defaultTitle]);
 
@@ -239,6 +242,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       return;
     }
     setBusy(true);
+    setPubResult("none");
     try {
       await waitForMathJaxIdle();
       const html = solveDraftHtml();
@@ -249,14 +253,24 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       };
       savePublishSettings(publishSettings);
       await addDraft(title.trim(), html, thumbId, publishSettings);
-      toast.show("已发到公众号草稿箱，请在后台确认排版后发送", "info", 4000);
-      onClose();
+      // 成功：先就地显示成功态，再关窗 + 提示，给用户一个明确的"发成了"反馈
+      setPubResult("ok");
+      window.setTimeout(() => {
+        toast.show("已发到公众号草稿箱，请在后台确认排版后发送", "info", 4000);
+        onClose();
+      }, 900);
     } catch (e) {
+      setPubResult("fail");
       toast.show(`发布失败：${String(e)}`, "error");
+      window.setTimeout(() => setPubResult("none"), 2000);
     } finally {
       setBusy(false);
     }
   };
+
+  // 发布按钮态：busy 时 loading（成功窗口期 busy 已 false 但 pubResult=ok 显示 success）
+  const publishState: ButtonState =
+    pubResult === "ok" ? "success" : pubResult === "fail" ? "error" : busy ? "loading" : "idle";
 
   const openThumbPicker = () => {
     if (busy) return;
@@ -279,14 +293,22 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
           <Button type="button" variant="secondary" onClick={onClose}>
             取消
           </Button>
-          <Button type="button" variant="primary" onClick={() => void publish()} disabled={busy}>
-            {busy ? "处理中…" : "发布到草稿箱"}
+          <Button
+            type="button"
+            variant="primary"
+            state={publishState}
+            loadingText="发布中…"
+            successText="已发布"
+            errorText="发布失败"
+            onClick={() => void publish()}
+          >
+            发布到草稿箱
           </Button>
         </>
       }
     >
       <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.05fr)]">
-        <div className="flex min-w-0 flex-col gap-4 rounded-lg border border-border bg-[linear-gradient(180deg,#fff_0%,#fbfbfd_100%)] p-4 shadow-[0_14px_34px_rgba(20,20,30,0.06)]">
+        <div className="flex min-w-0 flex-col gap-4 rounded border border-border bg-[linear-gradient(180deg,#fff_0%,#fbfbfd_100%)] p-4 shadow-sm">
           <div>
             <label htmlFor="publish-title" className="mb-2 block text-[13px] font-medium text-text-secondary">
               文章标题
@@ -408,7 +430,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
               aria-label={thumbPreview ? "更换封面图" : "上传封面图"}
               className={`group relative flex aspect-[2.35/1] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-bg-secondary text-left outline-none transition-all duration-fast ease-smooth focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
                 thumbPreview
-                  ? "border border-border shadow-[0_14px_34px_rgba(20,20,30,0.12)]"
+                  ? "border border-border shadow-sm"
                   : "border border-dashed border-border-strong hover:border-accent hover:bg-accent-subtle"
               }`}
             >
@@ -448,7 +470,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
           </div>
         </div>
 
-        <div className="min-w-0 rounded-lg border border-border bg-[linear-gradient(180deg,#fff_0%,#fbfbfd_100%)] p-4 shadow-[0_14px_34px_rgba(20,20,30,0.06)]">
+        <div className="min-w-0 rounded border border-border bg-[linear-gradient(180deg,#fff_0%,#fbfbfd_100%)] p-4 shadow-sm">
           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex w-full rounded-lg border border-border bg-bg-secondary p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] sm:w-[260px]">
               <button
@@ -629,10 +651,12 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
             <Button
               type="button"
               variant="primary"
+              state={busy ? "loading" : "idle"}
+              loadingText="处理中…"
               onClick={() => pendingCandidateUrl && void pickArticleThumb(pendingCandidateUrl)}
               disabled={busy}
             >
-              {busy ? "处理中…" : "确认使用"}
+              确认使用
             </Button>
           </>
         }

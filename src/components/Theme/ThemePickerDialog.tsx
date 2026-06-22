@@ -145,13 +145,19 @@ export default function ThemePickerDialog({onClose}: Props) {
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-[rgba(20,20,30,0.32)]">
+    <motion.div
+      className="fixed inset-0 z-[2000] flex items-center justify-center"
+      style={{background: "rgba(20,20,30,0.32)"}}
+      initial={{opacity: 0}}
+      animate={{opacity: 1}}
+      transition={{duration: 0.13}}
+    >
       <motion.div
         ref={ref}
         initial={{opacity: 0, scale: 0.96, y: 8}}
         animate={{opacity: 1, scale: 1, y: 0}}
         transition={{duration: 0.13}}
-        className="flex w-[920px] max-w-[92vw] max-h-[86vh] flex-col overflow-hidden rounded-lg border border-border bg-bg shadow-lg"
+        className="flex w-[920px] max-w-[92vw] max-h-[86vh] flex-col overflow-hidden rounded bg-bg border border-border shadow-md"
       >
       <div className="flex items-start justify-between gap-4 px-7 pb-[18px] pt-6">
         <div>
@@ -423,7 +429,7 @@ export default function ThemePickerDialog({onClose}: Props) {
         )}
       </div>
       </motion.div>
-    </div>,
+    </motion.div>,
     document.body,
   );
 }

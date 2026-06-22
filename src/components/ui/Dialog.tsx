@@ -28,7 +28,7 @@ export default function Dialog({open, title, onClose, closeOnOverlay = true, wid
           onClick={closeOnOverlay ? onClose : undefined}
         >
           <motion.div
-            className="flex max-h-[86vh] flex-col overflow-hidden rounded-lg bg-bg shadow-lg"
+            className="flex max-h-[86vh] flex-col overflow-hidden rounded bg-bg shadow-md"
             style={{width, maxWidth: "90vw"}}
             initial={{opacity: 0, scale: 0.96, y: 8}}
             animate={{opacity: 1, scale: 1, y: 0}}

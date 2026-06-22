@@ -1,44 +1,55 @@
 import {useState} from "react";
-import {Check, Copy} from "lucide-react";
+import {Copy} from "lucide-react";
 import {solveHtml} from "../../markdown/converter.ts";
 import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
 import {copyHtml} from "../../utils/clipboard.ts";
-import Button from "../ui/Button.tsx";
+import Button, {type ButtonState} from "../ui/Button.tsx";
+import {toast} from "../Toast/toast.ts";
+
+const RESET_MS = 2000;
 
 export default function CopyButton() {
-  const [status, setStatus] = useState<"idle" | "copying" | "ok" | "fail">("idle");
+  const [state, setState] = useState<ButtonState>("idle");
+
+  const fail = (message: string) => {
+    setState("error");
+    toast.show(message, "error");
+    window.setTimeout(() => setState("idle"), RESET_MS);
+  };
 
   const handleCopy = async () => {
-    setStatus("copying");
+    setState("loading");
     try {
       await waitForMathJaxIdle();
       const html = solveHtml();
       if (!html) {
-        setStatus("fail");
-        window.setTimeout(() => setStatus("idle"), 2000);
+        fail("没有可复制的内容");
         return;
       }
       const ok = await copyHtml(html);
-      setStatus(ok ? "ok" : "fail");
+      if (ok) {
+        setState("success");
+        window.setTimeout(() => setState("idle"), RESET_MS);
+      } else {
+        fail("复制失败，请重试");
+      }
     } catch (error) {
       console.error("复制前 MathJax 排版失败", error);
-      setStatus("fail");
+      fail("复制失败，公式排版异常");
     }
-    window.setTimeout(() => setStatus("idle"), 2000);
   };
-
-  const label = status === "ok" ? "已复制" : status === "fail" ? "复制失败" : status === "copying" ? "复制中…" : "复制到微信";
-  const Icon = status === "ok" ? Check : Copy;
 
   return (
     <Button
       variant="primary"
+      state={state}
+      loadingText="复制中…"
+      successText="已复制"
+      errorText="复制失败"
       onClick={handleCopy}
-      disabled={status === "copying"}
-      className={status === "ok" ? "!bg-success hover:!bg-success" : ""}
     >
-      <Icon size={14} />
-      {label}
+      <Copy size={14} />
+      复制到微信
     </Button>
   );
 }

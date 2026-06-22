@@ -1,6 +1,6 @@
 import {type MouseEvent, useEffect, useState} from "react";
 import {invoke} from "@tauri-apps/api/core";
-import {Check, Cloud, Copy, Download, Eye, EyeOff, FolderSync, Info, KeyRound, LockKeyhole, Network, RefreshCw, Save, ShieldCheck, UserRound} from "lucide-react";
+import {Check, Cloud, Copy, Eye, EyeOff, FolderSync, Info, KeyRound, LockKeyhole, Network, Save, ShieldCheck, UserRound} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
@@ -33,7 +33,7 @@ const inputClass =
   "h-10 min-w-0 flex-1 border-0 bg-transparent text-sm text-text outline-none placeholder:text-text-muted disabled:cursor-default";
 
 const inputShellClass =
-  "group flex h-10 items-center gap-2 rounded-md border border-border bg-bg px-3 text-text-muted shadow-sm transition-all duration-fast ease-smooth focus-within:border-accent focus-within:bg-bg-secondary focus-within:ring-2 focus-within:ring-[color:var(--ring)] hover:border-border-strong has-[:disabled]:bg-bg-secondary has-[:disabled]:opacity-70";
+  "group flex h-10 items-center gap-2 rounded border border-border bg-bg px-3 text-text-muted shadow-sm transition-all duration-fast ease-smooth focus-within:border-accent focus-within:bg-bg-secondary focus-within:ring-2 focus-within:ring-[color:var(--ring)] hover:border-border-strong has-[:disabled]:bg-bg-secondary has-[:disabled]:opacity-70";
 
 const labelClass = "mb-1.5 block text-[13px] font-medium text-text";
 const helpDocumentUrl = "https://my.feishu.cn/docx/RUDpd1zWnoWuuyx0uFxcahIGnmC";
@@ -228,17 +228,19 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
           <Button
             type="button"
             variant="primary"
+            state={saving ? "loading" : "idle"}
+            loadingText="保存中…"
             onClick={handleSave}
-            disabled={saving || !loaded}
-            className="min-w-[86px] gap-2 shadow-[0_6px_16px_rgba(94,106,210,0.18)]"
+            disabled={!loaded}
+            className="min-w-[86px] gap-2"
           >
             <Save size={14} />
-            {saving ? "保存中…" : "保存"}
+            保存
           </Button>
         </>
       }
     >
-      <div className="grid min-h-[460px] grid-cols-[180px_minmax(0,1fr)] overflow-hidden rounded-md border border-border bg-bg-secondary">
+      <div className="grid min-h-[460px] grid-cols-[180px_minmax(0,1fr)] overflow-hidden rounded border border-border bg-bg-secondary">
         <nav className="flex flex-col gap-1 border-r border-border bg-bg-tertiary p-2" aria-label="设置分类">
           {[
             {id: "wechat" as const, label: "微信配置", hint: "素材上传", icon: ShieldCheck},
@@ -259,7 +261,7 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
                 type="button"
                 onClick={() => setActiveSection(item.id)}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-md border-0 px-3 text-left transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+                className={`flex min-h-12 cursor-pointer items-center gap-2 rounded border-0 px-3 text-left transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
                   active ? "bg-bg text-accent shadow-sm" : "bg-transparent text-text-secondary hover:bg-bg hover:text-text"
                 }`}
               >
@@ -282,7 +284,7 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
           {activeSection === "wechat" && (
             <div className="mx-auto flex max-w-[520px] flex-col gap-5">
               <div className="flex items-start gap-3">
-                <span className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-md bg-accent-subtle text-accent">
+                <span className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded bg-accent-subtle text-accent">
                   <ShieldCheck size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -350,7 +352,7 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
           {activeSection === "sync" && (
             <div className="mx-auto flex max-w-[520px] flex-col gap-5">
               <div className="flex items-start gap-3">
-                <span className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-md bg-accent-subtle text-accent">
+                <span className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded bg-accent-subtle text-accent">
                   <Cloud size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -366,7 +368,7 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
                 </div>
               </div>
 
-              <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-border bg-bg-secondary px-3 text-sm text-text transition-colors duration-fast hover:border-border-strong">
+              <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded border border-border bg-bg-secondary px-3 text-sm text-text transition-colors duration-fast hover:border-border-strong">
                 <input
                   type="checkbox"
                   checked={syncEnabled}
@@ -462,7 +464,7 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 rounded-md border border-border bg-bg-secondary px-3 py-3">
+              <div className="flex flex-col gap-2 rounded border border-border bg-bg-secondary px-3 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-[13px] font-semibold leading-5 text-text">连接验证</div>
@@ -471,12 +473,15 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
                   <Button
                     type="button"
                     variant="secondary"
+                    state={connectionStatus === "loading" ? "loading" : connectionStatus === "ok" ? "success" : connectionStatus === "error" ? "error" : "idle"}
+                    loadingText="测试中…"
+                    successText="已连接"
+                    errorText="连接失败"
                     onClick={() => void handleTestSyncConnection()}
-                    disabled={!loaded || !syncEnabled || connectionStatus === "loading"}
+                    disabled={!loaded || !syncEnabled}
                     className="gap-2"
                   >
-                    <RefreshCw size={14} className={connectionStatus === "loading" ? "animate-spin" : ""} />
-                    {connectionStatus === "loading" ? "测试中…" : "测试连接"}
+                    测试连接
                   </Button>
                 </div>
                 {connectionMessage && (
@@ -496,7 +501,7 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
           {activeSection === "network" && (
             <div className="mx-auto flex max-w-[520px] flex-col gap-5">
               <div className="flex items-start gap-3">
-                <span className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-md bg-accent-subtle text-accent">
+                <span className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded bg-accent-subtle text-accent">
                   <Network size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -543,12 +548,12 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
                 <Button
                   type="button"
                   variant="secondary"
+                  state={ipStatus === "loading" ? "loading" : ipStatus === "error" ? "error" : "idle"}
+                  loadingText="获取中…"
                   onClick={() => void handleFetchOutboundIp()}
-                  disabled={ipStatus === "loading"}
                   className="w-full min-w-0 gap-2 px-2"
                 >
-                  <RefreshCw size={14} className={ipStatus === "loading" ? "animate-spin" : ""} />
-                  {ipStatus === "loading" ? "获取中…" : "获取出口 IP"}
+                  获取出口 IP
                 </Button>
                 {ipError && <p className="m-0 text-[12px] leading-5 text-danger" role="alert">{ipError}</p>}
               </div>
@@ -558,12 +563,12 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
           {activeSection === "about" && (
             <div className="mx-auto flex max-w-[520px] flex-col gap-5">
               <div className="flex items-start gap-3">
-                <span className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-md bg-accent-subtle text-accent">
+                <span className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded bg-accent-subtle text-accent">
                   <Info size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="m-0 text-[16px] font-semibold leading-6 text-text">关于 VellumStyle</h2>
+                    <h2 className="m-0 text-[16px] font-semibold leading-6 text-text">VellumStyle</h2>
                     <span className="rounded-sm bg-bg-secondary px-2 py-0.5 text-[11px] font-medium text-text-muted">
                       文澜排版
                     </span>
@@ -574,76 +579,76 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
                 </div>
               </div>
 
-              <div className="grid gap-3 rounded-md border border-border bg-bg-secondary p-3">
-                <div className="flex items-center justify-between gap-3">
+              <div className="rounded border border-border bg-bg shadow-sm">
+                <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
                   <span className="text-[13px] font-medium text-text-secondary">当前版本</span>
-                  <span className="font-mono text-[13px] text-text">{updateState?.currentVersion || "读取中"}</span>
+                  <span className="font-mono text-[13px] text-text">{updateState?.currentVersion || "—"}</span>
                 </div>
-                <div className="flex items-center justify-between gap-3">
+                {updateState?.status === "available" && (
+                  <div className="flex items-center justify-between border-b border-border bg-danger/5 px-3 py-2.5">
+                    <span className="text-[13px] font-medium text-danger">最新版本</span>
+                    <span className="font-mono text-[13px] text-danger">{updateState.version}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between px-3 py-2.5">
                   <span className="text-[13px] font-medium text-text-secondary">更新状态</span>
                   <span className={`text-[13px] font-medium ${updateState?.status === "available" ? "text-danger" : "text-text"}`}>
                     {formatUpdateStatus(updateState)}
                   </span>
                 </div>
-                {updateState?.version && (
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[13px] font-medium text-text-secondary">最新版本</span>
-                    <span className="font-mono text-[13px] text-text">{updateState.version}</span>
-                  </div>
-                )}
               </div>
 
-              {updateState?.status === "available" && (
-                <div className="rounded-md border border-danger/25 bg-danger/5 px-3 py-3">
-                  <div className="text-[13px] font-semibold leading-5 text-danger">发现新版本</div>
-                  <p className="m-0 mt-1 text-xs leading-5 text-text-secondary">
-                    可以立即下载并安装，安装完成后应用会自动重启。
-                  </p>
-                  {updateState.message && <p className="m-0 mt-2 text-xs leading-5 text-text-secondary">{updateState.message}</p>}
-                </div>
-              )}
-
               {updateState?.status === "available" && releaseNotes && (
-                <div className="rounded-md border border-border bg-bg-secondary px-3 py-3">
-                  <div className="text-[13px] font-semibold leading-5 text-text">更新内容</div>
-                  <div className="mt-2 max-h-44 overflow-y-auto rounded-sm bg-bg px-3 py-2 editor-preview-scrollbar">
+                <div className="rounded border border-border bg-bg shadow-sm">
+                  <div className="border-b border-border px-3 py-2.5">
+                    <div className="text-[13px] font-semibold leading-5 text-text">更新内容</div>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto px-3 py-2.5 editor-preview-scrollbar">
                     <ReleaseNotesView markdown={releaseNotes} />
                   </div>
                 </div>
               )}
 
               {showUpdateMessage && (
-                <p
-                  className={`m-0 rounded-md border px-3 py-2 text-xs leading-5 ${
-                    updateState.status === "error" ? "border-danger/25 bg-danger/5 text-danger" : "border-border bg-bg-secondary text-text-secondary"
+                <div
+                  className={`rounded border px-3 py-2.5 text-[13px] leading-5 ${
+                    updateState.status === "error"
+                      ? "border-danger/25 bg-danger/5 text-danger"
+                      : "border-border bg-bg-secondary text-text-secondary"
                   }`}
                   role={updateState.status === "error" ? "alert" : undefined}
                 >
                   {updateState.message}
-                </p>
+                </div>
               )}
 
               <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={updateState?.onCheck}
-                  disabled={!updateState || updateState.checking || updateState.installing}
-                  className="gap-2"
-                >
-                  <RefreshCw size={14} className={updateState?.checking ? "animate-spin" : ""} />
-                  {updateState?.checking ? "检查中…" : "检查更新"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  onClick={updateState?.onInstall}
-                  disabled={!updateState || updateState.status !== "available" || updateState.installing}
-                  className="gap-2"
-                >
-                  <Download size={14} className={updateState?.installing ? "animate-pulse" : ""} />
-                  {updateState?.installing ? "更新中…" : "立即更新"}
-                </Button>
+                {updateState?.status !== "available" && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    state={updateState?.checking ? "loading" : "idle"}
+                    loadingText="检查中…"
+                    onClick={updateState?.onCheck}
+                    disabled={!updateState || updateState.installing}
+                    className="min-w-[94px] gap-2"
+                  >
+                    检查更新
+                  </Button>
+                )}
+                {updateState?.status === "available" && (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    state={updateState?.installing ? "loading" : "idle"}
+                    loadingText="更新中…"
+                    onClick={updateState?.onInstall}
+                    disabled={!updateState}
+                    className="min-w-[94px] gap-2"
+                  >
+                    立即更新
+                  </Button>
+                )}
               </div>
             </div>
           )}

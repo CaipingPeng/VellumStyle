@@ -24,9 +24,9 @@
 
   --ring: rgba(94, 106, 210, 0.4);
 
-  --radius-sm: 6px;
-  --radius: 8px;
-  --radius-lg: 12px;
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 8px;
 
   --shadow-sm: 0 1px 2px rgba(20, 20, 30, 0.06);
   --shadow-md: 0 4px 16px rgba(20, 20, 30, 0.1);
@@ -47,6 +47,13 @@ body {
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   color: var(--text);
   background: var(--bg);
+  /* UI chrome 数字等宽（状态栏计数/时间/版本号），文章正文见下方 #article 恢复比例数字 */
+  font-variant-numeric: tabular-nums;
+}
+
+/* 文章正文恢复比例数字：UI 等宽不影响公众号排版成品 */
+#article {
+  font-variant-numeric: normal;
 }
 
 ::selection {
@@ -142,6 +149,7 @@ body {
 #article .preview-edit-selected {
   cursor: pointer;
   outline-offset: 4px;
+  transition: outline 0.13s ease, outline-offset 0.13s ease;
 }
 
 #article .preview-edit-hover {
@@ -239,4 +247,31 @@ body {
   overflow-x: auto;
   overflow-y: hidden;
   text-align: center;
+}
+
+/* —— 按钮错误态抖动（CopyButton/PublishButton 失败时） —— */
+@keyframes vs-shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-3px); }
+  40%, 60% { transform: translateX(3px); }
+}
+.vs-shake {
+  animation: vs-shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* —— 预览骨架屏 shimmer（首次加载 / 切文档瞬间） —— */
+@keyframes vs-shimmer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.vs-skel {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  animation: vs-shimmer 1.4s ease-in-out infinite;
+}
+
+/* —— 主题切换淡入淡出过渡（Preview 文章容器） —— */
+.vs-theme-fade {
+  transition: opacity 160ms var(--ease);
 }
