@@ -18,6 +18,14 @@ test("标准 Markdown 脚注定义渲染到脚注区", () => {
   assert.doesNotMatch(html, /\[\^注1\]:/);
 });
 
+test("图片后紧跟脚注引用时仍渲染图片图注", () => {
+  const html = render("![图2：长图注](http://example.com/a.png)\n[^note]\n\n[^note]: 图片来源");
+
+  assert.match(html, /<figure data-line="0"><img src="http:\/\/example\.com\/a\.png" alt=""><figcaption>图2：长图注<sup class="footnote-ref">\[1\]<\/sup><\/figcaption><\/figure>/);
+  assert.doesNotMatch(html, /<p data-line="0"><img/);
+  assert.match(html, /<span id="fn1" class="footnote-item" style="display:block;"><span class="footnote-num" style="display:inline;width:auto;">\[1\] <\/span>图片来源<\/span>/);
+});
+
 test("普通 Markdown 链接渲染为脚注引用而不是外链", () => {
   const html = render("项目地址仍然是：[CaipingPeng/VellumStyle](https://github.com/CaipingPeng/VellumStyle)。");
 

@@ -87,5 +87,54 @@ parser
 parser.use(dataLine); // 14. 顶层块注入 data-line（同步滚动用）
 
 export function render(markdown: string): string {
-  return sanitizeRenderedHtml(parser.render(markdown));
+  return sanitizeRenderedHtml(normalizeImageFootnoteFigures(parser.render(markdown)));
+}
+
+export function normalizeImageFootnoteFigures(html: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  for (const paragraph of Array.from(doc.querySelectorAll("p"))) {
+    const meaningfulNodes = Array.from(paragraph.childNodes).filter((node) => {
+      return node.nodeType !== Node.TEXT_NODE || Boolean(node.textContent?.trim());
+    });
+    if (meaningfulNodes.length < 2) {
+      continue;
+    }
+
+    const [imageNode, ...captionRefs] = meaningfulNodes;
+    if (!isElementTag(imageNode, "img") || !captionRefs.every((node) => isFootnoteRef(node))) {
+      continue;
+    }
+
+    const image = imageNode as HTMLImageElement;
+    const caption = image.getAttribute("alt")?.trim();
+    if (!caption) {
+      continue;
+    }
+
+    const figure = doc.createElement("figure");
+    for (const attr of Array.from(paragraph.attributes)) {
+      figure.setAttribute(attr.name, attr.value);
+    }
+
+    const nextImage = image.cloneNode(true) as HTMLImageElement;
+    nextImage.setAttribute("alt", "");
+    const figcaption = doc.createElement("figcaption");
+    figcaption.textContent = caption;
+    for (const ref of captionRefs) {
+      figcaption.appendChild(ref.cloneNode(true));
+    }
+
+    figure.appendChild(nextImage);
+    figure.appendChild(figcaption);
+    paragraph.replaceWith(figure);
+  }
+  return doc.body.innerHTML;
+}
+
+function isElementTag(node: Node, tagName: string): boolean {
+  return node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName.toLowerCase() === tagName;
+}
+
+function isFootnoteRef(node: Node): boolean {
+  return isElementTag(node, "sup") && (node as Element).classList.contains("footnote-ref");
 }

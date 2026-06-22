@@ -163,6 +163,12 @@ function parseMarkdownDestination(value: string): {url: string; urlStart: number
   }
 
   const start = i;
+  const mediaUrlEnd = findMediaPathEnd(value, start);
+  if (mediaUrlEnd) {
+    const url = value.slice(start, mediaUrlEnd).trim();
+    return {url, urlStart: start, urlEnd: start + url.length};
+  }
+
   let inQuote: string | null = null;
   while (i < value.length) {
     const ch = value[i];
@@ -176,6 +182,13 @@ function parseMarkdownDestination(value: string): {url: string; urlStart: number
   const url = value.slice(start, i).trim();
   if (!url) return null;
   return {url, urlStart: start, urlEnd: start + url.length};
+}
+
+function findMediaPathEnd(value: string, start: number): number | null {
+  const rest = value.slice(start);
+  const match = rest.match(/^.+?\.(?:jpe?g|png|gif|mp4|mov|m4v|webm|avi|mkv)(?:[?#][^\s]*)?/i);
+  if (!match) return null;
+  return start + match[0].length;
 }
 
 function parseObsidianBody(body: string): ObsidianMeta {
