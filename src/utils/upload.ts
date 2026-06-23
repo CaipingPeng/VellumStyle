@@ -9,7 +9,7 @@ export interface UploadError extends Error {
 }
 
 const MAX_SIZE = 10 * 1024 * 1024;
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif"];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/svg+xml"];
 
 export function isImageFile(file: File): boolean {
   return ALLOWED_TYPES.includes(file.type);

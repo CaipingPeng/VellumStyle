@@ -20,7 +20,7 @@ export interface MediaRef {
   obsidianMeta?: ObsidianMeta;
 }
 
-const IMAGE_EXT = /\.(?:jpe?g|png|gif)(?:[?#].*)?$/i;
+const IMAGE_EXT = /\.(?:jpe?g|png|gif|svg)(?:[?#].*)?$/i;
 const VIDEO_EXT = /\.(?:mp4|mov|m4v|webm|avi|mkv)(?:[?#].*)?$/i;
 const MARKDOWN_IMAGE_RE = /!\[([^\]\\]*(?:\\.[^\]\\]*)*)\]\(([^)\n]+)\)/g;
 const MARKDOWN_LINK_RE = /(?<!!)\[([^\]\\]*(?:\\.[^\]\\]*)*)\]\(([^)\n]+)\)/g;
@@ -230,3 +230,4 @@ function stripUrlDecorations(url: string): string {
 function escapeMarkdownAlt(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/]/g, "\\]");
 }
+

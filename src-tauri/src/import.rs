@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tauri_plugin_dialog::DialogExt;
 
-const IMAGE_EXTS: [&str; 4] = ["jpg", "jpeg", "png", "gif"];
+const IMAGE_EXTS: [&str; 5] = ["jpg", "jpeg", "png", "gif", "svg"];
 const COMMON_ASSET_DIRS: [&str; 4] = ["assets", "images", "attachments", "附件"];
 const MAX_RECURSIVE_SEARCH_FILES: usize = 5000;
 

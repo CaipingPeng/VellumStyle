@@ -11,6 +11,8 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::AppHandle;
+use resvg::usvg;
+use resvg::tiny_skia;
 
 const MAX_SIZE: usize = 10 * 1024 * 1024; // add_material 图片限制 10MB
 const ALLOWED_TYPES: [&str; 3] = ["image/jpeg", "image/png", "image/gif"];
@@ -387,18 +389,45 @@ pub async fn upload_local_image(app: AppHandle, path: String) -> Result<String, 
         return Err("本地图片不存在".into());
     }
 
-    let meta = fs::metadata(&path).map_err(|e| format!("读取本地图片信息失败：{e}"))?;
-    if meta.len() as usize > MAX_SIZE {
-        return Err("图片不能超过 10MB".into());
-    }
-
-    let mime = mime_from_path(&path).ok_or_else(|| "仅支持 jpg/png/gif 图片".to_string())?;
-    let filename = path
-        .file_name()
+    // 检查是否为 SVG 文件
+    let ext = path
+        .extension()
         .and_then(|v| v.to_str())
-        .unwrap_or("image")
-        .to_string();
-    let bytes = fs::read(&path).map_err(|e| format!("读取本地图片失败：{e}"))?;
+        .map(|s| s.to_ascii_lowercase())
+        .unwrap_or_default();
+    
+    let (bytes, filename, mime) = if ext == "svg" {
+        // SVG 转 PNG
+        let png_bytes = convert_svg_to_png(&path)?;
+        
+        if png_bytes.len() > MAX_SIZE {
+            return Err("SVG 转换后的 PNG 超过 10MB，请尝试缩小 SVG 尺寸".into());
+        }
+        
+        let original_name = path
+            .file_stem()
+            .and_then(|v| v.to_str())
+            .unwrap_or("image");
+        let new_filename = format!("{}.png", original_name);
+        
+        (png_bytes, new_filename, "image/png")
+    } else {
+        // 常规图片处理
+        let meta = fs::metadata(&path).map_err(|e| format!("读取本地图片信息失败：{e}"))?;
+        if meta.len() as usize > MAX_SIZE {
+            return Err("图片不能超过 10MB".into());
+        }
+
+        let mime = mime_from_path(&path).ok_or_else(|| "仅支持 jpg/png/gif/svg 图片".to_string())?;
+        let filename = path
+            .file_name()
+            .and_then(|v| v.to_str())
+            .unwrap_or("image")
+            .to_string();
+        let bytes = fs::read(&path).map_err(|e| format!("读取本地图片失败：{e}"))?;
+        
+        (bytes, filename, mime)
+    };
 
     upload_image_bytes(app, bytes, filename, mime.into()).await
 }
@@ -593,6 +622,45 @@ fn mime_from_ext(ext: &str) -> Option<&'static str> {
         "gif" => Some("image/gif"),
         _ => None,
     }
+}
+
+
+fn convert_svg_to_png(svg_path: &Path) -> Result<Vec<u8>, String> {
+    let svg_data = fs::read(svg_path).map_err(|e| format!("读取 SVG 文件失败：{e}"))?;
+    
+    let mut opt = usvg::Options::default();
+    opt.fontdb_mut().load_system_fonts();
+    
+    let tree = usvg::Tree::from_data(&svg_data, &opt)
+        .map_err(|e| format!("解析 SVG 文件失败：{e}"))?;
+    
+    let size = tree.size();
+    let width = size.width() as u32;
+    let height = size.height() as u32;
+    
+    // 限制最大尺寸，避免内存溢出
+    let max_dimension = 4096;
+    let (width, height) = if width > max_dimension || height > max_dimension {
+        let scale = (max_dimension as f32) / width.max(height) as f32;
+        ((width as f32 * scale) as u32, (height as f32 * scale) as u32)
+    } else {
+        (width, height)
+    };
+    
+    let mut pixmap = tiny_skia::Pixmap::new(width, height)
+        .ok_or_else(|| "创建图片缓冲区失败".to_string())?;
+    
+    let transform = if width != size.width() as u32 || height != size.height() as u32 {
+        let scale_x = width as f32 / size.width();
+        let scale_y = height as f32 / size.height();
+        tiny_skia::Transform::from_scale(scale_x, scale_y)
+    } else {
+        tiny_skia::Transform::identity()
+    };
+    
+    resvg::render(&tree, transform, &mut pixmap.as_mut());
+    
+    pixmap.encode_png().map_err(|e| format!("PNG 编码失败：{e}"))
 }
 
 fn normalize_mime(content_type: &str) -> Option<&'static str> {
@@ -1040,3 +1108,8 @@ mod tests {
         assert_eq!(actual, expected);
     }
 }
+
+
+
+
+
