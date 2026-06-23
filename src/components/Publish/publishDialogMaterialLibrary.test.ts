@@ -26,3 +26,9 @@ test("发布弹窗评论开关的打开和关闭使用不同图标", async () =>
   assert.match(source, /<MessageCircleOff size=\{15\} \/>[\s\S]*关闭/);
   assert.match(source, /<MessageCircle size=\{15\} \/>[\s\S]*打开/);
 });
+
+test("发布弹窗打开时只触发一次素材库初始化加载", async () => {
+  const source = await readFile(new URL("./PublishDialog.tsx", import.meta.url), "utf8");
+
+  assert.doesNotMatch(source, /\}, \[open, defaultTitle, loadMaterialLibrary\]\);/);
+});

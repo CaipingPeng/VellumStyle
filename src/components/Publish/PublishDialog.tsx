@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {useStore} from "../../store/index.ts";
 import {solveDraftHtml} from "../../markdown/converter.ts";
 import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
@@ -6,10 +6,8 @@ import {toProxyImageUrl} from "../../utils/imageProxy.ts";
 import {
   addDraft,
   findUnuploadedImages,
-  getCoverCandidates,
   listImageMaterials,
   type MaterialImage,
-  uploadRemoteThumb,
   uploadThumb,
 } from "../../utils/publish.ts";
 import {
@@ -18,7 +16,7 @@ import {
   type CommentFlag,
 } from "../../utils/publishSettings.ts";
 import {toast} from "../Toast/toast.ts";
-import {FileText, Globe2, ImageIcon, Images, Library, Loader2, MessageCircle, MessageCircleOff, RefreshCw, UploadCloud, UserRound, Users} from "lucide-react";
+import {FileText, Globe2, ImageIcon, Library, Loader2, MessageCircle, MessageCircleOff, RefreshCw, UploadCloud, UserRound, Users} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import Button, {type ButtonState} from "../ui/Button.tsx";
 
@@ -27,8 +25,6 @@ interface Props {
   onClose: () => void;
   onNeedSettings: () => void;
 }
-
-type CoverSource = "article" | "material";
 
 const MATERIAL_PAGE_SIZE = 20;
 
@@ -43,13 +39,6 @@ const segmentedButtonClass = (active: boolean) =>
     active
       ? "border-[rgba(94,106,210,0.42)] bg-bg text-accent shadow-[0_8px_18px_rgba(94,106,210,0.12)]"
       : "border-transparent bg-transparent text-text-secondary hover:bg-bg hover:text-text"
-  }`;
-
-const sourceButtonClass = (active: boolean) =>
-  `inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-md border px-3 text-[13px] font-semibold outline-none transition-all duration-fast ease-smooth focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
-    active
-      ? "border-[rgba(94,106,210,0.48)] bg-bg text-accent shadow-[0_10px_24px_rgba(94,106,210,0.14)]"
-      : "border-transparent bg-transparent text-text-secondary hover:bg-bg/80 hover:text-text"
   }`;
 
 function revokePreview(url: string | null) {
@@ -84,10 +73,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const [onlyFansCanComment, setOnlyFansCanComment] = useState<CommentFlag>(0);
   const [thumbId, setThumbId] = useState<string | null>(null);
   const [thumbPreview, setThumbPreview] = useState<string | null>(null);
-  const [coverSource, setCoverSource] = useState<CoverSource>("article");
-  const [selectedCandidateUrl, setSelectedCandidateUrl] = useState<string | null>(null);
   const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
-  const [pendingCandidateUrl, setPendingCandidateUrl] = useState<string | null>(null);
   const [materialItems, setMaterialItems] = useState<MaterialImage[]>([]);
   const [materialTotal, setMaterialTotal] = useState(0);
   const [materialLoaded, setMaterialLoaded] = useState(false);
@@ -98,12 +84,13 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const [pubResult, setPubResult] = useState<"none" | "ok" | "fail">("none");
   const fileRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<string | null>(null);
-  const coverCandidates = useMemo(() => getCoverCandidates(content), [content]);
+  const materialLoadingRef = useRef(false);
   const commentsEnabled = needOpenComment === 1;
   previewRef.current = thumbPreview;
 
   const loadMaterialLibrary = useCallback(async (offset = 0) => {
-    if (materialLoading) return;
+    if (materialLoadingRef.current) return;
+    materialLoadingRef.current = true;
     setMaterialLoading(true);
     setMaterialError(null);
     try {
@@ -121,13 +108,13 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       }
     } finally {
       setMaterialLoaded(true);
+      materialLoadingRef.current = false;
       setMaterialLoading(false);
     }
-  }, [materialLoading, onNeedSettings]);
+  }, [onNeedSettings]);
 
   useEffect(() => {
     if (!open) {
-      setPendingCandidateUrl(null);
       return;
     }
     const publishSettings = loadPublishSettings();
@@ -136,13 +123,11 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     setNeedOpenComment(publishSettings.needOpenComment);
     setOnlyFansCanComment(publishSettings.needOpenComment === 1 ? publishSettings.onlyFansCanComment : 0);
     setThumbId(null);
-    setCoverSource("article");
-    setSelectedCandidateUrl(null);
     setSelectedMaterialId(null);
-    setPendingCandidateUrl(null);
     setMaterialItems([]);
     setMaterialTotal(0);
     setMaterialLoaded(false);
+    materialLoadingRef.current = false;
     setMaterialLoading(false);
     setMaterialError(null);
     setThumbPreview((prev) => {
@@ -152,12 +137,9 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     setBusy(false);
     setPubResult("none");
     if (fileRef.current) fileRef.current.value = "";
-  }, [open, defaultTitle]);
-
-  useEffect(() => {
-    if (!open || coverSource !== "material" || materialLoaded || materialLoading) return;
+    // 打开弹窗时自动加载素材库
     void loadMaterialLibrary(0);
-  }, [coverSource, loadMaterialLibrary, materialLoaded, materialLoading, open]);
+  }, [open, defaultTitle]);
 
   // 弹窗卸载时释放最后的预览 blob URL。
   useEffect(() => {
@@ -171,7 +153,6 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     try {
       const id = await uploadThumb(file);
       setThumbId(id);
-      setSelectedCandidateUrl(null);
       setSelectedMaterialId(null);
       setThumbPreview((prev) => {
         revokePreview(prev);
@@ -184,31 +165,9 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     }
   };
 
-  const pickArticleThumb = async (url: string) => {
-    if (busy) return;
-    setPendingCandidateUrl(null);
-    setBusy(true);
-    try {
-      const id = await uploadRemoteThumb(url);
-      setThumbId(id);
-      setSelectedCandidateUrl(url);
-      setSelectedMaterialId(null);
-      setThumbPreview((prev) => {
-        revokePreview(prev);
-        return toProxyImageUrl(url);
-      });
-      toast.show("已选择文中图片作为封面", "info");
-    } catch (e) {
-      handleThumbError(e);
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const pickMaterialThumb = (item: MaterialImage) => {
     if (busy) return;
     setThumbId(item.mediaId);
-    setSelectedCandidateUrl(null);
     setSelectedMaterialId(item.mediaId);
     setThumbPreview((prev) => {
       revokePreview(prev);
@@ -307,7 +266,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
         </>
       }
     >
-      <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.05fr)]">
+      <div className="grid h-full min-h-0 items-stretch gap-5 lg:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.05fr)]">
         <div className="flex min-w-0 flex-col gap-4 rounded border border-border bg-[linear-gradient(180deg,#fff_0%,#fbfbfd_100%)] p-4 shadow-sm">
           <div>
             <label htmlFor="publish-title" className="mb-2 block text-[13px] font-medium text-text-secondary">
@@ -402,13 +361,13 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex flex-col">
             <div className="mb-2 flex items-end justify-between gap-3">
               <div>
                 <label htmlFor="publish-thumb" className="block text-[13px] font-medium text-text">
                   封面图
                 </label>
-                <div className="mt-1 text-xs text-text-muted">建议使用清晰横图，支持 JPG、PNG、GIF。</div>
+                <div className="mt-1 text-xs text-text-muted">建议使用2.35:1的清晰横图；点击封面可从本地上传</div>
               </div>
               {thumbPreview && <span className="text-xs font-medium text-accent">已选择</span>}
             </div>
@@ -470,206 +429,121 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
           </div>
         </div>
 
-        <div className="min-w-0 rounded border border-border bg-[linear-gradient(180deg,#fff_0%,#fbfbfd_100%)] p-4 shadow-sm">
-          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex w-full rounded-lg border border-border bg-bg-secondary p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] sm:w-[260px]">
-              <button
-                type="button"
-                aria-pressed={coverSource === "article"}
-                onClick={() => setCoverSource("article")}
-                className={sourceButtonClass(coverSource === "article")}
-              >
-                <Images size={15} />
-                文中图片
-              </button>
-              <button
-                type="button"
-                aria-pressed={coverSource === "material"}
-                onClick={() => setCoverSource("material")}
-                className={sourceButtonClass(coverSource === "material")}
-              >
-                <Library size={15} />
-                素材库
-              </button>
+        <div className="flex min-h-0 min-w-0 flex-col rounded border border-border bg-[linear-gradient(180deg,#fff_0%,#fbfbfd_100%)] p-4 shadow-sm">
+          <div className="mb-3 flex flex-none flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-0.5">
+              <h3 className="flex items-center gap-1.5 text-[14px] font-semibold text-text">
+                <Library size={16} />
+                素材库选择
+              </h3>
+              <span className="text-xs text-text-muted">已上传的正文图片和历史封面都在这里，点击即可选择</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-text-muted">
-                {coverSource === "article"
-                  ? `${coverCandidates.length} 张可选`
-                  : materialLoaded
-                    ? `${materialItems.length}/${materialTotal || materialItems.length} 张`
-                    : "未加载"}
+                {materialLoaded
+                  ? `${materialItems.length}/${materialTotal || materialItems.length} 张`
+                  : "加载中…"}
               </span>
-              {coverSource === "material" && (
-                <button
-                  type="button"
-                  title="刷新素材库"
-                  aria-label="刷新素材库"
-                  disabled={busy || materialLoading}
-                  onClick={() => void loadMaterialLibrary(0)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-border bg-bg-secondary text-text-secondary outline-none transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-50"
-                >
-                  <RefreshCw size={14} className={materialLoading ? "animate-spin" : ""} />
-                </button>
-              )}
+              <button
+                type="button"
+                title="刷新素材库"
+                aria-label="刷新素材库"
+                disabled={busy || materialLoading}
+                onClick={() => void loadMaterialLibrary(0)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-border bg-bg-secondary text-text-secondary outline-none transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-50"
+              >
+                <RefreshCw size={14} className={materialLoading ? "animate-spin" : ""} />
+              </button>
             </div>
           </div>
 
-          {coverSource === "article" ? (
-            coverCandidates.length > 0 ? (
-              <div className="grid max-h-[52vh] grid-cols-2 gap-2 overflow-y-auto pr-1 xl:grid-cols-3">
-                {coverCandidates.map((candidate, index) => {
-                  const selected = selectedCandidateUrl === candidate.url;
-                  return (
-                    <button
-                      key={candidate.url}
-                      type="button"
-                      disabled={busy}
-                      onClick={() => setPendingCandidateUrl(candidate.url)}
-                      className={`group relative aspect-[2.35/1] overflow-hidden rounded-md border bg-bg-secondary outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
-                        selected ? "border-accent ring-2 ring-[color:var(--ring)]" : "border-border"
-                      }`}
-                      aria-label={`选择第 ${index + 1} 张文中图片作为封面`}
-                    >
-                      <img
-                        src={toProxyImageUrl(candidate.url)}
-                        alt="文中候选封面"
-                        className="h-full w-full object-cover transition-transform duration-fast group-hover:scale-105"
-                      />
-                      {selected && (
-                        <span className="absolute right-1.5 top-1.5 rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
-                          已选
+          <div className="min-h-0 flex-1">
+            {materialLoading && materialItems.length === 0 ? (
+              <div className="grid h-full grid-cols-2 gap-2 overflow-hidden pr-1 xl:grid-cols-3">
+                {Array.from({length: 6}).map((_, index) => (
+                  <div
+                    key={index}
+                    className="flex aspect-[2.35/1] items-center justify-center rounded-md border border-border bg-bg-secondary text-text-muted"
+                  >
+                    <Loader2 size={18} className="animate-spin" />
+                  </div>
+                ))}
+              </div>
+            ) : materialError && materialItems.length === 0 ? (
+              <div className="rounded-md bg-bg-secondary px-3 py-3 text-xs leading-5 text-text-secondary">
+                <div className="font-medium text-text">素材库读取失败</div>
+                <div className="mt-1 break-words">
+                  {materialError.includes("NOT_CONFIGURED") ? "请先在设置中填写微信素材上传凭证。" : materialError}
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="mt-3"
+                  disabled={materialLoading}
+                  onClick={() => void loadMaterialLibrary(0)}
+                >
+                  重试
+                </Button>
+              </div>
+            ) : materialItems.length > 0 ? (
+              <div className="flex h-full flex-col">
+                <div className="min-h-0 flex-1 grid grid-cols-2 gap-2 overflow-y-auto pr-1 content-start xl:grid-cols-3">
+                  {materialItems.map((item, index) => {
+                    const selected = selectedMaterialId === item.mediaId;
+                    return (
+                      <button
+                        key={item.mediaId}
+                        type="button"
+                        disabled={busy}
+                        onClick={() => pickMaterialThumb(item)}
+                        className={`group relative aspect-[2.35/1] overflow-hidden rounded-md border bg-bg-secondary outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
+                          selected ? "border-accent ring-2 ring-[color:var(--ring)]" : "border-border"
+                        }`}
+                        aria-label={`选择素材库第 ${index + 1} 张图片作为封面：${item.name}`}
+                      >
+                        <img
+                          src={toProxyImageUrl(item.url)}
+                          alt={`素材库候选封面：${item.name}`}
+                          className="h-full w-full object-cover transition-transform duration-fast group-hover:scale-105"
+                        />
+                        <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-left text-[11px] leading-4 text-white/90 opacity-0 transition-opacity group-hover:opacity-100">
+                          <span className="block truncate">{item.name}</span>
+                          <span className="block text-white/70">{formatMaterialTime(item.updateTime)}</span>
                         </span>
-                      )}
-                      <span className="absolute inset-x-0 bottom-0 bg-black/50 px-2 py-1 text-left text-[11px] text-white/90 opacity-0 transition-opacity group-hover:opacity-100">
-                        设为封面
-                      </span>
-                    </button>
-                  );
-                })}
+                        {selected && (
+                          <span className="absolute right-1.5 top-1.5 rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
+                            已选
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex flex-none items-center justify-between gap-3">
+                  <span className="text-xs text-text-muted">
+                    {materialTotal > 0 ? `共 ${materialTotal} 张图片素材` : "已显示素材库图片"}
+                  </span>
+                  {materialItems.length < materialTotal && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={busy || materialLoading}
+                      onClick={() => void loadMaterialLibrary(materialItems.length)}
+                    >
+                      {materialLoading ? "加载中…" : "加载更多"}
+                    </Button>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="rounded-md bg-bg-secondary px-3 py-3 text-xs leading-5 text-text-secondary">
-                正文中未找到已上传到微信的图片，请先上传正文图片，或直接上传本地封面。
+                素材库暂无图片素材。上传过的正文图片会进入这里，后续发布同系列文章时可以直接复用。
               </div>
-            )
-          ) : materialLoading && materialItems.length === 0 ? (
-            <div className="grid max-h-[52vh] grid-cols-2 gap-2 overflow-hidden pr-1 xl:grid-cols-3">
-              {Array.from({length: 6}).map((_, index) => (
-                <div
-                  key={index}
-                  className="flex aspect-[2.35/1] items-center justify-center rounded-md border border-border bg-bg-secondary text-text-muted"
-                >
-                  <Loader2 size={18} className="animate-spin" />
-                </div>
-              ))}
-            </div>
-          ) : materialError && materialItems.length === 0 ? (
-            <div className="rounded-md bg-bg-secondary px-3 py-3 text-xs leading-5 text-text-secondary">
-              <div className="font-medium text-text">素材库读取失败</div>
-              <div className="mt-1 break-words">
-                {materialError.includes("NOT_CONFIGURED") ? "请先在设置中填写微信素材上传凭证。" : materialError}
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                className="mt-3"
-                disabled={materialLoading}
-                onClick={() => void loadMaterialLibrary(0)}
-              >
-                重试
-              </Button>
-            </div>
-          ) : materialItems.length > 0 ? (
-            <>
-              <div className="grid max-h-[52vh] grid-cols-2 gap-2 overflow-y-auto pr-1 xl:grid-cols-3">
-                {materialItems.map((item, index) => {
-                  const selected = selectedMaterialId === item.mediaId;
-                  return (
-                    <button
-                      key={item.mediaId}
-                      type="button"
-                      disabled={busy}
-                      onClick={() => pickMaterialThumb(item)}
-                      className={`group relative aspect-[2.35/1] overflow-hidden rounded-md border bg-bg-secondary outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
-                        selected ? "border-accent ring-2 ring-[color:var(--ring)]" : "border-border"
-                      }`}
-                      aria-label={`选择素材库第 ${index + 1} 张图片作为封面：${item.name}`}
-                    >
-                      <img
-                        src={toProxyImageUrl(item.url)}
-                        alt={`素材库候选封面：${item.name}`}
-                        className="h-full w-full object-cover transition-transform duration-fast group-hover:scale-105"
-                      />
-                      <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-left text-[11px] leading-4 text-white/90 opacity-0 transition-opacity group-hover:opacity-100">
-                        <span className="block truncate">{item.name}</span>
-                        <span className="block text-white/70">{formatMaterialTime(item.updateTime)}</span>
-                      </span>
-                      {selected && (
-                        <span className="absolute right-1.5 top-1.5 rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
-                          已选
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <span className="text-xs text-text-muted">
-                  {materialTotal > 0 ? `共 ${materialTotal} 张图片素材` : "已显示素材库图片"}
-                </span>
-                {materialItems.length < materialTotal && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={busy || materialLoading}
-                    onClick={() => void loadMaterialLibrary(materialItems.length)}
-                  >
-                    {materialLoading ? "加载中…" : "加载更多"}
-                  </Button>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="rounded-md bg-bg-secondary px-3 py-3 text-xs leading-5 text-text-secondary">
-              素材库暂无图片素材。上传过的正文图片会进入这里，后续发布同系列文章时可以直接复用。
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </Dialog>
-      <Dialog
-        open={pendingCandidateUrl !== null}
-        title="确认使用这张图片？"
-        onClose={() => setPendingCandidateUrl(null)}
-        width={420}
-        footer={
-          <>
-            <Button type="button" variant="secondary" onClick={() => setPendingCandidateUrl(null)} disabled={busy}>
-              取消
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              state={busy ? "loading" : "idle"}
-              loadingText="处理中…"
-              onClick={() => pendingCandidateUrl && void pickArticleThumb(pendingCandidateUrl)}
-              disabled={busy}
-            >
-              确认使用
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-3">
-          <div className="overflow-hidden rounded-md border border-border bg-bg-secondary">
-            {pendingCandidateUrl && (
-              <img src={toProxyImageUrl(pendingCandidateUrl)} alt="待确认的封面图" className="aspect-[2.35/1] w-full object-cover" />
-            )}
-          </div>
-          <p className="text-sm leading-6 text-text-secondary">确认后才会获取封面图片 ID，取消不会消耗资源。</p>
-        </div>
-      </Dialog>
     </>
   );
 }
