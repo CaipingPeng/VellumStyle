@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useLayoutEffect, useRef, useState} from "react";
 import {useStore} from "../../store/index.ts";
 import {solveDraftHtml} from "../../markdown/converter.ts";
 import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
@@ -16,7 +16,7 @@ import {
   type CommentFlag,
 } from "../../utils/publishSettings.ts";
 import {toast} from "../Toast/toast.ts";
-import {FileText, Globe2, ImageIcon, Library, Loader2, MessageCircle, MessageCircleOff, RefreshCw, UploadCloud, UserRound, Users} from "lucide-react";
+import {FileText, Globe2, ImageIcon, Library, MessageCircle, MessageCircleOff, RefreshCw, UploadCloud, UserRound, Users} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import Button, {type ButtonState} from "../ui/Button.tsx";
 
@@ -83,8 +83,10 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   // 发布结果态：发布动作的 loading/success/error 由它 + busy 推导，封面操作仍走 busy
   const [pubResult, setPubResult] = useState<"none" | "ok" | "fail">("none");
   const fileRef = useRef<HTMLInputElement>(null);
+  const leftPanelRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<string | null>(null);
   const materialLoadingRef = useRef(false);
+  const [materialPanelHeight, setMaterialPanelHeight] = useState<number | null>(null);
   const commentsEnabled = needOpenComment === 1;
   previewRef.current = thumbPreview;
 
@@ -147,6 +149,49 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       revokePreview(previewRef.current);
     };
   }, []);
+
+  useLayoutEffect(() => {
+    if (!open || typeof window.matchMedia !== "function") {
+      setMaterialPanelHeight(null);
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+    let frame = 0;
+
+    const updateMaterialPanelHeight = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        if (!mediaQuery.matches || !leftPanelRef.current) {
+          setMaterialPanelHeight(null);
+          return;
+        }
+
+        const nextHeight = Math.max(360, Math.ceil(leftPanelRef.current.getBoundingClientRect().height));
+        setMaterialPanelHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+      });
+    };
+
+    updateMaterialPanelHeight();
+    const settleTimer = window.setTimeout(updateMaterialPanelHeight, 180);
+
+    const resizeObserver =
+      typeof ResizeObserver === "function" ? new ResizeObserver(updateMaterialPanelHeight) : null;
+    if (resizeObserver) {
+      if (leftPanelRef.current) resizeObserver.observe(leftPanelRef.current);
+    }
+
+    window.addEventListener("resize", updateMaterialPanelHeight);
+    mediaQuery.addEventListener("change", updateMaterialPanelHeight);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(settleTimer);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateMaterialPanelHeight);
+      mediaQuery.removeEventListener("change", updateMaterialPanelHeight);
+    };
+  }, [open]);
 
   const pickThumb = async (file: File) => {
     setBusy(true);
@@ -266,8 +311,11 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
         </>
       }
     >
-      <div className="grid h-full min-h-0 items-stretch gap-5 lg:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.05fr)]">
-        <div className="flex min-w-0 flex-col gap-4 rounded border border-border bg-[linear-gradient(180deg,#fff_0%,#fbfbfd_100%)] p-4 shadow-sm">
+      <div className="grid min-h-0 items-start gap-5 lg:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.05fr)]">
+        <div
+          ref={leftPanelRef}
+          className="flex min-w-0 flex-col gap-4 rounded border border-border bg-[linear-gradient(180deg,#fff_0%,#fbfbfd_100%)] p-4 shadow-sm"
+        >
           <div>
             <label htmlFor="publish-title" className="mb-2 block text-[13px] font-medium text-text-secondary">
               文章标题
@@ -429,7 +477,10 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
           </div>
         </div>
 
-        <div className="flex min-h-0 min-w-0 flex-col rounded border border-border bg-[linear-gradient(180deg,#fff_0%,#fbfbfd_100%)] p-4 shadow-sm">
+        <div
+          className="box-border flex min-h-0 min-w-0 flex-col overflow-hidden rounded border border-border bg-[linear-gradient(180deg,#fff_0%,#fbfbfd_100%)] p-4 shadow-sm"
+          style={{height: materialPanelHeight ? `${materialPanelHeight}px` : undefined}}
+        >
           <div className="mb-3 flex flex-none flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-0.5">
               <h3 className="flex items-center gap-1.5 text-[14px] font-semibold text-text">
@@ -459,13 +510,16 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
 
           <div className="min-h-0 flex-1">
             {materialLoading && materialItems.length === 0 ? (
-              <div className="grid h-full grid-cols-2 gap-2 overflow-hidden pr-1 xl:grid-cols-3">
+              <div
+                className="grid h-full auto-rows-max grid-cols-2 gap-2 overflow-hidden pr-1 xl:grid-cols-3"
+                aria-label="素材库加载中"
+              >
                 {Array.from({length: 6}).map((_, index) => (
                   <div
                     key={index}
-                    className="flex aspect-[2.35/1] items-center justify-center rounded-md border border-border bg-bg-secondary text-text-muted"
+                    className="aspect-[2.35/1] animate-pulse overflow-hidden rounded-md border border-border bg-bg-secondary p-2"
                   >
-                    <Loader2 size={18} className="animate-spin" />
+                    <div className="h-full rounded bg-[linear-gradient(90deg,rgba(148,163,184,0.10),rgba(148,163,184,0.22),rgba(148,163,184,0.10))]" />
                   </div>
                 ))}
               </div>
@@ -487,7 +541,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
               </div>
             ) : materialItems.length > 0 ? (
               <div className="flex h-full flex-col">
-                <div className="min-h-0 flex-1 grid grid-cols-2 gap-2 overflow-y-auto pr-1 content-start xl:grid-cols-3">
+                <div className="min-h-0 flex-1 grid auto-rows-max grid-cols-2 gap-2 overflow-y-auto pr-1 content-start xl:grid-cols-3">
                   {materialItems.map((item, index) => {
                     const selected = selectedMaterialId === item.mediaId;
                     return (
@@ -496,7 +550,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                         type="button"
                         disabled={busy}
                         onClick={() => pickMaterialThumb(item)}
-                        className={`group relative aspect-[2.35/1] overflow-hidden rounded-md border bg-bg-secondary outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
+                        className={`group relative block aspect-[2.35/1] w-full appearance-none overflow-hidden rounded-md border bg-bg-secondary p-0 outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
                           selected ? "border-accent ring-2 ring-[color:var(--ring)]" : "border-border"
                         }`}
                         aria-label={`选择素材库第 ${index + 1} 张图片作为封面：${item.name}`}
@@ -504,7 +558,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                         <img
                           src={toProxyImageUrl(item.url)}
                           alt={`素材库候选封面：${item.name}`}
-                          className="h-full w-full object-cover transition-transform duration-fast group-hover:scale-105"
+                          className="block h-full w-full object-cover transition-transform duration-fast group-hover:scale-105"
                         />
                         <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-left text-[11px] leading-4 text-white/90 opacity-0 transition-opacity group-hover:opacity-100">
                           <span className="block truncate">{item.name}</span>

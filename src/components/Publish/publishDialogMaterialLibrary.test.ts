@@ -32,3 +32,32 @@ test("发布弹窗打开时只触发一次素材库初始化加载", async () =>
 
   assert.doesNotMatch(source, /\}, \[open, defaultTitle, loadMaterialLibrary\]\);/);
 });
+
+test("发布弹窗素材库初始加载不渲染多个旋转占位图标", async () => {
+  const source = await readFile(new URL("./PublishDialog.tsx", import.meta.url), "utf8");
+
+  assert.doesNotMatch(source, /Array\.from\(\{length: 6\}\)[\s\S]*<Loader2 size=\{18\} className="animate-spin" \/>/);
+  assert.match(source, /animate-pulse/);
+});
+
+test("发布弹窗素材库高度由左侧表单容器约束", async () => {
+  const source = await readFile(new URL("./PublishDialog.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /leftPanelRef/);
+  assert.match(source, /materialPanelHeight/);
+  assert.match(source, /leftPanelRef\.current\.getBoundingClientRect\(\)\.height/);
+  assert.match(source, /style=\{\{height: materialPanelHeight/);
+  assert.match(source, /setTimeout\(updateMaterialPanelHeight, 180\)/);
+  assert.match(source, /box-border[\s\S]*style=\{\{height: materialPanelHeight/);
+  assert.doesNotMatch(source, /coverBottom - panelTop/);
+});
+
+test("发布弹窗素材库图片网格使用稳定行高并重置按钮图片默认布局", async () => {
+  const source = await readFile(new URL("./PublishDialog.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /min-h-0 flex-1 grid auto-rows-max grid-cols-2/);
+  assert.match(source, /className=\{`group relative block aspect-\[2\.35\/1\] w-full/);
+  assert.match(source, /appearance-none/);
+  assert.match(source, / p-0 /);
+  assert.match(source, /className="block h-full w-full object-cover/);
+});
