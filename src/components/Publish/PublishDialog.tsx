@@ -430,6 +430,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                 if (f) void pickThumb(f);
               }}
             />
+            <div className="rounded-[10px] p-[2px]">
             <button
               type="button"
               onClick={openThumbPicker}
@@ -437,8 +438,8 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
               aria-label={thumbPreview ? "更换封面图" : "上传封面图"}
               className={`group relative flex aspect-[2.35/1] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-bg-secondary text-left outline-none transition-all duration-fast ease-smooth focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
                 thumbPreview
-                  ? "border border-border shadow-sm"
-                  : "border border-dashed border-border-strong hover:border-accent hover:bg-accent-subtle"
+                  ? "border border-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_3px_10px_rgba(0,0,0,0.05)]"
+                  : "border border-dashed border-black/[0.12] hover:border-[rgba(94,106,210,0.5)] hover:bg-accent-subtle"
               }`}
             >
               {thumbPreview ? (
@@ -474,6 +475,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                 </div>
               )}
             </button>
+            </div>
           </div>
         </div>
 
@@ -511,13 +513,13 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
           <div className="min-h-0 flex-1">
             {materialLoading && materialItems.length === 0 ? (
               <div
-                className="grid h-full auto-rows-max grid-cols-2 gap-2 overflow-hidden pr-1 xl:grid-cols-3"
+                className="grid h-full auto-rows-max grid-cols-2 gap-2 overflow-hidden py-[5px] pl-[4px] pr-2 xl:grid-cols-3"
                 aria-label="素材库加载中"
               >
                 {Array.from({length: 6}).map((_, index) => (
                   <div
                     key={index}
-                    className="aspect-[2.35/1] animate-pulse overflow-hidden rounded-md border border-border bg-bg-secondary p-2"
+                    className="aspect-[2.35/1] animate-pulse overflow-hidden rounded-md border border-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)] bg-bg-secondary p-2"
                   >
                     <div className="h-full rounded bg-[linear-gradient(90deg,rgba(148,163,184,0.10),rgba(148,163,184,0.22),rgba(148,163,184,0.10))]" />
                   </div>
@@ -541,8 +543,9 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
               </div>
             ) : materialItems.length > 0 ? (
               <div className="flex h-full flex-col">
-                <div className="min-h-0 flex-1 grid auto-rows-max grid-cols-2 gap-2 overflow-y-auto pr-1 content-start xl:grid-cols-3">
-                  {materialItems.map((item, index) => {
+                <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable_both-edges] [scrollbar-width:thin] py-[5px] pl-[4px] pr-2">
+                  <div className="grid auto-rows-max grid-cols-2 gap-2 content-start xl:grid-cols-3">
+                    {materialItems.map((item, index) => {
                     const selected = selectedMaterialId === item.mediaId;
                     return (
                       <button
@@ -550,8 +553,8 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                         type="button"
                         disabled={busy}
                         onClick={() => pickMaterialThumb(item)}
-                        className={`group relative block aspect-[2.35/1] w-full appearance-none overflow-hidden rounded-md border bg-bg-secondary p-0 outline-none transition-all duration-fast hover:border-accent focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
-                          selected ? "border-accent ring-2 ring-[color:var(--ring)]" : "border-border"
+                        className={`group relative block aspect-[2.35/1] w-full appearance-none overflow-hidden rounded-md border bg-bg-secondary p-0 outline-none transition-all duration-fast hover:-translate-y-px hover:border-accent/60 focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
+                          selected ? "border-accent/70 shadow-[0_0_0_2px_var(--ring),0_4px_14px_rgba(94,106,210,0.16)] hover:shadow-[0_0_0_2px_var(--ring),0_6px_20px_rgba(94,106,210,0.22)]" : "border border-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.05),0_8px_20px_rgba(0,0,0,0.05)]"
                         }`}
                         aria-label={`选择素材库第 ${index + 1} 张图片作为封面：${item.name}`}
                       >
@@ -572,6 +575,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                       </button>
                     );
                   })}
+                  </div>
                 </div>
                 <div className="mt-3 flex flex-none items-center justify-between gap-3">
                   <span className="text-xs text-text-muted">

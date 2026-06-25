@@ -1,5 +1,7 @@
 import {JSDOM} from "jsdom";
 
+process.env.NODE_ENV = "test";
+
 const {window} = new JSDOM("<!doctype html><html><body></body></html>");
 
 Object.defineProperties(globalThis, {

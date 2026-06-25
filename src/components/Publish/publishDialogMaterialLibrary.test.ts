@@ -55,7 +55,9 @@ test("发布弹窗素材库高度由左侧表单容器约束", async () => {
 test("发布弹窗素材库图片网格使用稳定行高并重置按钮图片默认布局", async () => {
   const source = await readFile(new URL("./PublishDialog.tsx", import.meta.url), "utf8");
 
-  assert.match(source, /min-h-0 flex-1 grid auto-rows-max grid-cols-2/);
+  assert.match(source, /min-h-0 flex-1 overflow-y-auto overflow-x-hidden/);
+  assert.match(source, /\[scrollbar-gutter:stable_both-edges\]/);
+  assert.match(source, /grid auto-rows-max grid-cols-2 gap-2 content-start/);
   assert.match(source, /className=\{`group relative block aspect-\[2\.35\/1\] w-full/);
   assert.match(source, /appearance-none/);
   assert.match(source, / p-0 /);
