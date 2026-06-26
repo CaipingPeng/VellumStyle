@@ -110,7 +110,12 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     }, []);
 
     const handleChange = useCallback((nextValue: string) => {
-      if (suppressChangeRef.current) {
+      // composition 期间 CodeMirror 会随 compositionupdate 多次触发 docChanged；
+      // 若此时把中间态经 onChange 回传父组件，会形成 value→effect→sync 的回环，
+      // 在 composition 边缘与浏览器原生 beforeinput(insertCompositionText) 叠加，
+      // 导致中文符号被写入两次。故组合期间抑制 emit，留待 compositionend 后
+      // 由 emitCurrentEditorDoc 统一提交最终值。
+      if (suppressChangeRef.current || composingRef.current || compositionSettlingRef.current) {
         return;
       }
       lastEmittedValueRef.current = nextValue;
