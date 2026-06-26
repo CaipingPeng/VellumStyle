@@ -2,8 +2,10 @@ import {forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef
 import {useCodeMirror} from "@uiw/react-codemirror";
 import {markdown, markdownLanguage} from "@codemirror/lang-markdown";
 import {languages} from "@codemirror/language-data";
-import {EditorView} from "@codemirror/view";
+import {EditorState, Prec} from "@codemirror/state";
+import {EditorView, keymap} from "@codemirror/view";
 import {undo, redo} from "@codemirror/commands";
+import {openSearchPanel, search} from "@codemirror/search";
 import {
   wrapSelection as wrapSel,
   insertLink as insLink,
@@ -209,6 +211,25 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       () => [
         ...(cspNonce ? [EditorView.cspNonce.of(cspNonce)] : []),
         markdown({base: markdownLanguage, codeLanguages: languages}),
+        search({top: true}),
+        EditorState.phrases.of({
+          Find: "查找",
+          Replace: "替换为",
+          next: "下一个",
+          previous: "上一个",
+          all: "全选",
+          "match case": "区分大小写",
+          regexp: "正则",
+          "by word": "整词",
+          replace: "替换",
+          "replace all": "全部替换",
+          close: "关闭",
+          "current match": "当前匹配",
+          "on line": "位于行",
+          "replaced match on line $": "已替换第 $ 行匹配",
+          "replaced $ matches": "已替换 $ 处匹配",
+        }),
+        Prec.highest(keymap.of([{key: "Ctrl-h", run: openSearchPanel}])),
         EditorView.lineWrapping,
         // 聚焦时不加任何边框；让内容区撑满高度，使空白区域点击也能定位光标。
         EditorView.theme({

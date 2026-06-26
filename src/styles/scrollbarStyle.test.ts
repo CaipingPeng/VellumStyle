@@ -25,6 +25,24 @@ test("CodeMirror 接收 Tauri CSP nonce，避免打包版动态样式被拦截",
   assert.match(source, /getCodeMirrorCspNonce/);
 });
 
+test("CodeMirror 搜索替换面板使用不挤压正文的浮层工具条", async () => {
+  const css = await readFile(new URL("./globals.css", import.meta.url), "utf8");
+
+  assert.match(css, /\.cm-editor\s+\.cm-panel\.cm-search/);
+  assert.match(css, /position:\s*absolute/);
+  assert.match(css, /z-index:\s*20/);
+  assert.match(css, /max-width:\s*calc\(100% - 24px\)/);
+  assert.match(css, /background:\s*var\(--bg\)/);
+  assert.match(css, /border:\s*1px solid var\(--border\)/);
+  assert.match(css, /border-radius:\s*var\(--radius-lg\)/);
+  assert.match(css, /box-shadow:\s*var\(--shadow-md\)/);
+  assert.match(css, /\.cm-search\s+input\.cm-textfield/);
+  assert.match(css, /\.cm-search\s+button\.cm-button/);
+  assert.match(css, /\.cm-search\s+button\[name="replaceAll"\]/);
+  assert.match(css, /\.cm-search\s+input\[type="checkbox"\]/);
+  assert.match(css, /\.cm-searchMatch-selected/);
+});
+
 test("预览滚动容器提供滚动条样式挂点", async () => {
   const source = await readFile(new URL("../components/Preview/Preview.tsx", import.meta.url), "utf8");
 

@@ -63,6 +63,7 @@ body {
 /* 编辑器：静态兜底，防止 Tauri CSP 拦截 CodeMirror 动态样式时滚动容器失效。 */
 .cm-editor {
   box-sizing: border-box;
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -143,6 +144,157 @@ body {
 .editor-preview-scrollbar::-webkit-scrollbar-thumb:active {
   border-width: 1px;
   background-color: rgba(94, 106, 210, 0.56);
+}
+
+.cm-editor .cm-panel.cm-search {
+  box-sizing: border-box;
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  z-index: 20;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  box-shadow: var(--shadow-md);
+  color: var(--text);
+  font-size: 12px;
+  overflow: hidden;
+}
+
+.cm-editor .cm-panel.cm-search .cm-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 40px 8px 12px;
+}
+
+.cm-editor .cm-search br {
+  display: none;
+}
+
+.cm-editor .cm-search input.cm-textfield {
+  box-sizing: border-box;
+  width: 180px;
+  height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+  color: var(--text);
+  font: inherit;
+  line-height: 1;
+  padding: 0 9px;
+  outline: none;
+  transition:
+    border-color 130ms var(--ease),
+    background-color 130ms var(--ease),
+    box-shadow 130ms var(--ease);
+}
+
+.cm-editor .cm-search input.cm-textfield:focus {
+  border-color: var(--accent);
+  background: var(--bg);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.cm-editor .cm-search input.cm-textfield::placeholder {
+  color: var(--text-muted);
+}
+
+.cm-editor .cm-search button.cm-button {
+  height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  line-height: 1;
+  padding: 0 10px;
+  transition:
+    border-color 130ms var(--ease),
+    background-color 130ms var(--ease),
+    color 130ms var(--ease),
+    transform 130ms var(--ease);
+}
+
+.cm-editor .cm-search button.cm-button:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-tertiary);
+  color: var(--text);
+}
+
+.cm-editor .cm-search button.cm-button:active {
+  transform: translateY(1px);
+}
+
+.cm-editor .cm-search button[name="replace"],
+.cm-editor .cm-search button[name="replaceAll"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.cm-editor .cm-search button[name="replace"]:hover,
+.cm-editor .cm-search button[name="replaceAll"]:hover {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+  color: #ffffff;
+}
+
+.cm-editor .cm-search button[name="close"] {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  padding: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  transition:
+    background-color 130ms var(--ease),
+    color 130ms var(--ease);
+}
+
+.cm-editor .cm-search button[name="close"]:hover {
+  background: var(--bg-tertiary);
+  color: var(--text);
+}
+
+.cm-editor .cm-search label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cm-editor .cm-search input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.cm-editor .cm-searchMatch {
+  background: rgba(183, 121, 31, 0.18);
+  outline: 1px solid rgba(183, 121, 31, 0.28);
+}
+
+.cm-editor .cm-searchMatch-selected {
+  background: var(--accent-subtle);
+  outline: 1px solid var(--accent);
 }
 
 #article .preview-edit-hover,

@@ -137,6 +137,12 @@ export default function TreeNode({
             onSelectDoc(node.path);
           }
         }}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          if (node.isDir || editing) return;
+          setDraft(node.name);
+          setEditing(true);
+        }}
         className={`group relative flex h-7 cursor-pointer items-center gap-1 overflow-hidden pr-1.5 text-[13px] transition-colors duration-fast ${rowTone}`}
         style={{
           paddingLeft: 8 + depth * 14,
