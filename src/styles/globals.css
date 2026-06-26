@@ -146,29 +146,53 @@ body {
   background-color: rgba(94, 106, 210, 0.56);
 }
 
+.cm-editor .cm-panels:has(.cm-panel.cm-search) {
+  background: transparent;
+  border: 0;
+  position: static;
+}
+
 .cm-editor .cm-panel.cm-search {
   box-sizing: border-box;
   position: absolute;
   top: 10px;
-  left: 12px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 20;
-  width: max-content;
+  width: min(660px, calc(100% - 24px));
   max-width: calc(100% - 24px);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: var(--bg);
-  box-shadow: var(--shadow-md);
+  background: rgba(248, 250, 252, 0.06);
+  backdrop-filter: blur(6px) saturate(1.16);
+  -webkit-backdrop-filter: blur(8px) saturate(1.16);
+  box-shadow:
+    0 18px 48px rgba(20, 20, 30, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.40);
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   overflow: hidden;
+  transition:
+    background-color 130ms var(--ease),
+    box-shadow 130ms var(--ease);
 }
 
-.cm-editor .cm-panel.cm-search .cm-search {
-  display: flex;
-  flex-wrap: wrap;
+.cm-editor .cm-panel.cm-search:hover,
+.cm-editor .cm-panel.cm-search:focus-within {
+  background: rgba(248, 250, 252, 0.12);
+  box-shadow:
+    0 18px 46px rgba(20, 20, 30, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.50);
+}
+
+.cm-editor .cm-panel.cm-search {
+  display: grid;
+  grid-template-columns: auto auto auto auto auto auto minmax(16px, 1fr) 88px 28px;
+  grid-template-rows: 28px 28px 28px;
   align-items: center;
+  justify-items: start;
   gap: 8px;
-  padding: 8px 40px 8px 12px;
+  padding: 24px 10px 10px;
 }
 
 .cm-editor .cm-search br {
@@ -177,11 +201,12 @@ body {
 
 .cm-editor .cm-search input.cm-textfield {
   box-sizing: border-box;
-  width: 180px;
+  width: 100%;
   height: 28px;
+  margin: 0;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: var(--bg-secondary);
+  background: rgba(255, 255, 255, 0.56);
   color: var(--text);
   font: inherit;
   line-height: 1;
@@ -195,7 +220,7 @@ body {
 
 .cm-editor .cm-search input.cm-textfield:focus {
   border-color: var(--accent);
-  background: var(--bg);
+  background: rgba(255, 255, 255, 0.78);
   box-shadow: 0 0 0 3px var(--ring);
 }
 
@@ -204,16 +229,19 @@ body {
 }
 
 .cm-editor .cm-search button.cm-button {
+  min-width: 0;
   height: 28px;
+  margin: 0;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: var(--bg-secondary);
+  background: rgba(255, 255, 255, 0.5);
   color: var(--text-secondary);
   cursor: pointer;
   font: inherit;
+  font-size: 13px;
   font-weight: 500;
   line-height: 1;
-  padding: 0 10px;
+  padding: 0 9px;
   transition:
     border-color 130ms var(--ease),
     background-color 130ms var(--ease),
@@ -223,7 +251,7 @@ body {
 
 .cm-editor .cm-search button.cm-button:hover {
   border-color: var(--border-strong);
-  background: var(--bg-tertiary);
+  background: rgba(255, 255, 255, 0.78);
   color: var(--text);
 }
 
@@ -234,7 +262,7 @@ body {
 .cm-editor .cm-search button[name="replace"],
 .cm-editor .cm-search button[name="replaceAll"] {
   border-color: var(--accent);
-  background: var(--accent);
+  background: rgba(94, 106, 210, 0.92);
   color: #ffffff;
 }
 
@@ -245,10 +273,150 @@ body {
   color: #ffffff;
 }
 
+.cm-editor .cm-search input[name="search"] {
+  grid-column: 1 / 8;
+  grid-row: 1;
+}
+
+.cm-editor .cm-search input[name="replace"] {
+  grid-column: 1 / 8;
+  grid-row: 3;
+}
+
+.cm-editor .cm-search button[name="next"]::before,
+.cm-editor .cm-search button[name="prev"]::before {
+  display: block;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.cm-editor .cm-search button[name="next"] {
+  grid-column: 1;
+  grid-row: 2;
+  width: 28px;
+  font-size: 0;
+  padding: 0;
+}
+
+.cm-editor .cm-search button[name="next"]::before {
+  content: "↓";
+}
+
+.cm-editor .cm-search button[name="prev"] {
+  grid-column: 2;
+  grid-row: 2;
+  width: 28px;
+  font-size: 0;
+  padding: 0;
+}
+
+.cm-editor .cm-search button[name="prev"]::before {
+  content: "↑";
+}
+
+.cm-editor .cm-search button[name="select"] {
+  grid-column: 3;
+  grid-row: 2;
+  align-self: center;
+  justify-content: flex-start;
+  height: 28px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  text-align: left;
+}
+
+.cm-editor .cm-search label {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  align-self: center;
+  gap: 6px;
+  height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 28px;
+  margin: 0;
+  padding: 0 9px;
+  white-space: nowrap;
+  transition:
+    border-color 130ms var(--ease),
+    background-color 130ms var(--ease),
+    color 130ms var(--ease);
+}
+
+.cm-editor .cm-panel.cm-search input.cm-textfield,
+.cm-editor .cm-panel.cm-search button.cm-button {
+  margin: 0;
+}
+
+.cm-editor .cm-panel.cm-search label {
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  height: 28px !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: var(--radius) !important;
+  background: rgba(255, 255, 255, 0.66) !important;
+  font: inherit !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 28px !important;
+  margin: 0 !important;
+  padding: 0 9px !important;
+  white-space: nowrap !important;
+}
+
+.cm-editor .cm-search label:hover {
+  border-color: var(--border-strong);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--text);
+}
+
+.cm-editor .cm-search label:has(input[name="case"]) {
+  grid-column: 4;
+  grid-row: 2;
+}
+
+.cm-editor .cm-search label:has(input[name="re"]) {
+  grid-column: 5;
+  grid-row: 2;
+}
+
+.cm-editor .cm-search label:has(input[name="word"]) {
+  grid-column: 6;
+  grid-row: 2;
+}
+
+.cm-editor .cm-search button[name="replace"],
+.cm-editor .cm-search button[name="replaceAll"] {
+  grid-column: 8;
+  width: 88px;
+  padding: 0 8px;
+}
+
+.cm-editor .cm-search button[name="replace"] {
+  grid-row: 1;
+}
+
+.cm-editor .cm-search button[name="replaceAll"] {
+  grid-row: 3;
+}
+
 .cm-editor .cm-search button[name="close"] {
-  position: absolute;
-  top: 8px;
-  right: 10px;
+  position: static;
+  grid-column: 9;
+  grid-row: 1;
+  align-self: center;
   width: 28px;
   height: 28px;
   border: 0;
@@ -266,25 +434,150 @@ body {
 }
 
 .cm-editor .cm-search button[name="close"]:hover {
-  background: var(--bg-tertiary);
+  background: rgba(255, 255, 255, 0.6);
   color: var(--text);
 }
 
-.cm-editor .cm-search label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-height: 28px;
-  color: var(--text-secondary);
+.cm-editor .cm-search input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  display: block;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.6);
+  align-self: center;
   cursor: pointer;
-  white-space: nowrap;
+  transform: translateY(0);
+  transition:
+    background-color 130ms var(--ease),
+    border-color 130ms var(--ease);
 }
 
-.cm-editor .cm-search input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
-  accent-color: var(--accent);
-  cursor: pointer;
+.cm-editor .cm-panel.cm-search input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  align-self: center;
+  transform: translateY(0);
+}
+
+.cm-editor .cm-search input[type="checkbox"]:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.cm-editor .cm-search input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.cm-editor .cm-search .od-search-drag-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  z-index: 4;
+}
+
+.cm-editor .cm-search .od-search-drag-handle:active {
+  cursor: grabbing;
+}
+
+.cm-editor .cm-search .od-search-drag-handle .od-grip {
+  width: 28px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-muted);
+  opacity: 0.6;
+  transition: opacity 130ms var(--ease);
+}
+
+.cm-editor:hover .cm-search .od-search-drag-handle .od-grip,
+.cm-editor .cm-search .od-search-drag-handle:active .od-grip {
+  opacity: 0.7;
+}
+
+@media (max-width: 720px) {
+  .cm-editor .cm-panel.cm-search {
+    width: calc(100% - 24px);
+  }
+
+  .cm-editor .cm-panel.cm-search {
+    grid-template-columns: minmax(0, 1fr) 28px 28px 88px 28px;
+    grid-template-rows: 28px 28px 28px auto auto;
+  }
+
+  .cm-editor .cm-search input[name="search"],
+  .cm-editor .cm-search input[name="replace"] {
+    grid-column: 1;
+  }
+
+  .cm-editor .cm-search button[name="next"],
+  .cm-editor .cm-search button[name="prev"] {
+    grid-row: 2;
+  }
+
+  .cm-editor .cm-search button[name="next"] {
+    grid-column: 2;
+  }
+
+  .cm-editor .cm-search button[name="prev"] {
+    grid-column: 3;
+  }
+
+  .cm-editor .cm-search button[name="replace"],
+  .cm-editor .cm-search button[name="replaceAll"] {
+    grid-column: 4;
+  }
+
+  .cm-editor .cm-search button[name="select"] {
+    grid-column: 1 / 4;
+    grid-row: 4;
+    height: 28px;
+  }
+
+  .cm-editor .cm-search label:has(input[name="case"]) {
+    grid-column: 1 / 3;
+    grid-row: 5;
+  }
+
+  .cm-editor .cm-search label:has(input[name="re"]) {
+    grid-column: 4 / 6;
+    grid-row: 4;
+  }
+
+  .cm-editor .cm-search label:has(input[name="word"]) {
+    grid-column: 4 / 6;
+    grid-row: 5;
+  }
+
+  .cm-editor .cm-search button[name="close"] {
+    grid-column: 5;
+    grid-row: 1;
+  }
 }
 
 .cm-editor .cm-searchMatch {

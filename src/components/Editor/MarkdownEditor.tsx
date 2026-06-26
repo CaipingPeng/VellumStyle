@@ -62,6 +62,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     const lastDocumentKeyRef = useRef<string | null>(documentKey);
     const compositionStartValueRef = useRef<string | null>(null);
     const onChangeRef = useRef(onChange);
+    const editorHostRef = useRef<HTMLDivElement | null>(null);
 
     latestPropValueRef.current = value;
     onChangeRef.current = onChange;
@@ -346,7 +347,107 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
 
     const setEditorContainer = useCallback((element: HTMLDivElement | null) => {
       setContainer(element);
+      editorHostRef.current = element;
     }, [setContainer]);
+
+    // 让 CodeMirror 搜索/替换浮层可在编辑区内随用随拖：注入一个拖拽手柄，仅修改定位，
+    // 不触碰 CodeMirror 的搜索/替换命令与按钮事件绑定，避免引入功能回归。
+    useEffect(() => {
+      const host = editorHostRef.current;
+      if (!host) return;
+      let panel: HTMLElement | null = null;
+
+      const onPointerDown = (event: PointerEvent) => {
+        const handle = event.currentTarget as HTMLElement;
+        if (!panel) return;
+        const panelEl = panel;
+        event.preventDefault();
+        const parent = panel.offsetParent as HTMLElement | null;
+        if (!parent) return;
+        const parentRect = parent.getBoundingClientRect();
+        const panelRect = panel.getBoundingClientRect();
+        const startLeft = panelRect.left - parentRect.left;
+        const startTop = panelRect.top - parentRect.top;
+        // 切换为显式定位并移除居中 transform，以便自由拖动。
+        panelEl.style.transform = "none";
+        panelEl.style.left = `${startLeft}px`;
+        panelEl.style.top = `${startTop}px`;
+        const originX = event.clientX;
+        const originY = event.clientY;
+        try {
+          handle.setPointerCapture(event.pointerId);
+        } catch {
+          // 捕获失败时拖动仍可由现有监听兜底
+        }
+        const clamp = (left: number, top: number) => {
+          const maxLeft = Math.max(parent.clientWidth - panelEl.offsetWidth, 0);
+          const maxTop = Math.max(parent.clientHeight - panelEl.offsetHeight, 0);
+          panelEl.style.left = `${Math.min(Math.max(left, 0), maxLeft)}px`;
+          panelEl.style.top = `${Math.min(Math.max(top, 0), maxTop)}px`;
+        };
+        const onMove = (ev: PointerEvent) => {
+          clamp(startLeft + (ev.clientX - originX), startTop + (ev.clientY - originY));
+        };
+        const onUp = (ev: PointerEvent) => {
+          try {
+            handle.releasePointerCapture(ev.pointerId);
+          } catch {
+            // noop
+          }
+          handle.removeEventListener("pointermove", onMove);
+          handle.removeEventListener("pointerup", onUp);
+          handle.removeEventListener("pointercancel", onUp);
+        };
+        handle.addEventListener("pointermove", onMove);
+        handle.addEventListener("pointerup", onUp);
+        handle.addEventListener("pointercancel", onUp);
+      };
+
+      const ensureHandle = () => {
+        const p = host.querySelector<HTMLElement>(".cm-panel.cm-search");
+        if (!p) {
+          panel = null;
+          return;
+        }
+        panel = p;
+        // 每次注入都用本侧闭包的 onPointerDown，覆盖 StrictMode 重挂载等情况。
+        p.querySelector(".od-search-drag-handle")?.remove();
+        const handle = document.createElement("div");
+        handle.className = "od-search-drag-handle";
+        handle.setAttribute("role", "button");
+        handle.setAttribute("aria-label", "拖动查找替换面板");
+        const grip = document.createElement("span");
+        grip.className = "od-grip";
+        handle.appendChild(grip);
+        p.prepend(handle);
+        handle.addEventListener("pointerdown", onPointerDown);
+      };
+
+      const onMutation = (records: MutationRecord[]) => {
+        for (const record of records) {
+          record.addedNodes.forEach((node) => {
+            if (node.nodeType !== Node.ELEMENT_NODE) return;
+            const el = node as HTMLElement;
+            if (el.classList.contains("cm-panel") || el.querySelector(".cm-panel.cm-search")) {
+              ensureHandle();
+            }
+          });
+        }
+      };
+
+      const editor = host.querySelector<HTMLElement>(".cm-editor");
+      const observer = new MutationObserver(onMutation);
+      observer.observe(editor ?? host, {childList: true, subtree: true});
+      ensureHandle();
+
+      return () => {
+        observer.disconnect();
+        const handle = panel?.querySelector(".od-search-drag-handle") as HTMLElement | null;
+        if (handle) {
+          handle.removeEventListener("pointerdown", onPointerDown);
+        }
+      };
+    }, []);
 
     return (
       <div
