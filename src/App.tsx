@@ -10,6 +10,7 @@ import DocTree from "./components/DocTree/DocTree.tsx";
 import OutlineNav from "./components/Outline/OutlineNav.tsx";
 import UpdatePromptDialog from "./components/Update/UpdatePromptDialog.tsx";
 import IpChangedDialog from "./components/Update/IpChangedDialog.tsx";
+import ImageMaterialPickerDialog from "./components/Upload/ImageMaterialPickerDialog.tsx";
 import IconButton from "./components/ui/IconButton.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
 import {toast} from "./components/Toast/toast.ts";
@@ -91,6 +92,7 @@ export default function App() {
   const [updateMessage, setUpdateMessage] = useState("");
   const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null);
   const [ipChanged, setIpChanged] = useState<{previousIp: string; currentIp: string} | null>(null);
+  const [imageMaterialPickerOpen, setImageMaterialPickerOpen] = useState(false);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
   const outlineItems = useMemo(() => parseMarkdownOutline(content), [content]);
@@ -125,6 +127,18 @@ export default function App() {
       handleUploadError(e);
     }
   };
+
+  const handleOpenImageMaterialPicker = useCallback(() => {
+    setImageMaterialPickerOpen(true);
+  }, []);
+
+  const handleNeedSettings = useCallback(() => {
+    setSettingsOpen(true);
+  }, []);
+
+  const handlePickMaterialImage = useCallback((url: string) => {
+    editorRef.current?.insertAtCursor(`\n![](${url})\n`);
+  }, []);
 
   const handleOutlineJump = useCallback((line: number) => {
     setActiveOutlineLine(line);
@@ -433,6 +447,7 @@ export default function App() {
             editorRef={editorRef}
             onPickFile={handleUploadFile}
             onPickLocal={handleUploadLocal}
+            onOpenMaterialLibrary={handleOpenImageMaterialPicker}
           />
         </div>
         <MainToolbar
@@ -513,6 +528,12 @@ export default function App() {
         previousIp={ipChanged?.previousIp ?? ""}
         currentIp={ipChanged?.currentIp ?? ""}
         onClose={() => setIpChanged(null)}
+      />
+      <ImageMaterialPickerDialog
+        open={imageMaterialPickerOpen}
+        onClose={() => setImageMaterialPickerOpen(false)}
+        onPick={handlePickMaterialImage}
+        onNeedSettings={handleNeedSettings}
       />
       <Toaster />
     </div>

@@ -1,4 +1,5 @@
-import {useEffect, useRef, type ReactNode} from "react";
+import {useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode} from "react";
+import {createPortal} from "react-dom";
 import {AnimatePresence, motion} from "framer-motion";
 
 interface Props {
@@ -13,11 +14,45 @@ interface Props {
 
 export default function Menu({open, onClose, trigger, children, minWidth = 120, align = "start"}: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({position: "fixed", top: 0, left: 0, minWidth});
+
+  useLayoutEffect(() => {
+    if (!open || !wrapRef.current) return;
+
+    const updatePosition = () => {
+      const rect = wrapRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const base: CSSProperties = {
+        position: "fixed",
+        top: rect.bottom + 4,
+        minWidth,
+      };
+
+      if (align === "end") {
+        base.right = Math.max(8, window.innerWidth - rect.right);
+      } else {
+        base.left = Math.max(8, rect.left);
+      }
+
+      setMenuStyle(base);
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [align, minWidth, open]);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) onClose();
+      const target = e.target as Node;
+      if (!wrapRef.current?.contains(target) && !menuRef.current?.contains(target)) onClose();
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
@@ -26,23 +61,24 @@ export default function Menu({open, onClose, trigger, children, minWidth = 120, 
   return (
     <div ref={wrapRef} className="relative">
       {trigger}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            className={[
-              "absolute top-[34px] z-10 overflow-hidden rounded-sm border border-border bg-bg shadow-md",
-              align === "end" ? "right-0" : "left-0",
-            ].join(" ")}
-            style={{minWidth}}
-            initial={{opacity: 0, scale: 0.96, y: -4}}
-            animate={{opacity: 1, scale: 1, y: 0}}
-            exit={{opacity: 0, scale: 0.96, y: -4}}
-            transition={{duration: 0.13, ease: [0.16, 1, 0.3, 1]}}
-          >
-            {children}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {createPortal(
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              ref={menuRef}
+              className="z-[2100] overflow-hidden rounded-sm border border-border bg-bg shadow-md"
+              style={menuStyle}
+              initial={{opacity: 0, scale: 0.96, y: -4}}
+              animate={{opacity: 1, scale: 1, y: 0}}
+              exit={{opacity: 0, scale: 0.96, y: -4}}
+              transition={{duration: 0.13, ease: [0.16, 1, 0.3, 1]}}
+            >
+              {children}
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
   );
 }

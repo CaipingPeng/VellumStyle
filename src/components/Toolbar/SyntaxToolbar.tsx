@@ -13,6 +13,7 @@ interface Props {
   editorRef: RefObject<MarkdownEditorHandle>;
   onPickFile: (file: File) => Promise<void>;
   onPickLocal: (path: string) => Promise<void>;
+  onOpenMaterialLibrary: () => void;
 }
 
 const ICON = 16;
@@ -21,7 +22,7 @@ function Separator() {
   return <div className="mx-1 h-5 w-px bg-border" />;
 }
 
-export default function SyntaxToolbar({editorRef, onPickFile, onPickLocal}: Props) {
+export default function SyntaxToolbar({editorRef, onPickFile, onPickLocal, onOpenMaterialLibrary}: Props) {
   const [headingOpen, setHeadingOpen] = useState(false);
   const ed = () => editorRef.current;
   const wrap = (b: string, a: string, ph: string) => () => ed()?.wrapSelection(b, a, ph);
@@ -41,7 +42,12 @@ export default function SyntaxToolbar({editorRef, onPickFile, onPickLocal}: Prop
       <IconButton title="删除线" onClick={wrap("~~", "~~", "删除文本")}><Strikethrough size={ICON} /></IconButton>
       <IconButton title="行内代码" onClick={wrap("`", "`", "代码")}><Code size={ICON} /></IconButton>
       <IconButton title="链接" onClick={() => ed()?.insertLink()}><Link size={ICON} /></IconButton>
-      <UploadButton display="icon" onPickFile={onPickFile} onPickLocal={onPickLocal} />
+      <UploadButton
+        display="icon"
+        onPickFile={onPickFile}
+        onPickLocal={onPickLocal}
+        onOpenMaterialLibrary={onOpenMaterialLibrary}
+      />
       <Separator />
 
       <Menu

@@ -4729,7 +4729,7 @@ checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
 name = "vellumstyle"
-version = "1.6.2"
+version = "1.6.3"
 dependencies = [
  "base64 0.22.1",
  "http",
@@ -5819,4 +5819,3 @@ checksum = "29ce2c8a9384ad323cf564b67da86e21d3cfdff87908bc1223ed5c99bc792713"
 dependencies = [
  "zune-core",
 ]
-
