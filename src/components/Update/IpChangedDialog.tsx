@@ -13,7 +13,7 @@ interface Props {
 }
 
 const STEPS = [
-  {label: "登录", emphasis: "微信公众平台"},
+  {label: "登录", emphasis: "微信开发者平台"},
   {label: "右上角头像 → 账号管理", emphasis: ""},
   {label: "公众号 → 详情页", emphasis: ""},
   {label: "基础信息 → IP 白名单", emphasis: ""},
