@@ -140,6 +140,30 @@ test("预览滚动容器提供滚动条样式挂点", async () => {
   assert.match(source, /className="editor-preview-scrollbar"/);
 });
 
+test("图片缩放手柄使用低遮挡角标、透明热区和拖拽反馈", async () => {
+  const css = await readFile(new URL("./globals.css", import.meta.url), "utf8");
+  const source = await readFile(new URL("../components/Preview/Preview.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /resizingHandle/);
+  assert.match(source, /vs-image-resize-size-badge/);
+  assert.match(source, /widthPercent/);
+  assert.match(source, /is-resizing/);
+
+  assert.match(cssRule(css, ".vs-image-resize-overlay"), /border:\s*1px solid rgba\(94,\s*106,\s*210,\s*0\.78\)/);
+  assert.match(cssRule(css, ".vs-image-resize-overlay"), /box-shadow:[\s\S]*0 0 0 5px rgba\(94,\s*106,\s*210,\s*0\.08\)/);
+  assert.match(cssRule(css, ".vs-image-resize-overlay.is-resizing"), /border-color:\s*var\(--accent-hover\)/);
+  assert.match(css, /\.vs-image-resize-size-badge/);
+  assert.match(cssRule(css, ".vs-image-resize-handle"), /width:\s*32px/);
+  assert.match(cssRule(css, ".vs-image-resize-handle"), /height:\s*32px/);
+  assert.match(cssRule(css, ".vs-image-resize-handle"), /background:\s*transparent/);
+  assert.match(css, /\.vs-image-resize-handle::before/);
+  assert.match(cssRule(css, ".vs-image-resize-handle::before"), /width:\s*14px/);
+  assert.match(cssRule(css, ".vs-image-resize-handle-nw::before"), /border-top-width:\s*2px/);
+  assert.match(cssRule(css, ".vs-image-resize-handle-nw::before"), /border-left-width:\s*2px/);
+  assert.match(cssRule(css, ".vs-image-resize-handle-se::before"), /border-right-width:\s*2px/);
+  assert.match(cssRule(css, ".vs-image-resize-handle-se::before"), /border-bottom-width:\s*2px/);
+});
+
 test("MathJax 行间公式有静态居中样式兜底", async () => {
   const css = await readFile(new URL("./globals.css", import.meta.url), "utf8");
 

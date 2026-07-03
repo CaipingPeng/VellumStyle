@@ -44,6 +44,7 @@ interface ImageResizeOverlay {
   top: number;
   width: number;
   height: number;
+  widthPercent: number;
 }
 
 function lineAnchors(scroller: HTMLElement, selector: string): LineAnchor[] {
@@ -92,6 +93,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
   ({content, markdownThemeId, onResizeImage}, ref) => {
     const [html, setHtml] = useState("");
     const [imageOverlay, setImageOverlay] = useState<ImageResizeOverlay | null>(null);
+    const [resizingHandle, setResizingHandle] = useState<ResizeHandle | null>(null);
     const timer = useRef<number | undefined>(undefined);
     const scrollRef = useRef<HTMLDivElement>(null);
     const articleBoxRef = useRef<HTMLDivElement>(null);
@@ -154,6 +156,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
         hoverEl.current = null;
         selectedEl.current = null;
         setImageOverlay(null);
+        setResizingHandle(null);
       }, RENDER_THROTTLE_MS);
       return () => {
         if (timer.current) {
@@ -222,6 +225,10 @@ const Preview = forwardRef<PreviewHandle, Props>(
       if (imageRect.width <= 0 || imageRect.height <= 0) {
         return null;
       }
+      const widthPercent = Math.min(
+        Math.max(Math.round((imageRect.width / Math.max(imageContainerWidth(image), 1)) * 100), 1),
+        100,
+      );
       return {
         image,
         imageIndex: index,
@@ -229,6 +236,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
         top: imageRect.top - boxRect.top,
         width: imageRect.width,
         height: imageRect.height,
+        widthPercent,
       };
     }
 
@@ -286,6 +294,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
       const image = target.closest("img[data-vs-image-index]") as HTMLImageElement | null;
       if (!image) {
         setImageOverlay(null);
+        setResizingHandle(null);
         return false;
       }
       const overlay = imageResizeOverlayFor(image);
@@ -299,6 +308,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
       }
       event.preventDefault();
       event.stopPropagation();
+      setResizingHandle(handle);
 
       const image = imageOverlay.image;
       const startX = event.clientX;
@@ -338,6 +348,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
         document.removeEventListener("pointermove", onMove);
         document.removeEventListener("pointerup", onUp);
         document.removeEventListener("pointercancel", onUp);
+        setResizingHandle(null);
         const percent = Math.min(Math.max(Math.round((nextWidth / Math.max(imageContainerWidth(image), 1)) * 100), 1), 100);
         onResizeImage(imageOverlay.imageIndex, {width: `${percent}%`});
       };
@@ -356,7 +367,9 @@ const Preview = forwardRef<PreviewHandle, Props>(
 
     function onMouseLeave() {
       replaceClass(hoverEl, null, "preview-edit-hover");
-      setImageOverlay(null);
+      if (!resizingHandle) {
+        setImageOverlay(null);
+      }
     }
 
     // 点击预览元素 → 识别 model id → 打开面板并保留选中高亮
@@ -403,6 +416,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
           {imageOverlay && (
             <ImageResizeHandles
               overlay={imageOverlay}
+              resizingHandle={resizingHandle}
               onPointerDown={startImageResize}
             />
           )}
@@ -414,9 +428,11 @@ const Preview = forwardRef<PreviewHandle, Props>(
 
 function ImageResizeHandles({
   overlay,
+  resizingHandle,
   onPointerDown,
 }: {
   overlay: ImageResizeOverlay;
+  resizingHandle: ResizeHandle | null;
   onPointerDown: (handle: ResizeHandle, event: React.PointerEvent<HTMLElement>) => void;
 }) {
   function handleFromPointer(event: React.PointerEvent<HTMLElement>): ResizeHandle | null {
@@ -442,7 +458,7 @@ function ImageResizeHandles({
 
   return (
     <div
-      className="vs-image-resize-overlay"
+      className={`vs-image-resize-overlay${resizingHandle ? " is-resizing" : ""}`}
       style={{
         left: overlay.left,
         top: overlay.top,
@@ -457,12 +473,17 @@ function ImageResizeHandles({
         }
       }}
     >
+      <div className="vs-image-resize-size-badge">
+        <span>{overlay.widthPercent}%</span>
+        <span className="vs-image-resize-size-badge-divider" />
+        <span>保持比例</span>
+      </div>
       {(["nw", "ne", "sw", "se"] as ResizeHandle[]).map((handle) => (
         <button
           key={handle}
           type="button"
           data-resize-handle={handle}
-          className={`vs-image-resize-handle vs-image-resize-handle-${handle}`}
+          className={`vs-image-resize-handle vs-image-resize-handle-${handle}${resizingHandle === handle ? " is-active" : ""}`}
           tabIndex={-1}
         />
       ))}

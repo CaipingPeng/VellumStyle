@@ -609,45 +609,169 @@ body {
   position: absolute;
   z-index: 60;
   box-sizing: border-box;
-  border: 1px solid var(--accent);
+  border: 1px solid rgba(94, 106, 210, 0.78);
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.86),
+    0 0 0 5px rgba(94, 106, 210, 0.08);
   pointer-events: auto;
+  transition:
+    border-color 130ms var(--ease),
+    box-shadow 130ms var(--ease);
+}
+
+.vs-image-resize-overlay.is-resizing {
+  border-color: var(--accent-hover);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.92),
+    0 0 0 6px rgba(94, 106, 210, 0.12);
+}
+
+.vs-image-resize-size-badge {
+  position: absolute;
+  top: -38px;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(28, 28, 36, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 8px 22px rgba(20, 20, 30, 0.12);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(4px);
+  transition:
+    opacity 130ms var(--ease),
+    transform 130ms var(--ease);
+  white-space: nowrap;
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+}
+
+.vs-image-resize-overlay:hover .vs-image-resize-size-badge,
+.vs-image-resize-overlay.is-resizing .vs-image-resize-size-badge {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.vs-image-resize-size-badge-divider {
+  width: 1px;
+  height: 12px;
+  background: var(--border-strong);
+}
+
+.vs-image-resize-size-badge span:last-child {
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .vs-image-resize-handle {
   position: absolute;
   box-sizing: border-box;
-  width: 12px;
-  height: 12px;
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: var(--shadow-sm);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   pointer-events: auto;
   touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vs-image-resize-handle::before {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--accent);
+  border-style: solid;
+  border-width: 0;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.92),
+    0 4px 10px rgba(20, 20, 30, 0.14);
+  transition:
+    background-color 130ms var(--ease),
+    border-color 130ms var(--ease),
+    box-shadow 130ms var(--ease),
+    transform 130ms var(--ease);
+}
+
+.vs-image-resize-handle:hover::before,
+.vs-image-resize-handle:focus-visible::before,
+.vs-image-resize-handle.is-active::before {
+  border-color: var(--accent-hover);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 0 0 3px rgba(94, 106, 210, 0.16),
+    0 8px 18px rgba(20, 20, 30, 0.18);
+  transform: scale(1.08);
+}
+
+.vs-image-resize-handle:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 999px;
 }
 
 .vs-image-resize-handle-nw {
-  top: -6px;
-  left: -6px;
+  top: -16px;
+  left: -16px;
   cursor: nwse-resize;
+}
+
+.vs-image-resize-handle-nw::before {
+  top: 15px;
+  left: 15px;
+  border-top-width: 2px;
+  border-left-width: 2px;
 }
 
 .vs-image-resize-handle-ne {
-  top: -6px;
-  right: -6px;
+  top: -16px;
+  right: -16px;
   cursor: nesw-resize;
+}
+
+.vs-image-resize-handle-ne::before {
+  top: 15px;
+  right: 15px;
+  border-top-width: 2px;
+  border-right-width: 2px;
 }
 
 .vs-image-resize-handle-sw {
-  bottom: -6px;
-  left: -6px;
+  bottom: -16px;
+  left: -16px;
   cursor: nesw-resize;
 }
 
+.vs-image-resize-handle-sw::before {
+  bottom: 15px;
+  left: 15px;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+}
+
 .vs-image-resize-handle-se {
-  right: -6px;
-  bottom: -6px;
+  right: -16px;
+  bottom: -16px;
   cursor: nwse-resize;
+}
+
+.vs-image-resize-handle-se::before {
+  right: 15px;
+  bottom: 15px;
+  border-right-width: 2px;
+  border-bottom-width: 2px;
 }
 
 .update-release-notes {
