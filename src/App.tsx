@@ -16,6 +16,7 @@ import Toaster from "./components/Toast/Toaster.tsx";
 import {toast} from "./components/Toast/toast.ts";
 import {useStore, getThemeById, flushSave} from "./store/index.ts";
 import {getCodeThemeById} from "./markdown/codeThemes.ts";
+import {formatMarkdownImage, replaceMarkdownImageSizeByIndex} from "./markdown/imageMarkdown.ts";
 import {getActiveOutlineLine, parseMarkdownOutline} from "./utils/outline.ts";
 import {loadAllThemes} from "./themes/loader.ts";
 import {defaultMarkdownTheme} from "./themes/index.ts";
@@ -98,7 +99,7 @@ export default function App() {
   const outlineItems = useMemo(() => parseMarkdownOutline(content), [content]);
 
   const insertUploadedImage = (url: string) => {
-    editorRef.current?.insertAtCursor(`\n![](${url})\n`);
+    editorRef.current?.insertAtCursor(`\n${formatMarkdownImage({alt: "", url})}\n`);
   };
 
   const handleUploadError = (e: unknown) => {
@@ -137,11 +138,19 @@ export default function App() {
   }, []);
 
   const handlePickMaterialImage = useCallback((url: string) => {
-    editorRef.current?.insertAtCursor(`\n![](${url})\n`);
+    editorRef.current?.insertAtCursor(`\n${formatMarkdownImage({alt: "", url})}\n`);
   }, []);
+
+  const handleResizePreviewImage = useCallback((imageIndex: number, size: {width: string}) => {
+    const result = replaceMarkdownImageSizeByIndex(useStore.getState().content, imageIndex, size);
+    if (result.changed) {
+      setContent(result.markdown);
+    }
+  }, [setContent]);
 
   const handleOutlineJump = useCallback((line: number) => {
     setActiveOutlineLine(line);
+    editorRef.current?.scrollToLine(line);
     previewRef.current?.scrollToLine(line);
   }, []);
 
@@ -483,6 +492,7 @@ export default function App() {
               ref={previewRef}
               content={content}
               markdownThemeId={markdownThemeId}
+              onResizeImage={handleResizePreviewImage}
             />
           </div>
           <StylePanel />

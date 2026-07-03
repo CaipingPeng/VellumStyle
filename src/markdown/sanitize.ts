@@ -77,6 +77,7 @@ const GLOBAL_ATTRIBUTES = [
   "data-line",
   "data-mermaid-source",
   "data-tool",
+  "data-vs-image-index",
   "id",
   "role",
   "style",

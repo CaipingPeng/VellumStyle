@@ -2,10 +2,10 @@ import {forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef
 import {useCodeMirror} from "@uiw/react-codemirror";
 import {markdown, markdownLanguage} from "@codemirror/lang-markdown";
 import {languages} from "@codemirror/language-data";
-import {EditorState, Prec} from "@codemirror/state";
-import {EditorView, keymap} from "@codemirror/view";
+import {Compartment, EditorState, Prec, StateEffect, StateField} from "@codemirror/state";
+import {EditorView, keymap, ViewPlugin} from "@codemirror/view";
 import {undo, redo} from "@codemirror/commands";
-import {openSearchPanel, search} from "@codemirror/search";
+import {openSearchPanel, search, searchPanelOpen} from "@codemirror/search";
 import {
   wrapSelection as wrapSel,
   insertLink as insLink,
@@ -44,6 +44,98 @@ interface Props {
   onChange: (value: string) => void;
   // 粘贴图片时触发；返回的 Promise 完成后编辑器无需额外处理（插入由回调内部完成）。
   onPasteImage?: (file: File) => void;
+}
+
+const searchCompartment = new Compartment();
+const searchLoadedEffect = StateEffect.define<boolean>();
+const searchLoadedField = StateField.define<boolean>({
+  create: () => false,
+  update(value, tr) {
+    for (const effect of tr.effects) {
+      if (effect.is(searchLoadedEffect)) {
+        return effect.value;
+      }
+    }
+    return value;
+  },
+});
+
+const unloadSearchWhenPanelCloses = ViewPlugin.fromClass(class {
+  private unloadFrame = 0;
+
+  constructor(private readonly view: EditorView) {}
+
+  update() {
+    if (this.view.state.field(searchLoadedField, false) && !searchPanelOpen(this.view.state)) {
+      this.scheduleUnload();
+    } else {
+      this.cancelUnload();
+    }
+  }
+
+  destroy() {
+    this.cancelUnload();
+  }
+
+  private scheduleUnload() {
+    if (this.unloadFrame) {
+      return;
+    }
+    this.unloadFrame = requestAnimationFrame(() => {
+      this.unloadFrame = 0;
+      if (!this.view.state.field(searchLoadedField, false) || searchPanelOpen(this.view.state)) {
+        return;
+      }
+      this.view.dispatch({
+        effects: [
+          searchCompartment.reconfigure([]),
+          searchLoadedEffect.of(false),
+        ],
+      });
+    });
+  }
+
+  private cancelUnload() {
+    if (!this.unloadFrame) {
+      return;
+    }
+    cancelAnimationFrame(this.unloadFrame);
+    this.unloadFrame = 0;
+  }
+});
+
+const localizedSearchExtensions = [
+  search({top: true}),
+  EditorState.phrases.of({
+    Find: "查找",
+    Replace: "替换为",
+    next: "下一个",
+    previous: "上一个",
+    all: "全选",
+    "match case": "区分大小写",
+    regexp: "正则",
+    "by word": "整词",
+    replace: "替换",
+    "replace all": "全部替换",
+    close: "关闭",
+    "current match": "当前匹配",
+    "on line": "位于行",
+    "replaced match on line $": "已替换第 $ 行匹配",
+    "replaced $ matches": "已替换 $ 处匹配",
+  }),
+  unloadSearchWhenPanelCloses,
+];
+
+function openLocalizedSearchPanel(view: EditorView) {
+  if (!view.state.field(searchLoadedField)) {
+    view.dispatch({
+      effects: [
+        searchCompartment.reconfigure(localizedSearchExtensions),
+        searchLoadedEffect.of(true),
+      ],
+    });
+  }
+  return openSearchPanel(view);
 }
 
 // Markdown 编辑器：CodeMirror 6，自动换行、无行号，支持光标插入与粘贴图片。
@@ -197,10 +289,10 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         if (!view) {
           return 0;
         }
-        // 视口顶部像素对应的块行号（CodeMirror 行 1-based，转 0-based 与 data-line 对齐）
-        const top = view.scrollDOM.scrollTop;
-        const blockInfo = view.lineBlockAtHeight(top);
-        return view.state.doc.lineAt(blockInfo.from).number - 1;
+        // CodeMirror 在滚动后未必同步刷新 view.viewport；直接用 scroller 实时像素
+        // 反推行号，避免读到滞后的 viewport.from 把预览拉回旧行号（滚动回弹）。
+        const block = view.lineBlockAtHeight(view.scrollDOM.scrollTop);
+        return view.state.doc.lineAt(block.from).number - 1;
       },
       scrollToLine: (line) => {
         const view = viewRef.current;
@@ -209,7 +301,9 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         }
         const docLine = Math.min(Math.max(line + 1, 1), view.state.doc.lines);
         const pos = view.state.doc.line(docLine).from;
-        view.dispatch({effects: EditorView.scrollIntoView(pos, {y: "start"})});
+        // 直接设滚动容器 scrollTop：同步生效，避免 scrollIntoView 的异步 effect
+        // 在主动方同步窗口外才把编辑器滚到位而被反向同步拉回（回弹）。
+        view.scrollDOM.scrollTop = view.lineBlockAt(pos).top;
       },
     }));
 
@@ -217,25 +311,9 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       () => [
         ...(cspNonce ? [EditorView.cspNonce.of(cspNonce)] : []),
         markdown({base: markdownLanguage, codeLanguages: languages}),
-        search({top: true}),
-        EditorState.phrases.of({
-          Find: "查找",
-          Replace: "替换为",
-          next: "下一个",
-          previous: "上一个",
-          all: "全选",
-          "match case": "区分大小写",
-          regexp: "正则",
-          "by word": "整词",
-          replace: "替换",
-          "replace all": "全部替换",
-          close: "关闭",
-          "current match": "当前匹配",
-          "on line": "位于行",
-          "replaced match on line $": "已替换第 $ 行匹配",
-          "replaced $ matches": "已替换 $ 处匹配",
-        }),
-        Prec.highest(keymap.of([{key: "Ctrl-h", run: openSearchPanel}])),
+        searchLoadedField,
+        searchCompartment.of([]),
+        Prec.highest(keymap.of([{key: "Ctrl-h", run: openLocalizedSearchPanel}])),
         EditorView.lineWrapping,
         // 聚焦时不加任何边框；让内容区撑满高度，使空白区域点击也能定位光标。
         EditorView.theme({

@@ -21,9 +21,23 @@ test("标准 Markdown 脚注定义渲染到脚注区", () => {
 test("图片后紧跟脚注引用时仍渲染图片图注", () => {
   const html = render("![图2：长图注](http://example.com/a.png)\n[^note]\n\n[^note]: 图片来源");
 
-  assert.match(html, /<figure data-line="0"><img src="http:\/\/example\.com\/a\.png" alt=""><figcaption>图2：长图注<sup class="footnote-ref">\[1\]<\/sup><\/figcaption><\/figure>/);
+  assert.match(html, /<figure data-line="0"><img src="http:\/\/example\.com\/a\.png" alt="" data-vs-image-index="0"><figcaption>图2：长图注<sup class="footnote-ref">\[1\]<\/sup><\/figcaption><\/figure>/);
   assert.doesNotMatch(html, /<p data-line="0"><img/);
   assert.match(html, /<span id="fn1" class="footnote-item" style="display:block;"><span class="footnote-num" style="display:inline;width:auto;">\[1\] <\/span>图片来源<\/span>/);
+});
+
+test("Markdown 图片渲染时带稳定图片序号用于预览反向回写", () => {
+  const html = render("![](https://example.com/a.png)\n\n![](https://example.com/b.png =120x60)");
+
+  assert.match(html, /<img src="https:\/\/example\.com\/a\.png" alt="" data-vs-image-index="0"/);
+  assert.match(html, /<img src="https:\/\/example\.com\/b\.png" alt="" width="120" height="60" data-vs-image-index="1"/);
+});
+
+test("百分比图片宽度不写入固定高度，窄视图下保持等比例缩放", () => {
+  const html = render("![](https://example.com/a.png =40%x)");
+
+  assert.match(html, /<img src="https:\/\/example\.com\/a\.png" alt="" width="40%" data-vs-image-index="0"/);
+  assert.doesNotMatch(html, /\sheight=/);
 });
 
 test("普通 Markdown 链接渲染为脚注引用而不是外链", () => {
@@ -32,6 +46,13 @@ test("普通 Markdown 链接渲染为脚注引用而不是外链", () => {
   assert.doesNotMatch(html, /<a\b[^>]*href=/);
   assert.match(html, /项目地址仍然是：<span class="footnote-word">⌈CaipingPeng\/VellumStyle⌋<\/span><sup class="footnote-ref">\[1\]<\/sup>。/);
   assert.match(html, /<span id="fn1" class="footnote-item" style="display:block;"><span class="footnote-num" style="display:inline;width:auto;">\[1\] <\/span>https:\/\/github\.com\/CaipingPeng\/VellumStyle<\/span>/);
+});
+
+test("带 title 的 Markdown 链接也使用同一套取整符号脚注样式", () => {
+  const html = render('这是一个带脚注的[术语](这里是脚注的解释内容 "术语")。');
+
+  assert.match(html, /这是一个带脚注的<span class="footnote-word">⌈术语⌋<\/span><sup class="footnote-ref">\[1\]<\/sup>。/);
+  assert.match(html, /<span id="fn1" class="footnote-item" style="display:block;"><span class="footnote-num" style="display:inline;width:auto;">\[1\] <\/span>术语: <em>这里是脚注的解释内容<\/em><\/span>/);
 });
 
 test("双等号高亮语法渲染为 mark", () => {

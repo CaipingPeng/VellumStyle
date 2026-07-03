@@ -13,6 +13,7 @@ import {ARTICLE_BOX_ID, ARTICLE_ROOT_ID} from "../../articleRoot.ts";
 interface Props {
   content: string;
   markdownThemeId: string;
+  onResizeImage?: (imageIndex: number, size: {width: string}) => void;
 }
 
 export interface PreviewHandle {
@@ -32,6 +33,17 @@ interface LineAnchor {
   element: HTMLElement;
   line: number;
   top: number;
+}
+
+type ResizeHandle = "nw" | "ne" | "sw" | "se";
+
+interface ImageResizeOverlay {
+  image: HTMLImageElement;
+  imageIndex: number;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
 }
 
 function lineAnchors(scroller: HTMLElement, selector: string): LineAnchor[] {
@@ -77,10 +89,12 @@ function activeHeadingLine(scroller: HTMLElement): number | null {
 // 实时预览：注入主题层样式 + 渲染 HTML 到文章根容器，自适应占满预览区宽度。
 // 点击预览元素 → 识别 model id → 打开样式面板。
 const Preview = forwardRef<PreviewHandle, Props>(
-  ({content, markdownThemeId}, ref) => {
+  ({content, markdownThemeId, onResizeImage}, ref) => {
     const [html, setHtml] = useState("");
+    const [imageOverlay, setImageOverlay] = useState<ImageResizeOverlay | null>(null);
     const timer = useRef<number | undefined>(undefined);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const articleBoxRef = useRef<HTMLDivElement>(null);
     const hoverEl = useRef<Element | null>(null);
     const selectedEl = useRef<Element | null>(null);
     const themes = useStore((s) => s.themes);
@@ -139,6 +153,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
         setHtml(reuseRenderedMermaidCharts(renderedHtml, root));
         hoverEl.current = null;
         selectedEl.current = null;
+        setImageOverlay(null);
       }, RENDER_THROTTLE_MS);
       return () => {
         if (timer.current) {
@@ -196,14 +211,152 @@ const Preview = forwardRef<PreviewHandle, Props>(
       }
     }
 
+    function imageResizeOverlayFor(image: HTMLImageElement): ImageResizeOverlay | null {
+      const box = articleBoxRef.current;
+      const index = Number(image.getAttribute("data-vs-image-index"));
+      if (!box || !Number.isInteger(index)) {
+        return null;
+      }
+      const imageRect = image.getBoundingClientRect();
+      const boxRect = box.getBoundingClientRect();
+      if (imageRect.width <= 0 || imageRect.height <= 0) {
+        return null;
+      }
+      return {
+        image,
+        imageIndex: index,
+        left: imageRect.left - boxRect.left,
+        top: imageRect.top - boxRect.top,
+        width: imageRect.width,
+        height: imageRect.height,
+      };
+    }
+
+    function imageContainerWidth(image: HTMLImageElement): number {
+      const rootWidth = document.getElementById(ARTICLE_ROOT_ID)?.getBoundingClientRect().width ?? 0;
+      if (rootWidth > 0) {
+        return rootWidth;
+      }
+      const parentWidth = image.parentElement?.getBoundingClientRect().width ?? 0;
+      return parentWidth > 0 ? parentWidth : image.getBoundingClientRect().width;
+    }
+
+    useEffect(() => {
+      const image = imageOverlay?.image;
+      if (!image) {
+        return;
+      }
+
+      let raf = 0;
+      let timer = 0;
+      const refresh = () => {
+        cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(() => {
+          if (!document.body.contains(image)) {
+            setImageOverlay(null);
+            return;
+          }
+          setImageOverlay(imageResizeOverlayFor(image));
+        });
+      };
+
+      const observer = new ResizeObserver(refresh);
+      if (articleBoxRef.current) {
+        observer.observe(articleBoxRef.current);
+      }
+      observer.observe(image);
+      scrollRef.current?.addEventListener("scroll", refresh, {passive: true});
+      timer = window.setTimeout(refresh, 190);
+      refresh();
+
+      return () => {
+        cancelAnimationFrame(raf);
+        window.clearTimeout(timer);
+        observer.disconnect();
+        scrollRef.current?.removeEventListener("scroll", refresh);
+      };
+      // Rebind only when the selected image element changes; overlay coordinates update inside refresh.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [imageOverlay?.image]);
+
+    function selectResizableImage(target: Element): boolean {
+      if (target.closest(".vs-image-resize-overlay")) {
+        return Boolean(imageOverlay);
+      }
+      const image = target.closest("img[data-vs-image-index]") as HTMLImageElement | null;
+      if (!image) {
+        setImageOverlay(null);
+        return false;
+      }
+      const overlay = imageResizeOverlayFor(image);
+      setImageOverlay(overlay);
+      return Boolean(overlay);
+    }
+
+    function startImageResize(handle: ResizeHandle, event: React.PointerEvent<HTMLElement>) {
+      if (!imageOverlay || !onResizeImage) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+
+      const image = imageOverlay.image;
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const startWidth = imageOverlay.width;
+      const startHeight = imageOverlay.height;
+      const aspect = startHeight / Math.max(startWidth, 1);
+      const containerWidth = imageContainerWidth(image);
+      const maxWidth = Math.max(32, containerWidth);
+      let nextWidth = startWidth;
+      let nextHeight = startHeight;
+
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        // 捕获失败时仍依赖 document 级监听兜底。
+      }
+
+      const resize = (clientX: number, clientY: number) => {
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+        const horizontalDelta = handle.endsWith("e") ? dx : -dx;
+        const verticalDelta = handle.startsWith("s") ? dy / aspect : -dy / aspect;
+        const delta = Math.abs(horizontalDelta) > Math.abs(verticalDelta) ? horizontalDelta : verticalDelta;
+        nextWidth = Math.min(Math.max(Math.round(startWidth + delta), 32), maxWidth);
+        nextHeight = Math.max(1, Math.round(nextWidth * aspect));
+        image.style.width = `${nextWidth}px`;
+        image.style.height = `${nextHeight}px`;
+        const overlay = imageResizeOverlayFor(image);
+        if (overlay) {
+          setImageOverlay(overlay);
+        }
+      };
+
+      const onMove = (ev: PointerEvent) => resize(ev.clientX, ev.clientY);
+      const onUp = () => {
+        document.removeEventListener("pointermove", onMove);
+        document.removeEventListener("pointerup", onUp);
+        document.removeEventListener("pointercancel", onUp);
+        const percent = Math.min(Math.max(Math.round((nextWidth / Math.max(imageContainerWidth(image), 1)) * 100), 1), 100);
+        onResizeImage(imageOverlay.imageIndex, {width: `${percent}%`});
+      };
+
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", onUp);
+      document.addEventListener("pointercancel", onUp);
+    }
+
     function onMouseMove(e: React.MouseEvent) {
       const target = e.target as Element;
       const match = findEditableElement(target);
       replaceClass(hoverEl, match?.element ?? null, "preview-edit-hover");
+      selectResizableImage(target);
     }
 
     function onMouseLeave() {
       replaceClass(hoverEl, null, "preview-edit-hover");
+      setImageOverlay(null);
     }
 
     // 点击预览元素 → 识别 model id → 打开面板并保留选中高亮
@@ -224,9 +377,11 @@ const Preview = forwardRef<PreviewHandle, Props>(
         style={{height: "100%", overflow: "auto", background: mode.width ? "var(--bg-secondary)" : "#fff"}}
       >
         <div
+          ref={articleBoxRef}
           id={ARTICLE_BOX_ID}
           className="vs-theme-fade"
           style={{
+            position: "relative",
             boxSizing: "border-box",
             width: mode.width ? `${mode.width}px` : "100%",
             maxWidth: "100%",
@@ -245,11 +400,75 @@ const Preview = forwardRef<PreviewHandle, Props>(
           ) : (
             <PreviewSkeleton />
           )}
+          {imageOverlay && (
+            <ImageResizeHandles
+              overlay={imageOverlay}
+              onPointerDown={startImageResize}
+            />
+          )}
         </div>
       </div>
     );
   },
 );
+
+function ImageResizeHandles({
+  overlay,
+  onPointerDown,
+}: {
+  overlay: ImageResizeOverlay;
+  onPointerDown: (handle: ResizeHandle, event: React.PointerEvent<HTMLElement>) => void;
+}) {
+  function handleFromPointer(event: React.PointerEvent<HTMLElement>): ResizeHandle | null {
+    const targetHandle = (event.target as HTMLElement).dataset.resizeHandle as ResizeHandle | undefined;
+    if (targetHandle) {
+      return targetHandle;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const corners: Array<{handle: ResizeHandle; x: number; y: number}> = [
+      {handle: "nw", x: 0, y: 0},
+      {handle: "ne", x: rect.width, y: 0},
+      {handle: "sw", x: 0, y: rect.height},
+      {handle: "se", x: rect.width, y: rect.height},
+    ];
+    const nearest = corners
+      .map((corner) => ({...corner, distance: Math.hypot(x - corner.x, y - corner.y)}))
+      .sort((a, b) => a.distance - b.distance)[0];
+    return nearest.distance <= 28 ? nearest.handle : null;
+  }
+
+  return (
+    <div
+      className="vs-image-resize-overlay"
+      style={{
+        left: overlay.left,
+        top: overlay.top,
+        width: overlay.width,
+        height: overlay.height,
+      }}
+      aria-hidden="true"
+      onPointerDown={(event) => {
+        const handle = handleFromPointer(event);
+        if (handle) {
+          onPointerDown(handle, event);
+        }
+      }}
+    >
+      {(["nw", "ne", "sw", "se"] as ResizeHandle[]).map((handle) => (
+        <button
+          key={handle}
+          type="button"
+          data-resize-handle={handle}
+          className={`vs-image-resize-handle vs-image-resize-handle-${handle}`}
+          tabIndex={-1}
+        />
+      ))}
+    </div>
+  );
+}
 
 // 首屏/切文档瞬间文章尚未渲染时的骨架占位
 function PreviewSkeleton() {

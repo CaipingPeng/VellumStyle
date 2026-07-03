@@ -54,9 +54,18 @@ test("保留 mjx-solid 兼容替换", () => {
 });
 
 test("导出前剥离预览编辑辅助 class 但保留业务 class", () => {
-  const html = stripPreviewEditClasses('<h1 class="title preview-edit-hover preview-edit-selected">标题</h1>');
+  const html = stripPreviewEditClasses('<h1 class="title preview-edit-hover preview-edit-selected">标题</h1><img src="a.png" data-vs-image-index="0"><div class="vs-image-resize-overlay"><button></button></div>');
 
-  assert.equal(html, '<h1 class="title">标题</h1>');
+  assert.equal(html, '<h1 class="title">标题</h1><img src="a.png">');
+});
+
+test("导出链接 leaf 外壳继承链接文字样式，避免转换后原位置格式漂移", () => {
+  const html = normalizeLinksForWechat(
+    '<p><a href="https://example.com" style="font-size: 16px; line-height: 1.8; color: red; border-bottom: 1px solid red;">Example</a></p>',
+  );
+
+  assert.match(html, /<span leaf="" style="font-size: 16px; line-height: 1.8; color: red"><a\b/);
+  assert.doesNotMatch(html, /<span leaf=""[^>]*border-bottom/);
 });
 
 test("发布到草稿箱保留列表项 section 包裹，避免微信把冒号后的正文拆到下一行", () => {

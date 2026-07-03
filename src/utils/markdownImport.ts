@@ -5,6 +5,7 @@ import {
   type MediaRef,
   type MediaSourceType,
 } from "./markdownMediaScanner.ts";
+import {formatMarkdownImage} from "../markdown/imageMarkdown.ts";
 
 export type ImportPhase = "reading" | "scanning" | "resolving" | "uploading" | "replacing" | "done";
 
@@ -117,7 +118,7 @@ export async function importMarkdownFile(
         replacements.push({
           start: ref.start,
           end: ref.end,
-          value: ref.replacementMode === "token" ? toObsidianMarkdownImage(uploadedUrl, ref.obsidianMeta) : uploadedUrl,
+          value: replacementValueForRef(ref, uploadedUrl),
         });
       }
     } catch (e) {
@@ -190,6 +191,16 @@ function applyReplacements(content: string, replacements: Replacement[]): string
     .reduce((output, replacement) => {
       return output.slice(0, replacement.start) + replacement.value + output.slice(replacement.end);
     }, content);
+}
+
+function replacementValueForRef(ref: MediaRef, uploadedUrl: string): string {
+  if (ref.syntax === "obsidian-embed") {
+    return toObsidianMarkdownImage(uploadedUrl, ref.obsidianMeta);
+  }
+  if (ref.replacementMode === "token") {
+    return formatMarkdownImage({alt: "", url: uploadedUrl});
+  }
+  return uploadedUrl;
 }
 
 function normalizeRemoteUrl(url: string): string {

@@ -6,6 +6,20 @@ import {inlineMermaidSvgElementStylesForWechat} from "./mermaidExport.ts";
 
 const DISPLAY_MATH_STYLE =
   "display:block;text-align:center;margin:1em 0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch";
+const LINK_LEAF_STYLE_PROPS = new Set([
+  "color",
+  "font-family",
+  "font-size",
+  "font-style",
+  "font-weight",
+  "letter-spacing",
+  "line-height",
+  "text-decoration",
+  "text-decoration-color",
+  "text-decoration-line",
+  "text-decoration-style",
+  "text-decoration-thickness",
+]);
 
 function readStyle(id: string): string {
   const el = document.getElementById(id);
@@ -36,6 +50,18 @@ function appendStyle(attrs: string, style: string): string {
     const current = value?.trim();
     return current ? `${current.replace(/;?\s*$/, ";")}${style}` : style;
   });
+}
+
+function linkLeafStyle(style: string): string {
+  return style
+    .split(";")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => {
+      const name = part.split(":", 1)[0]?.trim().toLowerCase();
+      return LINK_LEAF_STYLE_PROPS.has(name);
+    })
+    .join("; ");
 }
 
 export function normalizeMathJaxForWechat(html: string): string {
@@ -84,6 +110,13 @@ export function normalizeLinksForWechat(html: string): string {
     if (link.parentElement?.getAttribute("leaf") !== "") {
       const leaf = doc.createElement("span");
       leaf.setAttribute("leaf", "");
+      const linkStyle = link.getAttribute("style");
+      if (linkStyle) {
+        const leafStyle = linkLeafStyle(linkStyle);
+        if (leafStyle) {
+          leaf.setAttribute("style", leafStyle);
+        }
+      }
       link.replaceWith(leaf);
       leaf.appendChild(link);
     }
@@ -110,10 +143,24 @@ function isWechatArticleUrl(url: string): boolean {
 }
 
 export function stripPreviewEditClasses(html: string): string {
-  return html.replace(/\sclass=(['"])([\s\S]*?)\1/g, (_match, quote: string, value: string) => {
-    const classes = value.split(/\s+/).filter((cls) => cls && cls !== "preview-edit-hover" && cls !== "preview-edit-selected");
-    return classes.length > 0 ? ` class=${quote}${classes.join(" ")}${quote}` : "";
-  });
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  for (const overlay of Array.from(doc.querySelectorAll(".vs-image-resize-overlay"))) {
+    overlay.remove();
+  }
+  for (const element of Array.from(doc.querySelectorAll("[data-vs-image-index]"))) {
+    element.removeAttribute("data-vs-image-index");
+  }
+  for (const element of Array.from(doc.querySelectorAll("[class]"))) {
+    const classes = (element.getAttribute("class") ?? "")
+      .split(/\s+/)
+      .filter((cls) => cls && cls !== "preview-edit-hover" && cls !== "preview-edit-selected");
+    if (classes.length > 0) {
+      element.setAttribute("class", classes.join(" "));
+    } else {
+      element.removeAttribute("class");
+    }
+  }
+  return doc.body.innerHTML;
 }
 
 function cloneBoxWithWechatSafeMermaid(box: HTMLElement): HTMLElement {

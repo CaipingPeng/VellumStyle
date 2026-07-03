@@ -27,7 +27,7 @@ function renderFootnoteCaption(tokens: Token[], idx: number): string {
 }
 
 function renderFootnoteWord(tokens: Token[], idx: number): string {
-  return '<span class="footnote-word">' + tokens[idx].content + "</span>";
+  return '<span class="footnote-word">⌈' + tokens[idx].content + "⌋</span>";
 }
 
 function renderFootnoteRef(tokens: Token[], idx: number, options: any, env: any, slf: any): string {

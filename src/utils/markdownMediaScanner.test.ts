@@ -20,3 +20,14 @@ test("excludes markdown image titles from the scanned url", () => {
   assert.equal(refs.length, 1);
   assert.equal(refs[0].originalUrl, "./assets/my image.png");
 });
+
+test("html img refs cover the whole tag so imports can normalize to Markdown image syntax", () => {
+  const markdown = '前文\n<img src="http://mmbiz.qpic.cn/a.png" alt="image" style="zoom:50%;" />\n后文';
+
+  const refs = scanMarkdownMedia(markdown);
+
+  assert.equal(refs.length, 1);
+  assert.equal(refs[0].syntax, "html-img");
+  assert.equal(refs[0].replacementMode, "token");
+  assert.equal(markdown.slice(refs[0].start, refs[0].end), '<img src="http://mmbiz.qpic.cn/a.png" alt="image" style="zoom:50%;" />');
+});

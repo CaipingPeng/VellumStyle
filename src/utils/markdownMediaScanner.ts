@@ -116,14 +116,15 @@ function scanHtmlMedia(markdown: string): MediaRef[] {
     const url = match[3];
     const matchStart = match.index ?? 0;
     const urlStart = matchStart + match[0].indexOf(url);
+    const isImage = tag === "img";
     refs.push({
-      start: urlStart,
-      end: urlStart + url.length,
+      start: isImage ? matchStart : urlStart,
+      end: isImage ? matchStart + match[0].length : urlStart + url.length,
       originalUrl: url,
-      mediaType: tag === "img" ? "image" : "video",
+      mediaType: isImage ? "image" : "video",
       sourceType: classifyMediaSource(url),
-      syntax: tag === "img" ? "html-img" : tag === "video" ? "html-video" : "html-source",
-      replacementMode: "url",
+      syntax: isImage ? "html-img" : tag === "video" ? "html-video" : "html-source",
+      replacementMode: isImage ? "token" : "url",
     });
   }
   return refs;

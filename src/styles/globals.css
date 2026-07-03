@@ -605,6 +605,51 @@ body {
   outline: 2px solid var(--accent);
 }
 
+.vs-image-resize-overlay {
+  position: absolute;
+  z-index: 60;
+  box-sizing: border-box;
+  border: 1px solid var(--accent);
+  pointer-events: auto;
+}
+
+.vs-image-resize-handle {
+  position: absolute;
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: var(--shadow-sm);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.vs-image-resize-handle-nw {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+.vs-image-resize-handle-ne {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.vs-image-resize-handle-sw {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
+}
+
+.vs-image-resize-handle-se {
+  right: -6px;
+  bottom: -6px;
+  cursor: nwse-resize;
+}
+
 .update-release-notes {
   color: var(--text-secondary);
   font-size: 13px;

@@ -222,6 +222,9 @@ function imageWithSize(md: MarkdownIt) {
       if (height !== "") {
         attrs.push(["height", height]);
       }
+      const env = state.env as {vsImageIndex?: number};
+      attrs.push(["data-vs-image-index", String(env.vsImageIndex ?? 0)]);
+      env.vsImageIndex = (env.vsImageIndex ?? 0) + 1;
     }
 
     state.pos = pos;
