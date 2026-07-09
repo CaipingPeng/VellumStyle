@@ -19,17 +19,67 @@ export interface ScrollSyncOptions {
   getEditorTopLine: () => number;
   // 把编辑器滚到指定行（0-based）
   scrollEditorToLine: (line: number) => void;
+  // 取编辑器当前 scrollTop。提供后同步使用像素级锚点插值。
+  getEditorScrollTop?: () => number;
+  // 取源码行在编辑器里的像素 top（0-based 行号）。
+  getEditorLineTop?: (line: number) => number;
+  // 取编辑器最大 scrollTop，用作文末虚拟锚点。
+  getEditorMaxScrollTop?: () => number;
+  // 直接滚动编辑器到像素 top。提供后预览→编辑器也使用像素级同步。
+  scrollEditorToTop?: (top: number) => void;
 }
 
 type ScrollSource = "editor" | "preview";
 type ScrollDirection = -1 | 0 | 1;
 
+export interface ScrollPoint {
+  sourceTop: number;
+  targetTop: number;
+}
+
 // 主动方判定：最后一次意图事件后这段时间内认为该侧仍是主动方；
 // 主动方持续滚动时会不断刷新该计时，故只在真正停止滚动后才释放。
 const IDLE_MS = 140;
 
+export function mapScrollTop(points: ScrollPoint[], sourceTop: number): number {
+  const sorted = points
+    .filter((point) => Number.isFinite(point.sourceTop) && Number.isFinite(point.targetTop))
+    .sort((a, b) => a.sourceTop - b.sourceTop);
+
+  if (sorted.length === 0) {
+    return 0;
+  }
+  if (sourceTop <= sorted[0].sourceTop) {
+    return sorted[0].targetTop;
+  }
+
+  let prev = sorted[0];
+  for (let i = 1; i < sorted.length; i++) {
+    const next = sorted[i];
+    if (sourceTop <= next.sourceTop) {
+      if (next.sourceTop === prev.sourceTop) {
+        return next.targetTop;
+      }
+      const ratio = (sourceTop - prev.sourceTop) / (next.sourceTop - prev.sourceTop);
+      return prev.targetTop + ratio * (next.targetTop - prev.targetTop);
+    }
+    prev = next;
+  }
+
+  return sorted[sorted.length - 1].targetTop;
+}
+
 export function createScrollSync(opts: ScrollSyncOptions): {destroy: () => void} {
-  const {editorScroller, previewScroller, getEditorTopLine, scrollEditorToLine} = opts;
+  const {
+    editorScroller,
+    previewScroller,
+    getEditorTopLine,
+    scrollEditorToLine,
+    getEditorScrollTop,
+    getEditorLineTop,
+    getEditorMaxScrollTop,
+    scrollEditorToTop,
+  } = opts;
   let activeSource: ScrollSource | null = null;
   let idleTimer = 0;
   let rafId = 0;
@@ -38,7 +88,8 @@ export function createScrollSync(opts: ScrollSyncOptions): {destroy: () => void}
   let lastEditorScrollTop = editorScroller.scrollTop;
   let lastPreviewScrollTop = previewScroller.scrollTop;
   let lastEditorToPreviewTop: number | null = null;
-  let lastPreviewToEditorLine: number | null = null;
+  let lastPreviewToEditorTop: number | null = null;
+  let cachedPoints: {key: string; points: ScrollPoint[]} | null = null;
 
   const scheduleRaf = (callback: () => void) => {
     cancelAnimationFrame(rafId);
@@ -67,8 +118,12 @@ export function createScrollSync(opts: ScrollSyncOptions): {destroy: () => void}
       editorWheelDirection = 0;
       previewWheelDirection = 0;
       lastEditorToPreviewTop = null;
-      lastPreviewToEditorLine = null;
+      lastPreviewToEditorTop = null;
     }, IDLE_MS);
+  };
+
+  const invalidatePoints = () => {
+    cachedPoints = null;
   };
 
   const wheelDirection = (event: Event): ScrollDirection => {
@@ -94,7 +149,7 @@ export function createScrollSync(opts: ScrollSyncOptions): {destroy: () => void}
     }
     editorWheelDirection = direction;
     previewWheelDirection = 0;
-    lastPreviewToEditorLine = null;
+    lastPreviewToEditorTop = null;
     if (event.type !== "wheel") {
       lastEditorScrollTop = editorScroller.scrollTop;
     }
@@ -107,9 +162,9 @@ export function createScrollSync(opts: ScrollSyncOptions): {destroy: () => void}
       return;
     }
     if (direction && direction !== previewWheelDirection) {
-      lastPreviewToEditorLine = null;
+      lastPreviewToEditorTop = null;
     } else if (!direction) {
-      lastPreviewToEditorLine = null;
+      lastPreviewToEditorTop = null;
     }
     previewWheelDirection = direction;
     editorWheelDirection = 0;
@@ -157,8 +212,48 @@ export function createScrollSync(opts: ScrollSyncOptions): {destroy: () => void}
     return list;
   };
 
+  const maxPreviewScrollTop = () => Math.max(previewScroller.scrollHeight - previewScroller.clientHeight, 0);
+
+  const pointsCacheKey = () => [
+    editorScroller.scrollHeight,
+    editorScroller.clientHeight,
+    previewScroller.scrollHeight,
+    previewScroller.clientHeight,
+  ].join(":");
+
+  const editorPreviewPoints = (): ScrollPoint[] | null => {
+    if (!getEditorLineTop || !getEditorMaxScrollTop) {
+      return null;
+    }
+    const key = pointsCacheKey();
+    if (cachedPoints?.key === key) {
+      return cachedPoints.points;
+    }
+    const points: ScrollPoint[] = [
+      {sourceTop: 0, targetTop: 0},
+      ...anchors().map((anchor) => ({
+        sourceTop: getEditorLineTop(anchor.line),
+        targetTop: anchor.top,
+      })),
+      {sourceTop: getEditorMaxScrollTop(), targetTop: maxPreviewScrollTop()},
+    ];
+    cachedPoints = {key, points};
+    return points;
+  };
+
   // 编辑器 → 预览：按顶部行号在锚点间线性插值出预览 scrollTop。
   const syncEditorToPreview = () => {
+    const points = editorPreviewPoints();
+    if (points && getEditorScrollTop) {
+      const top = mapScrollTop(points, getEditorScrollTop());
+      if (!allowsMonotonicTarget(top, lastEditorToPreviewTop, editorWheelDirection)) {
+        return;
+      }
+      lastEditorToPreviewTop = top;
+      previewScroller.scrollTop = top;
+      return;
+    }
+
     const list = anchors();
     if (list.length === 0) {
       return;
@@ -190,6 +285,23 @@ export function createScrollSync(opts: ScrollSyncOptions): {destroy: () => void}
 
   // 预览 → 编辑器：按预览 scrollTop 反插值出行号，滚编辑器到该行。
   const syncPreviewToEditor = () => {
+    const points = editorPreviewPoints();
+    if (points && scrollEditorToTop) {
+      const top = mapScrollTop(
+        points.map((point) => ({
+          sourceTop: point.targetTop,
+          targetTop: point.sourceTop,
+        })),
+        previewScroller.scrollTop,
+      );
+      if (!allowsMonotonicTarget(top, lastPreviewToEditorTop, previewWheelDirection)) {
+        return;
+      }
+      lastPreviewToEditorTop = top;
+      scrollEditorToTop(top);
+      return;
+    }
+
     const list = anchors();
     if (list.length === 0) {
       return;
@@ -213,10 +325,10 @@ export function createScrollSync(opts: ScrollSyncOptions): {destroy: () => void}
       line = prev.line + ratio * (next.line - prev.line);
     }
     const roundedLine = Math.round(line);
-    if (!allowsMonotonicTarget(roundedLine, lastPreviewToEditorLine, previewWheelDirection)) {
+    if (!allowsMonotonicTarget(roundedLine, lastPreviewToEditorTop, previewWheelDirection)) {
       return;
     }
-    lastPreviewToEditorLine = roundedLine;
+    lastPreviewToEditorTop = roundedLine;
     scrollEditorToLine(roundedLine);
   };
 
@@ -272,6 +384,12 @@ export function createScrollSync(opts: ScrollSyncOptions): {destroy: () => void}
   editorScroller.addEventListener("scroll", onEditorScroll, {passive: true});
   previewScroller.addEventListener("scroll", onPreviewScroll, {passive: true});
 
+  const mutationObserver = new window.MutationObserver(invalidatePoints);
+  mutationObserver.observe(previewScroller, {childList: true, subtree: true});
+  const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(invalidatePoints);
+  resizeObserver?.observe(editorScroller);
+  resizeObserver?.observe(previewScroller);
+
   return {
     destroy() {
       cancelAnimationFrame(rafId);
@@ -282,6 +400,8 @@ export function createScrollSync(opts: ScrollSyncOptions): {destroy: () => void}
       }
       editorScroller.removeEventListener("scroll", onEditorScroll);
       previewScroller.removeEventListener("scroll", onPreviewScroll);
+      mutationObserver.disconnect();
+      resizeObserver?.disconnect();
     },
   };
 }

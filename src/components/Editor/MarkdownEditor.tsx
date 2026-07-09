@@ -34,8 +34,16 @@ export interface MarkdownEditorHandle {
   getScroller: () => HTMLElement | null;
   // 顶部可视行号（0-based，与渲染 data-line 同基准）
   getTopLine: () => number;
+  // 编辑器当前滚动像素位置，供同步滚动做像素级插值
+  getScrollTop: () => number;
+  // 指定源码行在编辑器文档中的像素 top（0-based 行号）
+  getLineTop: (line: number) => number;
+  // 编辑器最大可滚动像素位置
+  getMaxScrollTop: () => number;
   // 滚动编辑器使指定行（0-based）出现在视口顶部
   scrollToLine: (line: number) => void;
+  // 滚动编辑器到指定像素位置
+  scrollToTop: (top: number) => void;
 }
 
 interface Props {
@@ -294,6 +302,20 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         const block = view.lineBlockAtHeight(view.scrollDOM.scrollTop);
         return view.state.doc.lineAt(block.from).number - 1;
       },
+      getScrollTop: () => viewRef.current?.scrollDOM.scrollTop ?? 0,
+      getLineTop: (line) => {
+        const view = viewRef.current;
+        if (!view) {
+          return 0;
+        }
+        const docLine = Math.min(Math.max(line + 1, 1), view.state.doc.lines);
+        const pos = view.state.doc.line(docLine).from;
+        return view.lineBlockAt(pos).top;
+      },
+      getMaxScrollTop: () => {
+        const scroller = viewRef.current?.scrollDOM;
+        return scroller ? Math.max(scroller.scrollHeight - scroller.clientHeight, 0) : 0;
+      },
       scrollToLine: (line) => {
         const view = viewRef.current;
         if (!view) {
@@ -304,6 +326,13 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         // 直接设滚动容器 scrollTop：同步生效，避免 scrollIntoView 的异步 effect
         // 在主动方同步窗口外才把编辑器滚到位而被反向同步拉回（回弹）。
         view.scrollDOM.scrollTop = view.lineBlockAt(pos).top;
+      },
+      scrollToTop: (top) => {
+        const scroller = viewRef.current?.scrollDOM;
+        if (!scroller) {
+          return;
+        }
+        scroller.scrollTop = Math.min(Math.max(top, 0), Math.max(scroller.scrollHeight - scroller.clientHeight, 0));
       },
     }));
 

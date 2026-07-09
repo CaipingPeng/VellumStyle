@@ -428,6 +428,10 @@ export default function App() {
         previewScroller,
         getEditorTopLine: () => editor.getTopLine(),
         scrollEditorToLine: (line) => editor.scrollToLine(line),
+        getEditorScrollTop: () => editor.getScrollTop(),
+        getEditorLineTop: (line) => editor.getLineTop(line),
+        getEditorMaxScrollTop: () => editor.getMaxScrollTop(),
+        scrollEditorToTop: (top) => editor.scrollToTop(top),
       });
     };
     attach();

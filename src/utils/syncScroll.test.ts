@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {afterEach, beforeEach, test} from "node:test";
-import {createScrollSync} from "./syncScroll.ts";
+import {createScrollSync, mapScrollTop} from "./syncScroll.ts";
 
 type RafCallback = FrameRequestCallback;
 
@@ -105,5 +105,74 @@ test("向下滚动编辑器后，CodeMirror 的反向测量修正不应把预览
   flushRaf();
   assert.equal(preview.scrollTop, 1200);
 
+  sync.destroy();
+});
+
+test("mapScrollTop 在相邻锚点之间按像素比例插值", () => {
+  const top = mapScrollTop([
+    {sourceTop: 0, targetTop: 0},
+    {sourceTop: 120, targetTop: 300},
+    {sourceTop: 420, targetTop: 900},
+  ], 270);
+
+  assert.equal(top, 600);
+});
+
+test("编辑器滚动使用像素锚点同步到预览，而不是只按整数行号跳转", () => {
+  const editor = scroller();
+  const preview = scroller();
+  appendAnchor(preview, 0, 0);
+  appendAnchor(preview, 10, 300);
+  appendAnchor(preview, 20, 900);
+  const editorLineTop = new Map([[0, 0], [10, 120], [20, 420]]);
+
+  const sync = createScrollSync({
+    editorScroller: editor,
+    previewScroller: preview,
+    getEditorTopLine: () => 0,
+    scrollEditorToLine: () => {},
+    getEditorScrollTop: () => editor.scrollTop,
+    getEditorLineTop: (line) => editorLineTop.get(line) ?? 0,
+    getEditorMaxScrollTop: () => 4500,
+    scrollEditorToTop: () => {},
+  });
+
+  dispatchWheel(editor, 270);
+  editor.scrollTop = 270;
+  dispatchScroll(editor);
+  flushRaf();
+
+  assert.equal(preview.scrollTop, 600);
+  sync.destroy();
+});
+
+test("预览滚动使用像素锚点反向同步到编辑器", () => {
+  const editor = scroller();
+  const preview = scroller();
+  appendAnchor(preview, 0, 0);
+  appendAnchor(preview, 10, 300);
+  appendAnchor(preview, 20, 900);
+  const editorLineTop = new Map([[0, 0], [10, 120], [20, 420]]);
+  let editorTargetTop = 0;
+
+  const sync = createScrollSync({
+    editorScroller: editor,
+    previewScroller: preview,
+    getEditorTopLine: () => 0,
+    scrollEditorToLine: () => {},
+    getEditorLineTop: (line) => editorLineTop.get(line) ?? 0,
+    getEditorMaxScrollTop: () => 4500,
+    scrollEditorToTop: (top) => {
+      editorTargetTop = top;
+      editor.scrollTop = top;
+    },
+  });
+
+  dispatchWheel(preview, 600);
+  preview.scrollTop = 600;
+  dispatchScroll(preview);
+  flushRaf();
+
+  assert.equal(editorTargetTop, 270);
   sync.destroy();
 });
