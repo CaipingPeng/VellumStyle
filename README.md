@@ -2,7 +2,7 @@
 
 本项目是用rust+tauri构建的桌面微信公众号排版工具。本工具排版仅适用于Markdown成稿的稿件，因此使用本软件的朋友一般需要具备一定的Markdown语法基础。当然，道友能看到本文，相信你已经来到了Github，故不会Markdown是我多虑了。
 
-![文澜排版主界面](assets/readme/hero.png)
+![文澜排版主界面](assets/hero.png)
 
 
 
@@ -32,7 +32,7 @@
 
    - 文章管理：在本地用户目录，针对本软件会创建一个目录用于存档我们写过的文章。如下图左图所示，文章是树形管理的，也就是说你可以像在使用windows文件管理一样在软件内创建文件夹或者Markdown文件。此外，所有文章，文件夹可以拖动管理，方便快速分类整理。
 
-      <img src="assets/image-20260711235322729.png" alt="image-20260711235322729" style="zoom:50%;" /><img src="assets/documents-and-sync.png" alt="多文档管理与文件同步" style="zoom:50%;" />  
+      <img src="assets/documents-and-sync.png" alt="多文档管理与文件同步" style="zoom:50%;" />  
 
    - 云同步：为了满足多设备使用，软件使用坚果云免费的 WebDAV服务，把文件管理目录下的文件树同步到云端目录。在B设备上安装本软件后，配置好坚果云账号信息，即可恢复A设备的所有文章。
 
