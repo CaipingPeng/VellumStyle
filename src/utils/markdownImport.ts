@@ -198,7 +198,12 @@ function replacementValueForRef(ref: MediaRef, uploadedUrl: string): string {
     return toObsidianMarkdownImage(uploadedUrl, ref.obsidianMeta);
   }
   if (ref.replacementMode === "token") {
-    return formatMarkdownImage({alt: "", url: uploadedUrl});
+    return formatMarkdownImage({
+      alt: ref.htmlImageMeta?.alt ?? "",
+      url: uploadedUrl,
+      width: ref.htmlImageMeta?.width,
+      height: ref.htmlImageMeta?.height,
+    });
   }
   return uploadedUrl;
 }

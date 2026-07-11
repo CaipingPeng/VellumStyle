@@ -9,6 +9,12 @@ export interface ObsidianMeta {
   size?: string;
 }
 
+export interface HtmlImageMeta {
+  alt: string;
+  width?: string;
+  height?: string;
+}
+
 export interface MediaRef {
   start: number;
   end: number;
@@ -18,6 +24,7 @@ export interface MediaRef {
   syntax: MediaSyntax;
   replacementMode: ReplacementMode;
   obsidianMeta?: ObsidianMeta;
+  htmlImageMeta?: HtmlImageMeta;
 }
 
 const IMAGE_EXT = /\.(?:jpe?g|png|gif|svg)(?:[?#].*)?$/i;
@@ -125,9 +132,29 @@ function scanHtmlMedia(markdown: string): MediaRef[] {
       sourceType: classifyMediaSource(url),
       syntax: isImage ? "html-img" : tag === "video" ? "html-video" : "html-source",
       replacementMode: isImage ? "token" : "url",
+      htmlImageMeta: isImage ? parseHtmlImageMeta(match[0]) : undefined,
     });
   }
   return refs;
+}
+
+function parseHtmlImageMeta(tag: string): HtmlImageMeta {
+  const alt = htmlAttribute(tag, "alt") ?? "";
+  const width = htmlAttribute(tag, "width");
+  const height = htmlAttribute(tag, "height");
+  if (width !== undefined || height !== undefined) {
+    return {alt, width, height};
+  }
+
+  const style = htmlAttribute(tag, "style") ?? "";
+  const zoom = /(?:^|;)\s*zoom\s*:\s*([^;]+)/i.exec(style)?.[1].trim();
+  return {alt, width: zoom || undefined};
+}
+
+function htmlAttribute(tag: string, name: string): string | undefined {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(`(?:^|\\s)${escapedName}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i").exec(tag);
+  return match ? (match[1] ?? match[2] ?? match[3] ?? "") : undefined;
 }
 
 function scanObsidianEmbeds(markdown: string): MediaRef[] {

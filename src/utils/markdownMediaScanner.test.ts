@@ -31,3 +31,25 @@ test("html img refs cover the whole tag so imports can normalize to Markdown ima
   assert.equal(refs[0].replacementMode, "token");
   assert.equal(markdown.slice(refs[0].start, refs[0].end), '<img src="http://mmbiz.qpic.cn/a.png" alt="image" style="zoom:50%;" />');
 });
+
+test("html img metadata preserves alt and explicit dimensions before zoom", () => {
+  const refs = scanMarkdownMedia(
+    `<img style="zoom:25%" height='120px' alt="图]一" src="./image.png" width=50%>`,
+  );
+
+  assert.equal(refs.length, 1);
+  assert.deepEqual(refs[0].htmlImageMeta, {
+    alt: "图]一",
+    width: "50%",
+    height: "120px",
+  });
+});
+
+test("html img metadata uses zoom as responsive width when dimensions are absent", () => {
+  const refs = scanMarkdownMedia(`<img src="./image.png" style="display:block; zoom: 40%; margin:0">`);
+
+  assert.deepEqual(refs[0].htmlImageMeta, {
+    alt: "",
+    width: "40%",
+  });
+});

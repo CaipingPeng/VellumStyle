@@ -30,7 +30,7 @@ test("importMarkdownFile normalizes html img tags to standard Markdown image syn
   try {
     const result = await importMarkdownFile({markdownPath: "C:\\article.md"});
 
-    assert.equal(result.content, `前文\n![](${uploadedUrl})\n后文`);
+    assert.equal(result.content, `前文\n![image-20260702205417533](${uploadedUrl} =50%x)\n后文`);
     assert.equal(result.totalRefs, 1);
     assert.equal(result.uploadedRemote.length, 1);
     assert.equal(result.uploadedRemote[0].syntax, "html-img");
