@@ -186,3 +186,48 @@ test("clicking the help guide link asks Tauri to open it externally", async () =
     delete tauriWindow.__TAURI_INTERNALS__;
   }
 });
+
+
+test("network helper opens the saved AppID whitelist page", async () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const calls: Array<{cmd: string; args?: Record<string, unknown>}> = [];
+  const tauriWindow = window as typeof window & {
+    __TAURI_INTERNALS__?: {
+      invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
+      transformCallback: () => number;
+    };
+  };
+  tauriWindow.__TAURI_INTERNALS__ = {
+    invoke: (cmd, args) => {
+      calls.push({cmd, args});
+      return Promise.resolve(cmd === "get_config" ? {wechat: {app_id: "wx saved/id", app_secret: "secret"}} : undefined);
+    },
+    transformCallback: () => 0,
+  };
+
+  const {cleanup} = renderSettingsDialog();
+  try {
+    const networkTab = Array.from(document.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("网络辅助"),
+    );
+    assert.ok(networkTab);
+    act(() => networkTab.click());
+
+    const openButton = Array.from(document.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("前往设置白名单"),
+    );
+    assert.ok(openButton, "whitelist shortcut should render");
+    await act(async () => {
+      openButton.click();
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    });
+
+    assert.deepEqual(calls[calls.length - 1], {
+      cmd: "open_external_url",
+      args: {url: "https://developers.weixin.qq.com/console/product/mp/wx%20saved%2Fid?tab1=basicInfo"},
+    });
+  } finally {
+    cleanup();
+    delete tauriWindow.__TAURI_INTERNALS__;
+  }
+});

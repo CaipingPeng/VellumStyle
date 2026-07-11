@@ -1,6 +1,6 @@
 import {type MouseEvent, useEffect, useState} from "react";
 import {invoke} from "@tauri-apps/api/core";
-import {Check, Cloud, Copy, Eye, EyeOff, FolderSync, Info, KeyRound, LockKeyhole, Network, Save, ShieldCheck, UserRound} from "lucide-react";
+import {Check, Cloud, Copy, ExternalLink, Eye, EyeOff, FolderSync, Info, KeyRound, LockKeyhole, Network, Save, ShieldCheck, UserRound} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
@@ -9,6 +9,7 @@ import {copyPlainText} from "../../utils/clipboard.ts";
 import {testSyncConnection} from "../../utils/cloudSync.ts";
 import {isTauriRuntime} from "../../utils/tauriEnv.ts";
 import ReleaseNotesView from "../Update/ReleaseNotesView.tsx";
+import {buildWechatWhitelistUrl} from "../../utils/wechatWhitelist.ts";
 
 interface Props {
   open: boolean;
@@ -167,6 +168,21 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
     setCopyStatus(ok ? "ok" : "fail");
     toast.show(ok ? "出口 IP 已复制" : "复制出口 IP 失败", ok ? "info" : "error");
     window.setTimeout(() => setCopyStatus("idle"), 1800);
+  };
+
+  const handleOpenWhitelistSettings = async () => {
+    try {
+      const cfg = await invoke<AppConfig>("get_config");
+      const url = buildWechatWhitelistUrl(cfg.wechat?.app_id || "");
+      if (isTauriRuntime(window)) {
+        await invoke("open_external_url", {url});
+      } else {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    } catch (e) {
+      const msg = typeof e === "string" ? e : (e as Error)?.message || "打开微信白名单设置失败";
+      toast.show(msg, "error");
+    }
   };
 
   const handleOpenHelpDocument = async (event: MouseEvent<HTMLAnchorElement>) => {
@@ -518,16 +534,27 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
                     {copyStatus === "ok" ? <Check size={14} /> : <Copy size={14} />}
                   </button>
                 </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  state={ipStatus === "loading" ? "loading" : ipStatus === "error" ? "error" : "idle"}
-                  loadingText="获取中…"
-                  onClick={() => void handleFetchOutboundIp()}
-                  className="w-full min-w-0 gap-2 px-2"
-                >
-                  获取出口 IP
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    state={ipStatus === "loading" ? "loading" : ipStatus === "error" ? "error" : "idle"}
+                    loadingText="获取中…"
+                    onClick={() => void handleFetchOutboundIp()}
+                    className="w-full min-w-0 gap-2 px-2"
+                  >
+                    获取出口 IP
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => void handleOpenWhitelistSettings()}
+                    className="w-full min-w-0 gap-2 px-2"
+                  >
+                    <ExternalLink size={14} />
+                    前往设置白名单
+                  </Button>
+                </div>
                 {ipError && <p className="m-0 text-[12px] leading-5 text-danger" role="alert">{ipError}</p>}
               </div>
             </div>

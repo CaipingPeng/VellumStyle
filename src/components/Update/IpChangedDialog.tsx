@@ -1,9 +1,17 @@
 import {useEffect, useRef, useState} from "react";
+import {invoke} from "@tauri-apps/api/core";
 import {createPortal} from "react-dom";
 import {AnimatePresence, motion} from "framer-motion";
-import {AlertTriangle, ArrowRight, Check, Copy, Info, X} from "lucide-react";
+import {AlertTriangle, ArrowRight, Check, Copy, ExternalLink, Info, X} from "lucide-react";
 import Button from "../ui/Button.tsx";
 import {copyPlainText} from "../../utils/clipboard.ts";
+import {buildWechatWhitelistUrl} from "../../utils/wechatWhitelist.ts";
+import {isTauriRuntime} from "../../utils/tauriEnv.ts";
+import {toast} from "../Toast/toast.ts";
+
+interface AppConfig {
+  wechat?: {app_id?: string};
+}
 
 interface Props {
   open: boolean;
@@ -22,6 +30,7 @@ const STEPS = [
 
 export default function IpChangedDialog({open, previousIp, currentIp, onClose}: Props) {
   const [copied, setCopied] = useState(false);
+  const [openingWhitelist, setOpeningWhitelist] = useState(false);
   const copiedTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
@@ -41,6 +50,28 @@ export default function IpChangedDialog({open, previousIp, currentIp, onClose}: 
       setCopied(true);
       if (copiedTimer.current) window.clearTimeout(copiedTimer.current);
       copiedTimer.current = window.setTimeout(() => setCopied(false), 1900);
+    }
+  };
+
+  const handleOpenWhitelist = async () => {
+    if (openingWhitelist) return;
+    setOpeningWhitelist(true);
+    try {
+      const copiedNow = await copyPlainText(currentIp);
+      if (copiedNow) setCopied(true);
+      const cfg = await invoke<AppConfig>("get_config");
+      const url = buildWechatWhitelistUrl(cfg.wechat?.app_id || "");
+      if (isTauriRuntime(window)) {
+        await invoke("open_external_url", {url});
+      } else {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+      if (!copiedNow) toast.show("未能自动复制新出口 IP，请返回后手动复制", "error");
+    } catch (e) {
+      const msg = typeof e === "string" ? e : (e as Error)?.message || "打开微信白名单设置失败";
+      toast.show(msg, "error");
+    } finally {
+      setOpeningWhitelist(false);
     }
   };
 
@@ -154,7 +185,7 @@ export default function IpChangedDialog({open, previousIp, currentIp, onClose}: 
               </Button>
               <Button
                 type="button"
-                variant="primary"
+                variant="secondary"
                 state={copied ? "success" : "idle"}
                 successText={`已复制 ${currentIp}`}
                 onClick={handleCopy}
@@ -162,6 +193,17 @@ export default function IpChangedDialog({open, previousIp, currentIp, onClose}: 
               >
                 <Copy size={14} />
                 复制新出口 IP
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                state={openingWhitelist ? "loading" : "idle"}
+                loadingText="正在打开…"
+                onClick={() => void handleOpenWhitelist()}
+                className="min-w-[132px] gap-1.5"
+              >
+                <ExternalLink size={14} />
+                前往设置白名单
               </Button>
             </div>
           </motion.div>
