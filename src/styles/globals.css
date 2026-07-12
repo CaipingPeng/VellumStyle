@@ -1009,6 +1009,12 @@ html.workspace-is-resizing * {
   background: rgba(31, 34, 41, 0.94);
 }
 
+:root[data-appearance="dark"] .cm-editor .cm-panel.cm-search label {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--text) !important;
+}
+
 :root[data-appearance="dark"] .cm-editor .cm-search input.cm-textfield,
 :root[data-appearance="dark"] .cm-editor .cm-search button.cm-button {
   background: rgba(39, 42, 50, 0.92);

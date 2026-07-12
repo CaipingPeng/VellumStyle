@@ -11,7 +11,7 @@ const cssRule = (css: string, selector: string) => {
 
 const cssRuleLast = (css: string, selector: string) => {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const matches = Array.from(css.matchAll(new RegExp(`${escapedSelector}\\s*\\{([\\s\\S]*?)\\}`, "g")));
+  const matches = Array.from(css.matchAll(new RegExp(`(?:^|\\n)${escapedSelector}\\s*\\{([\\s\\S]*?)\\}`, "g")));
   assert.ok(matches.length > 0, `missing CSS rule for ${selector}`);
   return matches[matches.length - 1][1];
 };
@@ -134,15 +134,18 @@ test("CodeMirror 搜索替换面板使用不挤压正文的浮层工具条", asy
   assert.match(cssRule(css, ".cm-editor .cm-search button[name=\"select\"]"), /justify-content:\s*flex-start/);
 });
 
-test("搜索选项使用随亮暗外观切换的表面色，避免暗色文字失去对比度", async () => {
+test("暗色搜索选项移除灰色按钮外框并保持文字清晰", async () => {
   const css = await readFile(new URL("./globals.css", import.meta.url), "utf8");
   const labelRule = cssRule(css, ".cm-editor .cm-search label");
-  const finalLabelRule = cssRuleLast(css, ".cm-editor .cm-panel.cm-search label");
+  const darkLabelRule = cssRule(
+    css,
+    ':root[data-appearance="dark"] .cm-editor .cm-panel.cm-search label',
+  );
 
-  assert.match(labelRule, /background:\s*var\(--bg-tertiary\)/);
   assert.match(labelRule, /color:\s*var\(--text-secondary\)/);
-  assert.match(finalLabelRule, /background:\s*var\(--bg-tertiary\)\s*!important/);
-  assert.doesNotMatch(finalLabelRule, /rgba\(255,\s*255,\s*255/);
+  assert.match(darkLabelRule, /background:\s*transparent\s*!important/);
+  assert.match(darkLabelRule, /border-color:\s*transparent\s*!important/);
+  assert.match(darkLabelRule, /color:\s*var\(--text\)\s*!important/);
 });
 
 test("预览滚动容器提供滚动条样式挂点", async () => {
