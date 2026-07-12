@@ -3,6 +3,7 @@ import {AnimatePresence, motion, useReducedMotion} from "framer-motion";
 import MarkdownEditor, {type MarkdownEditorHandle} from "./components/Editor/MarkdownEditor.tsx";
 import Preview, {type PreviewHandle} from "./components/Preview/Preview.tsx";
 import PreviewModeToggle from "./components/Preview/PreviewModeToggle.tsx";
+import AppearanceToggle from "./components/Appearance/AppearanceToggle.tsx";
 import SettingsDialog from "./components/Settings/SettingsDialog.tsx";
 import StylePanel from "./components/StylePanel/StylePanel.tsx";
 import MainToolbar from "./components/Toolbar/MainToolbar.tsx";
@@ -43,6 +44,7 @@ import {invoke} from "@tauri-apps/api/core";
 import {getCurrentWindow} from "@tauri-apps/api/window";
 import {ListTree, PanelLeft} from "lucide-react";
 import defaultContent from "./content.md?raw";
+import {applyAppearanceMode} from "./appearance/appearanceMode.ts";
 
 // 取树里第一篇文档路径（深度优先）。
 function flattenFirst(nodes: DocNode[]): string | null {
@@ -88,7 +90,11 @@ function StatusDivider() {
 }
 
 export default function App() {
-  const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, outlineOpen, saveStatus, lastSavedAt, syncStatus, lastSyncedAt, syncMessage, workspaceSplitRatio, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar, toggleOutline, setWorkspaceSplitRatio} = useStore();
+  const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, outlineOpen, saveStatus, lastSavedAt, syncStatus, lastSyncedAt, syncMessage, workspaceSplitRatio, appearanceMode, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar, toggleOutline, setWorkspaceSplitRatio} = useStore();
+  useEffect(() => {
+    applyAppearanceMode(appearanceMode, document.documentElement);
+  }, [appearanceMode]);
+
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [startupUpdatePromptOpen, setStartupUpdatePromptOpen] = useState(false);
   const [availableUpdate, setAvailableUpdate] = useState<AppUpdateCandidate | null>(null);
@@ -579,6 +585,8 @@ export default function App() {
           </span>
           <StatusDivider />
           <PreviewModeToggle variant="status" />
+          <StatusDivider />
+          <AppearanceToggle />
         </div>
       </footer>
 
