@@ -1010,9 +1010,13 @@ html.workspace-is-resizing * {
 }
 
 :root[data-appearance="dark"] .cm-editor .cm-panel.cm-search label {
-  border-color: transparent !important;
-  background: transparent !important;
+  border-color: var(--border-strong) !important;
+  background: rgba(39, 42, 50, 0.92) !important;
   color: var(--text) !important;
+}
+
+:root[data-appearance="dark"] .cm-editor .cm-panel.cm-search label:hover {
+  background: #30333d !important;
 }
 
 :root[data-appearance="dark"] .cm-editor .cm-search input.cm-textfield,

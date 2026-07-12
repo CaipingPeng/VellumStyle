@@ -134,18 +134,21 @@ test("CodeMirror 搜索替换面板使用不挤压正文的浮层工具条", asy
   assert.match(cssRule(css, ".cm-editor .cm-search button[name=\"select\"]"), /justify-content:\s*flex-start/);
 });
 
-test("暗色搜索选项移除灰色按钮外框并保持文字清晰", async () => {
+test("暗色搜索选项与左侧搜索按钮使用相同的表面和悬停效果", async () => {
   const css = await readFile(new URL("./globals.css", import.meta.url), "utf8");
-  const labelRule = cssRule(css, ".cm-editor .cm-search label");
   const darkLabelRule = cssRule(
     css,
     ':root[data-appearance="dark"] .cm-editor .cm-panel.cm-search label',
   );
+  const darkLabelHoverRule = cssRule(
+    css,
+    ':root[data-appearance="dark"] .cm-editor .cm-panel.cm-search label:hover',
+  );
 
-  assert.match(labelRule, /color:\s*var\(--text-secondary\)/);
-  assert.match(darkLabelRule, /background:\s*transparent\s*!important/);
-  assert.match(darkLabelRule, /border-color:\s*transparent\s*!important/);
+  assert.match(darkLabelRule, /border-color:\s*var\(--border-strong\)\s*!important/);
+  assert.match(darkLabelRule, /background:\s*rgba\(39,\s*42,\s*50,\s*0\.92\)\s*!important/);
   assert.match(darkLabelRule, /color:\s*var\(--text\)\s*!important/);
+  assert.match(darkLabelHoverRule, /background:\s*#30333d\s*!important/);
 });
 
 test("预览滚动容器提供滚动条样式挂点", async () => {
