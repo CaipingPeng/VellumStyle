@@ -528,6 +528,7 @@ export default function App() {
                 ref={editorRef}
                 value={content}
                 documentKey={currentDocPath}
+                appearanceMode={appearanceMode}
                 onChange={setContent}
                 onPasteImage={handleUploadFile}
               />

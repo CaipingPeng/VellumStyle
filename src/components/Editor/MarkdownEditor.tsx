@@ -15,6 +15,7 @@ import {
   shouldQueueExternalValueDuringComposition,
 } from "./editing.ts";
 import {getCodeMirrorCspNonce} from "../../utils/cspNonce.ts";
+import type {AppearanceMode} from "../../appearance/appearanceMode.ts";
 
 export interface MarkdownEditorHandle {
   // 在当前光标处插入文本（替换选区）。供工具栏上传按钮调用。
@@ -49,12 +50,26 @@ export interface MarkdownEditorHandle {
 interface Props {
   value: string;
   documentKey?: string | null;
+  appearanceMode: AppearanceMode;
   onChange: (value: string) => void;
   // 粘贴图片时触发；返回的 Promise 完成后编辑器无需额外处理（插入由回调内部完成）。
   onPasteImage?: (file: File) => void;
 }
 
 const searchCompartment = new Compartment();
+const appearanceCompartment = new Compartment();
+
+function createEditorAppearanceExtension(appearanceMode: AppearanceMode) {
+  return EditorView.theme({
+    "&": {backgroundColor: "var(--workspace-panel)", color: "var(--text)"},
+    ".cm-content": {caretColor: "var(--text)"},
+    ".cm-cursor, .cm-dropCursor": {borderLeftColor: "var(--text)"},
+    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
+      backgroundColor: "var(--accent-subtle)",
+    },
+    ".cm-activeLine": {backgroundColor: "var(--editor-active-line)"},
+  }, {dark: appearanceMode === "dark"});
+}
 const searchLoadedEffect = StateEffect.define<boolean>();
 const searchLoadedField = StateField.define<boolean>({
   create: () => false,
@@ -148,8 +163,9 @@ function openLocalizedSearchPanel(view: EditorView) {
 
 // Markdown 编辑器：CodeMirror 6，自动换行、无行号，支持光标插入与粘贴图片。
 const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
-  ({value, documentKey = null, onChange, onPasteImage}, ref) => {
+  ({value, documentKey = null, appearanceMode, onChange, onPasteImage}, ref) => {
     const viewRef = useRef<EditorView | null>(null);
+    const initialAppearanceModeRef = useRef(appearanceMode);
     const cspNonce = useMemo(() => getCodeMirrorCspNonce(), []);
     const composingRef = useRef(false);
     const compositionSettlingRef = useRef(false);
@@ -342,6 +358,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         markdown({base: markdownLanguage, codeLanguages: languages}),
         searchLoadedField,
         searchCompartment.of([]),
+        appearanceCompartment.of(createEditorAppearanceExtension(initialAppearanceModeRef.current)),
         Prec.highest(keymap.of([{key: "Ctrl-h", run: openLocalizedSearchPanel}])),
         EditorView.lineWrapping,
         // 聚焦时不加任何边框；让内容区撑满高度，使空白区域点击也能定位光标。
@@ -416,6 +433,13 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     });
 
     viewRef.current = view ?? null;
+
+    useEffect(() => {
+      if (!view) return;
+      view.dispatch({
+        effects: appearanceCompartment.reconfigure(createEditorAppearanceExtension(appearanceMode)),
+      });
+    }, [appearanceMode, view]);
 
     useEffect(() => {
       const nextDocumentKey = documentKey ?? null;
@@ -564,7 +588,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     return (
       <div
         ref={setEditorContainer}
-        className="cm-theme-light"
+        className={`cm-theme-${appearanceMode}`}
         style={{height: "100%", fontSize: 14}}
       />
     );
