@@ -4,6 +4,23 @@ import {join, resolve} from "node:path";
 import {fileURLToPath, pathToFileURL} from "node:url";
 
 const TEST_FILE_PATTERN = /\.test\.tsx?$/;
+const OPTIONS_WITH_VALUE = new Set([
+  "--experimental-test-isolation",
+  "--test-concurrency",
+  "--test-coverage-branches",
+  "--test-coverage-exclude",
+  "--test-coverage-functions",
+  "--test-coverage-include",
+  "--test-coverage-lines",
+  "--test-global-setup",
+  "--test-isolation",
+  "--test-name-pattern",
+  "--test-reporter",
+  "--test-reporter-destination",
+  "--test-shard",
+  "--test-skip-pattern",
+  "--test-timeout",
+]);
 
 export function collectTestFiles(root) {
   const files = [];
@@ -27,20 +44,56 @@ export function collectTestFiles(root) {
   return files;
 }
 
-function runTests() {
-  const projectRoot = fileURLToPath(new URL("..", import.meta.url));
-  const testFiles = [
-    fileURLToPath(new URL("./run-tests.test.mjs", import.meta.url)),
-    ...collectTestFiles(join(projectRoot, "src")),
-  ];
-  const result = spawnSync(
-    process.execPath,
+export function parseRunnerArguments(args) {
+  const forwardedOptions = [];
+  const explicitFiles = [];
+
+  for (let index = 0; index < args.length; index++) {
+    const argument = args[index];
+    if (argument === "--") {
+      explicitFiles.push(...args.slice(index + 1));
+      break;
+    }
+    if (!argument.startsWith("-")) {
+      explicitFiles.push(argument);
+      continue;
+    }
+
+    forwardedOptions.push(argument);
+    const optionName = argument.split("=", 1)[0];
+    if (!argument.includes("=") && OPTIONS_WITH_VALUE.has(optionName) && index + 1 < args.length) {
+      forwardedOptions.push(args[++index]);
+    }
+  }
+
+  return {forwardedOptions, explicitFiles};
+}
+
+export function runTests(
+  args = process.argv.slice(2),
+  {
+    projectRoot = fileURLToPath(new URL("..", import.meta.url)),
+    executable = process.execPath,
+    collect = collectTestFiles,
+    spawn = spawnSync,
+  } = {},
+) {
+  const {forwardedOptions, explicitFiles} = parseRunnerArguments(args);
+  const testFiles = explicitFiles.length
+    ? explicitFiles.map((file) => resolve(projectRoot, file))
+    : [
+        fileURLToPath(new URL("./run-tests.test.mjs", import.meta.url)),
+        ...collect(join(projectRoot, "src")),
+      ];
+  const result = spawn(
+    executable,
     [
       "--import",
       "tsx",
       "--import",
       pathToFileURL(join(projectRoot, "src", "test", "setupDom.ts")).href,
       "--test",
+      ...forwardedOptions,
       ...testFiles,
     ],
     {cwd: projectRoot, stdio: "inherit"},
