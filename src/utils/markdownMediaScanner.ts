@@ -1,3 +1,5 @@
+import MarkdownIt from "markdown-it";
+
 export type MediaType = "image" | "video";
 export type MediaSourceType = "local" | "remote" | "data" | "blob" | "anchor" | "unsupported" | "empty";
 export type MediaSyntax = "markdown-image" | "markdown-link" | "html-img" | "html-video" | "html-source" | "image-flow" | "obsidian-embed";
@@ -13,6 +15,11 @@ export interface HtmlImageMeta {
   alt: string;
   width?: string;
   height?: string;
+}
+
+interface SourceRange {
+  start: number;
+  end: number;
 }
 
 export interface MediaRef {
@@ -33,14 +40,165 @@ const MARKDOWN_IMAGE_RE = /!\[([^\]\\]*(?:\\.[^\]\\]*)*)\]\(([^)\n]+)\)/g;
 const MARKDOWN_LINK_RE = /(?<!!)\[([^\]\\]*(?:\\.[^\]\\]*)*)\]\(([^)\n]+)\)/g;
 const HTML_MEDIA_RE = /<(img|video|source)\b[^>]*\bsrc\s*=\s*(["'])(.*?)\2[^>]*>/gi;
 const OBSIDIAN_EMBED_RE = /!\[\[([^\]\n]+)\]\]/g;
+const markdownIt = new MarkdownIt({html: true});
 
 export function scanMarkdownMedia(markdown: string): MediaRef[] {
+  const ignoredRanges = findIgnoredCodeRanges(markdown);
   const refs: MediaRef[] = [];
   refs.push(...scanMarkdownImages(markdown));
   refs.push(...scanHtmlMedia(markdown));
   refs.push(...scanObsidianEmbeds(markdown));
   refs.push(...scanMarkdownVideoLinks(markdown));
-  return dedupeRefs(refs).sort((a, b) => a.start - b.start);
+  return dedupeRefs(refs)
+    .filter((ref) => !ignoredRanges.some((range) => overlapsRange(ref, range)))
+    .sort((a, b) => a.start - b.start);
+}
+
+function findIgnoredCodeRanges(markdown: string): SourceRange[] {
+  const tokens = markdownIt.parse(markdown, {});
+  const lineStarts = findLineStarts(markdown);
+  const ranges: SourceRange[] = [];
+
+  for (const token of tokens) {
+    if (!token.map) continue;
+    const tokenRange = sourceRangeFromLineMap(token.map, lineStarts, markdown.length);
+    if (token.type === "fence" || token.type === "code_block") {
+      ranges.push(tokenRange);
+      continue;
+    }
+
+    const source = markdown.slice(tokenRange.start, tokenRange.end);
+    if (token.type === "html_block") {
+      if (/^\s*<pre\b/i.test(token.content)) ranges.push(tokenRange);
+      ranges.push(...shiftRanges(findHtmlCodeRanges(source), tokenRange.start));
+      continue;
+    }
+    if (token.type === "inline") {
+      ranges.push(...shiftRanges(findInlineCodeRanges(source), tokenRange.start));
+      ranges.push(...shiftRanges(findHtmlCodeRanges(source), tokenRange.start));
+    }
+  }
+
+  return mergeRanges(ranges);
+}
+
+function shiftRanges(ranges: SourceRange[], offset: number): SourceRange[] {
+  return ranges.map((range) => ({start: offset + range.start, end: offset + range.end}));
+}
+
+function findHtmlCodeRanges(source: string): SourceRange[] {
+  const tagPattern = /<(\/?)(code|pre)\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
+  const openTags = new Map<string, SourceRange[]>();
+  const ranges: SourceRange[] = [];
+
+  for (const match of source.matchAll(tagPattern)) {
+    const start = match.index ?? 0;
+    if (isEscapedAt(source, start)) continue;
+
+    const tag = match[2].toLowerCase();
+    const stack = openTags.get(tag) ?? [];
+    if (!match[1]) {
+      stack.push({start, end: start + match[0].length});
+      openTags.set(tag, stack);
+      continue;
+    }
+
+    const opener = stack.pop();
+    if (opener) ranges.push({start: opener.start, end: start + match[0].length});
+  }
+
+  return ranges;
+}
+
+function findLineStarts(markdown: string): number[] {
+  const starts = [0];
+  for (let i = 0; i < markdown.length; i++) {
+    if (markdown[i] === "\n") starts.push(i + 1);
+  }
+  return starts;
+}
+
+function sourceRangeFromLineMap(map: [number, number], lineStarts: number[], sourceLength: number): SourceRange {
+  return {
+    start: lineStarts[map[0]] ?? sourceLength,
+    end: lineStarts[map[1]] ?? sourceLength,
+  };
+}
+
+function findInlineCodeRanges(markdown: string): SourceRange[] {
+  const runs: Array<SourceRange & {length: number; escaped: boolean}> = [];
+  const runIndicesByLength = new Map<number, number[]>();
+  let offset = 0;
+  while (offset < markdown.length) {
+    if (markdown[offset] !== "`") {
+      offset++;
+      continue;
+    }
+
+    const start = offset;
+    while (offset < markdown.length && markdown[offset] === "`") offset++;
+    const run = {start, end: offset, length: offset - start, escaped: isEscapedAt(markdown, start)};
+    runs.push(run);
+    const indices = runIndicesByLength.get(run.length) ?? [];
+    indices.push(runs.length - 1);
+    runIndicesByLength.set(run.length, indices);
+  }
+
+  const ranges: SourceRange[] = [];
+  for (let i = 0; i < runs.length;) {
+    const run = runs[i];
+    const openerLength = run.length - (run.escaped ? 1 : 0);
+    if (openerLength === 0) {
+      i++;
+      continue;
+    }
+
+    const closerIndex = findNextRunIndex(runIndicesByLength.get(openerLength), i);
+    if (closerIndex === undefined) {
+      i++;
+      continue;
+    }
+
+    ranges.push({start: run.end - openerLength, end: runs[closerIndex].end});
+    i = closerIndex + 1;
+  }
+  return ranges;
+}
+
+function findNextRunIndex(indices: number[] | undefined, currentIndex: number): number | undefined {
+  if (!indices) return undefined;
+  let low = 0;
+  let high = indices.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (indices[middle] <= currentIndex) low = middle + 1;
+    else high = middle;
+  }
+  return indices[low];
+}
+
+function isEscapedAt(source: string, offset: number): boolean {
+  let backslashCount = 0;
+  for (let i = offset - 1; i >= 0 && source[i] === "\\"; i--) backslashCount++;
+  return backslashCount % 2 === 1;
+}
+
+function mergeRanges(ranges: SourceRange[]): SourceRange[] {
+  const sorted = [...ranges].sort((a, b) => a.start - b.start || a.end - b.end);
+  const merged: SourceRange[] = [];
+  for (const range of sorted) {
+    const previous = merged[merged.length - 1];
+    if (previous && range.start <= previous.end) {
+      previous.end = Math.max(previous.end, range.end);
+    } else {
+      merged.push({...range});
+    }
+  }
+  return merged;
+}
+
+function overlapsRange(ref: MediaRef, range: SourceRange): boolean {
+  return ref.start < range.end && range.start < ref.end;
 }
 
 export function classifyMediaSource(url: string): MediaSourceType {
