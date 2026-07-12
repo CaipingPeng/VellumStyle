@@ -423,6 +423,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     const {view, setContainer} = useCodeMirror({
       value: undefined,
       height: "100%",
+      theme: "none",
       extensions,
       onChange: handleChange,
       basicSetup: {
