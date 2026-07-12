@@ -80,5 +80,6 @@ export function stepWorkspaceSplitRatio(
   const step = largeStep ? WORKSPACE_KEYBOARD_LARGE_STEP : WORKSPACE_KEYBOARD_STEP;
   const direction = key === "ArrowRight" ? 1 : -1;
   const bounds = getWorkspaceRatioBounds(containerWidth);
-  return clamp(ratio + direction * step, bounds.min, bounds.max);
+  const nextRatio = Math.round((ratio + direction * step) * 1_000_000) / 1_000_000;
+  return clamp(nextRatio, bounds.min, bounds.max);
 }
