@@ -6,6 +6,7 @@ const {window} = new JSDOM("<!doctype html><html><body></body></html>");
 
 Object.defineProperties(globalThis, {
   window: {value: window, configurable: true},
+  navigator: {value: window.navigator, configurable: true},
   document: {value: window.document, configurable: true},
   DOMParser: {value: window.DOMParser, configurable: true},
   DocumentFragment: {value: window.DocumentFragment, configurable: true},
