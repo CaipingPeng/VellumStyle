@@ -33,7 +33,7 @@ export default function UnuploadedImagesWarning({items, busy, onBack, onContinue
   }, [busy, onBack]);
 
   return (
-    <section role="alert" aria-labelledby={titleId} aria-describedby={descriptionId} className="flex min-h-0 flex-col">
+    <section role="region" aria-labelledby={titleId} aria-describedby={descriptionId} className="flex min-h-0 flex-col">
       <div className="border-b border-border px-5 py-4">
         <h2 id={titleId} className="text-base font-semibold text-danger">发现未上传的图片</h2>
         <p id={descriptionId} className="mt-1.5 text-sm leading-6 text-text-secondary">
@@ -62,4 +62,3 @@ export default function UnuploadedImagesWarning({items, busy, onBack, onContinue
     </section>
   );
 }
-
