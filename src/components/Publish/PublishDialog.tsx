@@ -8,6 +8,7 @@ import {
   findUnuploadedImages,
   listImageMaterials,
   type MaterialImage,
+  type UnuploadedImage,
   uploadThumb,
 } from "../../utils/publish.ts";
 import {
@@ -19,6 +20,7 @@ import {toast} from "../Toast/toast.ts";
 import {FileText, Globe2, ImageIcon, Library, MessageCircle, MessageCircleOff, RefreshCw, UploadCloud, UserRound, Users} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import Button, {type ButtonState} from "../ui/Button.tsx";
+import UnuploadedImagesWarning from "./UnuploadedImagesWarning.tsx";
 
 interface Props {
   open: boolean;
@@ -27,6 +29,12 @@ interface Props {
 }
 
 const MATERIAL_PAGE_SIZE = 20;
+const PUBLISH_TRIGGER_ID = "publish-dialog-submit";
+
+interface ImageWarningState {
+  contentSnapshot: string;
+  diagnostics: UnuploadedImage[];
+}
 
 const titleInputShellClass =
   "group box-border flex h-11 items-center gap-2 rounded-lg border-2 border-solid border-[#b8baca] bg-bg-secondary px-3.5 text-text-muted shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_22px_rgba(20,20,30,0.045)] transition-all duration-fast ease-smooth hover:border-[#9ea2b8] hover:bg-bg focus-within:border-[rgba(94,106,210,0.5)] focus-within:bg-bg focus-within:shadow-[inset_0_1px_0_rgba(255,255,255,0.86),0_0_0_3px_rgba(94,106,210,0.10),0_10px_24px_rgba(20,20,30,0.06)]";
@@ -62,7 +70,6 @@ function formatMaterialTime(value: number): string {
 }
 
 export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
-  const content = useStore((s) => s.content);
   const currentDocPath = useStore((s) => s.currentDocPath);
   const defaultTitle = currentDocPath
     ? currentDocPath.split("/").pop()!.replace(/\.md$/, "")
@@ -82,10 +89,14 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const [busy, setBusy] = useState(false);
   // 发布结果态：发布动作的 loading/success/error 由它 + busy 推导，封面操作仍走 busy
   const [pubResult, setPubResult] = useState<"none" | "ok" | "fail">("none");
+  const [imageWarning, setImageWarning] = useState<ImageWarningState | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<string | null>(null);
   const materialLoadingRef = useRef(false);
+  const publishingRef = useRef(false);
+  const warningBackButtonRef = useRef<HTMLButtonElement>(null);
+  const restorePublishFocusRef = useRef(false);
   const [materialPanelHeight, setMaterialPanelHeight] = useState<number | null>(null);
   const commentsEnabled = needOpenComment === 1;
   previewRef.current = thumbPreview;
@@ -117,6 +128,8 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
 
   useEffect(() => {
     if (!open) {
+      restorePublishFocusRef.current = false;
+      setImageWarning(null);
       return;
     }
     const publishSettings = loadPublishSettings();
@@ -138,10 +151,24 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     });
     setBusy(false);
     setPubResult("none");
+    restorePublishFocusRef.current = false;
+    setImageWarning(null);
     if (fileRef.current) fileRef.current.value = "";
     // 打开弹窗时自动加载素材库
     void loadMaterialLibrary(0);
   }, [open, defaultTitle]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    if (imageWarning) {
+      warningBackButtonRef.current?.focus();
+      return;
+    }
+    if (restorePublishFocusRef.current) {
+      restorePublishFocusRef.current = false;
+      document.getElementById(PUBLISH_TRIGGER_ID)?.focus();
+    }
+  }, [imageWarning, open]);
 
   // 弹窗卸载时释放最后的预览 blob URL。
   useEffect(() => {
@@ -231,12 +258,18 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     }
   };
 
-  const publish = async () => {
-    const bad = findUnuploadedImages(content);
-    if (bad.length > 0) {
-      toast.show(`正文有 ${bad.length} 张未上传的图片，请先上传图片再发布`, "error");
-      return;
-    }
+  const clearImageWarning = (restorePublishFocus = false) => {
+    restorePublishFocusRef.current = restorePublishFocus;
+    setImageWarning(null);
+  };
+
+  const handleClose = () => {
+    restorePublishFocusRef.current = false;
+    setImageWarning(null);
+    onClose();
+  };
+
+  const executePublish = async () => {
     if (!title.trim()) {
       toast.show("请填写标题", "error");
       return;
@@ -245,6 +278,8 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       toast.show("请选择封面图", "error");
       return;
     }
+    if (publishingRef.current) return;
+    publishingRef.current = true;
     setBusy(true);
     setPubResult("none");
     try {
@@ -257,19 +292,49 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       };
       savePublishSettings(publishSettings);
       await addDraft(title.trim(), html, thumbId, publishSettings);
+      restorePublishFocusRef.current = false;
+      setImageWarning(null);
       // 成功：先就地显示成功态，再关窗 + 提示，给用户一个明确的"发成了"反馈
       setPubResult("ok");
       window.setTimeout(() => {
         toast.show("已发到公众号草稿箱，请在后台确认排版后发送", "info", 4000);
-        onClose();
+        handleClose();
       }, 900);
     } catch (e) {
+      restorePublishFocusRef.current = false;
+      setImageWarning(null);
       setPubResult("fail");
       toast.show(`发布失败：${String(e)}`, "error");
       window.setTimeout(() => setPubResult("none"), 2000);
     } finally {
+      publishingRef.current = false;
       setBusy(false);
     }
+  };
+
+  const requestPublish = () => {
+    const contentSnapshot = useStore.getState().content;
+    const diagnostics = findUnuploadedImages(contentSnapshot);
+    if (diagnostics.length > 0) {
+      setImageWarning({contentSnapshot, diagnostics});
+      return;
+    }
+    void executePublish();
+  };
+
+  const continuePublish = () => {
+    if (!imageWarning || publishingRef.current) return;
+    const latestContent = useStore.getState().content;
+    if (latestContent !== imageWarning.contentSnapshot) {
+      const diagnostics = findUnuploadedImages(latestContent);
+      if (diagnostics.length > 0) {
+        setImageWarning({contentSnapshot: latestContent, diagnostics});
+      } else {
+        clearImageWarning(true);
+      }
+      return;
+    }
+    void executePublish();
   };
 
   // 发布按钮态：busy 时 loading（成功窗口期 busy 已 false 但 pubResult=ok 显示 success）
@@ -288,29 +353,39 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     <>
       <Dialog
         open={open}
-        title="发布到公众号草稿箱"
-        onClose={onClose}
+        title={imageWarning ? "未上传图片检查" : "发布到公众号草稿箱"}
+        onClose={imageWarning && busy ? () => {} : handleClose}
         closeOnOverlay={false}
         width="min(86vw,1040px)"
-        footer={
-        <>
-          <Button type="button" variant="secondary" onClick={onClose}>
-            取消
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            state={publishState}
-            loadingText="发布中…"
-            successText="已发布"
-            errorText="发布失败"
-            onClick={() => void publish()}
-          >
-            发布到草稿箱
-          </Button>
-        </>
-      }
-    >
+        footer={imageWarning ? undefined : (
+          <>
+            <Button type="button" variant="secondary" onClick={handleClose}>
+              取消
+            </Button>
+            <Button
+              id={PUBLISH_TRIGGER_ID}
+              type="button"
+              variant="primary"
+              state={publishState}
+              loadingText="发布中…"
+              successText="已发布"
+              errorText="发布失败"
+              onClick={requestPublish}
+            >
+              发布到草稿箱
+            </Button>
+          </>
+        )}
+      >
+        {imageWarning ? (
+          <UnuploadedImagesWarning
+            items={imageWarning.diagnostics}
+            busy={busy}
+            onBack={() => clearImageWarning(true)}
+            onContinue={continuePublish}
+            backButtonRef={warningBackButtonRef}
+          />
+        ) : (
       <div className="grid min-h-0 items-start gap-5 lg:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.05fr)]">
         <div
           ref={leftPanelRef}
@@ -601,6 +676,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
           </div>
         </div>
       </div>
+        )}
     </Dialog>
     </>
   );
