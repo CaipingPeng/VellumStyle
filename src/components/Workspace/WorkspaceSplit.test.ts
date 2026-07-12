@@ -93,7 +93,7 @@ test("键盘支持小步、大步和恢复默认比例", () => {
     const right = new window.KeyboardEvent("keydown", {key: "ArrowRight", bubbles: true, cancelable: true});
     act(() => view.separator.dispatchEvent(right));
     assert.equal(right.defaultPrevented, true);
-    assert.equal(commits.at(-1), 0.52);
+    assert.equal(commits[commits.length - 1], 0.52);
 
     act(() => view.separator.dispatchEvent(new window.KeyboardEvent("keydown", {
       key: "ArrowLeft",
@@ -101,10 +101,10 @@ test("键盘支持小步、大步和恢复默认比例", () => {
       bubbles: true,
       cancelable: true,
     })));
-    assert.equal(commits.at(-1), 0.42);
+    assert.equal(commits[commits.length - 1], 0.42);
 
     act(() => view.separator.dispatchEvent(new window.MouseEvent("dblclick", {bubbles: true})));
-    assert.equal(commits.at(-1), DEFAULT_WORKSPACE_SPLIT_RATIO);
+    assert.equal(commits[commits.length - 1], DEFAULT_WORKSPACE_SPLIT_RATIO);
   } finally {
     view.cleanup();
   }
@@ -128,7 +128,7 @@ test("指针拖动即时更新，结束提交并可靠清理捕获状态", () =>
     assert.deepEqual(commits, []);
 
     act(() => view.separator.dispatchEvent(pointerEvent("pointerup", 700)));
-    assert.equal(commits.at(-1), 0.6);
+    assert.equal(commits[commits.length - 1], 0.6);
     assert.deepEqual(releases, [7]);
     assert.equal(document.documentElement.classList.contains("workspace-is-resizing"), false);
   } finally {
@@ -142,7 +142,7 @@ test("pointercancel 和拖动中卸载都不会遗留全局拖动状态", () => 
   act(() => cancelled.separator.dispatchEvent(pointerEvent("pointerdown", 600, 8)));
   act(() => cancelled.separator.dispatchEvent(pointerEvent("pointermove", 650, 8)));
   act(() => cancelled.separator.dispatchEvent(pointerEvent("pointercancel", 650, 8)));
-  assert.equal(commits.at(-1), 0.55);
+  assert.equal(commits[commits.length - 1], 0.55);
   assert.equal(document.documentElement.classList.contains("workspace-is-resizing"), false);
   cancelled.cleanup();
 
