@@ -1,6 +1,6 @@
 // 发布草稿箱：上传封面拿 media_id + add_draft；发布前校验正文无未上传外链图。
 import {invoke} from "@tauri-apps/api/core";
-import type {MediaRef} from "./markdownMediaScanner.ts";
+import type {MediaRef, MediaSourceType, MediaSyntax} from "./markdownMediaScanner.ts";
 import {scanMarkdownMedia} from "./markdownMediaScanner.ts";
 import {DEFAULT_PUBLISH_SETTINGS, type PublishSettings} from "./publishSettings.ts";
 
@@ -10,6 +10,17 @@ export interface CoverCandidate {
   url: string;
   syntax: MediaRef["syntax"];
   sourceType: MediaRef["sourceType"];
+}
+
+export type UnuploadedImageReason = "local" | "external" | "temporary" | "unsupported";
+
+export interface UnuploadedImage {
+  url: string;
+  line: number;
+  column: number;
+  sourceType: MediaSourceType;
+  syntax: MediaSyntax;
+  reason: UnuploadedImageReason;
 }
 
 export interface MaterialImage {
@@ -25,19 +36,23 @@ export interface MaterialImagePage {
   items: MaterialImage[];
 }
 
-// 返回正文里仍为非 mmbiz 远程/本地图片的 url 列表（发布前需先上传）。
-export function findUnuploadedImages(markdown: string): string[] {
-  const refs = scanMarkdownMedia(markdown);
-  const bad: string[] = [];
-  for (const ref of refs) {
+// 返回正文里仍未上传到微信素材域名的图片诊断（发布前需先处理或确认风险）。
+export function findUnuploadedImages(markdown: string): UnuploadedImage[] {
+  const diagnostics: UnuploadedImage[] = [];
+  for (const ref of scanMarkdownMedia(markdown)) {
     if (ref.mediaType !== "image") continue;
-    if (ref.sourceType === "remote") {
-      if (!isMmbizImageUrl(ref.originalUrl)) bad.push(ref.originalUrl);
-    } else if (ref.sourceType === "local") {
-      bad.push(ref.originalUrl);
-    }
+    const reason = unuploadedImageReason(ref);
+    if (!reason) continue;
+    const position = sourcePosition(markdown, ref.start);
+    diagnostics.push({
+      url: ref.originalUrl,
+      ...position,
+      sourceType: ref.sourceType,
+      syntax: ref.syntax,
+      reason,
+    });
   }
-  return bad;
+  return diagnostics;
 }
 
 export function getCoverCandidates(markdown: string): CoverCandidate[] {
@@ -95,12 +110,44 @@ function normalizeRemoteImageUrl(url: string): string | null {
 }
 
 function isMmbizImageUrl(url: string): boolean {
+  const parsed = parseRemoteImageUrl(url);
+  return parsed !== null && MMBIZ_HOSTS.includes(parsed.hostname.toLowerCase());
+}
+
+function parseRemoteImageUrl(url: string): URL | null {
   const normalized = normalizeRemoteImageUrl(url);
-  if (!normalized) return false;
+  if (!normalized) return null;
   try {
-    const host = new URL(normalized).hostname.toLowerCase();
-    return MMBIZ_HOSTS.includes(host);
+    return new URL(normalized);
   } catch {
-    return MMBIZ_HOSTS.some((host) => normalized.includes(host));
+    return null;
   }
+}
+
+function unuploadedImageReason(ref: MediaRef): UnuploadedImageReason | null {
+  switch (ref.sourceType) {
+    case "local":
+      return "local";
+    case "remote": {
+      const parsed = parseRemoteImageUrl(ref.originalUrl);
+      if (!parsed) return "unsupported";
+      return MMBIZ_HOSTS.includes(parsed.hostname.toLowerCase()) ? null : "external";
+    }
+    case "data":
+    case "blob":
+      return "temporary";
+    case "anchor":
+    case "empty":
+    case "unsupported":
+      return "unsupported";
+  }
+}
+
+function sourcePosition(markdown: string, start: number): {line: number; column: number} {
+  const lineStart = markdown.lastIndexOf("\n", start - 1) + 1;
+  let line = 1;
+  for (let index = 0; index < lineStart; index++) {
+    if (markdown[index] === "\n") line++;
+  }
+  return {line, column: start - lineStart + 1};
 }
