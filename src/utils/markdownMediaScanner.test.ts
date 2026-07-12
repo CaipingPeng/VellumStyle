@@ -338,6 +338,23 @@ test("multiline block-level HTML pre scans media after its closing tag on a late
   assert.equal(refs[0].end, expectedStart + "later-closing-line.png".length);
 });
 
+test("a later closed block-level HTML pre does not suppress media before its source range", () => {
+  const markdown = [
+    "![before](before.png)",
+    "",
+    "<pre>",
+    "![hidden](hidden.png)",
+    "</pre>",
+    "",
+    "![after](after.png)",
+  ].join("\n");
+
+  assert.deepEqual(
+    scanMarkdownMedia(markdown).map((ref) => ref.originalUrl),
+    ["before.png", "after.png"],
+  );
+});
+
 test("unclosed block-level HTML pre suppresses media through EOF using markdown-it block semantics", () => {
   const markdown = [
     "  <pre data-language=\"markdown\">",

@@ -78,7 +78,7 @@ function findIgnoredCodeRanges(markdown: string): SourceRange[] {
       if (/^\s*<pre\b/i.test(token.content)) {
         const blockPreStart = findHtmlTags(source).find((tag) => tag.name === "pre" && !tag.closing)?.start;
         const closedBlockPre = htmlCodeRanges.find((range) => range.start === blockPreStart);
-        ranges.push(closedBlockPre ?? tokenRange);
+        if (!closedBlockPre) ranges.push(tokenRange);
       }
       ranges.push(...shiftRanges(htmlCodeRanges, tokenRange.start));
       continue;
