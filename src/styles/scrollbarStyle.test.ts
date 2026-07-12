@@ -97,7 +97,7 @@ test("CodeMirror 搜索替换面板使用不挤压正文的浮层工具条", asy
   assert.match(cssRule(css, ".cm-editor .cm-search label"), /height:\s*28px/);
   assert.match(cssRule(css, ".cm-editor .cm-search label"), /border:\s*1px solid var\(--border-strong\)/);
   assert.match(cssRule(css, ".cm-editor .cm-search label"), /border-radius:\s*var\(--radius\)/);
-  assert.match(cssRule(css, ".cm-editor .cm-search label"), /background:\s*rgba\(255,\s*255,\s*255,\s*0\.5\)/);
+  assert.match(cssRule(css, ".cm-editor .cm-search label"), /background:\s*var\(--bg-tertiary\)/);
   assert.match(cssRule(css, ".cm-editor .cm-search label"), /padding:\s*0 9px/);
   assert.match(css, /\.cm-editor\s+\.cm-panel\.cm-search\s+label/);
   assert.match(cssRule(css, ".cm-editor .cm-panel.cm-search label"), /font-size:\s*13px/);
@@ -132,6 +132,17 @@ test("CodeMirror 搜索替换面板使用不挤压正文的浮层工具条", asy
   assert.match(cssRule(css, ".cm-editor .cm-search button[name=\"select\"]"), /text-align:\s*left/);
   assert.match(css, /\.od-search-drag-handle \.od-grip[\s\S]*?opacity:\s*0\.6/);
   assert.match(cssRule(css, ".cm-editor .cm-search button[name=\"select\"]"), /justify-content:\s*flex-start/);
+});
+
+test("搜索选项使用随亮暗外观切换的表面色，避免暗色文字失去对比度", async () => {
+  const css = await readFile(new URL("./globals.css", import.meta.url), "utf8");
+  const labelRule = cssRule(css, ".cm-editor .cm-search label");
+  const finalLabelRule = cssRuleLast(css, ".cm-editor .cm-panel.cm-search label");
+
+  assert.match(labelRule, /background:\s*var\(--bg-tertiary\)/);
+  assert.match(labelRule, /color:\s*var\(--text-secondary\)/);
+  assert.match(finalLabelRule, /background:\s*var\(--bg-tertiary\)\s*!important/);
+  assert.doesNotMatch(finalLabelRule, /rgba\(255,\s*255,\s*255/);
 });
 
 test("预览滚动容器提供滚动条样式挂点", async () => {

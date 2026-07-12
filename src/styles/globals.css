@@ -442,7 +442,7 @@ html.workspace-is-resizing * {
   height: 28px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--bg-tertiary);
   color: var(--text-secondary);
   cursor: pointer;
   font: inherit;
@@ -472,7 +472,7 @@ html.workspace-is-resizing * {
   height: 28px !important;
   border: 1px solid var(--border-strong) !important;
   border-radius: var(--radius) !important;
-  background: rgba(255, 255, 255, 0.66) !important;
+  background: var(--bg-tertiary) !important;
   font: inherit !important;
   font-family: inherit !important;
   font-size: 13px !important;
