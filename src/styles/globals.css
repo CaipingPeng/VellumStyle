@@ -74,35 +74,6 @@
   --shadow-lg: 0 18px 54px rgba(0, 0, 0, 0.46);
 }
 
-:root[data-appearance="dark"] .cm-editor .cm-panel.cm-search {
-  border-color: var(--border-strong);
-  background: rgba(28, 30, 36, 0.88);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-:root[data-appearance="dark"] .cm-editor .cm-panel.cm-search:hover,
-:root[data-appearance="dark"] .cm-editor .cm-panel.cm-search:focus-within {
-  background: rgba(31, 34, 41, 0.94);
-}
-
-:root[data-appearance="dark"] .cm-editor .cm-search input.cm-textfield,
-:root[data-appearance="dark"] .cm-editor .cm-search button.cm-button {
-  background: rgba(39, 42, 50, 0.92);
-  color: var(--text);
-}
-
-:root[data-appearance="dark"] .cm-editor .cm-search input.cm-textfield:focus,
-:root[data-appearance="dark"] .cm-editor .cm-search button.cm-button:hover {
-  background: #30333d;
-}
-
-:root[data-appearance="dark"] .vs-image-resize-size-badge,
-:root[data-appearance="dark"] .vs-image-resize-handle::before {
-  border-color: var(--border-strong);
-  background: rgba(31, 33, 40, 0.94);
-  box-shadow: var(--shadow-md);
-}
-
 html,
 body,
 #root {
@@ -1024,4 +995,34 @@ html.workspace-is-resizing * {
 /* —— 主题切换淡入淡出过渡（Preview 文章容器） —— */
 .vs-theme-fade {
   transition: opacity 160ms var(--ease);
+}
+
+/* 暗色组件覆盖置于基础规则之后，确保层叠顺序稳定。 */
+:root[data-appearance="dark"] .cm-editor .cm-panel.cm-search {
+  border-color: var(--border-strong);
+  background: rgba(28, 30, 36, 0.88);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+:root[data-appearance="dark"] .cm-editor .cm-panel.cm-search:hover,
+:root[data-appearance="dark"] .cm-editor .cm-panel.cm-search:focus-within {
+  background: rgba(31, 34, 41, 0.94);
+}
+
+:root[data-appearance="dark"] .cm-editor .cm-search input.cm-textfield,
+:root[data-appearance="dark"] .cm-editor .cm-search button.cm-button {
+  background: rgba(39, 42, 50, 0.92);
+  color: var(--text);
+}
+
+:root[data-appearance="dark"] .cm-editor .cm-search input.cm-textfield:focus,
+:root[data-appearance="dark"] .cm-editor .cm-search button.cm-button:hover {
+  background: #30333d;
+}
+
+:root[data-appearance="dark"] .vs-image-resize-size-badge,
+:root[data-appearance="dark"] .vs-image-resize-handle::before {
+  border-color: var(--border-strong);
+  background: rgba(31, 33, 40, 0.94);
+  box-shadow: var(--shadow-md);
 }

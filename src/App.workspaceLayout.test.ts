@@ -46,7 +46,7 @@ test("状态栏保留完整信息并只用细竖线分隔相邻项目", async ()
   assert.match(footer, /formatSaveStatus/);
   assert.match(footer, /formatCloudSyncStatus/);
   assert.match(footer, /<PreviewModeToggle variant="status"/);
-  assert.equal((footer.match(/<StatusDivider \/>/g) ?? []).length, 6);
+  assert.equal((footer.match(/<StatusDivider \/>/g) ?? []).length, 7);
 });
 
 test("预览面板提供克制的活动边框触发点", async () => {
