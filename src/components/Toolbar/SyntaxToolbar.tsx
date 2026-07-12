@@ -19,7 +19,7 @@ interface Props {
 const ICON = 16;
 
 function Separator() {
-  return <div className="mx-1 h-5 w-px bg-border" />;
+  return <div aria-hidden="true" className="mx-1 h-[18px] w-px flex-none bg-border" />;
 }
 
 export default function SyntaxToolbar({editorRef, onPickFile, onPickLocal, onOpenMaterialLibrary}: Props) {

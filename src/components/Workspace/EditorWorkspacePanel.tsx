@@ -27,7 +27,7 @@ export default function EditorWorkspacePanel({
         role="toolbar"
         aria-label="编辑器工具栏"
         data-editor-toolbar
-        className="workspace-editor-toolbar flex min-h-10 flex-none items-center overflow-x-auto px-2"
+        className="workspace-editor-toolbar flex h-[42px] min-h-[42px] flex-none items-center overflow-x-auto px-2"
       >
         <SyntaxToolbar
           editorRef={editorRef}

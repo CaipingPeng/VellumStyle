@@ -22,3 +22,10 @@ test("分隔柄保持 8px 命中区域和克制的细视觉线", async () => {
   assert.match(separator, /width: 1px/);
   assert.doesNotMatch(separator.slice(0, separator.indexOf("@media")), /box-shadow:\s*var\(--shadow-(md|lg)\)/);
 });
+
+test("编辑器和预览都以活动面板边框反馈焦点", async () => {
+  const css = await readFile(new URL("./globals.css", import.meta.url), "utf8");
+  assert.match(css, /\.workspace-editor-panel:focus-within/);
+  assert.match(css, /\.workspace-preview-panel:focus-within/);
+  assert.match(css, /border-color:\s*var\(--workspace-panel-active\)/);
+});

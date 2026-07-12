@@ -36,3 +36,23 @@ test("预览无标题栏且模式切换器和浮动样式面板保持原位", as
   assert.ok(source.indexOf("<StylePanel />") > source.indexOf("<Preview"));
   assert.match(source, /<StylePanel \/>[\s\S]*<\/div>/);
 });
+
+test("状态栏保留完整信息并只用细竖线分隔相邻项目", async () => {
+  const source = await appSource;
+  const footer = source.slice(source.indexOf("<footer"), source.indexOf("</footer>"));
+  for (const label of ["文档 ", "行数 ", "字数 ", "主题 ", "代码 "]) {
+    assert.match(footer, new RegExp(label));
+  }
+  assert.match(footer, /formatSaveStatus/);
+  assert.match(footer, /formatCloudSyncStatus/);
+  assert.match(footer, /<PreviewModeToggle variant="status"/);
+  assert.equal((footer.match(/<StatusDivider \/>/g) ?? []).length, 6);
+});
+
+test("预览面板提供克制的活动边框触发点", async () => {
+  const source = await appSource;
+  const preview = source.slice(source.indexOf('aria-label="文章预览"'), source.indexOf("</section>", source.indexOf('aria-label="文章预览"')));
+  assert.match(preview, /workspace-preview-panel/);
+  assert.match(preview, /tabIndex=\{-1\}/);
+  assert.match(preview, /onPointerDown=/);
+});

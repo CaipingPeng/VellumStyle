@@ -12,8 +12,8 @@ function countLabel(count: number): string {
 
 export default function OutlineNav({items, activeLine, onJump}: Props) {
   return (
-    <aside className="flex w-[220px] flex-shrink-0 flex-col overflow-hidden border-r border-border bg-bg-tertiary">
-      <div className="flex h-[47px] items-center justify-between border-b border-border px-3">
+    <aside className="workspace-panel workspace-outline-panel flex w-[220px] flex-shrink-0 flex-col overflow-hidden">
+      <div className="flex h-[42px] flex-none items-center justify-between border-b border-border px-3">
         <span className="text-[13px] font-medium text-text">大纲</span>
         <span className="text-xs tabular-nums text-text-muted">{countLabel(items.length)}</span>
       </div>

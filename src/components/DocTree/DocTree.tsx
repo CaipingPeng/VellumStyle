@@ -157,10 +157,10 @@ export default function DocTree() {
         tabIndex={-1}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        className="relative flex flex-shrink-0 flex-col overflow-hidden border-r border-border bg-bg-tertiary outline-none"
+        className="workspace-panel workspace-documents-panel relative flex flex-shrink-0 flex-col overflow-hidden outline-none"
         style={{width: treeWidth}}
       >
-        <div className="flex gap-1 p-2 border-b border-border">
+        <div className="flex h-[42px] flex-none items-center gap-1 border-b border-border px-2">
           <IconButton title="新建文档" onClick={() => startCreate("doc")}>
             <FilePlus size={15} />
           </IconButton>

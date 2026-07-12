@@ -83,6 +83,10 @@ function syncStatusClass(tone: CloudSyncTone): string {
   return "";
 }
 
+function StatusDivider() {
+  return <span aria-hidden="true" className="h-3 w-px flex-none bg-border" />;
+}
+
 export default function App() {
   const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, outlineOpen, saveStatus, lastSavedAt, syncStatus, lastSyncedAt, syncMessage, workspaceSplitRatio, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar, toggleOutline, setWorkspaceSplitRatio} = useStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -528,7 +532,9 @@ export default function App() {
               <section
                 aria-label="文章预览"
                 data-workspace-panel="preview"
-                className="workspace-panel flex min-h-0 min-w-0 flex-1 overflow-hidden"
+                tabIndex={-1}
+                onPointerDown={(event) => event.currentTarget.focus({preventScroll: true})}
+                className="workspace-panel workspace-preview-panel flex min-h-0 min-w-0 flex-1 overflow-hidden outline-none"
               >
                 <div className="min-w-0 flex-1">
                   <Preview
@@ -547,21 +553,31 @@ export default function App() {
 
       {/* Footer */}
       <footer className="flex h-7 flex-shrink-0 items-center justify-between gap-4 border-t border-border bg-bg-secondary px-4 text-xs text-text-muted">
-        <div className="flex min-w-0 items-center gap-4">
-          {currentDocPath && <span className="min-w-0 max-w-[260px] truncate">文档 {currentDocPath.split("/").pop()}</span>}
+        <div className="flex min-w-0 items-center gap-2">
+          {currentDocPath && (
+            <>
+              <span className="min-w-0 max-w-[260px] truncate">文档 {currentDocPath.split("/").pop()}</span>
+              <StatusDivider />
+            </>
+          )}
           <span className="tabular-nums">行数 {lineCount}</span>
+          <StatusDivider />
           <span className="tabular-nums">字数 {charCount}</span>
         </div>
-        <div className="flex flex-none items-center gap-4">
+        <div className="flex flex-none items-center gap-2">
           <span>主题 {getThemeById(themes, markdownThemeId).name}</span>
+          <StatusDivider />
           <span>代码 {getCodeThemeById(codeThemeId).name}</span>
+          <StatusDivider />
           <span className={saveStatus === "error" ? "text-danger" : ""}>{formatSaveStatus(saveStatus, lastSavedAt)}</span>
+          <StatusDivider />
           <span
             className={syncStatusClass(syncStatusTone(syncStatus))}
             title={syncMessage || undefined}
           >
             {formatCloudSyncStatus({status: syncStatus, lastSyncedAt, message: syncMessage})}
           </span>
+          <StatusDivider />
           <PreviewModeToggle variant="status" />
         </div>
       </footer>

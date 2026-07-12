@@ -70,7 +70,8 @@ body {
   transition: border-color 130ms var(--ease);
 }
 
-.workspace-editor-panel:focus-within {
+.workspace-editor-panel:focus-within,
+.workspace-preview-panel:focus-within {
   border-color: var(--workspace-panel-active);
 }
 
