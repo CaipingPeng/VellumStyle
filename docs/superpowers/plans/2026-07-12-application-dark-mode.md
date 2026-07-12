@@ -17,7 +17,7 @@
 - Create: `src/appearance/appearanceMode.test.ts`
 
 - [ ] 写失败测试，覆盖默认值、无效值回退、根属性与 `color-scheme` 同步、持久化 JSON 预读。
-- [ ] 运行 `npm test -- --test-name-pattern="外观模式"`，确认因模块缺失失败。
+- [ ] 运行 `npm test -- -- --test-name-pattern="外观模式"`，确认因模块缺失失败。
 - [ ] 实现 `AppearanceMode`、`sanitizeAppearanceMode`、`readPersistedAppearanceMode`、`applyAppearanceMode`。
 - [ ] 重跑聚焦测试，确认通过。
 - [ ] 提交 `test/feat: add application appearance model`。

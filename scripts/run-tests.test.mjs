@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
+import {spawnSync} from "node:child_process";
 import {mkdir, mkdtemp, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join, relative, resolve, sep} from "node:path";
-import {pathToFileURL} from "node:url";
+import {fileURLToPath, pathToFileURL} from "node:url";
 import test from "node:test";
 
 const toPosixPath = (value) => value.split(sep).join("/");
@@ -36,6 +37,7 @@ test("parseRunnerArguments forwards options while separating explicit test files
 
   assert.deepEqual(
     parseRunnerArguments([
+      "--",
       "--test-name-pattern",
       "publish flow",
       "--test-reporter=spec",
@@ -99,4 +101,31 @@ test("runTests returns the child process exit code", async () => {
   });
 
   assert.equal(status, 23);
+});
+
+test("npm entry preserves the double-separated name pattern and explicit file", () => {
+  const projectRoot = fileURLToPath(new URL("..", import.meta.url));
+  const npmArguments = [
+    "test",
+    "--",
+    "--",
+    "--test-name-pattern=npm-entry-selected",
+    "scripts/npm-argument-probe.test.mjs",
+  ];
+  const childEnvironment = {...process.env};
+  delete childEnvironment.NODE_TEST_CONTEXT;
+  const spawnOptions = {cwd: projectRoot, encoding: "utf8", env: childEnvironment};
+  const result =
+    process.platform === "win32"
+      ? spawnSync(
+          process.env.ComSpec ?? "cmd.exe",
+          ["/d", "/s", "/c", ["npm", ...npmArguments].join(" ")],
+          spawnOptions,
+        )
+      : spawnSync("npm", npmArguments, spawnOptions);
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+
+  assert.equal(result.status, 0, output);
+  assert.match(output, /NPM_ARGUMENT_PROBE_SELECTED/);
+  assert.doesNotMatch(output, /NPM_ARGUMENT_PROBE_REJECTED/);
 });

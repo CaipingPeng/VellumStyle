@@ -71,7 +71,7 @@ test("缺 id/styles 的项返回 false", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm test -- --test-name-pattern="校验|model"`
+Run: `npm test -- -- --test-name-pattern="校验|model"`
 Expected: FAIL（找不到模块 `./themeModel.ts`）
 
 - [ ] **Step 3: Write minimal implementation**
@@ -110,7 +110,7 @@ export function validateModel(data: unknown): data is StyleModel[] {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npm test -- --test-name-pattern="校验|model"`
+Run: `npm test -- -- --test-name-pattern="校验|model"`
 Expected: PASS（3 项）
 
 - [ ] **Step 5: Commit**
@@ -208,7 +208,7 @@ test("同一 value 写多个 selector", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm test -- --test-name-pattern="编译|递归|common|selector"`
+Run: `npm test -- -- --test-name-pattern="编译|递归|common|selector"`
 Expected: FAIL（找不到 `./compileModel.ts`）
 
 - [ ] **Step 3: Write minimal implementation**
@@ -258,7 +258,7 @@ export function compileModel(models: StyleModel[]): string {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npm test -- --test-name-pattern="编译|递归|common|selector"`
+Run: `npm test -- -- --test-name-pattern="编译|递归|common|selector"`
 Expected: PASS（4 项）
 
 - [ ] **Step 5: Commit**
@@ -313,7 +313,7 @@ test("oracle：编译 草原绿 model 与其 data.style 规则等价", () => {
 
 - [ ] **Step 3: Run test to verify it fails or passes**
 
-Run: `npm test -- --test-name-pattern="oracle"`
+Run: `npm test -- -- --test-name-pattern="oracle"`
 Expected: 若编译器正确则 PASS；若某 selector/prop 报错，说明编译规则有遗漏（如 common 块解析、children 层级），按报错信息修 `compileModel.ts` 直到 PASS。
 
 > 注意：`data.style` 里可能含编译器未产出的 selector（mdnice 额外细节），本测试只要求 actual ⊇ expected 的方向覆盖；若发现 expected 中有 model 里根本没有的规则，记录到 spec 风险，不强行通过。
@@ -383,7 +383,7 @@ test("default 编译出关键元素的预期视觉值", () => {
 
 - [ ] **Step 3: Run test**
 
-Run: `npm test -- --test-name-pattern="default"`
+Run: `npm test -- -- --test-name-pattern="default"`
 Expected: 先 FAIL（值未对齐），调 `default.json` 的 value 直到 PASS。
 
 - [ ] **Step 4: Commit**
@@ -587,7 +587,7 @@ test("优先级表覆盖所有可点击元素", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm test -- --test-name-pattern="命中|归|优先级|null"`
+Run: `npm test -- -- --test-name-pattern="命中|归|优先级|null"`
 Expected: FAIL（找不到模块）
 
 - [ ] **Step 3: Write minimal implementation**
@@ -646,7 +646,7 @@ export function modelIdFromElement(el: Element): string | null {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npm test -- --test-name-pattern="命中|归|优先级|null"`
+Run: `npm test -- -- --test-name-pattern="命中|归|优先级|null"`
 Expected: PASS（5 项）
 
 - [ ] **Step 5: Commit**

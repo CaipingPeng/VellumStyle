@@ -50,10 +50,7 @@ export function parseRunnerArguments(args) {
 
   for (let index = 0; index < args.length; index++) {
     const argument = args[index];
-    if (argument === "--") {
-      explicitFiles.push(...args.slice(index + 1));
-      break;
-    }
+    if (argument === "--") continue;
     if (!argument.startsWith("-")) {
       explicitFiles.push(argument);
       continue;
