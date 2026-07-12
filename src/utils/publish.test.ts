@@ -220,6 +220,65 @@ test("findUnuploadedImages returns exhaustive structured diagnostics at original
   ]);
 });
 
+function findDiagnosticsWithoutRepeatedNewlineSearch(markdown: string) {
+  const originalLastIndexOf = String.prototype.lastIndexOf;
+  let newlineSearches = 0;
+  String.prototype.lastIndexOf = function (searchString: string, position?: number): number {
+    if (String(this) === markdown && searchString === "\n") newlineSearches++;
+    return originalLastIndexOf.call(this, searchString, position);
+  };
+
+  try {
+    const diagnostics = findUnuploadedImages(markdown);
+    assert.equal(newlineSearches, 0, "line positions must use one precomputed index, not search once per diagnostic");
+    return diagnostics;
+  } finally {
+    String.prototype.lastIndexOf = originalLastIndexOf;
+  }
+}
+
+test("findUnuploadedImages locates diagnostics across LF lines without repeated source scans", () => {
+  const markdown = [
+    "prefix",
+    "![one](./one.png)",
+    "middle",
+    "  ![two](https://example.com/two.png)",
+    'tail <img src="data:image/png;base64,three">',
+  ].join("\n");
+
+  const diagnostics = findDiagnosticsWithoutRepeatedNewlineSearch(markdown);
+
+  assert.deepEqual(
+    diagnostics.map(({url, line, column}) => ({url, line, column})),
+    [
+      {url: "./one.png", line: 2, column: 8},
+      {url: "https://example.com/two.png", line: 4, column: 10},
+      {url: "data:image/png;base64,three", line: 5, column: 6},
+    ],
+  );
+});
+
+test("findUnuploadedImages locates diagnostics across CRLF lines without repeated source scans", () => {
+  const markdown = [
+    "![first](./first.png)",
+    "already uploaded: ![wechat](//mmbiz.qpic.cn/accepted/0)",
+    '    <img src="blob:https://example.com/id">',
+    "plain text",
+    "![last](#anchor)",
+  ].join("\r\n");
+
+  const diagnostics = findDiagnosticsWithoutRepeatedNewlineSearch(markdown);
+
+  assert.deepEqual(
+    diagnostics.map(({url, line, column}) => ({url, line, column})),
+    [
+      {url: "./first.png", line: 1, column: 10},
+      {url: "blob:https://example.com/id", line: 3, column: 5},
+      {url: "#anchor", line: 5, column: 9},
+    ],
+  );
+});
+
 test("getCoverCandidates excludes code-only WeChat images and normalizes a real protocol-relative image", () => {
   const markdown = [
     "`![code](https://mmbiz.qpic.cn/code-only.png)`",

@@ -39,11 +39,12 @@ export interface MaterialImagePage {
 // 返回正文里仍未上传到微信素材域名的图片诊断（发布前需先处理或确认风险）。
 export function findUnuploadedImages(markdown: string): UnuploadedImage[] {
   const diagnostics: UnuploadedImage[] = [];
+  const lineStarts = findLineStarts(markdown);
   for (const ref of scanMarkdownMedia(markdown)) {
     if (ref.mediaType !== "image") continue;
     const reason = unuploadedImageReason(ref);
     if (!reason) continue;
-    const position = sourcePosition(markdown, ref.start);
+    const position = sourcePosition(lineStarts, ref.start);
     diagnostics.push({
       url: ref.originalUrl,
       ...position,
@@ -143,11 +144,21 @@ function unuploadedImageReason(ref: MediaRef): UnuploadedImageReason | null {
   }
 }
 
-function sourcePosition(markdown: string, start: number): {line: number; column: number} {
-  const lineStart = markdown.lastIndexOf("\n", start - 1) + 1;
-  let line = 1;
-  for (let index = 0; index < lineStart; index++) {
-    if (markdown[index] === "\n") line++;
+function findLineStarts(markdown: string): number[] {
+  const lineStarts = [0];
+  for (let index = 0; index < markdown.length; index++) {
+    if (markdown[index] === "\n") lineStarts.push(index + 1);
   }
-  return {line, column: start - lineStart + 1};
+  return lineStarts;
+}
+
+function sourcePosition(lineStarts: number[], start: number): {line: number; column: number} {
+  let low = 0;
+  let high = lineStarts.length;
+  while (low + 1 < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (lineStarts[middle] <= start) low = middle;
+    else high = middle;
+  }
+  return {line: low + 1, column: start - lineStarts[low] + 1};
 }
