@@ -9,6 +9,10 @@ import {runCloudSync, type CloudSyncStatusValue} from "../utils/cloudSync.ts";
 import {toast} from "../components/Toast/toast.ts";
 import type {PreviewModeId} from "../components/Preview/previewModes.ts";
 import {DEFAULT_CODE_THEME_ID, DEFAULT_PINNED_CODE_THEME_IDS, type CodeThemeId} from "../markdown/codeThemes.ts";
+import {
+  DEFAULT_WORKSPACE_SPLIT_RATIO,
+  sanitizeWorkspaceSplitRatio,
+} from "../components/Workspace/workspaceSplitLayout.ts";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -29,6 +33,7 @@ export interface EditorState {
   lastSyncedAt: number | null; // 最近一次同步成功时间戳
   syncMessage: string; // 最近一次同步说明或错误
   previewMode: PreviewModeId; // 预览宽度模式
+  workspaceSplitRatio: number; // 编辑器/预览外层分栏比例，persist
   favoriteThemeIds: string[]; // 收藏主题，persist
   pinnedCodeThemeIds: CodeThemeId[]; // 置顶代码主题，persist
   setContent: (content: string) => void;
@@ -39,6 +44,7 @@ export interface EditorState {
   setCurrentDocPath: (path: string | null) => void;
   setSelectedPath: (path: string | null) => void;
   setPreviewMode: (mode: PreviewModeId) => void;
+  setWorkspaceSplitRatio: (ratio: number) => void;
   toggleFavoriteTheme: (id: string) => void;
   togglePinnedCodeTheme: (id: CodeThemeId) => void;
   toggleSidebar: () => void;
@@ -186,6 +192,7 @@ export const useStore = create<EditorState>()(
       lastSyncedAt: null,
       syncMessage: "",
       previewMode: "fluid",
+      workspaceSplitRatio: DEFAULT_WORKSPACE_SPLIT_RATIO,
       favoriteThemeIds: [],
       pinnedCodeThemeIds: [...DEFAULT_PINNED_CODE_THEME_IDS],
       setContent: (content) => {
@@ -199,6 +206,8 @@ export const useStore = create<EditorState>()(
       setCurrentDocPath: (currentDocPath) => set({currentDocPath}),
       setSelectedPath: (selectedPath) => set({selectedPath}),
       setPreviewMode: (previewMode) => set({previewMode}),
+      setWorkspaceSplitRatio: (workspaceSplitRatio) =>
+        set({workspaceSplitRatio: sanitizeWorkspaceSplitRatio(workspaceSplitRatio)}),
       toggleFavoriteTheme: (id) =>
         set((s) => ({
           favoriteThemeIds: s.favoriteThemeIds.includes(id)
@@ -250,9 +259,18 @@ export const useStore = create<EditorState>()(
         markdownThemeId: s.markdownThemeId,
         codeThemeId: s.codeThemeId,
         previewMode: s.previewMode,
+        workspaceSplitRatio: s.workspaceSplitRatio,
         favoriteThemeIds: s.favoriteThemeIds,
         pinnedCodeThemeIds: s.pinnedCodeThemeIds,
       }),
+      merge: (persisted, current) => {
+        const saved = persisted as Partial<EditorState> | undefined;
+        return {
+          ...current,
+          ...saved,
+          workspaceSplitRatio: sanitizeWorkspaceSplitRatio(saved?.workspaceSplitRatio),
+        };
+      },
     },
   ),
 );
