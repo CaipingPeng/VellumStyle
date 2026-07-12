@@ -48,3 +48,6 @@ coverage/
 .cache/
 .temp/
 .tmp/
+
+# Isolated development worktrees
+.worktrees/
