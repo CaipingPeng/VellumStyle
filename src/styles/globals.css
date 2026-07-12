@@ -11,6 +11,12 @@
   --bg-secondary: #fafafb;
   --bg-tertiary: #f4f4f6;
 
+  --workspace-frame: #f1f1f4;
+  --workspace-panel: #ffffff;
+  --workspace-panel-border: #dedee5;
+  --workspace-panel-active: rgba(94, 106, 210, 0.52);
+  --workspace-panel-radius: 10px;
+
   --border: #ebebef;
   --border-strong: #e0e0e6;
 
@@ -49,6 +55,69 @@ body {
   background: var(--bg);
   /* UI chrome 数字等宽（状态栏计数/时间/版本号），文章正文见下方 #article 恢复比例数字 */
   font-variant-numeric: tabular-nums;
+}
+
+/* 工作区板块：框架底色、独立表面和可访问分隔柄。 */
+.workspace-frame {
+  background: var(--workspace-frame);
+}
+
+.workspace-panel {
+  box-sizing: border-box;
+  border: 1px solid var(--workspace-panel-border);
+  border-radius: var(--workspace-panel-radius);
+  background: var(--workspace-panel);
+  transition: border-color 130ms var(--ease);
+}
+
+.workspace-editor-panel:focus-within {
+  border-color: var(--workspace-panel-active);
+}
+
+.workspace-split-separator {
+  position: relative;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.workspace-split-separator::before {
+  content: "";
+  position: absolute;
+  inset-block: 10px;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: var(--border-strong);
+  transition:
+    background-color 130ms var(--ease),
+    width 130ms var(--ease);
+}
+
+.workspace-split-separator:hover::before,
+.workspace-split-separator:focus-visible::before {
+  width: 2px;
+  background: var(--accent);
+}
+
+.workspace-split-separator:focus-visible {
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 2px var(--ring);
+}
+
+html.workspace-is-resizing,
+html.workspace-is-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-panel,
+  .workspace-split-separator::before {
+    transition: none;
+  }
 }
 
 /* 文章正文恢复比例数字：UI 等宽不影响公众号排版成品 */
