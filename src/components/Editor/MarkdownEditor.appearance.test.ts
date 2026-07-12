@@ -8,9 +8,12 @@ const appSource = readFile(new URL("../../App.tsx", import.meta.url), "utf8");
 test("CodeMirror 通过 Compartment 原位重配置亮暗主题", async () => {
   const source = await editorSource;
   assert.match(source, /appearanceMode: AppearanceMode/);
+  assert.match(
+    source,
+    /import \{createEditorAppearanceExtension\} from "\.\/editorAppearance\.ts"/,
+  );
   assert.match(source, /const appearanceCompartment = new Compartment\(\)/);
   assert.match(source, /appearanceCompartment\.reconfigure\(createEditorAppearanceExtension\(appearanceMode\)\)/);
-  assert.match(source, /\{dark: appearanceMode === "dark"\}/);
   assert.match(source, /theme: "none"/);
   assert.doesNotMatch(source, /cm-theme-light/);
 });

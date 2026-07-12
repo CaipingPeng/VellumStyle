@@ -16,6 +16,7 @@ import {
 } from "./editing.ts";
 import {getCodeMirrorCspNonce} from "../../utils/cspNonce.ts";
 import type {AppearanceMode} from "../../appearance/appearanceMode.ts";
+import {createEditorAppearanceExtension} from "./editorAppearance.ts";
 
 export interface MarkdownEditorHandle {
   // 在当前光标处插入文本（替换选区）。供工具栏上传按钮调用。
@@ -59,17 +60,6 @@ interface Props {
 const searchCompartment = new Compartment();
 const appearanceCompartment = new Compartment();
 
-function createEditorAppearanceExtension(appearanceMode: AppearanceMode) {
-  return EditorView.theme({
-    "&": {backgroundColor: "var(--workspace-panel)", color: "var(--text)"},
-    ".cm-content": {caretColor: "var(--text)"},
-    ".cm-cursor, .cm-dropCursor": {borderLeftColor: "var(--text)"},
-    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": {
-      backgroundColor: "var(--accent-subtle)",
-    },
-    ".cm-activeLine": {backgroundColor: "var(--editor-active-line)"},
-  }, {dark: appearanceMode === "dark"});
-}
 const searchLoadedEffect = StateEffect.define<boolean>();
 const searchLoadedField = StateField.define<boolean>({
   create: () => false,
