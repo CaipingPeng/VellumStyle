@@ -10,6 +10,7 @@
   --bg: #ffffff;
   --bg-secondary: #fafafb;
   --bg-tertiary: #f4f4f6;
+  --editor-active-line: rgba(94, 106, 210, 0.045);
 
   --workspace-frame: #f1f1f4;
   --workspace-panel: #ffffff;
@@ -39,6 +40,67 @@
   --shadow-lg: 0 12px 40px rgba(20, 20, 30, 0.16);
 
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root[data-appearance="dark"] {
+  --accent: #8b96ff;
+  --accent-hover: #a4adff;
+  --accent-subtle: rgba(139, 150, 255, 0.16);
+
+  --bg: #17181d;
+  --bg-secondary: #1c1e24;
+  --bg-tertiary: #272a32;
+  --editor-active-line: rgba(139, 150, 255, 0.08);
+
+  --workspace-frame: #111217;
+  --workspace-panel: #1b1d23;
+  --workspace-panel-border: #343741;
+  --workspace-panel-active: rgba(139, 150, 255, 0.68);
+
+  --border: #30333c;
+  --border-strong: #414550;
+
+  --text: #f1f2f5;
+  --text-secondary: #b4b8c2;
+  --text-muted: #828792;
+
+  --success: #57c995;
+  --warning: #e1aa5a;
+  --danger: #ff7177;
+  --ring: rgba(139, 150, 255, 0.46);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.34);
+  --shadow-lg: 0 18px 54px rgba(0, 0, 0, 0.46);
+}
+
+:root[data-appearance="dark"] .cm-editor .cm-panel.cm-search {
+  border-color: var(--border-strong);
+  background: rgba(28, 30, 36, 0.88);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+:root[data-appearance="dark"] .cm-editor .cm-panel.cm-search:hover,
+:root[data-appearance="dark"] .cm-editor .cm-panel.cm-search:focus-within {
+  background: rgba(31, 34, 41, 0.94);
+}
+
+:root[data-appearance="dark"] .cm-editor .cm-search input.cm-textfield,
+:root[data-appearance="dark"] .cm-editor .cm-search button.cm-button {
+  background: rgba(39, 42, 50, 0.92);
+  color: var(--text);
+}
+
+:root[data-appearance="dark"] .cm-editor .cm-search input.cm-textfield:focus,
+:root[data-appearance="dark"] .cm-editor .cm-search button.cm-button:hover {
+  background: #30333d;
+}
+
+:root[data-appearance="dark"] .vs-image-resize-size-badge,
+:root[data-appearance="dark"] .vs-image-resize-handle::before {
+  border-color: var(--border-strong);
+  background: rgba(31, 33, 40, 0.94);
+  box-shadow: var(--shadow-md);
 }
 
 html,

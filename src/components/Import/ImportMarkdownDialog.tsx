@@ -29,27 +29,27 @@ const phaseText: Record<string, string> = {
 };
 
 const fieldShellClass =
-  "group flex min-h-[46px] items-center overflow-hidden rounded-md bg-[#f7f8fb] " +
+  "group flex min-h-[46px] items-center overflow-hidden rounded-md bg-bg-secondary " +
   "shadow-[inset_0_0_0_1px_rgba(26,26,30,0.055),inset_0_1px_0_rgba(255,255,255,0.92)] " +
   "transition-[background,box-shadow] duration-fast ease-smooth " +
-  "hover:bg-[#f4f6fa] focus-within:bg-white focus-within:shadow-[inset_0_0_0_1px_rgba(94,106,210,0.22),0_0_0_3px_rgba(94,106,210,0.09),0_8px_22px_rgba(20,20,30,0.055)]";
+  "hover:bg-bg-tertiary focus-within:bg-bg focus-within:shadow-[inset_0_0_0_1px_rgba(94,106,210,0.22),0_0_0_3px_rgba(94,106,210,0.09),0_8px_22px_rgba(20,20,30,0.055)]";
 
 const inputClass =
   "h-full min-w-0 flex-1 appearance-none border-0 bg-transparent px-1 text-[13px] leading-none text-text shadow-none outline-none " +
   "placeholder:text-text-muted";
 
 const pickerButtonClass =
-  "mr-1 inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-0 bg-white px-3 " +
+  "mr-1 inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-0 bg-bg px-3 " +
   "text-[13px] font-medium text-text shadow-[0_1px_2px_rgba(20,20,30,0.08),inset_0_1px_0_rgba(255,255,255,0.94)] " +
   "cursor-pointer transition-[background,box-shadow,transform,color] duration-fast ease-smooth " +
-  "hover:bg-[#fbfbfd] hover:text-accent hover:shadow-[0_6px_18px_rgba(20,20,30,0.08),inset_0_1px_0_rgba(255,255,255,0.96)] " +
+  "hover:bg-bg-tertiary hover:text-accent hover:shadow-[0_6px_18px_rgba(20,20,30,0.08),inset_0_1px_0_rgba(255,255,255,0.96)] " +
   "active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] " +
   "disabled:cursor-default disabled:opacity-50 disabled:shadow-none disabled:hover:text-text";
 
 const headerOptionClass =
   "inline-flex min-h-6 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-1 " +
   "text-xs font-medium text-text-muted transition-[background,color] duration-fast ease-smooth " +
-  "hover:bg-[#f3f4f8] hover:text-text";
+  "hover:bg-bg-tertiary hover:text-text";
 
 const footerButtonBase =
   "inline-flex h-9 min-w-[88px] items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-0 px-4 " +
@@ -59,13 +59,13 @@ const footerButtonBase =
 
 const footerGhostButton =
   footerButtonBase +
-  " bg-[#f3f4f8] text-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] hover:bg-[#eaecf3] hover:text-text";
+  " bg-bg-tertiary text-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] hover:bg-bg hover:text-text";
 
 const footerPrimaryButton =
   footerButtonBase +
   " bg-accent text-white shadow-[0_10px_24px_rgba(94,106,210,0.24),inset_0_1px_0_rgba(255,255,255,0.22)] " +
   "hover:bg-accent-hover hover:shadow-[0_12px_28px_rgba(94,106,210,0.30),inset_0_1px_0_rgba(255,255,255,0.24)] " +
-  "disabled:bg-[#c7cadf] disabled:shadow-none";
+  "disabled:bg-accent disabled:opacity-40 disabled:shadow-none";
 
 export default function ImportMarkdownDialog({
   open,
@@ -121,7 +121,7 @@ export default function ImportMarkdownDialog({
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="rounded-md bg-[#f8f9fc] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
+        <div className="rounded-md bg-bg-secondary px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
           <p className="m-0 text-[13px] leading-[1.7] text-text-secondary">
             选择一个或多个 Markdown 文件后，会识别本地和在线图片，上传到公众号永久素材库并替换为微信素材链接。Obsidian 的 <code>![[...]]</code> 图片语法也会转换成标准 Markdown 图片。
           </p>
@@ -273,6 +273,6 @@ function DetailList({title, items}: {title: string; items: Array<{originalUrl: s
 }
 
 const statusClass =
-  "rounded-md bg-[#f8f9fc] px-3.5 py-3 text-xs leading-relaxed text-text " +
+  "rounded-md bg-bg-secondary px-3.5 py-3 text-xs leading-relaxed text-text " +
   "shadow-[inset_0_0_0_1px_rgba(26,26,30,0.05),inset_0_1px_0_rgba(255,255,255,0.94)]";
 const pathClass = "overflow-hidden text-ellipsis whitespace-nowrap text-text-muted";

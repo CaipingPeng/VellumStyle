@@ -438,15 +438,15 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
               aria-label={thumbPreview ? "更换封面图" : "上传封面图"}
               className={`group relative flex aspect-[2.35/1] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-bg-secondary text-left outline-none transition-all duration-fast ease-smooth focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
                 thumbPreview
-                  ? "border border-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_3px_10px_rgba(0,0,0,0.05)]"
-                  : "border border-dashed border-black/[0.12] hover:border-[rgba(94,106,210,0.5)] hover:bg-accent-subtle"
+                  ? "border border-border shadow-[0_1px_2px_rgba(0,0,0,0.04),0_3px_10px_rgba(0,0,0,0.05)]"
+                  : "border border-dashed border-border-strong hover:border-[rgba(94,106,210,0.5)] hover:bg-accent-subtle"
               }`}
             >
               {thumbPreview ? (
                 <>
                   <img src={thumbPreview} alt="已选择的封面图预览" className="absolute inset-0 h-full w-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/18 to-transparent" />
-                  <span className="absolute right-2 top-2 inline-flex h-8 items-center gap-1.5 rounded-md bg-white/95 px-2.5 text-[12px] font-medium text-text shadow-sm transition-colors group-hover:bg-white">
+                  <span className="absolute right-2 top-2 inline-flex h-8 items-center gap-1.5 rounded-md bg-bg/95 px-2.5 text-[12px] font-medium text-text shadow-sm transition-colors group-hover:bg-bg">
                     <UploadCloud size={14} />
                     更换
                   </span>
@@ -519,7 +519,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                 {Array.from({length: 6}).map((_, index) => (
                   <div
                     key={index}
-                    className="aspect-[2.35/1] animate-pulse overflow-hidden rounded-md border border-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)] bg-bg-secondary p-2"
+                    className="aspect-[2.35/1] animate-pulse overflow-hidden rounded-md border border-border shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)] bg-bg-secondary p-2"
                   >
                     <div className="h-full rounded bg-[linear-gradient(90deg,rgba(148,163,184,0.10),rgba(148,163,184,0.22),rgba(148,163,184,0.10))]" />
                   </div>
@@ -554,7 +554,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                         disabled={busy}
                         onClick={() => pickMaterialThumb(item)}
                         className={`group relative block aspect-[2.35/1] w-full appearance-none overflow-hidden rounded-md border bg-bg-secondary p-0 outline-none transition-all duration-fast hover:-translate-y-px hover:border-accent/60 focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
-                          selected ? "border-accent/70 shadow-[0_0_0_2px_var(--ring),0_4px_14px_rgba(94,106,210,0.16)] hover:shadow-[0_0_0_2px_var(--ring),0_6px_20px_rgba(94,106,210,0.22)]" : "border border-black/[0.06] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.05),0_8px_20px_rgba(0,0,0,0.05)]"
+                          selected ? "border-accent/70 shadow-[0_0_0_2px_var(--ring),0_4px_14px_rgba(94,106,210,0.16)] hover:shadow-[0_0_0_2px_var(--ring),0_6px_20px_rgba(94,106,210,0.22)]" : "border border-border shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.05),0_8px_20px_rgba(0,0,0,0.05)]"
                         }`}
                         aria-label={`选择素材库第 ${index + 1} 张图片作为封面：${item.name}`}
                       >

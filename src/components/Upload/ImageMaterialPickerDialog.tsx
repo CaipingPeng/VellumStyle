@@ -127,7 +127,7 @@ export default function ImageMaterialPickerDialog({open, onClose, onPick, onNeed
             {Array.from({length: 8}).map((_, index) => (
               <div
                 key={index}
-                className="aspect-[2.35/1] animate-pulse overflow-hidden rounded-md border border-black/[0.06] bg-bg-secondary p-2 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)]"
+                className="aspect-[2.35/1] animate-pulse overflow-hidden rounded-md border border-border bg-bg-secondary p-2 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)]"
               >
                 <div className="h-full rounded bg-[linear-gradient(90deg,rgba(148,163,184,0.10),rgba(148,163,184,0.22),rgba(148,163,184,0.10))]" />
               </div>
@@ -158,7 +158,7 @@ export default function ImageMaterialPickerDialog({open, onClose, onPick, onNeed
                     key={item.mediaId}
                     type="button"
                     onClick={() => pickMaterialImage(item)}
-                    className="group relative block aspect-[2.35/1] w-full appearance-none overflow-hidden rounded-md border border-black/[0.06] bg-bg-secondary p-0 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)] outline-none transition-all duration-fast hover:-translate-y-px hover:border-accent/60 hover:shadow-[0_2px_8px_rgba(0,0,0,0.05),0_8px_20px_rgba(0,0,0,0.05)] focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+                    className="group relative block aspect-[2.35/1] w-full appearance-none overflow-hidden rounded-md border border-border bg-bg-secondary p-0 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)] outline-none transition-all duration-fast hover:-translate-y-px hover:border-accent/60 hover:shadow-[0_2px_8px_rgba(0,0,0,0.05),0_8px_20px_rgba(0,0,0,0.05)] focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
                     aria-label={`插入素材库第 ${index + 1} 张图片：${item.name}`}
                   >
                     <img
