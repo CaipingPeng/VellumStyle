@@ -22,6 +22,12 @@ interface SourceRange {
   end: number;
 }
 
+interface HtmlTagRange extends SourceRange {
+  name: string;
+  closing: boolean;
+  source: string;
+}
+
 export interface MediaRef {
   start: number;
   end: number;
@@ -38,7 +44,6 @@ const IMAGE_EXT = /\.(?:jpe?g|png|gif|svg)(?:[?#].*)?$/i;
 const VIDEO_EXT = /\.(?:mp4|mov|m4v|webm|avi|mkv)(?:[?#].*)?$/i;
 const MARKDOWN_IMAGE_RE = /!\[([^\]\\]*(?:\\.[^\]\\]*)*)\]\(([^)\n]+)\)/g;
 const MARKDOWN_LINK_RE = /(?<!!)\[([^\]\\]*(?:\\.[^\]\\]*)*)\]\(([^)\n]+)\)/g;
-const HTML_MEDIA_RE = /<(img|video|source)\b[^>]*\bsrc\s*=\s*(["'])(.*?)\2[^>]*>/gi;
 const OBSIDIAN_EMBED_RE = /!\[\[([^\]\n]+)\]\]/g;
 const markdownIt = new MarkdownIt({html: true});
 
@@ -69,8 +74,13 @@ function findIgnoredCodeRanges(markdown: string): SourceRange[] {
 
     const source = markdown.slice(tokenRange.start, tokenRange.end);
     if (token.type === "html_block") {
-      if (/^\s*<pre\b/i.test(token.content)) ranges.push(tokenRange);
-      ranges.push(...shiftRanges(findHtmlCodeRanges(source), tokenRange.start));
+      const htmlCodeRanges = findHtmlCodeRanges(source);
+      if (/^\s*<pre\b/i.test(token.content)) {
+        const blockPreStart = findHtmlTags(source).find((tag) => tag.name === "pre" && !tag.closing)?.start;
+        const closedBlockPre = htmlCodeRanges.find((range) => range.start === blockPreStart);
+        ranges.push(closedBlockPre ?? tokenRange);
+      }
+      ranges.push(...shiftRanges(htmlCodeRanges, tokenRange.start));
       continue;
     }
     if (token.type === "inline") {
@@ -86,25 +96,34 @@ function shiftRanges(ranges: SourceRange[], offset: number): SourceRange[] {
   return ranges.map((range) => ({start: offset + range.start, end: offset + range.end}));
 }
 
+function findHtmlTags(source: string): HtmlTagRange[] {
+  const tagPattern = /<\/?([A-Za-z][A-Za-z0-9-]*)\b(?:[^>"']|"[^"]*"|'[^']*')*>/g;
+  return [...source.matchAll(tagPattern)].map((match) => ({
+    start: match.index ?? 0,
+    end: (match.index ?? 0) + match[0].length,
+    name: match[1].toLowerCase(),
+    closing: match[0].startsWith("</"),
+    source: match[0],
+  }));
+}
+
 function findHtmlCodeRanges(source: string): SourceRange[] {
-  const tagPattern = /<(\/?)(code|pre)\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
   const openTags = new Map<string, SourceRange[]>();
   const ranges: SourceRange[] = [];
 
-  for (const match of source.matchAll(tagPattern)) {
-    const start = match.index ?? 0;
-    if (isEscapedAt(source, start)) continue;
+  for (const htmlTag of findHtmlTags(source)) {
+    if (htmlTag.name !== "code" && htmlTag.name !== "pre") continue;
+    if (isEscapedAt(source, htmlTag.start)) continue;
 
-    const tag = match[2].toLowerCase();
-    const stack = openTags.get(tag) ?? [];
-    if (!match[1]) {
-      stack.push({start, end: start + match[0].length});
-      openTags.set(tag, stack);
+    const stack = openTags.get(htmlTag.name) ?? [];
+    if (!htmlTag.closing) {
+      stack.push(htmlTag);
+      openTags.set(htmlTag.name, stack);
       continue;
     }
 
     const opener = stack.pop();
-    if (opener) ranges.push({start: opener.start, end: start + match[0].length});
+    if (opener) ranges.push({start: opener.start, end: htmlTag.end});
   }
 
   return ranges;
@@ -128,8 +147,16 @@ function sourceRangeFromLineMap(map: [number, number], lineStarts: number[], sou
 function findInlineCodeRanges(markdown: string): SourceRange[] {
   const runs: Array<SourceRange & {length: number; escaped: boolean}> = [];
   const runIndicesByLength = new Map<number, number[]>();
+  const htmlTags = findHtmlTags(markdown);
+  let htmlTagIndex = 0;
   let offset = 0;
   while (offset < markdown.length) {
+    while (htmlTags[htmlTagIndex]?.end <= offset) htmlTagIndex++;
+    const htmlTag = htmlTags[htmlTagIndex];
+    if (htmlTag && htmlTag.start <= offset) {
+      offset = htmlTag.end;
+      continue;
+    }
     if (markdown[offset] !== "`") {
       offset++;
       continue;
@@ -276,21 +303,22 @@ function scanMarkdownVideoLinks(markdown: string): MediaRef[] {
 
 function scanHtmlMedia(markdown: string): MediaRef[] {
   const refs: MediaRef[] = [];
-  for (const match of markdown.matchAll(HTML_MEDIA_RE)) {
-    const tag = match[1].toLowerCase();
-    const url = match[3];
-    const matchStart = match.index ?? 0;
-    const urlStart = matchStart + match[0].indexOf(url);
-    const isImage = tag === "img";
+  for (const htmlTag of findHtmlTags(markdown)) {
+    if (htmlTag.closing || !["img", "video", "source"].includes(htmlTag.name)) continue;
+    const src = htmlAttributeInfo(htmlTag.source, "src");
+    if (!src) continue;
+
+    const urlStart = htmlTag.start + src.start;
+    const isImage = htmlTag.name === "img";
     refs.push({
-      start: isImage ? matchStart : urlStart,
-      end: isImage ? matchStart + match[0].length : urlStart + url.length,
-      originalUrl: url,
+      start: isImage ? htmlTag.start : urlStart,
+      end: isImage ? htmlTag.end : urlStart + src.value.length,
+      originalUrl: src.value,
       mediaType: isImage ? "image" : "video",
-      sourceType: classifyMediaSource(url),
-      syntax: isImage ? "html-img" : tag === "video" ? "html-video" : "html-source",
+      sourceType: classifyMediaSource(src.value),
+      syntax: isImage ? "html-img" : htmlTag.name === "video" ? "html-video" : "html-source",
       replacementMode: isImage ? "token" : "url",
-      htmlImageMeta: isImage ? parseHtmlImageMeta(match[0]) : undefined,
+      htmlImageMeta: isImage ? parseHtmlImageMeta(htmlTag.source) : undefined,
     });
   }
   return refs;
@@ -309,10 +337,19 @@ function parseHtmlImageMeta(tag: string): HtmlImageMeta {
   return {alt, width: zoom || undefined};
 }
 
-function htmlAttribute(tag: string, name: string): string | undefined {
+function htmlAttributeInfo(tag: string, name: string): {value: string; start: number} | undefined {
   const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = new RegExp(`(?:^|\\s)${escapedName}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i").exec(tag);
-  return match ? (match[1] ?? match[2] ?? match[3] ?? "") : undefined;
+  if (!match) return undefined;
+
+  const value = match[1] ?? match[2] ?? match[3] ?? "";
+  const quote = match[1] !== undefined ? '"' : match[2] !== undefined ? "'" : undefined;
+  const relativeStart = quote ? match[0].indexOf(quote) + 1 : match[0].lastIndexOf(value);
+  return {value, start: match.index + relativeStart};
+}
+
+function htmlAttribute(tag: string, name: string): string | undefined {
+  return htmlAttributeInfo(tag, name)?.value;
 }
 
 function scanObsidianEmbeds(markdown: string): MediaRef[] {

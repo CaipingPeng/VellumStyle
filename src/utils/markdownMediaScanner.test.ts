@@ -32,6 +32,28 @@ test("html img refs cover the whole tag so imports can normalize to Markdown ima
   assert.equal(markdown.slice(refs[0].start, refs[0].end), '<img src="http://mmbiz.qpic.cn/a.png" alt="image" style="zoom:50%;" />');
 });
 
+test("HTML img attributes containing backticks remain scannable", () => {
+  const tag = '<img alt="`caption`" src="inline-attr.png">';
+  const refs = scanMarkdownMedia(tag);
+
+  assert.equal(refs.length, 1);
+  assert.equal(refs[0].originalUrl, "inline-attr.png");
+  assert.equal(refs[0].syntax, "html-img");
+  assert.equal(refs[0].start, 0);
+  assert.equal(refs[0].end, tag.length);
+});
+
+test("HTML img attributes containing literal code tags remain scannable", () => {
+  const tag = '<img alt="<code>literal</code>" src="attr-code.png">';
+  const refs = scanMarkdownMedia(tag);
+
+  assert.equal(refs.length, 1);
+  assert.equal(refs[0].originalUrl, "attr-code.png");
+  assert.equal(refs[0].syntax, "html-img");
+  assert.equal(refs[0].start, 0);
+  assert.equal(refs[0].end, tag.length);
+});
+
 test("html img metadata preserves alt and explicit dimensions before zoom", () => {
   const refs = scanMarkdownMedia(
     `<img style="zoom:25%" height='120px' alt="图]一" src="./image.png" width=50%>`,
@@ -290,6 +312,30 @@ test("unmatched inline HTML code does not suppress remaining media", () => {
     scanMarkdownMedia(markdown).map((ref) => ref.originalUrl),
     ["inline-unclosed.png", "inline-after.png"],
   );
+});
+
+test("closed block-level HTML pre scans media after its closing tag on the opening line", () => {
+  const markdown = '<pre>![hidden](hidden.png)</pre> ![real](same-line.png)';
+  const refs = scanMarkdownMedia(markdown);
+  const expectedStart = markdown.indexOf("same-line.png");
+
+  assert.deepEqual(refs.map((ref) => ref.originalUrl), ["same-line.png"]);
+  assert.equal(refs[0].start, expectedStart);
+  assert.equal(refs[0].end, expectedStart + "same-line.png".length);
+});
+
+test("multiline block-level HTML pre scans media after its closing tag on a later line", () => {
+  const markdown = [
+    "<pre>",
+    "![hidden](hidden.png)",
+    "</pre> ![real](later-closing-line.png)",
+  ].join("\n");
+  const refs = scanMarkdownMedia(markdown);
+  const expectedStart = markdown.indexOf("later-closing-line.png");
+
+  assert.deepEqual(refs.map((ref) => ref.originalUrl), ["later-closing-line.png"]);
+  assert.equal(refs[0].start, expectedStart);
+  assert.equal(refs[0].end, expectedStart + "later-closing-line.png".length);
 });
 
 test("unclosed block-level HTML pre suppresses media through EOF using markdown-it block semantics", () => {
