@@ -13,6 +13,11 @@ import {
   DEFAULT_WORKSPACE_SPLIT_RATIO,
   sanitizeWorkspaceSplitRatio,
 } from "../components/Workspace/workspaceSplitLayout.ts";
+import {
+  DEFAULT_APPEARANCE_MODE,
+  sanitizeAppearanceMode,
+  type AppearanceMode,
+} from "../appearance/appearanceMode.ts";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -34,6 +39,7 @@ export interface EditorState {
   syncMessage: string; // 最近一次同步说明或错误
   previewMode: PreviewModeId; // 预览宽度模式
   workspaceSplitRatio: number; // 编辑器/预览外层分栏比例，persist
+  appearanceMode: AppearanceMode; // 应用亮暗外观，persist
   favoriteThemeIds: string[]; // 收藏主题，persist
   pinnedCodeThemeIds: CodeThemeId[]; // 置顶代码主题，persist
   setContent: (content: string) => void;
@@ -45,6 +51,7 @@ export interface EditorState {
   setSelectedPath: (path: string | null) => void;
   setPreviewMode: (mode: PreviewModeId) => void;
   setWorkspaceSplitRatio: (ratio: number) => void;
+  toggleAppearanceMode: () => void;
   toggleFavoriteTheme: (id: string) => void;
   togglePinnedCodeTheme: (id: CodeThemeId) => void;
   toggleSidebar: () => void;
@@ -193,6 +200,7 @@ export const useStore = create<EditorState>()(
       syncMessage: "",
       previewMode: "fluid",
       workspaceSplitRatio: DEFAULT_WORKSPACE_SPLIT_RATIO,
+      appearanceMode: DEFAULT_APPEARANCE_MODE,
       favoriteThemeIds: [],
       pinnedCodeThemeIds: [...DEFAULT_PINNED_CODE_THEME_IDS],
       setContent: (content) => {
@@ -208,6 +216,8 @@ export const useStore = create<EditorState>()(
       setPreviewMode: (previewMode) => set({previewMode}),
       setWorkspaceSplitRatio: (workspaceSplitRatio) =>
         set({workspaceSplitRatio: sanitizeWorkspaceSplitRatio(workspaceSplitRatio)}),
+      toggleAppearanceMode: () =>
+        set((s) => ({appearanceMode: s.appearanceMode === "light" ? "dark" : "light"})),
       toggleFavoriteTheme: (id) =>
         set((s) => ({
           favoriteThemeIds: s.favoriteThemeIds.includes(id)
@@ -260,6 +270,7 @@ export const useStore = create<EditorState>()(
         codeThemeId: s.codeThemeId,
         previewMode: s.previewMode,
         workspaceSplitRatio: s.workspaceSplitRatio,
+        appearanceMode: s.appearanceMode,
         favoriteThemeIds: s.favoriteThemeIds,
         pinnedCodeThemeIds: s.pinnedCodeThemeIds,
       }),
@@ -269,6 +280,7 @@ export const useStore = create<EditorState>()(
           ...current,
           ...saved,
           workspaceSplitRatio: sanitizeWorkspaceSplitRatio(saved?.workspaceSplitRatio),
+          appearanceMode: sanitizeAppearanceMode(saved?.appearanceMode),
         };
       },
     },
