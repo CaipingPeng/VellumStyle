@@ -74,6 +74,10 @@ body {
   border-color: var(--workspace-panel-active);
 }
 
+.workspace-editor-toolbar {
+  border-bottom: 1px solid var(--workspace-panel-border);
+}
+
 .workspace-split-separator {
   position: relative;
   width: 8px;
