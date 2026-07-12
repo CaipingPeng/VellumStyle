@@ -95,6 +95,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const previewRef = useRef<string | null>(null);
   const materialLoadingRef = useRef(false);
   const sessionRef = useRef(0);
+  const mountedRef = useRef(true);
   const nextOperationIdRef = useRef(0);
   const publishingRef = useRef<{id: number; session: number} | null>(null);
   const terminalTimeoutRef = useRef<number | null>(null);
@@ -183,7 +184,10 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
 
   // 弹窗卸载时释放最后的预览 blob URL。
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
+      sessionRef.current += 1;
       clearTerminalTimeout();
       revokePreview(previewRef.current);
     };
@@ -296,13 +300,16 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     clearTerminalTimeout();
     const operation = {id: ++nextOperationIdRef.current, session: sessionRef.current};
     publishingRef.current = operation;
-    const isCurrentSession = () => sessionRef.current === operation.session;
+    const isCurrentSession = () =>
+      mountedRef.current && sessionRef.current === operation.session;
     const isCurrentOperationGeneration = () =>
       isCurrentSession() && nextOperationIdRef.current === operation.id;
     setBusy(true);
     setPubResult("none");
     try {
       await waitForMathJaxIdle();
+      if (!isCurrentSession()) return;
+
       const html = solveDraftHtml();
       const publishSettings = {
         author: author.trim(),
@@ -346,7 +353,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     } finally {
       if (publishingRef.current?.id === operation.id) {
         publishingRef.current = null;
-        setBusy(false);
+        if (mountedRef.current) setBusy(false);
       }
     }
   };

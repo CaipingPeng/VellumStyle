@@ -151,6 +151,8 @@ interface Harness {
   setInput: (id: string, value: string) => Promise<void>;
   selectCover: () => Promise<void>;
   runTimer: (delay: number) => Promise<void>;
+  timerCount: (delay: number) => number;
+  unmount: () => Promise<void>;
   cleanup: () => void;
 }
 
@@ -277,6 +279,7 @@ async function createHarness(content = WARNING_FIXTURE, options: HarnessOptions 
   const root: Root = createRoot(container);
   let open = true;
   let closes = 0;
+  let rootMounted = true;
 
   const renderDialog = async () => {
     await act(async () => {
@@ -300,7 +303,10 @@ async function createHarness(content = WARNING_FIXTURE, options: HarnessOptions 
   const cleanup = () => {
     if (cleaned) return;
     cleaned = true;
-    act(() => root.unmount());
+    if (rootMounted) {
+      act(() => root.unmount());
+      rootMounted = false;
+    }
     timers.clear();
     animationFrames.clear();
     unsubscribeToast();
@@ -371,6 +377,15 @@ async function createHarness(content = WARNING_FIXTURE, options: HarnessOptions 
         const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
         setter?.call(input, value);
         input.dispatchEvent(new window.Event("input", {bubbles: true}));
+        await flushPromises();
+      });
+    },
+    timerCount: (delay) => [...timers.values()].filter((timer) => timer.delay === delay).length,
+    unmount: async () => {
+      if (!rootMounted) return;
+      await act(async () => {
+        root.unmount();
+        rootMounted = false;
         await flushPromises();
       });
     },
@@ -701,6 +716,28 @@ test("successful confirmation closes at 900ms and reopening requires a fresh sca
   await harness.publish();
   assert.ok(warningRegion());
   assert.equal(harness.draftCalls().length, 1);
+});
+
+test("unmounting during deferred addDraft invalidates every terminal side effect", async () => {
+  const harness = await createHarness(INLINE_IMAGE_FIXTURE);
+  const draft = harness.holdDraft();
+  await harness.publish();
+  assert.equal(harness.draftCalls().length, 1);
+
+  await harness.unmount();
+  await act(async () => {
+    draft.resolve("UNMOUNTED_DRAFT");
+    await draft.promise;
+    await flushPromises();
+  });
+
+  assert.equal(harness.timerCount(900), 0, "an unmounted operation must not schedule its success callback");
+  await harness.runTimer(900);
+  assert.equal(harness.closeCount(), 0);
+  assert.equal(
+    harness.toastMessages().some(({message}) => message.includes("已发到公众号草稿箱")),
+    false,
+  );
 });
 
 test("success state blocks duplicate submission until its 900ms callback", async () => {
