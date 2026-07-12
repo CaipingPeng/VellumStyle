@@ -1,13 +1,15 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {AnimatePresence, motion, useReducedMotion} from "framer-motion";
 import MarkdownEditor, {type MarkdownEditorHandle} from "./components/Editor/MarkdownEditor.tsx";
 import Preview, {type PreviewHandle} from "./components/Preview/Preview.tsx";
 import PreviewModeToggle from "./components/Preview/PreviewModeToggle.tsx";
 import SettingsDialog from "./components/Settings/SettingsDialog.tsx";
 import StylePanel from "./components/StylePanel/StylePanel.tsx";
-import SyntaxToolbar from "./components/Toolbar/SyntaxToolbar.tsx";
 import MainToolbar from "./components/Toolbar/MainToolbar.tsx";
 import DocTree from "./components/DocTree/DocTree.tsx";
 import OutlineNav from "./components/Outline/OutlineNav.tsx";
+import WorkspaceSplit from "./components/Workspace/WorkspaceSplit.tsx";
+import EditorWorkspacePanel from "./components/Workspace/EditorWorkspacePanel.tsx";
 import UpdatePromptDialog from "./components/Update/UpdatePromptDialog.tsx";
 import IpChangedDialog from "./components/Update/IpChangedDialog.tsx";
 import ImageMaterialPickerDialog from "./components/Upload/ImageMaterialPickerDialog.tsx";
@@ -82,7 +84,7 @@ function syncStatusClass(tone: CloudSyncTone): string {
 }
 
 export default function App() {
-  const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, outlineOpen, saveStatus, lastSavedAt, syncStatus, lastSyncedAt, syncMessage, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar, toggleOutline} = useStore();
+  const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, outlineOpen, saveStatus, lastSavedAt, syncStatus, lastSyncedAt, syncMessage, workspaceSplitRatio, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar, toggleOutline, setWorkspaceSplitRatio} = useStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [startupUpdatePromptOpen, setStartupUpdatePromptOpen] = useState(false);
   const [availableUpdate, setAvailableUpdate] = useState<AppUpdateCandidate | null>(null);
@@ -97,6 +99,10 @@ export default function App() {
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
   const outlineItems = useMemo(() => parseMarkdownOutline(content), [content]);
+  const reduceMotion = useReducedMotion();
+  const drawerTransition = reduceMotion
+    ? {duration: 0}
+    : {duration: 0.14, ease: "easeOut" as const};
 
   const insertUploadedImage = (url: string) => {
     editorRef.current?.insertAtCursor(`\n${formatMarkdownImage({alt: "", url})}\n`);
@@ -456,12 +462,6 @@ export default function App() {
           <IconButton active={outlineOpen} title="大纲" aria-pressed={outlineOpen} onClick={toggleOutline}>
             <ListTree size={16} />
           </IconButton>
-          <SyntaxToolbar
-            editorRef={editorRef}
-            onPickFile={handleUploadFile}
-            onPickLocal={handleUploadLocal}
-            onOpenMaterialLibrary={handleOpenImageMaterialPicker}
-          />
         </div>
         <MainToolbar
           onOpenSettings={() => setSettingsOpen(true)}
@@ -470,37 +470,79 @@ export default function App() {
         />
       </header>
 
-      {/* 主体：文档树 + 编辑器 + 预览 */}
-      <main className="relative flex min-h-0 flex-1">
-        {sidebarOpen && <DocTree />}
-        {outlineOpen && (
-          <OutlineNav
-            items={outlineItems}
-            activeLine={activeOutlineLine}
-            onJump={handleOutlineJump}
-          />
-        )}
-        <div className="min-w-0 flex-1 overflow-hidden">
-          <MarkdownEditor
-            ref={editorRef}
-            value={content}
-            documentKey={currentDocPath}
-            onChange={setContent}
-            onPasteImage={handleUploadFile}
-          />
-        </div>
-        <div className="w-px flex-none bg-border-strong" aria-hidden="true" />
-        <div className="flex min-w-0 flex-1">
-          <div className="min-w-0 flex-1">
-            <Preview
-              ref={previewRef}
-              content={content}
-              markdownThemeId={markdownThemeId}
-              onResizeImage={handleResizePreviewImage}
-            />
-          </div>
-          <StylePanel />
-        </div>
+      {/* 主体：文档树 + 大纲 + 编辑器 + 预览 */}
+      <main className="workspace-frame relative flex min-h-0 flex-1 gap-2 p-2.5">
+        <AnimatePresence initial={false}>
+          {sidebarOpen && (
+            <motion.div
+              key="documents"
+              className="flex min-h-0 flex-none overflow-hidden"
+              initial={{width: 0, x: -8, opacity: 0}}
+              animate={{width: "auto", x: 0, opacity: 1}}
+              exit={{width: 0, x: -8, opacity: 0}}
+              transition={drawerTransition}
+            >
+              <DocTree />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <AnimatePresence initial={false}>
+          {outlineOpen && (
+            <motion.div
+              key="outline"
+              className="flex min-h-0 flex-none overflow-hidden"
+              initial={{width: 0, x: -8, opacity: 0}}
+              animate={{width: "auto", x: 0, opacity: 1}}
+              exit={{width: 0, x: -8, opacity: 0}}
+              transition={drawerTransition}
+            >
+              <OutlineNav
+                items={outlineItems}
+                activeLine={activeOutlineLine}
+                onJump={handleOutlineJump}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <WorkspaceSplit
+          ratio={workspaceSplitRatio}
+          onRatioCommit={setWorkspaceSplitRatio}
+          editor={
+            <EditorWorkspacePanel
+              editorRef={editorRef}
+              onPickFile={handleUploadFile}
+              onPickLocal={handleUploadLocal}
+              onOpenMaterialLibrary={handleOpenImageMaterialPicker}
+            >
+              <MarkdownEditor
+                ref={editorRef}
+                value={content}
+                documentKey={currentDocPath}
+                onChange={setContent}
+                onPasteImage={handleUploadFile}
+              />
+            </EditorWorkspacePanel>
+          }
+          preview={
+            <div className="relative flex h-full min-h-0 min-w-0">
+              <section
+                aria-label="文章预览"
+                data-workspace-panel="preview"
+                className="workspace-panel flex min-h-0 min-w-0 flex-1 overflow-hidden"
+              >
+                <div className="min-w-0 flex-1">
+                  <Preview
+                    ref={previewRef}
+                    content={content}
+                    markdownThemeId={markdownThemeId}
+                    onResizeImage={handleResizePreviewImage}
+                  />
+                </div>
+              </section>
+              <StylePanel />
+            </div>
+          }
+        />
       </main>
 
       {/* Footer */}
