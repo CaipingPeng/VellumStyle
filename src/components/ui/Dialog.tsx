@@ -9,12 +9,23 @@ interface Props {
   onClose: () => void;
   /** 点遮罩是否关闭，默认 true。发布对话框传 false（已知需求）。 */
   closeOnOverlay?: boolean;
+  /** 禁用所有内建关闭入口；默认 false，不影响现有调用方。 */
+  closeDisabled?: boolean;
   width?: number | string;
   children: ReactNode;
   footer?: ReactNode;
 }
 
-export default function Dialog({open, title, onClose, closeOnOverlay = true, width = 440, children, footer}: Props) {
+export default function Dialog({
+  open,
+  title,
+  onClose,
+  closeOnOverlay = true,
+  closeDisabled = false,
+  width = 440,
+  children,
+  footer,
+}: Props) {
   return createPortal(
     <AnimatePresence>
       {open && (
@@ -25,7 +36,7 @@ export default function Dialog({open, title, onClose, closeOnOverlay = true, wid
           animate={{opacity: 1}}
           exit={{opacity: 0}}
           transition={{duration: 0.13}}
-          onClick={closeOnOverlay ? onClose : undefined}
+          onClick={closeOnOverlay && !closeDisabled ? onClose : undefined}
         >
           <motion.div
             className="flex max-h-[86vh] flex-col overflow-hidden rounded bg-bg shadow-md"
@@ -41,8 +52,10 @@ export default function Dialog({open, title, onClose, closeOnOverlay = true, wid
               <button
                 type="button"
                 onClick={onClose}
+                disabled={closeDisabled}
+                aria-disabled={closeDisabled || undefined}
                 title="关闭"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast hover:bg-bg-tertiary hover:text-text"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast hover:bg-bg-tertiary hover:text-text disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-text-muted"
               >
                 <X size={16} />
               </button>

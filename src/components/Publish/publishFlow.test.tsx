@@ -40,6 +40,7 @@ type PublishDialogComponent = typeof import("./PublishDialog.tsx").default;
 let storeModule: StoreModule | null = null;
 let PublishDialog: PublishDialogComponent | null = null;
 let initialStoreState: ReturnType<StoreModule["useStore"]["getState"]> | null = null;
+let runtimeToast: typeof import("../Toast/toast.ts").toast | null = null;
 const runtimeBundlePath = join(process.cwd(), "src", "components", "Publish", `.publishFlow.runtime-${process.pid}.mjs`);
 
 async function loadRuntimeModules() {
@@ -49,6 +50,7 @@ async function loadRuntimeModules() {
         contents: [
           'export {default as PublishDialog} from "./src/components/Publish/PublishDialog.tsx";',
           'export {useStore} from "./src/store/index.ts";',
+          'export {toast} from "./src/components/Toast/toast.ts";',
         ].join("\n"),
         resolveDir: process.cwd(),
         loader: "ts",
@@ -68,6 +70,10 @@ async function loadRuntimeModules() {
             ),
             loader: "ts",
           }));
+          pluginBuild.onLoad({filter: /src[\\/]markdown[\\/]mathjax\.ts$/}, () => ({
+            contents: "export function waitForMathJaxIdle() { return globalThis.__PUBLISH_TEST_MATHJAX_IDLE__ ?? Promise.resolve(); }",
+            loader: "ts",
+          }));
         },
       }],
     });
@@ -75,9 +81,11 @@ async function loadRuntimeModules() {
     const runtime = await import(`${pathToFileURL(runtimeBundlePath).href}?test=${Date.now()}`) as {
       useStore: StoreModule["useStore"];
       PublishDialog: PublishDialogComponent;
+      toast: typeof import("../Toast/toast.ts").toast;
     };
     storeModule = {useStore: runtime.useStore} as StoreModule;
     PublishDialog = runtime.PublishDialog;
+    runtimeToast = runtime.toast;
     initialStoreState = runtime.useStore.getState();
   }
   return {useStore: storeModule.useStore, PublishDialog: PublishDialog!, initialStoreState: initialStoreState!};
@@ -131,6 +139,8 @@ function installRenderedFixture(markdown: string) {
 
 interface Harness {
   calls: InvokeCall[];
+  articleBox: HTMLElement;
+  toastMessages: () => Array<{message: string; type: string}>;
   closeCount: () => number;
   draftCalls: () => InvokeCall[];
   holdDraft: () => Deferred<string>;
@@ -138,10 +148,17 @@ interface Harness {
   continuePublish: () => Promise<void>;
   setContent: (content: string) => Promise<void>;
   setOpen: (open: boolean) => Promise<void>;
+  setInput: (id: string, value: string) => Promise<void>;
+  selectCover: () => Promise<void>;
+  runTimer: (delay: number) => Promise<void>;
   cleanup: () => void;
 }
 
-async function createHarness(content = WARNING_FIXTURE): Promise<Harness> {
+interface HarnessOptions {
+  selectCover?: boolean;
+}
+
+async function createHarness(content = WARNING_FIXTURE, options: HarnessOptions = {}): Promise<Harness> {
   const previousLocalStorage = Object.getOwnPropertyDescriptor(window, "localStorage");
   const storage = new Map<string, string>();
   const testStorage = {
@@ -198,12 +215,12 @@ async function createHarness(content = WARNING_FIXTURE): Promise<Harness> {
   const previousSetTimeout = Object.getOwnPropertyDescriptor(window, "setTimeout");
   const previousClearTimeout = Object.getOwnPropertyDescriptor(window, "clearTimeout");
   let nextTimer = 1;
-  const timers = new Map<number, TimerHandler>();
+  const timers = new Map<number, {handler: TimerHandler; delay: number}>();
   Object.defineProperty(window, "setTimeout", {
     configurable: true,
-    value: (handler: TimerHandler) => {
+    value: (handler: TimerHandler, delay = 0) => {
       const id = nextTimer++;
-      timers.set(id, handler);
+      timers.set(id, {handler, delay});
       return id;
     },
   });
@@ -230,6 +247,22 @@ async function createHarness(content = WARNING_FIXTURE): Promise<Harness> {
     },
   };
 
+  const toastMessages: Array<{message: string; type: string}> = [];
+  const knownToastIds = new Set<number>();
+  let receivedInitialToasts = false;
+  const unsubscribeToast = runtimeToast!.subscribe((items) => {
+    if (!receivedInitialToasts) {
+      for (const {id} of items) knownToastIds.add(id);
+      receivedInitialToasts = true;
+      return;
+    }
+    for (const {id, message, type} of items) {
+      if (knownToastIds.has(id)) continue;
+      knownToastIds.add(id);
+      toastMessages.push({message, type});
+    }
+  });
+
   const previousConsoleError = console.error;
   const actWarnings: string[] = [];
   console.error = (...args: unknown[]) => {
@@ -253,12 +286,15 @@ async function createHarness(content = WARNING_FIXTURE): Promise<Harness> {
   };
 
   await renderDialog();
-  await act(async () => {
-    const material = document.querySelector<HTMLButtonElement>('button[aria-label^="选择素材库第 1 张图片作为封面"]');
-    assert.ok(material, "material library item should load");
-    material.click();
-    await flushPromises();
-  });
+  const selectCover = async () => {
+    await act(async () => {
+      const material = document.querySelector<HTMLButtonElement>('button[aria-label^="选择素材库第 1 张图片作为封面"]');
+      assert.ok(material, "material library item should load");
+      material.click();
+      await flushPromises();
+    });
+  };
+  if (options.selectCover !== false) await selectCover();
 
   let cleaned = false;
   const cleanup = () => {
@@ -267,6 +303,8 @@ async function createHarness(content = WARNING_FIXTURE): Promise<Harness> {
     act(() => root.unmount());
     timers.clear();
     animationFrames.clear();
+    unsubscribeToast();
+    Reflect.deleteProperty(globalThis, "__PUBLISH_TEST_MATHJAX_IDLE__");
     container.remove();
     articleBox.remove();
     document.getElementById(STYLE_IDS.markdown)?.remove();
@@ -295,6 +333,8 @@ async function createHarness(content = WARNING_FIXTURE): Promise<Harness> {
 
   return {
     calls,
+    articleBox,
+    toastMessages: () => [...toastMessages],
     closeCount: () => closes,
     draftCalls: () => calls.filter((call) => call.cmd === "add_draft"),
     holdDraft: () => {
@@ -322,6 +362,28 @@ async function createHarness(content = WARNING_FIXTURE): Promise<Harness> {
     setOpen: async (nextOpen) => {
       open = nextOpen;
       await renderDialog();
+    },
+    selectCover,
+    setInput: async (id, value) => {
+      await act(async () => {
+        const input = document.getElementById(id) as HTMLInputElement | null;
+        assert.ok(input, `input not found: ${id}`);
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+        setter?.call(input, value);
+        input.dispatchEvent(new window.Event("input", {bubbles: true}));
+        await flushPromises();
+      });
+    },
+    runTimer: async (delay) => {
+      const matching = [...timers.entries()].filter(([, timer]) => timer.delay === delay);
+      await act(async () => {
+        for (const [id, timer] of matching) {
+          timers.delete(id);
+          if (typeof timer.handler === "function") timer.handler();
+          else Function(timer.handler)();
+        }
+        await flushPromises();
+      });
     },
     cleanup,
   };
@@ -468,6 +530,7 @@ test("confirmed busy state disables warning actions and ignores Escape", async (
 
   assert.ok(buttonWithText("返回检查").disabled);
   assert.ok(buttonWithText("仍然发布").disabled);
+  assert.equal(document.querySelector<HTMLButtonElement>('button[title="关闭"]')?.disabled, true);
   await act(async () => {
     window.dispatchEvent(new window.KeyboardEvent("keydown", {key: "Escape", cancelable: true}));
     await flushPromises();
@@ -530,4 +593,195 @@ test("visible inline image examples survive rendering and the HTML passed to add
   assert.match(html, /!\[imgDescription\]\(imgUrl\)/);
   assert.match(html, /!\[imgDescription\]\(imgUrl =缩放参数\)/);
   assert.match(html, /mmbiz\.qpic\.cn\/mmbiz_png\/real\/0/);
+});
+
+// Task 5 spec-review regressions
+
+test("clean publishing disables every visible close action", async () => {
+  const harness = await createHarness(INLINE_IMAGE_FIXTURE);
+  const gate = harness.holdDraft();
+  await harness.publish();
+
+  const cancel = buttonWithText("取消");
+  const titleClose = document.querySelector<HTMLButtonElement>('button[title="关闭"]');
+  assert.ok(titleClose);
+  assert.equal(cancel.disabled, true);
+  assert.equal(titleClose.disabled, true);
+  await act(async () => {
+    cancel.click();
+    titleClose.click();
+    await flushPromises();
+  });
+  assert.equal(harness.closeCount(), 0);
+
+  await act(async () => {
+    gate.resolve("DRAFT_ID");
+    await gate.promise;
+    await flushPromises();
+  });
+});
+
+test("external close and reopen cannot receive stale completion or overlap addDraft", async () => {
+  const harness = await createHarness(INLINE_IMAGE_FIXTURE);
+  const gate = harness.holdDraft();
+  await harness.publish();
+  assert.equal(harness.draftCalls().length, 1);
+
+  await harness.setOpen(false);
+  await harness.setOpen(true);
+  const reopenedPublish = document.getElementById("publish-dialog-submit") as HTMLButtonElement | null;
+  assert.ok(reopenedPublish);
+  assert.equal(reopenedPublish.disabled, true, "live operation must keep the reopened session locked");
+  await act(async () => {
+    reopenedPublish.click();
+    await flushPromises();
+  });
+  assert.equal(harness.draftCalls().length, 1);
+
+  await act(async () => {
+    gate.resolve("OLD_DRAFT");
+    await gate.promise;
+    await flushPromises();
+  });
+  await harness.runTimer(900);
+  assert.equal(harness.closeCount(), 0, "stale success must not close the new session");
+  assert.ok(buttonWithText("发布到草稿箱"));
+
+  await harness.selectCover();
+  await harness.publish();
+  assert.equal(harness.draftCalls().length, 2, "a new operation may start only after the old one settles");
+});
+
+
+
+test("a scheduled success callback cannot close or toast into a reopened session", async () => {
+  const harness = await createHarness(INLINE_IMAGE_FIXTURE);
+  await harness.publish();
+  await harness.setOpen(false);
+  await harness.setOpen(true);
+
+  await harness.runTimer(900);
+  assert.equal(harness.closeCount(), 0);
+  assert.equal(
+    harness.toastMessages().some(({message}) => message.includes("已发到公众号草稿箱")),
+    false,
+  );
+  assert.ok(buttonWithText("发布到草稿箱"));
+});
+
+test("back revokes warning authorization so another publish request rescans", async () => {
+  const harness = await createHarness();
+  await harness.publish();
+  await act(async () => {
+    buttonWithText("返回检查").click();
+    await flushPromises();
+  });
+  await harness.publish();
+  assert.ok(warningRegion());
+  assert.equal(harness.draftCalls().length, 0);
+});
+
+test("successful confirmation closes at 900ms and reopening requires a fresh scan", async () => {
+  const harness = await createHarness();
+  await harness.publish();
+  await harness.continuePublish();
+  assert.equal(harness.closeCount(), 0);
+  assert.ok(buttonWithText("已发布"));
+  assert.equal(
+    harness.toastMessages().some(({message}) => message.includes("已发到公众号草稿箱")),
+    false,
+  );
+
+  await harness.runTimer(900);
+  assert.equal(harness.closeCount(), 1);
+  assert.ok(harness.toastMessages().some(({message}) => message.includes("已发到公众号草稿箱")));
+
+  await harness.setOpen(false);
+  await harness.setOpen(true);
+  await harness.publish();
+  assert.ok(warningRegion());
+  assert.equal(harness.draftCalls().length, 1);
+});
+
+test("failed confirmation shows an error, resets after 2000ms, and retry rescans", async () => {
+  const harness = await createHarness();
+  await harness.publish();
+  const gate = harness.holdDraft();
+  await act(async () => {
+    buttonWithText("仍然发布").click();
+    await flushPromises();
+  });
+  await act(async () => {
+    gate.reject(new Error("draft rejected"));
+    await gate.promise.catch(() => undefined);
+    await flushPromises();
+  });
+  assert.ok(buttonWithText("发布失败"));
+  assert.ok(harness.toastMessages().some(({message, type}) => type === "error" && message.includes("draft rejected")));
+
+  await harness.runTimer(2000);
+  assert.ok(buttonWithText("发布到草稿箱"));
+  await harness.publish();
+  assert.ok(warningRegion());
+  assert.equal(harness.draftCalls().length, 1);
+});
+
+test("empty title is rejected behaviorally before addDraft", async () => {
+  const harness = await createHarness(INLINE_IMAGE_FIXTURE);
+  await harness.setInput("publish-title", "   ");
+  await harness.publish();
+  assert.equal(harness.draftCalls().length, 0);
+  assert.ok(harness.toastMessages().some(({message, type}) => type === "error" && message === "请填写标题"));
+});
+
+test("missing cover is rejected behaviorally before addDraft", async () => {
+  const harness = await createHarness(INLINE_IMAGE_FIXTURE, {selectCover: false});
+  await harness.publish();
+  assert.equal(harness.draftCalls().length, 0);
+  assert.ok(harness.toastMessages().some(({message, type}) => type === "error" && message === "请选择封面图"));
+});
+
+test("author and comment settings are persisted and passed to addDraft", async () => {
+  const harness = await createHarness(INLINE_IMAGE_FIXTURE);
+  await harness.setInput("publish-author", "  Alice  ");
+  await act(async () => {
+    buttonWithText("打开").click();
+    await flushPromises();
+  });
+  await act(async () => {
+    buttonWithText("粉丝").click();
+    await flushPromises();
+  });
+  await harness.publish();
+
+  const args = harness.draftCalls()[0]?.args;
+  assert.deepEqual(
+    {author: args?.author, needOpenComment: args?.needOpenComment, onlyFansCanComment: args?.onlyFansCanComment},
+    {author: "Alice", needOpenComment: 1, onlyFansCanComment: 1},
+  );
+  assert.deepEqual(JSON.parse(window.localStorage.getItem("vellumstyle.publishSettings") ?? "null"), {
+    author: "Alice",
+    needOpenComment: 1,
+    onlyFansCanComment: 1,
+  });
+});
+
+test("publishing waits for MathJax idle before solving HTML and calling addDraft", async () => {
+  const harness = await createHarness(INLINE_IMAGE_FIXTURE);
+  const mathGate = deferred<void>();
+  Object.defineProperty(globalThis, "__PUBLISH_TEST_MATHJAX_IDLE__", {configurable: true, value: mathGate.promise});
+
+  await harness.publish();
+  assert.equal(harness.draftCalls().length, 0);
+  const root = harness.articleBox.querySelector(`#${ARTICLE_ROOT_ID}`);
+  assert.ok(root);
+  root.insertAdjacentHTML("beforeend", '<p id="after-math-idle">idle boundary</p>');
+
+  await act(async () => {
+    mathGate.resolve();
+    await mathGate.promise;
+    await flushPromises();
+  });
+  assert.equal(harness.draftCalls().length, 1);
+  assert.match(String(harness.draftCalls()[0]?.args?.content), /idle boundary/);
 });

@@ -94,7 +94,9 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<string | null>(null);
   const materialLoadingRef = useRef(false);
-  const publishingRef = useRef(false);
+  const sessionRef = useRef(0);
+  const nextOperationIdRef = useRef(0);
+  const publishingRef = useRef<{id: number; session: number} | null>(null);
   const warningBackButtonRef = useRef<HTMLButtonElement>(null);
   const restorePublishFocusRef = useRef(false);
   const [materialPanelHeight, setMaterialPanelHeight] = useState<number | null>(null);
@@ -127,6 +129,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   }, [onNeedSettings]);
 
   useEffect(() => {
+    sessionRef.current += 1;
     if (!open) {
       restorePublishFocusRef.current = false;
       setImageWarning(null);
@@ -149,7 +152,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       revokePreview(prev);
       return null;
     });
-    setBusy(false);
+    setBusy(publishingRef.current !== null);
     setPubResult("none");
     restorePublishFocusRef.current = false;
     setImageWarning(null);
@@ -279,7 +282,10 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       return;
     }
     if (publishingRef.current) return;
-    publishingRef.current = true;
+
+    const operation = {id: ++nextOperationIdRef.current, session: sessionRef.current};
+    publishingRef.current = operation;
+    const isCurrentSession = () => sessionRef.current === operation.session;
     setBusy(true);
     setPubResult("none");
     try {
@@ -292,23 +298,32 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       };
       savePublishSettings(publishSettings);
       await addDraft(title.trim(), html, thumbId, publishSettings);
+      if (!isCurrentSession()) return;
+
       restorePublishFocusRef.current = false;
       setImageWarning(null);
       // 成功：先就地显示成功态，再关窗 + 提示，给用户一个明确的"发成了"反馈
       setPubResult("ok");
       window.setTimeout(() => {
+        if (!isCurrentSession()) return;
         toast.show("已发到公众号草稿箱，请在后台确认排版后发送", "info", 4000);
         handleClose();
       }, 900);
     } catch (e) {
+      if (!isCurrentSession()) return;
+
       restorePublishFocusRef.current = false;
       setImageWarning(null);
       setPubResult("fail");
       toast.show(`发布失败：${String(e)}`, "error");
-      window.setTimeout(() => setPubResult("none"), 2000);
+      window.setTimeout(() => {
+        if (isCurrentSession()) setPubResult("none");
+      }, 2000);
     } finally {
-      publishingRef.current = false;
-      setBusy(false);
+      if (publishingRef.current?.id === operation.id) {
+        publishingRef.current = null;
+        setBusy(false);
+      }
     }
   };
 
@@ -323,7 +338,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   };
 
   const continuePublish = () => {
-    if (!imageWarning || publishingRef.current) return;
+    if (!imageWarning || publishingRef.current !== null) return;
     const latestContent = useStore.getState().content;
     if (latestContent !== imageWarning.contentSnapshot) {
       const diagnostics = findUnuploadedImages(latestContent);
@@ -354,12 +369,13 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       <Dialog
         open={open}
         title={imageWarning ? "未上传图片检查" : "发布到公众号草稿箱"}
-        onClose={imageWarning && busy ? () => {} : handleClose}
+        onClose={handleClose}
         closeOnOverlay={false}
+        closeDisabled={busy}
         width="min(86vw,1040px)"
         footer={imageWarning ? undefined : (
           <>
-            <Button type="button" variant="secondary" onClick={handleClose}>
+            <Button type="button" variant="secondary" disabled={busy} onClick={handleClose}>
               取消
             </Button>
             <Button
