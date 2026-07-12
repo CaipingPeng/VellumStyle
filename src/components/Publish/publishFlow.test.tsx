@@ -703,6 +703,47 @@ test("successful confirmation closes at 900ms and reopening requires a fresh sca
   assert.equal(harness.draftCalls().length, 1);
 });
 
+test("success state blocks duplicate submission until its 900ms callback", async () => {
+  const harness = await createHarness(INLINE_IMAGE_FIXTURE);
+  await harness.publish();
+
+  const successButton = buttonWithText("已发布");
+  assert.equal(successButton.disabled, true);
+  await act(async () => {
+    successButton.click();
+    await flushPromises();
+  });
+  assert.equal(harness.draftCalls().length, 1);
+});
+
+test("an old failure reset timer cannot erase an immediate retry success", async () => {
+  const harness = await createHarness(INLINE_IMAGE_FIXTURE);
+  const failedDraft = harness.holdDraft();
+  await harness.publish();
+  await act(async () => {
+    failedDraft.reject(new Error("first attempt failed"));
+    await failedDraft.promise.catch(() => undefined);
+    await flushPromises();
+  });
+  assert.ok(buttonWithText("发布失败"));
+
+  const retriedDraft = harness.holdDraft();
+  await act(async () => {
+    buttonWithText("发布失败").click();
+    await flushPromises();
+  });
+  await act(async () => {
+    retriedDraft.resolve("RETRY_DRAFT");
+    await retriedDraft.promise;
+    await flushPromises();
+  });
+  assert.ok(buttonWithText("已发布"));
+  assert.equal(harness.draftCalls().length, 2);
+
+  await harness.runTimer(2000);
+  assert.ok(buttonWithText("已发布"), "the first attempt's timer must not reset the newer success state");
+});
+
 test("failed confirmation shows an error, resets after 2000ms, and retry rescans", async () => {
   const harness = await createHarness();
   await harness.publish();

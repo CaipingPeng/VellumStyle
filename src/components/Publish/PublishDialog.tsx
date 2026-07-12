@@ -97,11 +97,18 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const sessionRef = useRef(0);
   const nextOperationIdRef = useRef(0);
   const publishingRef = useRef<{id: number; session: number} | null>(null);
+  const terminalTimeoutRef = useRef<number | null>(null);
   const warningBackButtonRef = useRef<HTMLButtonElement>(null);
   const restorePublishFocusRef = useRef(false);
   const [materialPanelHeight, setMaterialPanelHeight] = useState<number | null>(null);
   const commentsEnabled = needOpenComment === 1;
   previewRef.current = thumbPreview;
+
+  const clearTerminalTimeout = useCallback(() => {
+    if (terminalTimeoutRef.current === null) return;
+    window.clearTimeout(terminalTimeoutRef.current);
+    terminalTimeoutRef.current = null;
+  }, []);
 
   const loadMaterialLibrary = useCallback(async (offset = 0) => {
     if (materialLoadingRef.current) return;
@@ -129,6 +136,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   }, [onNeedSettings]);
 
   useEffect(() => {
+    clearTerminalTimeout();
     sessionRef.current += 1;
     if (!open) {
       restorePublishFocusRef.current = false;
@@ -159,7 +167,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     if (fileRef.current) fileRef.current.value = "";
     // 打开弹窗时自动加载素材库
     void loadMaterialLibrary(0);
-  }, [open, defaultTitle]);
+  }, [open, defaultTitle, clearTerminalTimeout]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -176,9 +184,10 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   // 弹窗卸载时释放最后的预览 blob URL。
   useEffect(() => {
     return () => {
+      clearTerminalTimeout();
       revokePreview(previewRef.current);
     };
-  }, []);
+  }, [clearTerminalTimeout]);
 
   useLayoutEffect(() => {
     if (!open || typeof window.matchMedia !== "function") {
@@ -267,6 +276,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   };
 
   const handleClose = () => {
+    clearTerminalTimeout();
     restorePublishFocusRef.current = false;
     setImageWarning(null);
     onClose();
@@ -283,9 +293,12 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     }
     if (publishingRef.current) return;
 
+    clearTerminalTimeout();
     const operation = {id: ++nextOperationIdRef.current, session: sessionRef.current};
     publishingRef.current = operation;
     const isCurrentSession = () => sessionRef.current === operation.session;
+    const isCurrentOperationGeneration = () =>
+      isCurrentSession() && nextOperationIdRef.current === operation.id;
     setBusy(true);
     setPubResult("none");
     try {
@@ -304,11 +317,16 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       setImageWarning(null);
       // 成功：先就地显示成功态，再关窗 + 提示，给用户一个明确的"发成了"反馈
       setPubResult("ok");
-      window.setTimeout(() => {
-        if (!isCurrentSession()) return;
+      const successTimeout = window.setTimeout(() => {
+        if (
+          terminalTimeoutRef.current !== successTimeout ||
+          !isCurrentOperationGeneration()
+        ) return;
+        terminalTimeoutRef.current = null;
         toast.show("已发到公众号草稿箱，请在后台确认排版后发送", "info", 4000);
         handleClose();
       }, 900);
+      terminalTimeoutRef.current = successTimeout;
     } catch (e) {
       if (!isCurrentSession()) return;
 
@@ -316,9 +334,15 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       setImageWarning(null);
       setPubResult("fail");
       toast.show(`发布失败：${String(e)}`, "error");
-      window.setTimeout(() => {
-        if (isCurrentSession()) setPubResult("none");
+      const failureTimeout = window.setTimeout(() => {
+        if (
+          terminalTimeoutRef.current !== failureTimeout ||
+          !isCurrentOperationGeneration()
+        ) return;
+        terminalTimeoutRef.current = null;
+        setPubResult("none");
       }, 2000);
+      terminalTimeoutRef.current = failureTimeout;
     } finally {
       if (publishingRef.current?.id === operation.id) {
         publishingRef.current = null;
@@ -383,6 +407,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
               type="button"
               variant="primary"
               state={publishState}
+              disabled={pubResult === "ok"}
               loadingText="发布中…"
               successText="已发布"
               errorText="发布失败"
