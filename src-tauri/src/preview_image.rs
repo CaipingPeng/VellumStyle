@@ -80,7 +80,7 @@ fn parse_svg(bytes: &[u8]) -> Result<resvg::usvg::Tree, String> {
     let mut options = resvg::usvg::Options::default();
     options.resources_dir = None;
     options.image_href_resolver = resvg::usvg::ImageHrefResolver {
-        resolve_data: resvg::usvg::ImageHrefResolver::default_data_resolver(),
+        resolve_data: Box::new(|_, _, _| None),
         resolve_string: Box::new(|_, _| None),
     };
     resvg::usvg::Tree::from_data(bytes, &options).map_err(|e| format!("invalid SVG: {e}"))
@@ -474,12 +474,15 @@ pub async fn copy_preview_image(app: tauri::AppHandle, source: String) -> Result
 mod tests {
     use std::io::{Read, Write};
     use std::net::TcpListener;
+    use std::sync::Mutex;
     use std::thread;
     use std::time::Duration;
 
     use base64::Engine;
 
     use super::*;
+
+    static HTTP_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     fn encoded(format: image::ImageFormat, width: u32, height: u32) -> Vec<u8> {
         let pixels = vec![255_u8; width as usize * height as usize * 4];
@@ -643,6 +646,7 @@ mod tests {
 
     #[tokio::test]
     async fn http_handles_status_non_images_redirects_timeout_and_overflow() {
+        let _guard = HTTP_TEST_LOCK.lock().unwrap();
         let not_found = serve(
             vec![response(
                 "404 Not Found",
@@ -736,7 +740,7 @@ mod tests {
     }
 
     #[test]
-    fn svg_external_images_are_not_loaded_but_inline_data_is_kept() {
+    fn svg_external_and_embedded_raster_images_are_not_loaded() {
         let path =
             std::env::temp_dir().join(format!("vellumstyle-external-{}.png", std::process::id()));
         std::fs::write(&path, encoded(image::ImageFormat::Png, 1, 1)).unwrap();
@@ -752,16 +756,24 @@ mod tests {
             "external file must not be embedded"
         );
 
-        let png = base64::engine::general_purpose::STANDARD.encode(encoded(
-            image::ImageFormat::Png,
-            1,
-            1,
-        ));
-        let inline = format!(
-            r#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><image width="1" height="1" href="data:image/png;base64,{png}"/></svg>"#
-        );
-        let decoded = decode_for_clipboard(inline.as_bytes(), None).unwrap();
-        assert_eq!(decoded.rgba[3], 255, "inline data images remain supported");
+        for width in [1, MAX_DIMENSION + 1] {
+            // Includes both an ordinary embedded raster and one exceeding the native side limit.
+            // Neither may enter usvg's tree or reach resvg's raster decoder.
+            let png = base64::engine::general_purpose::STANDARD.encode(encoded(
+                image::ImageFormat::Png,
+                width,
+                1,
+            ));
+            let inline = format!(
+                r#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><image width="1" height="1" href="data:image/png;base64,{png}"/></svg>"#
+            );
+            let decoded = decode_for_clipboard(inline.as_bytes(), None).unwrap();
+            assert_eq!(
+                &decoded.rgba[..4],
+                &[0, 0, 0, 0],
+                "embedded data raster width {width} must not be decoded or rendered"
+            );
+        }
     }
 
     #[test]
@@ -847,6 +859,7 @@ mod tests {
 
     #[tokio::test]
     async fn redirected_final_url_supplies_fallback_filename() {
+        let _guard = HTTP_TEST_LOCK.lock().unwrap();
         let body = svg(1, 1);
         let server = serve(
             vec![
