@@ -267,8 +267,11 @@ export function normalizeDraftLists(html: string): string {
   }
 
   for (const list of Array.from(doc.querySelectorAll("ul, ol"))) {
-    const items = Array.from(list.children).filter((child) => child.tagName.toLowerCase() === "li");
-    list.innerHTML = items.map((item) => item.outerHTML.trim()).join("");
+    for (const child of Array.from(list.childNodes)) {
+      if (child.nodeType !== Node.ELEMENT_NODE || (child as Element).tagName.toLowerCase() !== "li") {
+        list.removeChild(child);
+      }
+    }
   }
 
   return doc.body.innerHTML;
