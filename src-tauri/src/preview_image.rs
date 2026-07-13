@@ -1,5 +1,6 @@
+use std::future::Future;
 use std::io::Cursor;
-use std::net::IpAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::time::Duration;
 
 use base64::Engine;
@@ -260,7 +261,13 @@ fn validate_http_target(url: &Url, policy: NetworkPolicy) -> Result<(), String> 
         return Ok(());
     }
     let blocked = match url.host() {
-        Some(url::Host::Domain(host)) => host.eq_ignore_ascii_case("localhost"),
+        Some(url::Host::Domain(host)) => {
+            host.eq_ignore_ascii_case("localhost")
+                || host
+                    .to_ascii_lowercase()
+                    .strip_suffix(".localhost")
+                    .is_some()
+        }
         Some(url::Host::Ipv4(ip)) => is_private_or_local_ip(IpAddr::V4(ip)),
         Some(url::Host::Ipv6(ip)) => is_private_or_local_ip(IpAddr::V6(ip)),
         None => true,
@@ -272,6 +279,79 @@ fn validate_http_target(url: &Url, policy: NetworkPolicy) -> Result<(), String> 
     }
 }
 
+#[derive(Debug)]
+struct PreparedHttpHop {
+    url: Url,
+    client: reqwest::Client,
+    #[cfg(test)]
+    pinned_addrs: Vec<SocketAddr>,
+}
+
+fn normalize_http_url(mut url: Url) -> Result<Url, String> {
+    let wechat = is_wechat_host(&url);
+    if wechat && url.scheme() == "http" {
+        url.set_scheme("https").map_err(|_| "invalid image URL")?;
+    }
+    Ok(url)
+}
+
+async fn prepare_http_hop_with_resolver<R, F>(
+    url: Url,
+    connect_timeout: Duration,
+    total_timeout: Duration,
+    policy: NetworkPolicy,
+    resolver: R,
+) -> Result<PreparedHttpHop, String>
+where
+    R: FnOnce(String, u16) -> F,
+    F: Future<Output = Result<Vec<SocketAddr>, String>>,
+{
+    let url = normalize_http_url(url)?;
+    validate_http_target(&url, policy)?;
+    #[cfg(test)]
+    let mut pinned_addrs = None;
+    let mut builder = reqwest::Client::builder()
+        .connect_timeout(connect_timeout)
+        .timeout(total_timeout)
+        .redirect(reqwest::redirect::Policy::none());
+    if let Some(url::Host::Domain(host)) = url.host() {
+        let port = url
+            .port_or_known_default()
+            .ok_or("image URL has no usable port")?;
+        let addresses = resolver(host.to_owned(), port)
+            .await
+            .map_err(|error| format!("unable to resolve image hostname: {error}"))?;
+        if addresses.is_empty() {
+            return Err("image hostname resolved to no addresses".into());
+        }
+        #[cfg(test)]
+        let allow_local = policy == NetworkPolicy::AllowLocalForTests;
+        #[cfg(not(test))]
+        let allow_local = false;
+        if !allow_local
+            && addresses
+                .iter()
+                .any(|address| is_private_or_local_ip(address.ip()))
+        {
+            return Err("image hostname resolves to a private or local address".into());
+        }
+        builder = builder.resolve_to_addrs(host, &addresses);
+        #[cfg(test)]
+        {
+            pinned_addrs = Some(addresses);
+        }
+    }
+    let client = builder
+        .build()
+        .map_err(|e| format!("unable to create HTTP client: {e}"))?;
+    Ok(PreparedHttpHop {
+        url,
+        client,
+        #[cfg(test)]
+        pinned_addrs: pinned_addrs.unwrap_or_default(),
+    })
+}
+
 fn is_wechat_host(url: &Url) -> bool {
     matches!(url.host_str(), Some("mmbiz.qpic.cn" | "mmbiz.qlogo.cn"))
 }
@@ -281,11 +361,9 @@ fn build_request_for_url(
     mut url: Url,
     policy: NetworkPolicy,
 ) -> Result<reqwest::Request, String> {
+    url = normalize_http_url(url)?;
     validate_http_target(&url, policy)?;
     let wechat = is_wechat_host(&url);
-    if wechat && url.scheme() == "http" {
-        url.set_scheme("https").map_err(|_| "invalid image URL")?;
-    }
     let mut request = client.get(url);
     if wechat {
         request = request.header(REFERER, "https://mp.weixin.qq.com");
@@ -295,6 +373,7 @@ fn build_request_for_url(
         .map_err(|e| format!("unable to build image request: {e}"))
 }
 
+#[cfg(test)]
 fn http_client(
     connect_timeout: Duration,
     total_timeout: Duration,
@@ -330,13 +409,26 @@ async fn fetch_http_with_policy(
     policy: NetworkPolicy,
 ) -> Result<Download, String> {
     let initial = Url::parse(source).map_err(|_| "invalid image URL")?;
-    let client = http_client(connect_timeout, total_timeout)?;
     let operation = async {
         let mut url = initial;
         let mut redirects = 0usize;
         loop {
-            let request = build_request_for_url(&client, url, policy)?;
-            let mut response = client
+            let prepared = prepare_http_hop_with_resolver(
+                url,
+                connect_timeout,
+                total_timeout,
+                policy,
+                |host, port| async move {
+                    tokio::net::lookup_host((host.as_str(), port))
+                        .await
+                        .map(|addresses| addresses.collect())
+                        .map_err(|e| e.to_string())
+                },
+            )
+            .await?;
+            let request = build_request_for_url(&prepared.client, prepared.url, policy)?;
+            let mut response = prepared
+                .client
                 .execute(request)
                 .await
                 .map_err(|e| format!("image download failed: {e}"))?;
@@ -1166,6 +1258,111 @@ mod tests {
             .err()
             .unwrap(),
             "private or local image URLs are not allowed"
+        );
+    }
+
+    #[tokio::test]
+    async fn strict_dns_validation_rejects_private_answers_and_localhost_domains() {
+        let private = prepare_http_hop_with_resolver(
+            Url::parse("https://attacker.example/image.png").unwrap(),
+            Duration::from_secs(1),
+            Duration::from_secs(1),
+            NetworkPolicy::Strict,
+            |_, port| async move { Ok(vec![SocketAddr::from(([192, 168, 1, 20], port))]) },
+        )
+        .await
+        .err()
+        .unwrap();
+        assert_eq!(
+            private,
+            "image hostname resolves to a private or local address"
+        );
+
+        let mut called = false;
+        let localhost = prepare_http_hop_with_resolver(
+            Url::parse("https://foo.localhost/image.png").unwrap(),
+            Duration::from_secs(1),
+            Duration::from_secs(1),
+            NetworkPolicy::Strict,
+            |_, _| {
+                called = true;
+                async { Ok(vec![]) }
+            },
+        )
+        .await
+        .err()
+        .unwrap();
+        assert_eq!(localhost, "private or local image URLs are not allowed");
+        assert!(!called, ".localhost must be rejected before DNS");
+
+        let url = Url::parse("https://attacker.example/image.png").unwrap();
+        let mixed = prepare_http_hop_with_resolver(
+            url.clone(),
+            Duration::from_secs(1),
+            Duration::from_secs(1),
+            NetworkPolicy::Strict,
+            |_, port| async move {
+                Ok(vec![
+                    SocketAddr::from(([203, 0, 113, 10], port)),
+                    SocketAddr::from(([127, 0, 0, 1], port)),
+                ])
+            },
+        )
+        .await
+        .err()
+        .unwrap();
+        assert_eq!(
+            mixed,
+            "image hostname resolves to a private or local address"
+        );
+
+        let empty = prepare_http_hop_with_resolver(
+            url.clone(),
+            Duration::from_secs(1),
+            Duration::from_secs(1),
+            NetworkPolicy::Strict,
+            |_, _| async { Ok(vec![]) },
+        )
+        .await
+        .err()
+        .unwrap();
+        assert_eq!(empty, "image hostname resolved to no addresses");
+
+        let failed = prepare_http_hop_with_resolver(
+            url,
+            Duration::from_secs(1),
+            Duration::from_secs(1),
+            NetworkPolicy::Strict,
+            |_, _| async { Err("synthetic DNS failure".into()) },
+        )
+        .await
+        .err()
+        .unwrap();
+        assert_eq!(
+            failed,
+            "unable to resolve image hostname: synthetic DNS failure"
+        );
+    }
+
+    #[tokio::test]
+    async fn validated_public_dns_answers_are_pinned_after_wechat_upgrade() {
+        let prepared = prepare_http_hop_with_resolver(
+            Url::parse("http://mmbiz.qpic.cn/image.png").unwrap(),
+            Duration::from_secs(1),
+            Duration::from_secs(1),
+            NetworkPolicy::Strict,
+            |host, port| async move {
+                assert_eq!(host, "mmbiz.qpic.cn");
+                assert_eq!(port, 443, "resolution must happen after HTTPS upgrade");
+                Ok(vec![SocketAddr::from(([203, 0, 113, 10], port))])
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(prepared.url.scheme(), "https");
+        assert_eq!(
+            prepared.pinned_addrs,
+            vec![SocketAddr::from(([203, 0, 113, 10], 443))]
         );
     }
 

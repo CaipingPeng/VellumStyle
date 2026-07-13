@@ -22,7 +22,7 @@ reqwest = { version = "0.12", features = ["json", "multipart", "stream"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
-tokio = { version = "1", features = ["sync", "fs", "macros", "rt-multi-thread", "time"] }
+tokio = { version = "1", features = ["sync", "fs", "macros", "net", "rt-multi-thread", "time"] }
 http = "1"
 urlencoding = "2"
 url = "2"
