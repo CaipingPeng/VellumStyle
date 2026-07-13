@@ -36,3 +36,19 @@ export function fromProxyHtml(html: string): string {
     return `${pre}${quote}${decodeURIComponent(encoded)}${quote}`;
   });
 }
+
+const RESTORABLE_PROXY_PREFIXES = [
+  "http://wximg.localhost/?url=",
+  "wximg://localhost/?url=",
+] as const;
+
+export function fromProxyImageUrl(source: string): string {
+  const prefix = RESTORABLE_PROXY_PREFIXES.find((candidate) => source.startsWith(candidate));
+  if (!prefix) return source;
+
+  try {
+    return decodeURIComponent(source.slice(prefix.length));
+  } catch {
+    return source;
+  }
+}
