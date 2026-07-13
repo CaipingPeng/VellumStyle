@@ -3,6 +3,7 @@
 import {scheduleCloudSync, useStore} from "../../store/index.ts";
 import {createDocument, createFolder, renameEntry, deleteEntry, moveEntry, openEntryLocation} from "../../utils/documents.ts";
 import {toast} from "../Toast/toast.ts";
+import {copyAbsolutePath as copyAbsolutePathToClipboard} from "./copyAbsolutePath.ts";
 
 export function useDocActions() {
   const loadTree = useStore((s) => s.loadTree);
@@ -79,6 +80,14 @@ export function useDocActions() {
     async openLocation(path: string) {
       try {
         await openEntryLocation(path);
+      } catch (e) {
+        toast.show(String(e), "error");
+      }
+    },
+    async copyAbsolutePath(path: string) {
+      try {
+        await copyAbsolutePathToClipboard(path);
+        toast.show("绝对路径已复制");
       } catch (e) {
         toast.show(String(e), "error");
       }

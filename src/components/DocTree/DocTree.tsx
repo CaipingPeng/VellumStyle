@@ -221,6 +221,7 @@ export default function DocTree() {
                   onRename={actions.rename}
                   onDelete={handleDelete}
                   onOpenLocation={(path) => void actions.openLocation(path)}
+                  onCopyAbsolutePath={(path) => void actions.copyAbsolutePath(path)}
                   onDragStartNode={setDragSrc}
                   onDragOverNode={setDragOverPath}
                   onDropNode={handleDrop}
