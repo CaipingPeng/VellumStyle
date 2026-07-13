@@ -146,12 +146,18 @@ fn build_file_name(candidate: Option<&str>, kind: ImageKind) -> String {
     if clean.is_empty() || clean == "." || clean == ".." {
         clean = "image".into();
     }
-    let upper = clean.to_ascii_uppercase();
-    let dangerous = matches!(upper.as_str(), "CON" | "PRN" | "AUX" | "NUL" | "CLOCK$")
-        || upper
-            .strip_prefix("COM")
-            .is_some_and(|n| matches!(n, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"))
-        || upper
+    let device_component = clean
+        .split('.')
+        .next()
+        .unwrap_or(&clean)
+        .to_ascii_uppercase();
+    let dangerous = matches!(
+        device_component.as_str(),
+        "CON" | "PRN" | "AUX" | "NUL" | "CLOCK$"
+    ) || device_component
+        .strip_prefix("COM")
+        .is_some_and(|n| matches!(n, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"))
+        || device_component
             .strip_prefix("LPT")
             .is_some_and(|n| matches!(n, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"));
     if dangerous {
@@ -379,6 +385,23 @@ fn strict_percent_decode(input: &str) -> Result<Vec<u8>, String> {
     Ok(output)
 }
 
+fn encoded_payload_limit(is_base64: bool) -> usize {
+    let decoded_limit = if is_base64 {
+        MAX_SOURCE_BYTES.div_ceil(3) * 4
+    } else {
+        MAX_SOURCE_BYTES
+    };
+    decoded_limit.saturating_mul(3)
+}
+
+fn validate_encoded_payload_len(length: usize, is_base64: bool) -> Result<(), String> {
+    if length > encoded_payload_limit(is_base64) {
+        Err("image exceeds 15 MiB limit".into())
+    } else {
+        Ok(())
+    }
+}
+
 fn parse_data_url(source: &str) -> Result<Download, String> {
     let (scheme, rest) = source.split_once(':').ok_or("malformed data URL")?;
     if !scheme.eq_ignore_ascii_case("data") {
@@ -391,10 +414,16 @@ fn parse_data_url(source: &str) -> Result<Download, String> {
         return Err("data URL must contain an image".into());
     }
     let is_base64 = parts.any(|p| p.eq_ignore_ascii_case("base64"));
-    if payload.len() > MAX_SOURCE_BYTES * 4 / 3 + 16 {
+    validate_encoded_payload_len(payload.len(), is_base64)?;
+    let decoded_payload = strict_percent_decode(payload)?;
+    let decoded_payload_limit = if is_base64 {
+        MAX_SOURCE_BYTES.div_ceil(3) * 4
+    } else {
+        MAX_SOURCE_BYTES
+    };
+    if decoded_payload.len() > decoded_payload_limit {
         return Err("image exceeds 15 MiB limit".into());
     }
-    let decoded_payload = strict_percent_decode(payload)?;
     let bytes = if is_base64 {
         base64::engine::general_purpose::STANDARD
             .decode(decoded_payload)
@@ -842,16 +871,38 @@ mod tests {
             "CLOCK$.gif",
             "com1.webp",
             "LPT9.svg",
+            "CON.backup.jpg",
+            "NuL.archive.tar",
+            "com1.backup.webp",
+            "lPt9.notes.svg",
         ] {
             let result = build_file_name(Some(name), ImageKind::Png);
-            assert!(!result
-                .trim_end_matches(".png")
-                .eq_ignore_ascii_case(name.split('.').next().unwrap()));
+            assert!(
+                result.starts_with('_'),
+                "reserved device name was not escaped: {name} -> {result}"
+            );
         }
-        let long = format!("{}.jpg", "图".repeat(200));
+        let long = format!("{}😀.jpg", "a".repeat(179));
         let result =
             std::panic::catch_unwind(|| build_file_name(Some(&long), ImageKind::Jpeg)).unwrap();
         assert!(result.len() <= 180 + ".jpg".len());
         assert!(result.ends_with(".jpg"));
+    }
+
+    #[test]
+    fn encoded_data_payload_limits_allow_worst_case_percent_escaping() {
+        let old_limit = MAX_SOURCE_BYTES * 4 / 3 + 16;
+        let raw_percent_limit = encoded_payload_limit(false);
+        let base64_len = MAX_SOURCE_BYTES.div_ceil(3) * 4;
+        let escaped_base64_limit = encoded_payload_limit(true);
+
+        assert_eq!(raw_percent_limit, MAX_SOURCE_BYTES * 3);
+        assert_eq!(escaped_base64_limit, base64_len * 3);
+        assert!(raw_percent_limit > old_limit);
+        assert!(escaped_base64_limit > old_limit);
+        assert!(validate_encoded_payload_len(raw_percent_limit, false).is_ok());
+        assert!(validate_encoded_payload_len(escaped_base64_limit, true).is_ok());
+        assert!(validate_encoded_payload_len(raw_percent_limit + 1, false).is_err());
+        assert!(validate_encoded_payload_len(escaped_base64_limit + 1, true).is_err());
     }
 }
