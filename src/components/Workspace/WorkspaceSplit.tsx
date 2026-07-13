@@ -11,7 +11,6 @@ import {
 import {
   DEFAULT_WORKSPACE_SPLIT_RATIO,
   clampWorkspaceSplitRatio,
-  getWorkspacePaneWidths,
   getWorkspaceRatioBounds,
   ratioFromPointer,
   sanitizeWorkspaceSplitRatio,
@@ -83,10 +82,6 @@ export default function WorkspaceSplit({ratio, onRatioCommit, editor, preview}: 
 
   const bounds = useMemo(() => getWorkspaceRatioBounds(containerWidth), [containerWidth]);
   const displayRatio = clampWorkspaceSplitRatio(draftRatio, containerWidth);
-  const paneWidths = useMemo(
-    () => getWorkspacePaneWidths(draftRatio, containerWidth),
-    [containerWidth, draftRatio],
-  );
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 || !event.isPrimary) return;
@@ -137,14 +132,21 @@ export default function WorkspaceSplit({ratio, onRatioCommit, editor, preview}: 
     onRatioCommit(nextRatio);
   };
 
-  const unmeasuredStyle = {flex: "1 1 0"};
-  const editorStyle = containerWidth > 0 ? {width: paneWidths.editor} : unmeasuredStyle;
-  const previewStyle = containerWidth > 0 ? {width: paneWidths.preview} : unmeasuredStyle;
+  const editorStyle = {
+    flexGrow: displayRatio,
+    flexShrink: 1,
+    flexBasis: 0,
+  };
+  const previewStyle = {
+    flexGrow: 1 - displayRatio,
+    flexShrink: 1,
+    flexBasis: 0,
+  };
 
   return (
     <div ref={containerRef} className="flex min-h-0 min-w-0 flex-1" data-workspace-split>
       <div
-        className="min-h-0 min-w-0 flex-none"
+        className="min-h-0 min-w-0"
         data-workspace-pane="editor"
         style={editorStyle}
       >
@@ -169,7 +171,7 @@ export default function WorkspaceSplit({ratio, onRatioCommit, editor, preview}: 
         onDoubleClick={resetRatio}
       />
       <div
-        className="min-h-0 min-w-0 flex-none"
+        className="min-h-0 min-w-0"
         data-workspace-pane="preview"
         style={previewStyle}
       >

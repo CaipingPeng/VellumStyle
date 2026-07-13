@@ -7,13 +7,35 @@ import {DEFAULT_WORKSPACE_SPLIT_RATIO} from "./workspaceSplitLayout.ts";
 
 (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
 
+let activeResizeObserver: ResizeObserverStub | null = null;
+
 class ResizeObserverStub {
-  constructor(private readonly callback: ResizeObserverCallback) {}
-  observe() {
-    this.callback([{contentRect: {width: 1008}} as ResizeObserverEntry], this as unknown as ResizeObserver);
+  constructor(private readonly callback: ResizeObserverCallback) {
+    activeResizeObserver = this;
   }
+
+  emit(width: number) {
+    this.callback(
+      [{contentRect: {width}} as ResizeObserverEntry],
+      this as unknown as ResizeObserver,
+    );
+  }
+
+  observe() {
+    this.emit(1008);
+  }
+
   unobserve() {}
-  disconnect() {}
+
+  disconnect() {
+    if (activeResizeObserver === this) activeResizeObserver = null;
+  }
+}
+
+function resizeWorkspace(width: number) {
+  const observer = activeResizeObserver;
+  assert.ok(observer);
+  act(() => observer.emit(width));
 }
 
 Object.defineProperty(globalThis, "ResizeObserver", {
@@ -46,13 +68,13 @@ function pointerEvent(type: string, clientX: number, pointerId = 7, button = 0):
   return event;
 }
 
-function renderSplit(onRatioCommit: (ratio: number) => void) {
+function renderSplit(onRatioCommit: (ratio: number) => void, ratio = 0.5) {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
   act(() => {
     root.render(React.createElement(WorkspaceSplit, {
-      ratio: 0.5,
+      ratio,
       onRatioCommit,
       editor: React.createElement("div", null, "editor"),
       preview: React.createElement("div", null, "preview"),
@@ -70,7 +92,21 @@ function renderSplit(onRatioCommit: (ratio: number) => void) {
   };
 }
 
-test("分栏渲染实时宽度并提供完整 separator 语义", () => {
+function assertPaneFlex(
+  container: HTMLElement,
+  pane: "editor" | "preview",
+  expectedGrow: string,
+) {
+  const element = container.querySelector<HTMLElement>(`[data-workspace-pane="${pane}"]`);
+  assert.ok(element);
+  assert.equal(element.style.flexGrow, expectedGrow);
+  assert.equal(element.style.flexShrink, "1");
+  assert.equal(element.style.flexBasis, "0px");
+  assert.equal(element.style.width, "");
+  assert.equal(element.classList.contains("flex-none"), false);
+}
+
+test("分栏使用同步比例布局并提供完整 separator 语义", () => {
   const view = renderSplit(() => {});
   try {
     assert.equal(view.separator.getAttribute("aria-orientation"), "vertical");
@@ -79,8 +115,27 @@ test("分栏渲染实时宽度并提供完整 separator 语义", () => {
     assert.equal(view.separator.getAttribute("aria-valuemin"), "28");
     assert.equal(view.separator.getAttribute("aria-valuemax"), "72");
     assert.equal(view.separator.getAttribute("aria-valuenow"), "50");
-    assert.equal(view.container.querySelector<HTMLElement>('[data-workspace-pane="editor"]')?.style.width, "500px");
-    assert.equal(view.container.querySelector<HTMLElement>('[data-workspace-pane="preview"]')?.style.width, "500px");
+    assertPaneFlex(view.container, "editor", "0.5");
+    assertPaneFlex(view.container, "preview", "0.5");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("容器测量只约束比例和 ARIA，不向面板写固定像素宽度", () => {
+  const view = renderSplit(() => {}, 0.6);
+  try {
+    assertPaneFlex(view.container, "editor", "0.6");
+    assertPaneFlex(view.container, "preview", "0.4");
+    assert.equal(view.separator.getAttribute("aria-valuenow"), "60");
+
+    resizeWorkspace(508);
+
+    assertPaneFlex(view.container, "editor", "0.5");
+    assertPaneFlex(view.container, "preview", "0.5");
+    assert.equal(view.separator.getAttribute("aria-valuemin"), "50");
+    assert.equal(view.separator.getAttribute("aria-valuemax"), "50");
+    assert.equal(view.separator.getAttribute("aria-valuenow"), "50");
   } finally {
     view.cleanup();
   }
@@ -124,7 +179,8 @@ test("指针拖动即时更新，结束提交并可靠清理捕获状态", () =>
     assert.equal(document.documentElement.classList.contains("workspace-is-resizing"), true);
 
     act(() => view.separator.dispatchEvent(pointerEvent("pointermove", 700)));
-    assert.equal(view.container.querySelector<HTMLElement>('[data-workspace-pane="editor"]')?.style.width, "600px");
+    assertPaneFlex(view.container, "editor", "0.6");
+    assertPaneFlex(view.container, "preview", "0.4");
     assert.deepEqual(commits, []);
 
     act(() => view.separator.dispatchEvent(pointerEvent("pointerup", 700)));
