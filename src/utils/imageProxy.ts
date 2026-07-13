@@ -17,10 +17,19 @@ export function toProxyImageUrl(url: string): string {
   return `${PROXY_PREFIX}${encodeURIComponent(url)}`;
 }
 
+function decodeHtmlAttributeValue(value: string, quote: string): string {
+  if (typeof document === "undefined" || !value.includes("&")) return value;
+
+  const template = document.createElement("template");
+  template.innerHTML = `<img data-source=${quote}${value}${quote}>`;
+  return template.content.firstElementChild?.getAttribute("data-source") ?? value;
+}
+
 // 预览用：把 mmbiz 图片 src 改写成代理 URL。只作用于渲染出的 HTML 字符串。
 export function toProxyHtml(html: string): string {
   return html.replace(MMBIZ_SRC, (_m, pre, quote, url) => {
-    return `${pre}${quote}${toProxyImageUrl(url)}${quote}`;
+    const decodedUrl = decodeHtmlAttributeValue(url, quote);
+    return `${pre}${quote}${toProxyImageUrl(decodedUrl)}${quote}`;
   });
 }
 

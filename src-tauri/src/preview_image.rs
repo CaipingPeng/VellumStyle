@@ -75,10 +75,87 @@ fn validate_dimensions(width: u32, height: u32) -> Result<(), String> {
     Ok(())
 }
 
+fn validate_svg_url_tokens(value: &str) -> Result<(), String> {
+    let lower = value.to_ascii_lowercase();
+    if lower.contains("@import") {
+        return Err("SVG external styles are not allowed".into());
+    }
+
+    let mut remainder = value;
+    loop {
+        let lower_remainder = remainder.to_ascii_lowercase();
+        let Some(start) = lower_remainder.find("url(") else {
+            return Ok(());
+        };
+        let after_open = &remainder[start + 4..];
+        let Some(end) = after_open.find(')') else {
+            return Err("invalid SVG URL reference".into());
+        };
+        let target = after_open[..end]
+            .trim()
+            .trim_matches(|character| matches!(character, '\'' | '"'))
+            .trim();
+        if !target.starts_with('#') || target.len() == 1 {
+            return Err("SVG external URL references are not allowed".into());
+        }
+        remainder = &after_open[end + 1..];
+    }
+}
+
+fn validate_svg_safety(bytes: &[u8]) -> Result<(), String> {
+    let xml = std::str::from_utf8(bytes).map_err(|_| "invalid SVG XML encoding".to_string())?;
+    let document =
+        roxmltree::Document::parse(xml).map_err(|error| format!("invalid SVG XML: {error}"))?;
+    if document.descendants().any(|node| node.is_pi()) {
+        return Err("SVG processing instructions are not allowed".into());
+    }
+
+    for node in document.descendants().filter(roxmltree::Node::is_element) {
+        let element_name = node.tag_name().name();
+        if element_name.eq_ignore_ascii_case("script") {
+            return Err("SVG scripts are not allowed".into());
+        }
+        if element_name.eq_ignore_ascii_case("image")
+            || element_name.eq_ignore_ascii_case("feImage")
+        {
+            return Err("SVG raster images are not allowed".into());
+        }
+
+        for attribute in node.attributes() {
+            let name = attribute.name();
+            if name.len() > 2
+                && name
+                    .get(..2)
+                    .is_some_and(|prefix| prefix.eq_ignore_ascii_case("on"))
+            {
+                return Err("SVG event handlers are not allowed".into());
+            }
+            if name.eq_ignore_ascii_case("href") {
+                let target = attribute.value().trim();
+                if !target.starts_with('#') || target.len() == 1 {
+                    return Err("SVG external references are not allowed".into());
+                }
+            }
+            validate_svg_url_tokens(attribute.value())?;
+        }
+
+        if element_name.eq_ignore_ascii_case("style") {
+            for text in node
+                .descendants()
+                .filter_map(|descendant| descendant.text())
+            {
+                validate_svg_url_tokens(text)?;
+            }
+        }
+    }
+    Ok(())
+}
+
 fn parse_svg(bytes: &[u8]) -> Result<resvg::usvg::Tree, String> {
     if bytes.starts_with(&[0x1f, 0x8b]) {
         return Err("compressed SVG/SVGZ is not supported".into());
     }
+    validate_svg_safety(bytes)?;
     let mut options = resvg::usvg::Options::default();
     options.resources_dir = None;
     options.image_href_resolver = resvg::usvg::ImageHrefResolver {
@@ -234,19 +311,57 @@ enum NetworkPolicy {
     AllowLocalForTests,
 }
 
-fn is_private_or_local_ip(ip: IpAddr) -> bool {
+fn ipv6_has_prefix(ip: std::net::Ipv6Addr, network: std::net::Ipv6Addr, prefix: u32) -> bool {
+    let mask = u128::MAX.checked_shl(128 - prefix).unwrap_or(0);
+    u128::from(ip) & mask == u128::from(network) & mask
+}
+
+fn is_globally_routable_ip(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(ip) => {
-            ip.is_private() || ip.is_loopback() || ip.is_link_local() || ip.is_unspecified()
+            let [a, b, c, _] = ip.octets();
+            !matches!(
+                (a, b, c),
+                (0, _, _)
+                    | (10, _, _)
+                    | (100, 64..=127, _)
+                    | (127, _, _)
+                    | (169, 254, _)
+                    | (172, 16..=31, _)
+                    | (192, 0, 0)
+                    | (192, 0, 2)
+                    | (192, 88, 99)
+                    | (192, 168, _)
+                    | (198, 18..=19, _)
+                    | (198, 51, 100)
+                    | (203, 0, 113)
+                    | (224..=255, _, _)
+            )
         }
         IpAddr::V6(ip) => {
             if let Some(mapped) = ip.to_ipv4_mapped() {
-                return is_private_or_local_ip(IpAddr::V4(mapped));
+                return is_globally_routable_ip(IpAddr::V4(mapped));
             }
-            ip.is_loopback()
-                || ip.is_unspecified()
-                || matches!(ip.segments()[0] & 0xfe00, 0xfc00)
-                || matches!(ip.segments()[0] & 0xffc0, 0xfe80)
+            let blocked_prefixes = [
+                (std::net::Ipv6Addr::UNSPECIFIED, 96),
+                ("64:ff9b::".parse().unwrap(), 96),
+                ("64:ff9b:1::".parse().unwrap(), 48),
+                ("100::".parse().unwrap(), 64),
+                ("2001::".parse().unwrap(), 32),
+                ("2001:2::".parse().unwrap(), 48),
+                ("2001:10::".parse().unwrap(), 28),
+                ("2001:20::".parse().unwrap(), 28),
+                ("2001:db8::".parse().unwrap(), 32),
+                ("2002::".parse().unwrap(), 16),
+                ("fc00::".parse().unwrap(), 7),
+                ("fe80::".parse().unwrap(), 10),
+                ("fec0::".parse().unwrap(), 10),
+                ("ff00::".parse().unwrap(), 8),
+            ];
+            ip != std::net::Ipv6Addr::LOCALHOST
+                && !blocked_prefixes
+                    .iter()
+                    .any(|&(network, prefix)| ipv6_has_prefix(ip, network, prefix))
         }
     }
 }
@@ -268,8 +383,8 @@ fn validate_http_target(url: &Url, policy: NetworkPolicy) -> Result<(), String> 
                     .strip_suffix(".localhost")
                     .is_some()
         }
-        Some(url::Host::Ipv4(ip)) => is_private_or_local_ip(IpAddr::V4(ip)),
-        Some(url::Host::Ipv6(ip)) => is_private_or_local_ip(IpAddr::V6(ip)),
+        Some(url::Host::Ipv4(ip)) => !is_globally_routable_ip(IpAddr::V4(ip)),
+        Some(url::Host::Ipv6(ip)) => !is_globally_routable_ip(IpAddr::V6(ip)),
         None => true,
     };
     if blocked {
@@ -339,7 +454,7 @@ where
         if !allow_local
             && addresses
                 .iter()
-                .any(|address| is_private_or_local_ip(address.ip()))
+                .any(|address| !is_globally_routable_ip(address.ip()))
         {
             return Err("image hostname resolves to a private or local address".into());
         }
@@ -997,40 +1112,70 @@ mod tests {
     }
 
     #[test]
-    fn svg_external_and_embedded_raster_images_are_not_loaded() {
-        let path =
-            std::env::temp_dir().join(format!("vellumstyle-external-{}.png", std::process::id()));
-        std::fs::write(&path, encoded(image::ImageFormat::Png, 1, 1)).unwrap();
-        let external = format!(
-            r#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><image width="1" height="1" href="{}"/></svg>"#,
-            path.display()
-        );
-        let decoded = decode_for_clipboard(external.as_bytes(), None).unwrap();
-        std::fs::remove_file(path).unwrap();
-        assert_eq!(
-            &decoded.rgba[..4],
-            &[0, 0, 0, 0],
-            "external file must not be embedded"
-        );
+    fn identify_rejects_active_or_external_svg_content() {
+        let unsafe_svgs: &[&[u8]] = &[
+            br#"<?xml-stylesheet href="https://example.com/a.css"?><svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:evil="urn:evil" width="1" height="1"><evil:ScRiPt>alert(1)</evil:ScRiPt></svg>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" onClick="alert(1)"/>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><image href="https://example.com/a.png"/></svg>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><IMAGE href="file:///tmp/a.png"/></svg>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><feImage href="data:image/png;base64,AA=="/></svg>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1" height="1"><use xlink:href="http://example.com/a.svg#x"/></svg>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><use href="other.svg#x"/></svg>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect style="fill:url(https://example.com/a.svg#x)"/></svg>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><style>@import url('https://example.com/a.css');</style></svg>"#,
+        ];
 
-        for width in [1, MAX_DIMENSION + 1] {
-            // Includes both an ordinary embedded raster and one exceeding the native side limit.
-            // Neither may enter usvg's tree or reach resvg's raster decoder.
-            let png = base64::engine::general_purpose::STANDARD.encode(encoded(
-                image::ImageFormat::Png,
-                width,
-                1,
-            ));
-            let inline = format!(
-                r#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><image width="1" height="1" href="data:image/png;base64,{png}"/></svg>"#
-            );
-            let decoded = decode_for_clipboard(inline.as_bytes(), None).unwrap();
-            assert_eq!(
-                &decoded.rgba[..4],
-                &[0, 0, 0, 0],
-                "embedded data raster width {width} must not be decoded or rendered"
+        for bytes in unsafe_svgs {
+            assert!(
+                identify_image(bytes, Some("image/svg+xml")).is_err(),
+                "unsafe SVG was accepted: {}",
+                String::from_utf8_lossy(bytes)
             );
         }
+        assert!(identify_image(
+            br#"<svg xmlns="http://www.w3.org/2000/svg"><path></svg>"#,
+            Some("image/svg+xml")
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn svg_safety_validation_handles_unicode_attribute_names() {
+        let safe_svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" 属性="值"><rect width="1" height="1"/></svg>"#;
+        assert_eq!(
+            identify_image(safe_svg.as_bytes(), Some("image/svg+xml")).unwrap(),
+            ImageKind::Svg
+        );
+    }
+
+    #[tokio::test]
+    async fn asset_rejects_unsafe_svg_and_preserves_safe_original_bytes() {
+        let unsafe_svg =
+            br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" onload="alert(1)"/>"#;
+        let unsafe_source = format!(
+            "data:image/svg+xml;base64,{}",
+            base64::engine::general_purpose::STANDARD.encode(unsafe_svg)
+        );
+        assert!(get_preview_image_asset(unsafe_source).await.is_err());
+
+        let safe_svg = br##"<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><defs><linearGradient id="g"><stop stop-color="red"/></linearGradient><path id="p" d="M0 0h1v1z"/></defs><use href="#p"/><rect width="2" height="2" fill="url(#g)"/></svg>"##;
+        assert_eq!(
+            identify_image(safe_svg, Some("image/svg+xml")).unwrap(),
+            ImageKind::Svg
+        );
+        let source = format!(
+            "data:image/svg+xml;base64,{}",
+            base64::engine::general_purpose::STANDARD.encode(safe_svg)
+        );
+        let asset = get_preview_image_asset(source).await.unwrap();
+        assert_eq!(asset.mime_type, "image/svg+xml");
+        assert_eq!(
+            base64::engine::general_purpose::STANDARD
+                .decode(asset.bytes_base64)
+                .unwrap(),
+            safe_svg
+        );
     }
 
     #[test]
@@ -1213,6 +1358,20 @@ mod tests {
             "http://[fe80::1]/a.png",
             "http://[::ffff:127.0.0.1]/a.png",
             "http://[::ffff:192.168.1.1]/a.png",
+            "http://100.64.0.1/a.png",
+            "http://198.18.0.1/a.png",
+            "http://192.0.2.1/a.png",
+            "http://198.51.100.1/a.png",
+            "http://203.0.113.1/a.png",
+            "http://224.0.0.1/a.png",
+            "http://240.0.0.1/a.png",
+            "http://255.255.255.255/a.png",
+            "http://[ff02::1]/a.png",
+            "http://[64:ff9b::808:808]/a.png",
+            "http://[64:ff9b:1::808:808]/a.png",
+            "http://[2001:db8::1]/a.png",
+            "http://[2002:0808:0808::1]/a.png",
+            "http://[::ffff:198.18.0.1]/a.png",
         ] {
             let url = Url::parse(source).unwrap();
             assert!(
@@ -1224,11 +1383,17 @@ mod tests {
                 "test policy rejected {source}"
             );
         }
-        assert!(validate_http_target(
-            &Url::parse("https://example.com/a.png").unwrap(),
-            NetworkPolicy::Strict
-        )
-        .is_ok());
+        for source in [
+            "https://8.8.8.8/a.png",
+            "https://1.1.1.1/a.png",
+            "https://[2606:4700:4700::1111]/a.png",
+            "https://example.com/a.png",
+        ] {
+            assert!(
+                validate_http_target(&Url::parse(source).unwrap(), NetworkPolicy::Strict).is_ok(),
+                "rejected globally routable target {source}"
+            );
+        }
         let current = Url::parse("https://example.com/start").unwrap();
         assert!(resolve_redirect_target(
             &current,
@@ -1308,7 +1473,7 @@ mod tests {
             NetworkPolicy::Strict,
             |_, port| async move {
                 Ok(vec![
-                    SocketAddr::from(([203, 0, 113, 10], port)),
+                    SocketAddr::from(([8, 8, 8, 8], port)),
                     SocketAddr::from(([127, 0, 0, 1], port)),
                 ])
             },
@@ -1350,6 +1515,52 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn strict_dns_validation_rejects_every_non_global_answer() {
+        let unsafe_addresses: &[IpAddr] = &[
+            "100.64.0.1".parse().unwrap(),
+            "198.18.0.1".parse().unwrap(),
+            "192.0.2.1".parse().unwrap(),
+            "198.51.100.1".parse().unwrap(),
+            "203.0.113.1".parse().unwrap(),
+            "224.0.0.1".parse().unwrap(),
+            "240.0.0.1".parse().unwrap(),
+            "255.255.255.255".parse().unwrap(),
+            "ff02::1".parse().unwrap(),
+            "64:ff9b::808:808".parse().unwrap(),
+            "64:ff9b:1::808:808".parse().unwrap(),
+            "2001:db8::1".parse().unwrap(),
+            "2002:0808:0808::1".parse().unwrap(),
+            "::ffff:198.18.0.1".parse().unwrap(),
+        ];
+
+        for &ip in unsafe_addresses {
+            let result = prepare_http_hop_with_resolver(
+                Url::parse("https://attacker.example/image.png").unwrap(),
+                Duration::from_secs(1),
+                Duration::from_secs(1),
+                NetworkPolicy::Strict,
+                |_, port| async move { Ok(vec![SocketAddr::new(ip, port)]) },
+            )
+            .await;
+            assert!(result.is_err(), "DNS answer {ip} was accepted");
+        }
+
+        for ip in ["8.8.8.8", "1.1.1.1", "2606:4700:4700::1111"] {
+            let ip: IpAddr = ip.parse().unwrap();
+            let prepared = prepare_http_hop_with_resolver(
+                Url::parse("https://public.example/image.png").unwrap(),
+                Duration::from_secs(1),
+                Duration::from_secs(1),
+                NetworkPolicy::Strict,
+                |_, port| async move { Ok(vec![SocketAddr::new(ip, port)]) },
+            )
+            .await
+            .unwrap();
+            assert_eq!(prepared.pinned_addrs, vec![SocketAddr::new(ip, 443)]);
+        }
+    }
+
+    #[tokio::test]
     async fn validated_public_dns_answers_are_pinned_after_wechat_upgrade() {
         let prepared = prepare_http_hop_with_resolver(
             Url::parse("http://mmbiz.qpic.cn/image.png").unwrap(),
@@ -1359,7 +1570,7 @@ mod tests {
             |host, port| async move {
                 assert_eq!(host, "mmbiz.qpic.cn");
                 assert_eq!(port, 443, "resolution must happen after HTTPS upgrade");
-                Ok(vec![SocketAddr::from(([203, 0, 113, 10], port))])
+                Ok(vec![SocketAddr::from(([1, 1, 1, 1], port))])
             },
         )
         .await
@@ -1367,7 +1578,7 @@ mod tests {
         assert_eq!(prepared.url.scheme(), "https");
         assert_eq!(
             prepared.pinned_addrs,
-            vec![SocketAddr::from(([203, 0, 113, 10], 443))]
+            vec![SocketAddr::from(([1, 1, 1, 1], 443))]
         );
     }
 
