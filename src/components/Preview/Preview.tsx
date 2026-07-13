@@ -118,6 +118,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
     const [html, setHtml] = useState("");
     const [imageOverlay, setImageOverlay] = useState<ImageResizeOverlay | null>(null);
     const [imageMenuTarget, setImageMenuTarget] = useState<PreviewImageMenuTarget | null>(null);
+    const imageMenuAnchor = useRef<HTMLImageElement | null>(null);
     const [resizingHandle, setResizingHandle] = useState<ResizeHandle | null>(null);
     const timer = useRef<number | undefined>(undefined);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -171,6 +172,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
     // 内容渲染，100ms 节流
     useEffect(() => {
       setImageMenuTarget(null);
+      imageMenuAnchor.current = null;
       if (timer.current) {
         window.clearTimeout(timer.current);
       }
@@ -190,6 +192,20 @@ const Preview = forwardRef<PreviewHandle, Props>(
         }
       };
     }, [content]);
+
+    useEffect(() => {
+      const root = document.getElementById(ARTICLE_ROOT_ID);
+      root?.querySelectorAll<HTMLImageElement>("img").forEach((image) => {
+        image.tabIndex = 0;
+        image.setAttribute("aria-haspopup", "menu");
+        const hasAccessibleName = Boolean(
+          image.getAttribute("alt")?.trim() || image.getAttribute("aria-label")?.trim(),
+        );
+        if (!hasAccessibleName) {
+          image.setAttribute("aria-label", "预览图片");
+        }
+      });
+    }, [html]);
 
     useEffect(() => {
       const root = document.getElementById(ARTICLE_ROOT_ID);
@@ -398,6 +414,25 @@ const Preview = forwardRef<PreviewHandle, Props>(
       }
     }
 
+    function openImageMenu(image: HTMLImageElement, x: number, y: number) {
+      imageMenuAnchor.current = image;
+      setImageMenuTarget({
+        source: image.currentSrc || image.src,
+        x,
+        y,
+      });
+    }
+
+    function closeImageMenu() {
+      const image = imageMenuAnchor.current;
+      imageMenuAnchor.current = null;
+      setImageMenuTarget(null);
+      const root = document.getElementById(ARTICLE_ROOT_ID);
+      if (image?.isConnected && root?.contains(image)) {
+        image.focus({preventScroll: true});
+      }
+    }
+
     function onContextMenu(event: React.MouseEvent) {
       const root = document.getElementById(ARTICLE_ROOT_ID);
       if (!root) return;
@@ -405,15 +440,29 @@ const Preview = forwardRef<PreviewHandle, Props>(
       if (!image) return;
 
       event.preventDefault();
-      setImageMenuTarget({
-        source: image.currentSrc || image.src,
-        x: event.clientX,
-        y: event.clientY,
-      });
+      openImageMenu(image, event.clientX, event.clientY);
+    }
+
+    function onKeyDown(event: React.KeyboardEvent) {
+      const opensContextMenu = event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey);
+      if (!opensContextMenu) return;
+
+      const root = document.getElementById(ARTICLE_ROOT_ID);
+      if (!root) return;
+      const image = resolvePreviewImage(event.target, root);
+      if (!image) return;
+
+      event.preventDefault();
+      const rect = image.getBoundingClientRect();
+      openImageMenu(
+        image,
+        rect.left + Math.min(Math.max(rect.width, 0), 16),
+        rect.top + Math.min(Math.max(rect.height, 0), 16),
+      );
     }
 
     async function copyImage(source: string) {
-      setImageMenuTarget(null);
+      closeImageMenu();
       try {
         await copyPreviewImage(source);
         toast.show("图片已复制");
@@ -423,7 +472,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
     }
 
     async function saveImage(source: string) {
-      setImageMenuTarget(null);
+      closeImageMenu();
       try {
         const result = await savePreviewImageAs(source);
         if (result.status === "saved") {
@@ -470,6 +519,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
           onMouseMove={onMouseMove}
           onMouseLeave={onMouseLeave}
           onContextMenu={onContextMenu}
+          onKeyDown={onKeyDown}
         >
           {html ? (
             <section id={ARTICLE_ROOT_ID} dangerouslySetInnerHTML={{__html: html}} />
@@ -489,7 +539,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
             target={imageMenuTarget}
             onCopy={copyImage}
             onSave={saveImage}
-            onClose={() => setImageMenuTarget(null)}
+            onClose={closeImageMenu}
           />
         )}
       </div>

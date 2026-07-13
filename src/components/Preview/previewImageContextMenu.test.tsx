@@ -492,6 +492,118 @@ test("Preview preserves the native context menu except for images inside #articl
   }
 });
 
+test("Preview article images are keyboard focusable and keep or receive an accessible name", async () => {
+  const view = await renderPreview([
+    '<img id="named-image" data-vs-image-index="0" src="https://example.com/named.png" alt="示例图片">',
+    '<img id="fallback-image" data-vs-image-index="1" src="https://example.com/fallback.png">',
+  ].join(""));
+  try {
+    const namedImage = view.article().querySelector<HTMLImageElement>("#named-image")!;
+    const fallbackImage = view.article().querySelector<HTMLImageElement>("#fallback-image")!;
+
+    assert.equal(namedImage.tabIndex, 0);
+    assert.equal(namedImage.getAttribute("alt"), "示例图片");
+    assert.equal(namedImage.getAttribute("aria-haspopup"), "menu");
+    assert.equal(fallbackImage.tabIndex, 0);
+    assert.match(fallbackImage.getAttribute("aria-label") ?? "", /图片/);
+    assert.equal(fallbackImage.getAttribute("aria-haspopup"), "menu");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Preview opens the image menu from Shift+F10 and ContextMenu keyboard keys", async () => {
+  const view = await renderPreview(IMAGE_HTML);
+  try {
+    const image = view.article().querySelector<HTMLImageElement>("img")!;
+    image.getBoundingClientRect = () => ({x: 20, y: 30, left: 20, top: 30, right: 120, bottom: 80, width: 100, height: 50, toJSON() { return {}; }});
+    image.focus();
+
+    const shiftF10 = new window.KeyboardEvent("keydown", {
+      key: "F10",
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    act(() => image.dispatchEvent(shiftF10));
+    assert.equal(shiftF10.defaultPrevented, true);
+    assert.ok(document.body.querySelector('[role="menu"]'));
+
+    act(() => dispatchKey(document.activeElement!, "Escape"));
+    image.focus();
+    const contextMenuKey = new window.KeyboardEvent("keydown", {
+      key: "ContextMenu",
+      bubbles: true,
+      cancelable: true,
+    });
+    act(() => image.dispatchEvent(contextMenuKey));
+    assert.equal(contextMenuKey.defaultPrevented, true);
+    assert.ok(document.body.querySelector('[role="menu"]'));
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Preview restores focus to the source image when Escape closes the menu", async () => {
+  const view = await renderPreview(IMAGE_HTML);
+  try {
+    const image = view.article().querySelector<HTMLImageElement>("img")!;
+    image.focus();
+    const openEvent = new window.KeyboardEvent("keydown", {
+      key: "ContextMenu",
+      bubbles: true,
+      cancelable: true,
+    });
+    act(() => image.dispatchEvent(openEvent));
+    const menu = document.body.querySelector<HTMLElement>('[role="menu"]');
+    assert.ok(menu);
+    assert.notEqual(document.activeElement, image);
+
+    act(() => dispatchKey(document.activeElement!, "Escape"));
+    assert.equal(document.body.querySelector('[role="menu"]'), null);
+    assert.equal(document.activeElement, image);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Preview copy and save close and restore image focus before awaiting their actions", async () => {
+  const view = await renderPreview(IMAGE_HTML);
+  const pendingCopy = deferred<void>();
+  const pendingSave = deferred<SavePreviewImageResult>();
+  view.controls.copy = () => pendingCopy.promise;
+  view.controls.save = () => pendingSave.promise;
+  try {
+    const image = view.article().querySelector<HTMLImageElement>("img")!;
+
+    view.openMenu(image);
+    act(() => menuItem("拷贝图片").click());
+    assert.equal(document.body.querySelector('[role="menu"]'), null);
+    assert.equal(document.activeElement, image);
+    assert.deepEqual(view.controls.copySources, ["https://example.com/original.png"]);
+
+    await act(async () => {
+      pendingCopy.resolve();
+      await pendingCopy.promise;
+      await flushPromises();
+    });
+
+    view.openMenu(image);
+    act(() => menuItem("将图片另存为").click());
+    assert.equal(document.body.querySelector('[role="menu"]'), null);
+    assert.equal(document.activeElement, image);
+    assert.deepEqual(view.controls.saveSources, ["https://example.com/original.png"]);
+
+    await act(async () => {
+      pendingSave.resolve({status: "cancelled"});
+      await pendingSave.promise;
+      await flushPromises();
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("Preview maps resize-overlay contextmenu back to its current article image", async () => {
   const previousResizeObserver = Object.getOwnPropertyDescriptor(globalThis, "ResizeObserver");
   const previousRaf = Object.getOwnPropertyDescriptor(globalThis, "requestAnimationFrame");
@@ -717,19 +829,27 @@ test("Preview shows the exact saved Toast and stays silent when save is cancelle
   }
 });
 
-test("Preview closes an open image menu as soon as article content rerenders", async () => {
+test("Preview safely closes without refocusing an image removed by article content rerender", async () => {
   const view = await renderPreview(IMAGE_HTML);
   try {
-    view.openMenu(view.article().querySelector("img")!);
+    const oldImage = view.article().querySelector<HTMLImageElement>("img")!;
+    let focusCalls = 0;
+    oldImage.focus = () => {
+      focusCalls++;
+    };
+    view.openMenu(oldImage);
     assert.ok(document.body.querySelector('[role="menu"]'));
 
-    await view.renderContent('<p id="updated">更新正文</p>', false);
+    await assert.doesNotReject(() => view.renderContent('<p id="updated">更新正文</p>', false));
     assert.equal(document.body.querySelector('[role="menu"]'), null);
+    assert.equal(focusCalls, 0);
 
     await act(async () => {
       await waitForPreviewRender();
     });
+    assert.equal(oldImage.isConnected, false);
     assert.equal(view.article().querySelector("#updated")?.textContent, "更新正文");
+    assert.equal(focusCalls, 0);
   } finally {
     view.cleanup();
   }
