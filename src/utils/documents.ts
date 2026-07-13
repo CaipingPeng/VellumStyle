@@ -211,6 +211,13 @@ export function moveEntry(src: string, destDir: string): Promise<string> {
   return invoke<string>("move_entry", {src, destDir});
 }
 
+export function getEntryAbsolutePath(path: string): Promise<string> {
+  if (!isTauriRuntime()) {
+    return Promise.reject(new Error("Web 调试模式无法复制本地绝对路径"));
+  }
+  return invoke<string>("get_entry_absolute_path", {path});
+}
+
 export function openEntryLocation(path: string): Promise<void> {
   if (!isTauriRuntime()) {
     return Promise.reject(new Error("Web 调试模式无法打开本地文件位置"));
