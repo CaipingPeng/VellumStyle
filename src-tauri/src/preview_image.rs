@@ -75,10 +75,76 @@ fn validate_dimensions(width: u32, height: u32) -> Result<(), String> {
     Ok(())
 }
 
+const SVG_NAMESPACE: &str = "http://www.w3.org/2000/svg";
+const XLINK_NAMESPACE: &str = "http://www.w3.org/1999/xlink";
+const XML_NAMESPACE: &str = "http://www.w3.org/XML/1998/namespace";
+
+fn is_safe_svg_element(name: &str) -> bool {
+    matches!(
+        name,
+        "svg"
+            | "g"
+            | "defs"
+            | "symbol"
+            | "use"
+            | "switch"
+            | "path"
+            | "rect"
+            | "circle"
+            | "ellipse"
+            | "line"
+            | "polyline"
+            | "polygon"
+            | "text"
+            | "tspan"
+            | "textPath"
+            | "title"
+            | "desc"
+            | "metadata"
+            | "marker"
+            | "pattern"
+            | "linearGradient"
+            | "radialGradient"
+            | "stop"
+            | "clipPath"
+            | "mask"
+            | "filter"
+            | "feBlend"
+            | "feColorMatrix"
+            | "feComponentTransfer"
+            | "feComposite"
+            | "feConvolveMatrix"
+            | "feDiffuseLighting"
+            | "feDisplacementMap"
+            | "feDistantLight"
+            | "feDropShadow"
+            | "feFlood"
+            | "feFuncA"
+            | "feFuncB"
+            | "feFuncG"
+            | "feFuncR"
+            | "feGaussianBlur"
+            | "feMerge"
+            | "feMergeNode"
+            | "feMorphology"
+            | "feOffset"
+            | "fePointLight"
+            | "feSpecularLighting"
+            | "feSpotLight"
+            | "feTile"
+            | "feTurbulence"
+    )
+}
+
 fn validate_svg_url_tokens(value: &str) -> Result<(), String> {
+    if value.contains('\\') || value.contains("/*") || value.contains("*/") {
+        return Err("SVG CSS escapes and comments are not allowed".into());
+    }
+
     let lower = value.to_ascii_lowercase();
-    if lower.contains("@import") {
-        return Err("SVG external styles are not allowed".into());
+    if lower.contains("@import") || lower.contains("expression(") || lower.contains("-moz-binding")
+    {
+        return Err("SVG active or external styles are not allowed".into());
     }
 
     let mut remainder = value;
@@ -111,24 +177,32 @@ fn validate_svg_safety(bytes: &[u8]) -> Result<(), String> {
     }
 
     for node in document.descendants().filter(roxmltree::Node::is_element) {
-        let element_name = node.tag_name().name();
-        if element_name.eq_ignore_ascii_case("script") {
-            return Err("SVG scripts are not allowed".into());
-        }
-        if element_name.eq_ignore_ascii_case("image")
-            || element_name.eq_ignore_ascii_case("feImage")
-        {
-            return Err("SVG raster images are not allowed".into());
+        let tag = node.tag_name();
+        if tag.namespace() != Some(SVG_NAMESPACE) || !is_safe_svg_element(tag.name()) {
+            return Err("SVG contains an unsafe element".into());
         }
 
         for attribute in node.attributes() {
             let name = attribute.name();
+            match attribute.namespace() {
+                None => {}
+                Some(XLINK_NAMESPACE) if name == "href" => {}
+                Some(XML_NAMESPACE) if matches!(name, "lang" | "space") => {}
+                _ => return Err("SVG contains an unsafe namespaced attribute".into()),
+            }
+
             if name.len() > 2
                 && name
                     .get(..2)
                     .is_some_and(|prefix| prefix.eq_ignore_ascii_case("on"))
             {
                 return Err("SVG event handlers are not allowed".into());
+            }
+            if matches!(
+                name.to_ascii_lowercase().as_str(),
+                "style" | "src" | "srcdoc"
+            ) {
+                return Err("SVG active or external resource attributes are not allowed".into());
             }
             if name.eq_ignore_ascii_case("href") {
                 let target = attribute.value().trim();
@@ -137,15 +211,6 @@ fn validate_svg_safety(bytes: &[u8]) -> Result<(), String> {
                 }
             }
             validate_svg_url_tokens(attribute.value())?;
-        }
-
-        if element_name.eq_ignore_ascii_case("style") {
-            for text in node
-                .descendants()
-                .filter_map(|descendant| descendant.text())
-            {
-                validate_svg_url_tokens(text)?;
-            }
         }
     }
     Ok(())
@@ -311,11 +376,6 @@ enum NetworkPolicy {
     AllowLocalForTests,
 }
 
-fn ipv6_has_prefix(ip: std::net::Ipv6Addr, network: std::net::Ipv6Addr, prefix: u32) -> bool {
-    let mask = u128::MAX.checked_shl(128 - prefix).unwrap_or(0);
-    u128::from(ip) & mask == u128::from(network) & mask
-}
-
 fn is_globally_routable_ip(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(ip) => {
@@ -342,26 +402,41 @@ fn is_globally_routable_ip(ip: IpAddr) -> bool {
             if let Some(mapped) = ip.to_ipv4_mapped() {
                 return is_globally_routable_ip(IpAddr::V4(mapped));
             }
-            let blocked_prefixes = [
-                (std::net::Ipv6Addr::UNSPECIFIED, 96),
-                ("64:ff9b::".parse().unwrap(), 96),
-                ("64:ff9b:1::".parse().unwrap(), 48),
-                ("100::".parse().unwrap(), 64),
-                ("2001::".parse().unwrap(), 32),
-                ("2001:2::".parse().unwrap(), 48),
-                ("2001:10::".parse().unwrap(), 28),
-                ("2001:20::".parse().unwrap(), 28),
-                ("2001:db8::".parse().unwrap(), 32),
-                ("2002::".parse().unwrap(), 16),
-                ("fc00::".parse().unwrap(), 7),
-                ("fe80::".parse().unwrap(), 10),
-                ("fec0::".parse().unwrap(), 10),
-                ("ff00::".parse().unwrap(), 8),
-            ];
-            ip != std::net::Ipv6Addr::LOCALHOST
-                && !blocked_prefixes
-                    .iter()
-                    .any(|&(network, prefix)| ipv6_has_prefix(ip, network, prefix))
+
+            let segments = ip.segments();
+            let numeric = u128::from_be_bytes(ip.octets());
+            let ietf_protocol_assignment = segments[0] == 0x2001 && segments[1] < 0x0200;
+            let globally_reachable_ietf_exception =
+                // PCP, TURN, and DNS-SD Service Registration Protocol anycast addresses.
+                matches!(numeric, 0x2001_0001_0000_0000_0000_0000_0000_0001
+                    | 0x2001_0001_0000_0000_0000_0000_0000_0002
+                    | 0x2001_0001_0000_0000_0000_0000_0000_0003)
+                // AMT and AS112-v6.
+                || matches!(segments, [0x2001, 0x0003, ..]
+                    | [0x2001, 0x0004, 0x0112, ..])
+                // ORCHIDv2 and Drone Remote ID Protocol Entity Tags.
+                || matches!(segments, [0x2001, 0x0020..=0x003f, ..]);
+
+            !(ip.is_unspecified()
+                || ip.is_loopback()
+                // IPv4-compatible, NAT64, translation, and discard-only prefixes.
+                || matches!(segments, [0, 0, 0, 0, 0, 0, _, _])
+                || matches!(segments, [0x0064, 0xff9b, 0, 0, 0, 0, _, _])
+                || matches!(segments, [0x0064, 0xff9b, 1, ..])
+                || matches!(segments, [0x0100, 0, 0, 0, ..])
+                || matches!(segments, [0x0100, 0, 0, 1, ..])
+                // IANA IETF Protocol Assignments are non-global except these explicit subranges.
+                || (ietf_protocol_assignment && !globally_reachable_ietf_exception)
+                // 6to4, both documentation ranges, and Segment Routing SIDs.
+                || matches!(segments, [0x2002, ..])
+                || matches!(segments, [0x2001, 0x0db8, ..])
+                || matches!(segments, [0x3fff, 0x0000..=0x0fff, ..])
+                || matches!(segments, [0x5f00, ..])
+                // Unique-local, deprecated site-local, link-local, and multicast scopes.
+                || matches!(segments[0] & 0xfe00, 0xfc00)
+                || matches!(segments[0] & 0xffc0, 0xfec0)
+                || matches!(segments[0] & 0xffc0, 0xfe80)
+                || matches!(segments[0] & 0xff00, 0xff00))
         }
     }
 }
@@ -1115,6 +1190,13 @@ mod tests {
     fn identify_rejects_active_or_external_svg_content() {
         let unsafe_svgs: &[&[u8]] = &[
             br#"<?xml-stylesheet href="https://example.com/a.css"?><svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><foreignObject><div xmlns="http://www.w3.org/1999/xhtml">active</div></foreignObject></svg>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:h="http://www.w3.org/1999/xhtml" width="1" height="1"><h:img src="https://example.com/a.png"/></svg>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:h="http://www.w3.org/1999/xhtml" width="1" height="1"><h:iframe srcdoc="&lt;script&gt;alert(1)&lt;/script&gt;"/></svg>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect fill="\75rl(https://example.com/a.svg#x)"/></svg>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect fill="u/**/rl(https://example.com/a.svg#x)"/></svg>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><style>\40 import 'https://example.com/a.css';</style></svg>"#,
+            br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><style>@im/**/port 'https://example.com/a.css';</style></svg>"#,
             br#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:evil="urn:evil" width="1" height="1"><evil:ScRiPt>alert(1)</evil:ScRiPt></svg>"#,
             br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" onClick="alert(1)"/>"#,
             br#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><image href="https://example.com/a.png"/></svg>"#,
@@ -1159,7 +1241,7 @@ mod tests {
         );
         assert!(get_preview_image_asset(unsafe_source).await.is_err());
 
-        let safe_svg = br##"<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><defs><linearGradient id="g"><stop stop-color="red"/></linearGradient><path id="p" d="M0 0h1v1z"/></defs><use href="#p"/><rect width="2" height="2" fill="url(#g)"/></svg>"##;
+        let safe_svg = br##"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2" height="2"><defs><linearGradient id="g"><stop stop-color="red"/></linearGradient><path id="p" d="M0 0h1v1z"/></defs><use href="#p"/><use xlink:href="#p"/><rect width="2" height="2" fill="url(#g)"/></svg>"##;
         assert_eq!(
             identify_image(safe_svg, Some("image/svg+xml")).unwrap(),
             ImageKind::Svg
@@ -1372,6 +1454,13 @@ mod tests {
             "http://[2001:db8::1]/a.png",
             "http://[2002:0808:0808::1]/a.png",
             "http://[::ffff:198.18.0.1]/a.png",
+            "http://[100:0:0:1::1]/a.png",
+            "http://[3fff::1]/a.png",
+            "http://[5f00::1]/a.png",
+            "http://[2001:2::1]/a.png",
+            "http://[2001:10::1]/a.png",
+            "http://[2001:40::1]/a.png",
+            "http://[2001:100::1]/a.png",
         ] {
             let url = Url::parse(source).unwrap();
             assert!(
@@ -1387,6 +1476,13 @@ mod tests {
             "https://8.8.8.8/a.png",
             "https://1.1.1.1/a.png",
             "https://[2606:4700:4700::1111]/a.png",
+            "https://[2001:1::1]/a.png",
+            "https://[2001:1::2]/a.png",
+            "https://[2001:1::3]/a.png",
+            "https://[2001:3::1]/a.png",
+            "https://[2001:4:112::1]/a.png",
+            "https://[2001:20::1]/a.png",
+            "https://[2001:30::1]/a.png",
             "https://example.com/a.png",
         ] {
             assert!(
@@ -1531,6 +1627,13 @@ mod tests {
             "2001:db8::1".parse().unwrap(),
             "2002:0808:0808::1".parse().unwrap(),
             "::ffff:198.18.0.1".parse().unwrap(),
+            "100:0:0:1::1".parse().unwrap(),
+            "3fff::1".parse().unwrap(),
+            "5f00::1".parse().unwrap(),
+            "2001:2::1".parse().unwrap(),
+            "2001:10::1".parse().unwrap(),
+            "2001:40::1".parse().unwrap(),
+            "2001:100::1".parse().unwrap(),
         ];
 
         for &ip in unsafe_addresses {
@@ -1545,7 +1648,18 @@ mod tests {
             assert!(result.is_err(), "DNS answer {ip} was accepted");
         }
 
-        for ip in ["8.8.8.8", "1.1.1.1", "2606:4700:4700::1111"] {
+        for ip in [
+            "8.8.8.8",
+            "1.1.1.1",
+            "2606:4700:4700::1111",
+            "2001:1::1",
+            "2001:1::2",
+            "2001:1::3",
+            "2001:3::1",
+            "2001:4:112::1",
+            "2001:20::1",
+            "2001:30::1",
+        ] {
             let ip: IpAddr = ip.parse().unwrap();
             let prepared = prepare_http_hop_with_resolver(
                 Url::parse("https://public.example/image.png").unwrap(),
