@@ -295,6 +295,17 @@ fn normalize_http_url(mut url: Url) -> Result<Url, String> {
     Ok(url)
 }
 
+fn direct_http_client_builder(
+    connect_timeout: Duration,
+    total_timeout: Duration,
+) -> reqwest::ClientBuilder {
+    reqwest::Client::builder()
+        .no_proxy()
+        .connect_timeout(connect_timeout)
+        .timeout(total_timeout)
+        .redirect(reqwest::redirect::Policy::none())
+}
+
 async fn prepare_http_hop_with_resolver<R, F>(
     url: Url,
     connect_timeout: Duration,
@@ -310,10 +321,7 @@ where
     validate_http_target(&url, policy)?;
     #[cfg(test)]
     let mut pinned_addrs = None;
-    let mut builder = reqwest::Client::builder()
-        .connect_timeout(connect_timeout)
-        .timeout(total_timeout)
-        .redirect(reqwest::redirect::Policy::none());
+    let mut builder = direct_http_client_builder(connect_timeout, total_timeout);
     if let Some(url::Host::Domain(host)) = url.host() {
         let port = url
             .port_or_known_default()
@@ -378,10 +386,7 @@ fn http_client(
     connect_timeout: Duration,
     total_timeout: Duration,
 ) -> Result<reqwest::Client, String> {
-    reqwest::Client::builder()
-        .connect_timeout(connect_timeout)
-        .timeout(total_timeout)
-        .redirect(reqwest::redirect::Policy::none())
+    direct_http_client_builder(connect_timeout, total_timeout)
         .build()
         .map_err(|e| format!("unable to create HTTP client: {e}"))
 }
@@ -1363,6 +1368,33 @@ mod tests {
         assert_eq!(
             prepared.pinned_addrs,
             vec![SocketAddr::from(([203, 0, 113, 10], 443))]
+        );
+    }
+
+    #[test]
+    fn preview_http_clients_explicitly_bypass_system_proxies() {
+        let source = include_str!("preview_image.rs");
+        let production = source.split("#[cfg(test)]\nmod tests").next().unwrap();
+        let helper_start = production
+            .find("\nfn direct_http_client_builder(")
+            .expect("preview HTTP clients must share a direct builder");
+        let helper = &production[helper_start
+            ..production[helper_start..]
+                .find("\n}")
+                .map(|offset| helper_start + offset + 2)
+                .unwrap()];
+        assert!(
+            helper.contains(".no_proxy()"),
+            "the shared preview HTTP builder must explicitly bypass system proxies"
+        );
+        assert_eq!(
+            production.matches("reqwest::Client::builder()").count(),
+            1,
+            "all preview HTTP clients must be created by the no-proxy builder"
+        );
+        assert!(
+            production.matches("direct_http_client_builder(").count() >= 3,
+            "production and test clients must both use the shared builder"
         );
     }
 
