@@ -1,4 +1,5 @@
 use std::io::Cursor;
+use std::net::IpAddr;
 use std::time::Duration;
 
 use base64::Engine;
@@ -14,7 +15,7 @@ const MAX_PIXELS: u64 = 40_000_000;
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PreviewImageAsset {
-    pub bytes: Vec<u8>,
+    pub bytes_base64: String,
     pub mime_type: String,
     pub file_name: String,
     pub extension: String,
@@ -225,6 +226,52 @@ fn decode_for_clipboard(bytes: &[u8], declared_mime: Option<&str>) -> Result<Dec
     })
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum NetworkPolicy {
+    Strict,
+    #[cfg(test)]
+    AllowLocalForTests,
+}
+
+fn is_private_or_local_ip(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(ip) => {
+            ip.is_private() || ip.is_loopback() || ip.is_link_local() || ip.is_unspecified()
+        }
+        IpAddr::V6(ip) => {
+            if let Some(mapped) = ip.to_ipv4_mapped() {
+                return is_private_or_local_ip(IpAddr::V4(mapped));
+            }
+            ip.is_loopback()
+                || ip.is_unspecified()
+                || matches!(ip.segments()[0] & 0xfe00, 0xfc00)
+                || matches!(ip.segments()[0] & 0xffc0, 0xfe80)
+        }
+    }
+}
+
+fn validate_http_target(url: &Url, policy: NetworkPolicy) -> Result<(), String> {
+    let _ = policy;
+    if !matches!(url.scheme(), "http" | "https") {
+        return Err("only HTTP(S) image URLs are allowed".into());
+    }
+    #[cfg(test)]
+    if policy == NetworkPolicy::AllowLocalForTests {
+        return Ok(());
+    }
+    let blocked = match url.host() {
+        Some(url::Host::Domain(host)) => host.eq_ignore_ascii_case("localhost"),
+        Some(url::Host::Ipv4(ip)) => is_private_or_local_ip(IpAddr::V4(ip)),
+        Some(url::Host::Ipv6(ip)) => is_private_or_local_ip(IpAddr::V6(ip)),
+        None => true,
+    };
+    if blocked {
+        Err("private or local image URLs are not allowed".into())
+    } else {
+        Ok(())
+    }
+}
+
 fn is_wechat_host(url: &Url) -> bool {
     matches!(url.host_str(), Some("mmbiz.qpic.cn" | "mmbiz.qlogo.cn"))
 }
@@ -232,10 +279,9 @@ fn is_wechat_host(url: &Url) -> bool {
 fn build_request_for_url(
     client: &reqwest::Client,
     mut url: Url,
+    policy: NetworkPolicy,
 ) -> Result<reqwest::Request, String> {
-    if !matches!(url.scheme(), "http" | "https") {
-        return Err("only HTTP(S) image URLs are allowed".into());
-    }
+    validate_http_target(&url, policy)?;
     let wechat = is_wechat_host(&url);
     if wechat && url.scheme() == "http" {
         url.set_scheme("https").map_err(|_| "invalid image URL")?;
@@ -261,10 +307,27 @@ fn http_client(
         .map_err(|e| format!("unable to create HTTP client: {e}"))
 }
 
-async fn fetch_http_with_timeouts(
+fn is_followable_redirect(status: reqwest::StatusCode) -> bool {
+    matches!(status.as_u16(), 301 | 302 | 303 | 307 | 308)
+}
+
+fn resolve_redirect_target(
+    current: &Url,
+    location: &str,
+    policy: NetworkPolicy,
+) -> Result<Url, String> {
+    let target = current
+        .join(location)
+        .map_err(|_| "invalid image redirect URL")?;
+    validate_http_target(&target, policy)?;
+    Ok(target)
+}
+
+async fn fetch_http_with_policy(
     source: &str,
     connect_timeout: Duration,
     total_timeout: Duration,
+    policy: NetworkPolicy,
 ) -> Result<Download, String> {
     let initial = Url::parse(source).map_err(|_| "invalid image URL")?;
     let client = http_client(connect_timeout, total_timeout)?;
@@ -272,12 +335,12 @@ async fn fetch_http_with_timeouts(
         let mut url = initial;
         let mut redirects = 0usize;
         loop {
-            let request = build_request_for_url(&client, url)?;
+            let request = build_request_for_url(&client, url, policy)?;
             let mut response = client
                 .execute(request)
                 .await
                 .map_err(|e| format!("image download failed: {e}"))?;
-            if response.status().is_redirection() {
+            if is_followable_redirect(response.status()) {
                 if redirects >= 5 {
                     return Err("image redirect limit exceeded".into());
                 }
@@ -286,13 +349,7 @@ async fn fetch_http_with_timeouts(
                     .get(LOCATION)
                     .and_then(|v| v.to_str().ok())
                     .ok_or("image redirect missing Location")?;
-                url = response
-                    .url()
-                    .join(location)
-                    .map_err(|_| "invalid image redirect URL")?;
-                if !matches!(url.scheme(), "http" | "https") {
-                    return Err("image redirect uses unsupported protocol".into());
-                }
+                url = resolve_redirect_target(response.url(), location, policy)?;
                 redirects += 1;
                 continue;
             }
@@ -347,6 +404,21 @@ async fn fetch_http_with_timeouts(
         .map_err(|_| "image download timed out".to_string())?
 }
 
+#[cfg(test)]
+async fn fetch_http_with_timeouts(
+    source: &str,
+    connect_timeout: Duration,
+    total_timeout: Duration,
+) -> Result<Download, String> {
+    fetch_http_with_policy(
+        source,
+        connect_timeout,
+        total_timeout,
+        NetworkPolicy::AllowLocalForTests,
+    )
+    .await
+}
+
 fn disposition_filename(value: &str) -> Option<String> {
     value
         .split(';')
@@ -358,11 +430,14 @@ fn disposition_filename(value: &str) -> Option<String> {
         .filter(|v| !v.is_empty())
 }
 
-fn strict_percent_decode(input: &str) -> Result<Vec<u8>, String> {
+fn strict_percent_decode(input: &str, max_output: usize) -> Result<Vec<u8>, String> {
     let bytes = input.as_bytes();
-    let mut output = Vec::with_capacity(bytes.len());
+    let mut output = Vec::with_capacity(bytes.len().min(max_output));
     let mut index = 0;
     while index < bytes.len() {
+        if output.len() >= max_output {
+            return Err("image exceeds 15 MiB limit".into());
+        }
         if bytes[index] == b'%' {
             if index + 2 >= bytes.len() {
                 return Err("malformed percent escape in data URL".into());
@@ -408,6 +483,9 @@ fn parse_data_url(source: &str) -> Result<Download, String> {
         return Err("malformed data URL".into());
     }
     let (metadata, payload) = rest.split_once(',').ok_or("malformed data URL")?;
+    if metadata.len() > 4 * 1024 {
+        return Err("data URL metadata exceeds 4 KiB limit".into());
+    }
     let mut parts = metadata.split(';');
     let mime = parts.next().unwrap_or_default().to_ascii_lowercase();
     if !mime.starts_with("image/") {
@@ -415,15 +493,12 @@ fn parse_data_url(source: &str) -> Result<Download, String> {
     }
     let is_base64 = parts.any(|p| p.eq_ignore_ascii_case("base64"));
     validate_encoded_payload_len(payload.len(), is_base64)?;
-    let decoded_payload = strict_percent_decode(payload)?;
     let decoded_payload_limit = if is_base64 {
         MAX_SOURCE_BYTES.div_ceil(3) * 4
     } else {
         MAX_SOURCE_BYTES
     };
-    if decoded_payload.len() > decoded_payload_limit {
-        return Err("image exceeds 15 MiB limit".into());
-    }
+    let decoded_payload = strict_percent_decode(payload, decoded_payload_limit)?;
     let bytes = if is_base64 {
         base64::engine::general_purpose::STANDARD
             .decode(decoded_payload)
@@ -450,21 +525,47 @@ pub async fn get_preview_image_asset(source: String) -> Result<PreviewImageAsset
     {
         parse_data_url(&source)?
     } else {
-        fetch_http_with_timeouts(&source, Duration::from_secs(8), Duration::from_secs(20)).await?
+        fetch_http_with_policy(
+            &source,
+            Duration::from_secs(8),
+            Duration::from_secs(20),
+            NetworkPolicy::Strict,
+        )
+        .await?
     };
     let kind = identify_image(&download.bytes, download.content_type.as_deref())?;
     Ok(PreviewImageAsset {
         file_name: build_file_name(download.file_name.as_deref(), kind),
         extension: kind.extension().into(),
         mime_type: kind.mime_type().into(),
-        bytes: download.bytes,
+        bytes_base64: base64::engine::general_purpose::STANDARD.encode(download.bytes),
     })
+}
+
+#[tauri::command]
+pub async fn write_preview_image_asset(path: String, bytes_base64: String) -> Result<(), String> {
+    let max_base64 = MAX_SOURCE_BYTES.div_ceil(3) * 4;
+    if bytes_base64.len() > max_base64 {
+        return Err("image exceeds 15 MiB limit".into());
+    }
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(bytes_base64)
+        .map_err(|_| "malformed base64 image data")?;
+    if bytes.len() > MAX_SOURCE_BYTES {
+        return Err("image exceeds 15 MiB limit".into());
+    }
+    tokio::fs::write(path, bytes)
+        .await
+        .map_err(|e| format!("unable to write preview image: {e}"))
 }
 
 #[tauri::command]
 pub async fn copy_preview_image(app: tauri::AppHandle, source: String) -> Result<(), String> {
     let asset = get_preview_image_asset(source).await?;
-    let decoded = decode_for_clipboard(&asset.bytes, Some(&asset.mime_type))?;
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(&asset.bytes_base64)
+        .map_err(|_| "invalid preview image asset")?;
+    let decoded = decode_for_clipboard(&bytes, Some(&asset.mime_type))?;
     let image = tauri::image::Image::new_owned(decoded.rgba, decoded.width, decoded.height);
     app.clipboard()
         .write_image(&image)
@@ -585,7 +686,12 @@ mod tests {
         let asset = get_preview_image_asset(format!("data:image/png;base64,{b64}"))
             .await
             .unwrap();
-        assert_eq!(asset.bytes, png);
+        assert_eq!(
+            base64::engine::general_purpose::STANDARD
+                .decode(asset.bytes_base64)
+                .unwrap(),
+            png
+        );
         let asset = get_preview_image_asset("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221%22%20height%3D%221%22%2F%3E".into()).await.unwrap();
         assert_eq!(asset.extension, ".svg");
     }
@@ -646,7 +752,7 @@ mod tests {
 
     #[tokio::test]
     async fn http_handles_status_non_images_redirects_timeout_and_overflow() {
-        let _guard = HTTP_TEST_LOCK.lock().unwrap();
+        let _guard = HTTP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let not_found = serve(
             vec![response(
                 "404 Not Found",
@@ -673,17 +779,42 @@ mod tests {
                 .is_err()
         );
 
-        let redirects = (0..7)
+        let mut five_redirects: Vec<_> = (0..5)
             .map(|_| response("302 Found", "Location: /again\r\n", b""))
             .collect();
-        let redirect = serve(redirects, Duration::ZERO);
-        assert!(fetch_http_with_timeouts(
+        five_redirects.push(response(
+            "200 OK",
+            "Content-Type: image/svg+xml\r\n",
+            &svg(1, 1),
+        ));
+        let redirect = serve(five_redirects, Duration::ZERO);
+        let five_result = fetch_http_with_timeouts(
             &format!("{redirect}/again"),
             Duration::from_secs(1),
-            Duration::from_secs(1)
+            Duration::from_secs(1),
         )
-        .await
-        .is_err());
+        .await;
+        assert!(
+            five_result.is_ok(),
+            "exactly five redirects must be allowed: {:?}",
+            five_result.err()
+        );
+
+        let six_redirects = (0..6)
+            .map(|_| response("302 Found", "Location: /again\r\n", b""))
+            .collect();
+        let redirect = serve(six_redirects, Duration::ZERO);
+        assert_eq!(
+            fetch_http_with_timeouts(
+                &format!("{redirect}/again"),
+                Duration::from_secs(1),
+                Duration::from_secs(1)
+            )
+            .await
+            .err()
+            .unwrap(),
+            "image redirect limit exceeded"
+        );
 
         let slow = serve(
             vec![response("200 OK", "Content-Type: image/png\r\n", b"")],
@@ -702,37 +833,45 @@ mod tests {
             "HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nConnection: close\r\n\r\n{streamed_body}"
         );
         let streamed = serve(vec![streamed_response], Duration::ZERO);
-        assert!(fetch_http_with_timeouts(
-            &streamed,
-            Duration::from_secs(2),
-            Duration::from_secs(5)
-        )
-        .await
-        .is_err());
+        assert_eq!(
+            fetch_http_with_timeouts(&streamed, Duration::from_secs(2), Duration::from_secs(5))
+                .await
+                .err()
+                .unwrap(),
+            "image exceeds 15 MiB limit"
+        );
 
         let huge_header = format!("HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", MAX_SOURCE_BYTES + 1);
         let huge = serve(vec![huge_header], Duration::ZERO);
-        assert!(
+        assert_eq!(
             fetch_http_with_timeouts(&huge, Duration::from_secs(1), Duration::from_secs(1))
                 .await
-                .is_err()
+                .err()
+                .unwrap(),
+            "image exceeds 15 MiB limit"
         );
     }
 
     #[test]
     fn wechat_hosts_are_upgraded_and_receive_exact_referer() {
         let client = http_client(Duration::from_secs(1), Duration::from_secs(1)).unwrap();
-        let request =
-            build_request_for_url(&client, Url::parse("http://mmbiz.qpic.cn/a.png").unwrap())
-                .unwrap();
+        let request = build_request_for_url(
+            &client,
+            Url::parse("http://mmbiz.qpic.cn/a.png").unwrap(),
+            NetworkPolicy::Strict,
+        )
+        .unwrap();
         assert_eq!(request.url().scheme(), "https");
         assert_eq!(
             request.headers().get(reqwest::header::REFERER).unwrap(),
             "https://mp.weixin.qq.com"
         );
-        let request =
-            build_request_for_url(&client, Url::parse("https://mmbiz.qlogo.cn/a.png").unwrap())
-                .unwrap();
+        let request = build_request_for_url(
+            &client,
+            Url::parse("https://mmbiz.qlogo.cn/a.png").unwrap(),
+            NetworkPolicy::Strict,
+        )
+        .unwrap();
         assert_eq!(
             request.headers().get(reqwest::header::REFERER).unwrap(),
             "https://mp.weixin.qq.com"
@@ -839,27 +978,40 @@ mod tests {
         let asset = get_preview_image_asset(format!("DATA:IMAGE/PNG;BASE64,{escaped}"))
             .await
             .unwrap();
-        assert_eq!(asset.bytes, png);
+        assert_eq!(
+            base64::engine::general_purpose::STANDARD
+                .decode(asset.bytes_base64)
+                .unwrap(),
+            png
+        );
     }
 
     #[test]
     fn production_request_policy_is_applied_per_target_without_referer_leaks() {
         let client = http_client(Duration::from_secs(1), Duration::from_secs(1)).unwrap();
-        let wx =
-            build_request_for_url(&client, Url::parse("http://mmbiz.qpic.cn/a").unwrap()).unwrap();
+        let wx = build_request_for_url(
+            &client,
+            Url::parse("http://mmbiz.qpic.cn/a").unwrap(),
+            NetworkPolicy::Strict,
+        )
+        .unwrap();
         assert_eq!(wx.url().scheme(), "https");
         assert_eq!(
             wx.headers().get(REFERER).unwrap(),
             "https://mp.weixin.qq.com"
         );
-        let ordinary =
-            build_request_for_url(&client, Url::parse("https://example.com/a").unwrap()).unwrap();
+        let ordinary = build_request_for_url(
+            &client,
+            Url::parse("https://example.com/a").unwrap(),
+            NetworkPolicy::Strict,
+        )
+        .unwrap();
         assert!(ordinary.headers().get(REFERER).is_none());
     }
 
     #[tokio::test]
     async fn redirected_final_url_supplies_fallback_filename() {
-        let _guard = HTTP_TEST_LOCK.lock().unwrap();
+        let _guard = HTTP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let body = svg(1, 1);
         let server = serve(
             vec![
@@ -868,10 +1020,18 @@ mod tests {
             ],
             Duration::ZERO,
         );
-        let asset = get_preview_image_asset(format!("{server}/initial-name.png"))
-            .await
-            .unwrap();
-        assert_eq!(asset.file_name, "final-name.svg");
+        let download = fetch_http_with_timeouts(
+            &format!("{server}/initial-name.png"),
+            Duration::from_secs(1),
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        let kind = identify_image(&download.bytes, download.content_type.as_deref()).unwrap();
+        assert_eq!(
+            build_file_name(download.file_name.as_deref(), kind),
+            "final-name.svg"
+        );
     }
 
     #[test]
@@ -917,5 +1077,160 @@ mod tests {
         assert!(validate_encoded_payload_len(escaped_base64_limit, true).is_ok());
         assert!(validate_encoded_payload_len(raw_percent_limit + 1, false).is_err());
         assert!(validate_encoded_payload_len(escaped_base64_limit + 1, true).is_err());
+    }
+
+    #[test]
+    fn strict_ssrf_policy_rejects_local_and_private_literal_addresses() {
+        for source in [
+            "http://localhost/a.png",
+            "http://127.0.0.1/a.png",
+            "http://10.0.0.1/a.png",
+            "http://172.16.0.1/a.png",
+            "http://192.168.1.1/a.png",
+            "http://169.254.1.1/a.png",
+            "http://0.0.0.0/a.png",
+            "http://[::1]/a.png",
+            "http://[::]/a.png",
+            "http://[fc00::1]/a.png",
+            "http://[fe80::1]/a.png",
+            "http://[::ffff:127.0.0.1]/a.png",
+            "http://[::ffff:192.168.1.1]/a.png",
+        ] {
+            let url = Url::parse(source).unwrap();
+            assert!(
+                validate_http_target(&url, NetworkPolicy::Strict).is_err(),
+                "allowed {source}"
+            );
+            assert!(
+                validate_http_target(&url, NetworkPolicy::AllowLocalForTests).is_ok(),
+                "test policy rejected {source}"
+            );
+        }
+        assert!(validate_http_target(
+            &Url::parse("https://example.com/a.png").unwrap(),
+            NetworkPolicy::Strict
+        )
+        .is_ok());
+        let current = Url::parse("https://example.com/start").unwrap();
+        assert!(resolve_redirect_target(
+            &current,
+            "http://127.0.0.1/secret",
+            NetworkPolicy::Strict
+        )
+        .is_err());
+        assert!(resolve_redirect_target(
+            &current,
+            "http://[::ffff:10.0.0.1]/secret",
+            NetworkPolicy::Strict
+        )
+        .is_err());
+        assert!(resolve_redirect_target(
+            &current,
+            "https://example.org/image",
+            NetworkPolicy::Strict
+        )
+        .is_ok());
+    }
+
+    #[tokio::test]
+    async fn production_fetch_rejects_local_initial_target_before_connecting() {
+        assert_eq!(
+            fetch_http_with_policy(
+                "http://127.0.0.1:9/image.png",
+                Duration::from_secs(1),
+                Duration::from_secs(1),
+                NetworkPolicy::Strict,
+            )
+            .await
+            .err()
+            .unwrap(),
+            "private or local image URLs are not allowed"
+        );
+    }
+
+    #[test]
+    fn redirect_statuses_are_explicitly_allowlisted() {
+        for code in [301, 302, 303, 307, 308] {
+            assert!(is_followable_redirect(
+                reqwest::StatusCode::from_u16(code).unwrap()
+            ));
+        }
+        for code in [300, 304, 305, 306] {
+            assert!(!is_followable_redirect(
+                reqwest::StatusCode::from_u16(code).unwrap()
+            ));
+        }
+    }
+
+    #[test]
+    fn percent_decoder_and_metadata_limits_fail_early() {
+        let input = "A".repeat(1025);
+        assert_eq!(
+            strict_percent_decode(&input, 1024).unwrap_err(),
+            "image exceeds 15 MiB limit"
+        );
+        let metadata = "x".repeat(4097);
+        assert_eq!(
+            parse_data_url(&format!("data:image/png;{metadata},x"))
+                .err()
+                .unwrap(),
+            "data URL metadata exceeds 4 KiB limit"
+        );
+    }
+
+    #[tokio::test]
+    async fn asset_serializes_base64_and_roundtrips_original_bytes() {
+        let png = encoded(image::ImageFormat::Png, 2, 2);
+        let source = format!(
+            "data:image/png;base64,{}",
+            base64::engine::general_purpose::STANDARD.encode(&png)
+        );
+        let asset = get_preview_image_asset(source).await.unwrap();
+        let json = serde_json::to_value(&asset).unwrap();
+        assert!(json.get("bytes").is_none());
+        assert_eq!(
+            json.get("bytesBase64").and_then(|v| v.as_str()),
+            Some(asset.bytes_base64.as_str())
+        );
+        assert_eq!(
+            base64::engine::general_purpose::STANDARD
+                .decode(&asset.bytes_base64)
+                .unwrap(),
+            png
+        );
+    }
+
+    #[tokio::test]
+    async fn write_asset_validates_base64_size_and_preserves_bytes() {
+        let path = std::env::temp_dir().join(format!(
+            "vellumstyle-preview-write-{}.png",
+            std::process::id()
+        ));
+        let png = encoded(image::ImageFormat::Png, 2, 2);
+        write_preview_image_asset(
+            path.to_string_lossy().into_owned(),
+            base64::engine::general_purpose::STANDARD.encode(&png),
+        )
+        .await
+        .unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), png);
+        std::fs::remove_file(&path).unwrap();
+        assert_eq!(
+            write_preview_image_asset(path.to_string_lossy().into_owned(), "%%%".into())
+                .await
+                .unwrap_err(),
+            "malformed base64 image data"
+        );
+        let oversized = vec![0_u8; MAX_SOURCE_BYTES + 1];
+        assert_eq!(
+            write_preview_image_asset(
+                path.to_string_lossy().into_owned(),
+                base64::engine::general_purpose::STANDARD.encode(oversized)
+            )
+            .await
+            .unwrap_err(),
+            "image exceeds 15 MiB limit"
+        );
+        assert!(!path.exists());
     }
 }

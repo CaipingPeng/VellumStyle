@@ -68,6 +68,7 @@ pub fn run() {
         .register_asynchronous_uri_scheme_protocol("wximg", handle_wximg)
         .invoke_handler(tauri::generate_handler![
             preview_image::get_preview_image_asset,
+            preview_image::write_preview_image_asset,
             preview_image::copy_preview_image,
             wechat::upload_image,
             wechat::get_outbound_ip,
