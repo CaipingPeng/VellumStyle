@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use base64::Engine;
 use image::GenericImageView;
-use reqwest::header::{CONTENT_DISPOSITION, CONTENT_TYPE, REFERER};
+use reqwest::header::{CONTENT_DISPOSITION, CONTENT_TYPE, LOCATION, REFERER};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use url::Url;
 
@@ -74,8 +74,15 @@ fn validate_dimensions(width: u32, height: u32) -> Result<(), String> {
 }
 
 fn parse_svg(bytes: &[u8]) -> Result<resvg::usvg::Tree, String> {
+    if bytes.starts_with(&[0x1f, 0x8b]) {
+        return Err("compressed SVG/SVGZ is not supported".into());
+    }
     let mut options = resvg::usvg::Options::default();
     options.resources_dir = None;
+    options.image_href_resolver = resvg::usvg::ImageHrefResolver {
+        resolve_data: resvg::usvg::ImageHrefResolver::default_data_resolver(),
+        resolve_string: Box::new(|_, _| None),
+    };
     resvg::usvg::Tree::from_data(bytes, &options).map_err(|e| format!("invalid SVG: {e}"))
 }
 
@@ -83,7 +90,12 @@ fn identify_image(bytes: &[u8], _declared_mime: Option<&str>) -> Result<ImageKin
     if bytes.len() > MAX_SOURCE_BYTES {
         return Err("image exceeds 15 MiB limit".into());
     }
-    if parse_svg(bytes).is_ok() {
+    if bytes.starts_with(&[0x1f, 0x8b]) {
+        return Err("compressed SVG/SVGZ is not supported".into());
+    }
+    if let Ok(tree) = parse_svg(bytes) {
+        let size = tree.size().to_int_size();
+        validate_dimensions(size.width(), size.height())?;
         return Ok(ImageKind::Svg);
     }
     let format =
@@ -95,12 +107,21 @@ fn identify_image(bytes: &[u8], _declared_mime: Option<&str>) -> Result<ImageKin
         image::ImageFormat::WebP => ImageKind::WebP,
         _ => return Err("unsupported image format".into()),
     };
+    decode_raster(bytes, format)?;
+    Ok(kind)
+}
+
+fn decode_raster(bytes: &[u8], format: image::ImageFormat) -> Result<image::DynamicImage, String> {
     let reader = image::ImageReader::with_format(Cursor::new(bytes), format);
     let (width, height) = reader
         .into_dimensions()
         .map_err(|e| format!("invalid image: {e}"))?;
     validate_dimensions(width, height)?;
-    Ok(kind)
+    let image = image::load_from_memory_with_format(bytes, format)
+        .map_err(|e| format!("unable to fully decode image: {e}"))?;
+    let (width, height) = image.dimensions();
+    validate_dimensions(width, height)?;
+    Ok(image)
 }
 
 fn build_file_name(candidate: Option<&str>, kind: ImageKind) -> String {
@@ -125,8 +146,42 @@ fn build_file_name(candidate: Option<&str>, kind: ImageKind) -> String {
     if clean.is_empty() || clean == "." || clean == ".." {
         clean = "image".into();
     }
-    clean.truncate(180);
+    let upper = clean.to_ascii_uppercase();
+    let dangerous = matches!(upper.as_str(), "CON" | "PRN" | "AUX" | "NUL" | "CLOCK$")
+        || upper
+            .strip_prefix("COM")
+            .is_some_and(|n| matches!(n, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"))
+        || upper
+            .strip_prefix("LPT")
+            .is_some_and(|n| matches!(n, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"));
+    if dangerous {
+        clean.insert(0, '_');
+    }
+    clean = clean
+        .chars()
+        .scan(0usize, |bytes, c| {
+            let next = *bytes + c.len_utf8();
+            if next > 180 {
+                None
+            } else {
+                *bytes = next;
+                Some(c)
+            }
+        })
+        .collect();
     format!("{clean}{}", kind.extension())
+}
+
+fn straight_rgba(mut rgba: Vec<u8>) -> Vec<u8> {
+    for pixel in rgba.chunks_exact_mut(4) {
+        let alpha = u32::from(pixel[3]);
+        if alpha != 0 && alpha != 255 {
+            for channel in &mut pixel[..3] {
+                *channel = ((u32::from(*channel) * 255 + alpha / 2) / alpha).min(255) as u8;
+            }
+        }
+    }
+    rgba
 }
 
 fn decode_for_clipboard(bytes: &[u8], declared_mime: Option<&str>) -> Result<DecodedImage, String> {
@@ -143,7 +198,7 @@ fn decode_for_clipboard(bytes: &[u8], declared_mime: Option<&str>) -> Result<Dec
             &mut pixmap.as_mut(),
         );
         return Ok(DecodedImage {
-            rgba: pixmap.take(),
+            rgba: straight_rgba(pixmap.take()),
             width: size.width(),
             height: size.height(),
         });
@@ -155,15 +210,8 @@ fn decode_for_clipboard(bytes: &[u8], declared_mime: Option<&str>) -> Result<Dec
         ImageKind::WebP => image::ImageFormat::WebP,
         ImageKind::Svg => unreachable!(),
     };
-    let reader = image::ImageReader::with_format(Cursor::new(bytes), format);
-    let (width, height) = reader
-        .into_dimensions()
-        .map_err(|e| format!("invalid image: {e}"))?;
-    validate_dimensions(width, height)?;
-    let image = image::load_from_memory_with_format(bytes, format)
-        .map_err(|e| format!("unable to decode image: {e}"))?;
+    let image = decode_raster(bytes, format)?;
     let (width, height) = image.dimensions();
-    validate_dimensions(width, height)?;
     Ok(DecodedImage {
         rgba: image.into_rgba8().into_raw(),
         width,
@@ -171,17 +219,21 @@ fn decode_for_clipboard(bytes: &[u8], declared_mime: Option<&str>) -> Result<Dec
     })
 }
 
-#[cfg(test)]
-fn prepare_http_request(source: &str) -> Result<reqwest::Request, String> {
-    let mut url = Url::parse(source).map_err(|_| "invalid image URL")?;
+fn is_wechat_host(url: &Url) -> bool {
+    matches!(url.host_str(), Some("mmbiz.qpic.cn" | "mmbiz.qlogo.cn"))
+}
+
+fn build_request_for_url(
+    client: &reqwest::Client,
+    mut url: Url,
+) -> Result<reqwest::Request, String> {
     if !matches!(url.scheme(), "http" | "https") {
         return Err("only HTTP(S) image URLs are allowed".into());
     }
-    let wechat = matches!(url.host_str(), Some("mmbiz.qpic.cn" | "mmbiz.qlogo.cn"));
+    let wechat = is_wechat_host(&url);
     if wechat && url.scheme() == "http" {
         url.set_scheme("https").map_err(|_| "invalid image URL")?;
     }
-    let client = http_client(Duration::from_secs(8), Duration::from_secs(20))?;
     let mut request = client.get(url);
     if wechat {
         request = request.header(REFERER, "https://mp.weixin.qq.com");
@@ -198,7 +250,7 @@ fn http_client(
     reqwest::Client::builder()
         .connect_timeout(connect_timeout)
         .timeout(total_timeout)
-        .redirect(reqwest::redirect::Policy::limited(5))
+        .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|e| format!("unable to create HTTP client: {e}"))
 }
@@ -208,66 +260,81 @@ async fn fetch_http_with_timeouts(
     connect_timeout: Duration,
     total_timeout: Duration,
 ) -> Result<Download, String> {
-    let mut url = Url::parse(source).map_err(|_| "invalid image URL")?;
-    if !matches!(url.scheme(), "http" | "https") {
-        return Err("only HTTP(S) image URLs are allowed".into());
-    }
-    let wechat = matches!(url.host_str(), Some("mmbiz.qpic.cn" | "mmbiz.qlogo.cn"));
-    if wechat && url.scheme() == "http" {
-        url.set_scheme("https").map_err(|_| "invalid image URL")?;
-    }
+    let initial = Url::parse(source).map_err(|_| "invalid image URL")?;
     let client = http_client(connect_timeout, total_timeout)?;
     let operation = async {
-        let mut request = client.get(url.clone());
-        if wechat {
-            request = request.header(REFERER, "https://mp.weixin.qq.com");
-        }
-        let mut response = request
-            .send()
-            .await
-            .map_err(|e| format!("image download failed: {e}"))?;
-        if !response.status().is_success() {
-            return Err(format!("image server returned HTTP {}", response.status()));
-        }
-        if response
-            .content_length()
-            .is_some_and(|n| n > MAX_SOURCE_BYTES as u64)
-        {
-            return Err("image exceeds 15 MiB limit".into());
-        }
-        let content_type = response
-            .headers()
-            .get(CONTENT_TYPE)
-            .and_then(|v| v.to_str().ok())
-            .map(str::to_owned);
-        let file_name = response
-            .headers()
-            .get(CONTENT_DISPOSITION)
-            .and_then(|v| v.to_str().ok())
-            .and_then(disposition_filename)
-            .or_else(|| {
-                url.path_segments()
-                    .and_then(Iterator::last)
-                    .filter(|s| !s.is_empty())
-                    .map(str::to_owned)
-            });
-        let mut bytes = Vec::new();
-        while let Some(chunk) = response
-            .chunk()
-            .await
-            .map_err(|e| format!("image download failed: {e}"))?
-        {
-            if bytes.len().saturating_add(chunk.len()) > MAX_SOURCE_BYTES {
+        let mut url = initial;
+        let mut redirects = 0usize;
+        loop {
+            let request = build_request_for_url(&client, url)?;
+            let mut response = client
+                .execute(request)
+                .await
+                .map_err(|e| format!("image download failed: {e}"))?;
+            if response.status().is_redirection() {
+                if redirects >= 5 {
+                    return Err("image redirect limit exceeded".into());
+                }
+                let location = response
+                    .headers()
+                    .get(LOCATION)
+                    .and_then(|v| v.to_str().ok())
+                    .ok_or("image redirect missing Location")?;
+                url = response
+                    .url()
+                    .join(location)
+                    .map_err(|_| "invalid image redirect URL")?;
+                if !matches!(url.scheme(), "http" | "https") {
+                    return Err("image redirect uses unsupported protocol".into());
+                }
+                redirects += 1;
+                continue;
+            }
+            if !response.status().is_success() {
+                return Err(format!("image server returned HTTP {}", response.status()));
+            }
+            if response
+                .content_length()
+                .is_some_and(|n| n > MAX_SOURCE_BYTES as u64)
+            {
                 return Err("image exceeds 15 MiB limit".into());
             }
-            bytes.extend_from_slice(&chunk);
+            let final_url = response.url().clone();
+            let content_type = response
+                .headers()
+                .get(CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .map(str::to_owned);
+            let file_name = response
+                .headers()
+                .get(CONTENT_DISPOSITION)
+                .and_then(|v| v.to_str().ok())
+                .and_then(disposition_filename)
+                .or_else(|| {
+                    final_url
+                        .path_segments()
+                        .and_then(Iterator::last)
+                        .filter(|s| !s.is_empty())
+                        .map(str::to_owned)
+                });
+            let mut bytes = Vec::new();
+            while let Some(chunk) = response
+                .chunk()
+                .await
+                .map_err(|e| format!("image download failed: {e}"))?
+            {
+                if bytes.len().saturating_add(chunk.len()) > MAX_SOURCE_BYTES {
+                    return Err("image exceeds 15 MiB limit".into());
+                }
+                bytes.extend_from_slice(&chunk);
+            }
+            identify_image(&bytes, content_type.as_deref())?;
+            return Ok(Download {
+                bytes,
+                content_type,
+                file_name,
+            });
         }
-        identify_image(&bytes, content_type.as_deref())?;
-        Ok(Download {
-            bytes,
-            content_type,
-            file_name,
-        })
     };
     tokio::time::timeout(total_timeout, operation)
         .await
@@ -285,11 +352,39 @@ fn disposition_filename(value: &str) -> Option<String> {
         .filter(|v| !v.is_empty())
 }
 
+fn strict_percent_decode(input: &str) -> Result<Vec<u8>, String> {
+    let bytes = input.as_bytes();
+    let mut output = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'%' {
+            if index + 2 >= bytes.len() {
+                return Err("malformed percent escape in data URL".into());
+            }
+            let hex = |byte: u8| match byte {
+                b'0'..=b'9' => Some(byte - b'0'),
+                b'a'..=b'f' => Some(byte - b'a' + 10),
+                b'A'..=b'F' => Some(byte - b'A' + 10),
+                _ => None,
+            };
+            let high = hex(bytes[index + 1]).ok_or("malformed percent escape in data URL")?;
+            let low = hex(bytes[index + 2]).ok_or("malformed percent escape in data URL")?;
+            output.push(high * 16 + low);
+            index += 3;
+        } else {
+            output.push(bytes[index]);
+            index += 1;
+        }
+    }
+    Ok(output)
+}
+
 fn parse_data_url(source: &str) -> Result<Download, String> {
-    let (metadata, payload) = source
-        .strip_prefix("data:")
-        .and_then(|s| s.split_once(','))
-        .ok_or("malformed data URL")?;
+    let (scheme, rest) = source.split_once(':').ok_or("malformed data URL")?;
+    if !scheme.eq_ignore_ascii_case("data") {
+        return Err("malformed data URL".into());
+    }
+    let (metadata, payload) = rest.split_once(',').ok_or("malformed data URL")?;
     let mut parts = metadata.split(';');
     let mime = parts.next().unwrap_or_default().to_ascii_lowercase();
     if !mime.starts_with("image/") {
@@ -299,12 +394,13 @@ fn parse_data_url(source: &str) -> Result<Download, String> {
     if payload.len() > MAX_SOURCE_BYTES * 4 / 3 + 16 {
         return Err("image exceeds 15 MiB limit".into());
     }
+    let decoded_payload = strict_percent_decode(payload)?;
     let bytes = if is_base64 {
         base64::engine::general_purpose::STANDARD
-            .decode(payload)
+            .decode(decoded_payload)
             .map_err(|_| "malformed base64 data URL")?
     } else {
-        urlencoding::decode_binary(payload.as_bytes()).into_owned()
+        decoded_payload
     };
     if bytes.len() > MAX_SOURCE_BYTES {
         return Err("image exceeds 15 MiB limit".into());
@@ -319,7 +415,10 @@ fn parse_data_url(source: &str) -> Result<Download, String> {
 
 #[tauri::command]
 pub async fn get_preview_image_asset(source: String) -> Result<PreviewImageAsset, String> {
-    let download = if source.starts_with("data:") {
+    let download = if source
+        .get(..5)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case("data:"))
+    {
         parse_data_url(&source)?
     } else {
         fetch_http_with_timeouts(&source, Duration::from_secs(8), Duration::from_secs(20)).await?
@@ -589,16 +688,170 @@ mod tests {
 
     #[test]
     fn wechat_hosts_are_upgraded_and_receive_exact_referer() {
-        let request = prepare_http_request("http://mmbiz.qpic.cn/a.png").unwrap();
+        let client = http_client(Duration::from_secs(1), Duration::from_secs(1)).unwrap();
+        let request =
+            build_request_for_url(&client, Url::parse("http://mmbiz.qpic.cn/a.png").unwrap())
+                .unwrap();
         assert_eq!(request.url().scheme(), "https");
         assert_eq!(
             request.headers().get(reqwest::header::REFERER).unwrap(),
             "https://mp.weixin.qq.com"
         );
-        let request = prepare_http_request("https://mmbiz.qlogo.cn/a.png").unwrap();
+        let request =
+            build_request_for_url(&client, Url::parse("https://mmbiz.qlogo.cn/a.png").unwrap())
+                .unwrap();
         assert_eq!(
             request.headers().get(reqwest::header::REFERER).unwrap(),
             "https://mp.weixin.qq.com"
         );
+    }
+
+    #[test]
+    fn svg_external_images_are_not_loaded_but_inline_data_is_kept() {
+        let path =
+            std::env::temp_dir().join(format!("vellumstyle-external-{}.png", std::process::id()));
+        std::fs::write(&path, encoded(image::ImageFormat::Png, 1, 1)).unwrap();
+        let external = format!(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><image width="1" height="1" href="{}"/></svg>"#,
+            path.display()
+        );
+        let decoded = decode_for_clipboard(external.as_bytes(), None).unwrap();
+        std::fs::remove_file(path).unwrap();
+        assert_eq!(
+            &decoded.rgba[..4],
+            &[0, 0, 0, 0],
+            "external file must not be embedded"
+        );
+
+        let png = base64::engine::general_purpose::STANDARD.encode(encoded(
+            image::ImageFormat::Png,
+            1,
+            1,
+        ));
+        let inline = format!(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><image width="1" height="1" href="data:image/png;base64,{png}"/></svg>"#
+        );
+        let decoded = decode_for_clipboard(inline.as_bytes(), None).unwrap();
+        assert_eq!(decoded.rgba[3], 255, "inline data images remain supported");
+    }
+
+    #[test]
+    fn svg_pixels_are_straight_not_premultiplied_rgba() {
+        let bytes = br##"<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="#ff0000" fill-opacity="0.5"/></svg>"##;
+        assert_eq!(
+            &decode_for_clipboard(bytes, None).unwrap().rgba[..4],
+            &[255, 0, 0, 128]
+        );
+    }
+
+    #[tokio::test]
+    async fn public_asset_rejects_oversized_svg_dimensions() {
+        let oversized = base64::engine::general_purpose::STANDARD.encode(svg(16_385, 1));
+        assert!(
+            get_preview_image_asset(format!("data:image/svg+xml;base64,{oversized}"))
+                .await
+                .is_err()
+        );
+        let too_many_pixels = base64::engine::general_purpose::STANDARD.encode(svg(10_000, 4_001));
+        assert!(
+            get_preview_image_asset(format!("data:image/svg+xml;base64,{too_many_pixels}"))
+                .await
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn rejects_truncated_raster_payloads_after_full_decode_validation() {
+        for format in [
+            image::ImageFormat::Png,
+            image::ImageFormat::Jpeg,
+            image::ImageFormat::Gif,
+            image::ImageFormat::WebP,
+        ] {
+            let mut bytes = encoded(format, 16, 16);
+            bytes.truncate(bytes.len() / 2);
+            assert!(
+                identify_image(&bytes, None).is_err(),
+                "truncated {format:?} was accepted"
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_svgz_gzip_magic() {
+        let svgz = base64::engine::general_purpose::STANDARD.decode("H4sIAAAAAAAC/7MpLkksS1UoLcpPzSvJzE21VTLUM9QzMNIzMjJVKEstKs7Mz7NSyM3JK7ZSKsovAgDQhNEZOgAAAA==").unwrap();
+        assert_eq!(&svgz[..2], &[0x1f, 0x8b]);
+        assert!(identify_image(&svgz, Some("image/svg+xml")).is_err());
+    }
+
+    #[tokio::test]
+    async fn data_url_parsing_is_strict_case_insensitive_and_decodes_base64_percent_escapes() {
+        assert!(get_preview_image_asset("data:image/svg+xml,%ZZ".into())
+            .await
+            .is_err());
+        let png = encoded(image::ImageFormat::Png, 1, 1);
+        let escaped = base64::engine::general_purpose::STANDARD
+            .encode(&png)
+            .replace('+', "%2B")
+            .replace('/', "%2F")
+            .replace('=', "%3D");
+        let asset = get_preview_image_asset(format!("DATA:IMAGE/PNG;BASE64,{escaped}"))
+            .await
+            .unwrap();
+        assert_eq!(asset.bytes, png);
+    }
+
+    #[test]
+    fn production_request_policy_is_applied_per_target_without_referer_leaks() {
+        let client = http_client(Duration::from_secs(1), Duration::from_secs(1)).unwrap();
+        let wx =
+            build_request_for_url(&client, Url::parse("http://mmbiz.qpic.cn/a").unwrap()).unwrap();
+        assert_eq!(wx.url().scheme(), "https");
+        assert_eq!(
+            wx.headers().get(REFERER).unwrap(),
+            "https://mp.weixin.qq.com"
+        );
+        let ordinary =
+            build_request_for_url(&client, Url::parse("https://example.com/a").unwrap()).unwrap();
+        assert!(ordinary.headers().get(REFERER).is_none());
+    }
+
+    #[tokio::test]
+    async fn redirected_final_url_supplies_fallback_filename() {
+        let body = svg(1, 1);
+        let server = serve(
+            vec![
+                response("302 Found", "Location: /final-name.bin\r\n", b""),
+                response("200 OK", "Content-Type: image/svg+xml\r\n", &body),
+            ],
+            Duration::ZERO,
+        );
+        let asset = get_preview_image_asset(format!("{server}/initial-name.png"))
+            .await
+            .unwrap();
+        assert_eq!(asset.file_name, "final-name.svg");
+    }
+
+    #[test]
+    fn sanitizes_windows_device_names_and_long_unicode_safely() {
+        for name in [
+            "CON.png",
+            "prn.jpg",
+            "AUX",
+            "nul.txt",
+            "CLOCK$.gif",
+            "com1.webp",
+            "LPT9.svg",
+        ] {
+            let result = build_file_name(Some(name), ImageKind::Png);
+            assert!(!result
+                .trim_end_matches(".png")
+                .eq_ignore_ascii_case(name.split('.').next().unwrap()));
+        }
+        let long = format!("{}.jpg", "图".repeat(200));
+        let result =
+            std::panic::catch_unwind(|| build_file_name(Some(&long), ImageKind::Jpeg)).unwrap();
+        assert!(result.len() <= 180 + ".jpg".len());
+        assert!(result.ends_with(".jpg"));
     }
 }
