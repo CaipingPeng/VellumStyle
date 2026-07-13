@@ -1,5 +1,5 @@
 import {useEffect, useState, type MouseEvent} from "react";
-import {ChevronRight, ChevronDown, Folder, FileText, FolderOpen, Pencil, Trash2} from "lucide-react";
+import {ChevronRight, ChevronDown, Folder, FileText, FolderOpen, Copy, Pencil, Trash2} from "lucide-react";
 import {AnimatePresence, motion} from "framer-motion";
 import type {DocNode} from "../../utils/documents.ts";
 import DraftInput from "./DraftInput.tsx";
@@ -24,6 +24,7 @@ interface Props {
   onRename: (path: string, newName: string) => void;
   onDelete: (node: DocNode) => void;
   onOpenLocation: (path: string) => void;
+  onCopyAbsolutePath: (path: string) => void;
   onDragStartNode: (path: string) => void;
   onDragOverNode: (path: string | null) => void;
   onDropNode: (destDir: string) => void;
@@ -35,7 +36,7 @@ interface Props {
 export default function TreeNode({
   node, depth, selectedPath, sidebarFocused, expanded, dragOverPath, creating,
   onToggle, onSelectDoc, onSelectFolder, onRename, onDelete,
-  onOpenLocation, onDragStartNode, onDragOverNode, onDropNode,
+  onOpenLocation, onCopyAbsolutePath, onDragStartNode, onDragOverNode, onDropNode,
   onDraftChange, onDraftCommit, onDraftCancel,
 }: Props) {
   const [editing, setEditing] = useState(false);
@@ -86,7 +87,7 @@ export default function TreeNode({
     if (editing) return;
     setContextMenu({
       x: Math.max(8, Math.min(event.clientX, window.innerWidth - 176)),
-      y: Math.max(8, Math.min(event.clientY, window.innerHeight - 44)),
+      y: Math.max(8, Math.min(event.clientY, window.innerHeight - 80)),
     });
   };
 
@@ -219,6 +220,17 @@ export default function TreeNode({
             <FolderOpen size={14} />
             打开文件位置
           </button>
+          <button
+            type="button"
+            className="flex h-8 w-full items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-[13px] text-text transition-colors duration-fast hover:bg-bg-tertiary"
+            onClick={() => {
+              setContextMenu(null);
+              onCopyAbsolutePath(node.path);
+            }}
+          >
+            <Copy size={14} />
+            复制绝对路径
+          </button>
         </div>
       )}
       <AnimatePresence initial={false}>
@@ -256,6 +268,7 @@ export default function TreeNode({
                 onRename={onRename}
                 onDelete={onDelete}
                 onOpenLocation={onOpenLocation}
+                onCopyAbsolutePath={onCopyAbsolutePath}
                 onDragStartNode={onDragStartNode}
                 onDragOverNode={onDragOverNode}
                 onDropNode={onDropNode}
