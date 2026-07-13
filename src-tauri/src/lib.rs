@@ -95,6 +95,7 @@ pub fn run() {
             documents::rename_entry,
             documents::delete_entry,
             documents::move_entry,
+            documents::get_entry_absolute_path,
             documents::open_entry_location,
             export_file::write_export_file,
             export_file::export_pdf_file,

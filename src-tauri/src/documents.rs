@@ -250,6 +250,20 @@ pub fn move_entry(app: AppHandle, src: String, dest_dir: String) -> Result<Strin
     Ok(rel_path(&base, &target))
 }
 
+fn existing_absolute_path(full: PathBuf) -> Result<String, String> {
+    if !full.exists() {
+        return Err("条目不存在".into());
+    }
+    full.into_os_string()
+        .into_string()
+        .map_err(|_| "绝对路径包含无效字符".to_string())
+}
+
+#[tauri::command]
+pub fn get_entry_absolute_path(app: AppHandle, path: String) -> Result<String, String> {
+    existing_absolute_path(resolve_in_documents(&app, &path)?)
+}
+
 /// 在系统文件管理器中打开条目所在位置。path 为相对 documents/ 的路径。
 #[cfg(target_os = "windows")]
 fn explorer_select_args(path: &Path) -> [std::ffi::OsString; 2] {
@@ -286,7 +300,34 @@ pub fn open_entry_location(app: AppHandle, path: String) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::is_valid_name;
+    use super::{existing_absolute_path, is_valid_name};
+
+    #[test]
+    fn existing_absolute_path_returns_native_absolute_path() {
+        let path = std::env::temp_dir().join(format!(
+            "vellumstyle-copy-path-{}-测试.md",
+            std::process::id()
+        ));
+        std::fs::write(&path, "test").unwrap();
+
+        let result = existing_absolute_path(path.clone()).unwrap();
+
+        assert_eq!(result, path.to_string_lossy());
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn existing_absolute_path_rejects_missing_entry() {
+        let path = std::env::temp_dir().join(format!(
+            "vellumstyle-copy-path-{}-missing.md",
+            std::process::id()
+        ));
+        if path.exists() {
+            std::fs::remove_file(&path).unwrap();
+        }
+
+        assert_eq!(existing_absolute_path(path).unwrap_err(), "条目不存在");
+    }
 
     #[test]
     fn rejects_path_separators_and_dotdot() {
