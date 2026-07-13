@@ -267,6 +267,7 @@ interface PreviewRuntimeControls {
   saveSources: string[];
   toasts: Array<{message: string; type: string}>;
   selectedModels: string[];
+  resizeCalls: Array<{imageIndex: number; size: {width: string}}>;
   store: {
     themes: unknown[];
     codeThemeId: string;
@@ -289,6 +290,7 @@ function createPreviewRuntimeControls(): PreviewRuntimeControls {
     saveSources: [],
     toasts: [],
     selectedModels: [],
+    resizeCalls: [],
     store: {
       themes: [],
       codeThemeId: "default",
@@ -322,7 +324,12 @@ async function loadPreview(): Promise<PreviewComponent> {
         [/src[\\/]utils[\\/]imageProxy\.ts$/, "export function toProxyHtml(html) { return html; }"],
         [/src[\\/]markdown[\\/]mathjax\.ts$/, "export async function typesetMath() {}"],
         [/src[\\/]markdown[\\/]mermaid\.ts$/, "export async function renderMermaidCharts() {} export function reuseRenderedMermaidCharts(html) { return html; }"],
-        [/src[\\/]components[\\/]StylePanel[\\/]elementMap\.ts$/, "export const SELECTOR_PRIORITY = []; export function modelIdFromElement() { return null; }"],
+        [/src[\\/]components[\\/]StylePanel[\\/]elementMap\.ts$/, [
+          "export const SELECTOR_PRIORITY = [{selector: 'img', modelId: 'image'}, {selector: 'p', modelId: 'p'}];",
+          "export function modelIdFromElement(element) {",
+          "  return SELECTOR_PRIORITY.find((entry) => element.closest(entry.selector))?.modelId ?? null;",
+          "}",
+        ].join("\n")],
         [/src[\\/]components[\\/]Preview[\\/]previewModes\.ts$/, "export function getPreviewMode() { return {width: null}; }"],
         [/src[\\/]markdown[\\/]codeThemes\.ts$/, "export function buildMarkdownCss() { return ''; }"],
         [/src[\\/]utils[\\/]previewImageActions\.ts$/, [
@@ -411,7 +418,13 @@ async function renderPreview(content: string) {
 
   const renderContent = async (nextContent: string, settle = true) => {
     await act(async () => {
-      root.render(<Preview content={nextContent} markdownThemeId="default" />);
+      root.render(
+        <Preview
+          content={nextContent}
+          markdownThemeId="default"
+          onResizeImage={(imageIndex, size) => controls.resizeCalls.push({imageIndex, size})}
+        />,
+      );
     });
     if (settle) {
       await act(async () => {
@@ -516,6 +529,102 @@ test("Preview maps resize-overlay contextmenu back to its current article image"
       await flushPromises();
     });
     assert.deepEqual(view.controls.copySources, ["https://example.com/original.png"]);
+  } finally {
+    view.cleanup();
+    if (previousResizeObserver) Object.defineProperty(globalThis, "ResizeObserver", previousResizeObserver);
+    else Reflect.deleteProperty(globalThis, "ResizeObserver");
+    if (previousRaf) Object.defineProperty(globalThis, "requestAnimationFrame", previousRaf);
+    else Reflect.deleteProperty(globalThis, "requestAnimationFrame");
+    if (previousCancelRaf) Object.defineProperty(globalThis, "cancelAnimationFrame", previousCancelRaf);
+    else Reflect.deleteProperty(globalThis, "cancelAnimationFrame");
+  }
+});
+
+test("Preview menu interactions trigger the image action without entering the selection path", async () => {
+  const view = await renderPreview(IMAGE_HTML);
+  try {
+    const paragraph = view.article().querySelector<HTMLElement>("#paragraph")!;
+    act(() => paragraph.click());
+    assert.deepEqual(view.controls.selectedModels, ["p"]);
+    assert.equal(paragraph.classList.contains("preview-edit-selected"), true);
+
+    view.openMenu(view.article().querySelector("img")!);
+    const copyItem = menuItem("拷贝图片");
+    await act(async () => {
+      dispatchPointerDown(copyItem);
+      copyItem.click();
+      await flushPromises();
+    });
+
+    assert.deepEqual(view.controls.copySources, ["https://example.com/original.png"]);
+    assert.deepEqual(view.controls.selectedModels, ["p"]);
+    assert.equal(paragraph.classList.contains("preview-edit-selected"), true);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Preview keeps editable-element hover and style selection behavior", async () => {
+  const view = await renderPreview(IMAGE_HTML);
+  try {
+    const paragraph = view.article().querySelector<HTMLElement>("#paragraph")!;
+
+    act(() => paragraph.dispatchEvent(new window.MouseEvent("mousemove", {bubbles: true})));
+    assert.equal(paragraph.classList.contains("preview-edit-hover"), true);
+
+    act(() => paragraph.click());
+    assert.deepEqual(view.controls.selectedModels, ["p"]);
+    assert.equal(paragraph.classList.contains("preview-edit-selected"), true);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Preview keeps image resize handle pointer dragging wired to onResizeImage", async () => {
+  const previousResizeObserver = Object.getOwnPropertyDescriptor(globalThis, "ResizeObserver");
+  const previousRaf = Object.getOwnPropertyDescriptor(globalThis, "requestAnimationFrame");
+  const previousCancelRaf = Object.getOwnPropertyDescriptor(globalThis, "cancelAnimationFrame");
+  class TestResizeObserver {
+    observe() {}
+    disconnect() {}
+    unobserve() {}
+  }
+  Object.defineProperty(globalThis, "ResizeObserver", {configurable: true, value: TestResizeObserver});
+  Object.defineProperty(globalThis, "requestAnimationFrame", {configurable: true, value: (callback: FrameRequestCallback) => {
+    callback(0);
+    return 1;
+  }});
+  Object.defineProperty(globalThis, "cancelAnimationFrame", {configurable: true, value: () => {}});
+
+  const view = await renderPreview(IMAGE_HTML);
+  try {
+    const article = view.article();
+    const image = article.querySelector<HTMLImageElement>("img")!;
+    const articleBox = view.host.querySelector<HTMLElement>("#article-box")!;
+    image.getBoundingClientRect = () => ({x: 20, y: 30, left: 20, top: 30, right: 220, bottom: 130, width: 200, height: 100, toJSON() { return {}; }});
+    article.getBoundingClientRect = () => ({x: 0, y: 0, left: 0, top: 0, right: 400, bottom: 500, width: 400, height: 500, toJSON() { return {}; }});
+    articleBox.getBoundingClientRect = () => ({x: 0, y: 0, left: 0, top: 0, right: 440, bottom: 540, width: 440, height: 540, toJSON() { return {}; }});
+
+    act(() => image.dispatchEvent(new window.MouseEvent("mousemove", {bubbles: true})));
+    const handle = view.host.querySelector<HTMLElement>('[data-resize-handle="se"]');
+    assert.ok(handle, "southeast resize handle should be visible");
+
+    act(() => {
+      handle.dispatchEvent(new window.MouseEvent("pointerdown", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 220,
+        clientY: 130,
+      }));
+      document.dispatchEvent(new window.MouseEvent("pointermove", {
+        bubbles: true,
+        clientX: 300,
+        clientY: 170,
+      }));
+      document.dispatchEvent(new window.MouseEvent("pointerup", {bubbles: true}));
+    });
+
+    assert.deepEqual(view.controls.resizeCalls, [{imageIndex: 0, size: {width: "70%"}}]);
   } finally {
     view.cleanup();
     if (previousResizeObserver) Object.defineProperty(globalThis, "ResizeObserver", previousResizeObserver);
