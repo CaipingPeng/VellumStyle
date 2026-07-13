@@ -9,6 +9,10 @@ import {modelIdFromElement, SELECTOR_PRIORITY} from "../StylePanel/elementMap.ts
 import {getPreviewMode} from "./previewModes.ts";
 import {buildMarkdownCss} from "../../markdown/codeThemes.ts";
 import {ARTICLE_BOX_ID, ARTICLE_ROOT_ID} from "../../articleRoot.ts";
+import PreviewImageContextMenu from "./PreviewImageContextMenu.tsx";
+import {resolvePreviewImage, type PreviewImageMenuTarget} from "./previewImageContextMenu.ts";
+import {copyPreviewImage, savePreviewImageAs} from "../../utils/previewImageActions.ts";
+import {toast} from "../Toast/toast.ts";
 
 interface Props {
   content: string;
@@ -28,6 +32,26 @@ export interface PreviewHandle {
 const RENDER_THROTTLE_MS = 100;
 const HEADING_ANCHOR_SELECTOR = "h1[data-line], h2[data-line], h3[data-line], h4[data-line], h5[data-line], h6[data-line]";
 const ACTIVE_HEADING_OFFSET_PX = 32;
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as {message?: unknown}).message;
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+  }
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+  try {
+    return String(error) || "未知错误";
+  } catch {
+    return "未知错误";
+  }
+}
 
 interface LineAnchor {
   element: HTMLElement;
@@ -93,6 +117,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
   ({content, markdownThemeId, onResizeImage}, ref) => {
     const [html, setHtml] = useState("");
     const [imageOverlay, setImageOverlay] = useState<ImageResizeOverlay | null>(null);
+    const [imageMenuTarget, setImageMenuTarget] = useState<PreviewImageMenuTarget | null>(null);
     const [resizingHandle, setResizingHandle] = useState<ResizeHandle | null>(null);
     const timer = useRef<number | undefined>(undefined);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -145,6 +170,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
 
     // 内容渲染，100ms 节流
     useEffect(() => {
+      setImageMenuTarget(null);
       if (timer.current) {
         window.clearTimeout(timer.current);
       }
@@ -372,6 +398,42 @@ const Preview = forwardRef<PreviewHandle, Props>(
       }
     }
 
+    function onContextMenu(event: React.MouseEvent) {
+      const root = document.getElementById(ARTICLE_ROOT_ID);
+      if (!root) return;
+      const image = resolvePreviewImage(event.target, root, imageOverlay?.image);
+      if (!image) return;
+
+      event.preventDefault();
+      setImageMenuTarget({
+        source: image.currentSrc || image.src,
+        x: event.clientX,
+        y: event.clientY,
+      });
+    }
+
+    async function copyImage(source: string) {
+      setImageMenuTarget(null);
+      try {
+        await copyPreviewImage(source);
+        toast.show("图片已复制");
+      } catch (error) {
+        toast.show(`图片复制失败：${errorMessage(error)}`, "error");
+      }
+    }
+
+    async function saveImage(source: string) {
+      setImageMenuTarget(null);
+      try {
+        const result = await savePreviewImageAs(source);
+        if (result.status === "saved") {
+          toast.show("图片已保存");
+        }
+      } catch (error) {
+        toast.show(`图片保存失败：${errorMessage(error)}`, "error");
+      }
+    }
+
     // 点击预览元素 → 识别 model id → 打开面板并保留选中高亮
     function onClick(e: React.MouseEvent) {
       const target = e.target as Element;
@@ -407,6 +469,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
           onClick={onClick}
           onMouseMove={onMouseMove}
           onMouseLeave={onMouseLeave}
+          onContextMenu={onContextMenu}
         >
           {html ? (
             <section id={ARTICLE_ROOT_ID} dangerouslySetInnerHTML={{__html: html}} />
@@ -421,6 +484,14 @@ const Preview = forwardRef<PreviewHandle, Props>(
             />
           )}
         </div>
+        {imageMenuTarget && (
+          <PreviewImageContextMenu
+            target={imageMenuTarget}
+            onCopy={copyImage}
+            onSave={saveImage}
+            onClose={() => setImageMenuTarget(null)}
+          />
+        )}
       </div>
     );
   },

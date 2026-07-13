@@ -188,3 +188,22 @@ test("MathJax 行间公式有静态居中样式兜底", async () => {
   assert.match(css, /text-align:\s*center/);
   assert.match(css, /margin:\s*1em 0/);
 });
+
+test("预览图片右键菜单在文章主题外使用应用变量和紧凑交互规则", async () => {
+  const css = await readFile(new URL("./globals.css", import.meta.url), "utf8");
+  const menuRule = cssRule(css, ".vs-preview-image-menu");
+  const itemRule = cssRule(css, ".vs-preview-image-menu-item");
+
+  assert.match(menuRule, /position:\s*fixed/);
+  assert.match(menuRule, /background:\s*var\(--bg\)/);
+  assert.match(menuRule, /border:\s*1px solid var\(--border\)/);
+  assert.match(menuRule, /color:\s*var\(--text\)/);
+  assert.match(itemRule, /color:\s*var\(--text\)/);
+  assert.match(itemRule, /height:\s*32px/);
+  assert.match(itemRule, /cursor:\s*pointer/);
+  assert.match(
+    css,
+    /\.vs-preview-image-menu-item:hover,\s*\.vs-preview-image-menu-item:focus-visible\s*\{[\s\S]*?background:\s*var\(--accent-subtle\)/,
+  );
+  assert.doesNotMatch(css, /#article\s+\.vs-preview-image-menu/);
+});
