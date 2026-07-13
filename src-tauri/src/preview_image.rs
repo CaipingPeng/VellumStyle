@@ -622,7 +622,28 @@ mod tests {
                 let _ = stream.read(&mut request);
                 thread::sleep(delay);
                 stream.write_all(response.as_bytes()).unwrap();
+                stream.flush().unwrap();
+                stream.shutdown(std::net::Shutdown::Write).unwrap();
             }
+        });
+        format!("http://{address}")
+    }
+
+    fn serve_streaming_overflow() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0_u8; 4096];
+            stream.read(&mut request).unwrap();
+            stream
+                .write_all(b"HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n")
+                .unwrap();
+            write!(stream, "{:X}\r\n", MAX_SOURCE_BYTES).unwrap();
+            stream.write_all(&vec![b'A'; MAX_SOURCE_BYTES]).unwrap();
+            stream.write_all(b"\r\n1\r\nB\r\n0\r\n\r\n").unwrap();
+            stream.flush().unwrap();
+            stream.shutdown(std::net::Shutdown::Write).unwrap();
         });
         format!("http://{address}")
     }
@@ -828,23 +849,23 @@ mod tests {
         .await
         .is_err());
 
-        let streamed_body = "A".repeat(MAX_SOURCE_BYTES + 1);
-        let streamed_response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nConnection: close\r\n\r\n{streamed_body}"
-        );
-        let streamed = serve(vec![streamed_response], Duration::ZERO);
+        let huge_header = format!("HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", MAX_SOURCE_BYTES + 1);
+        let huge = serve(vec![huge_header], Duration::ZERO);
         assert_eq!(
-            fetch_http_with_timeouts(&streamed, Duration::from_secs(2), Duration::from_secs(5))
+            fetch_http_with_timeouts(&huge, Duration::from_secs(1), Duration::from_secs(1))
                 .await
                 .err()
                 .unwrap(),
             "image exceeds 15 MiB limit"
         );
+    }
 
-        let huge_header = format!("HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", MAX_SOURCE_BYTES + 1);
-        let huge = serve(vec![huge_header], Duration::ZERO);
+    #[tokio::test]
+    async fn streaming_overflow_is_rejected_before_image_identification() {
+        let _guard = HTTP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let streamed = serve_streaming_overflow();
         assert_eq!(
-            fetch_http_with_timeouts(&huge, Duration::from_secs(1), Duration::from_secs(1))
+            fetch_http_with_timeouts(&streamed, Duration::from_secs(2), Duration::from_secs(10))
                 .await
                 .err()
                 .unwrap(),
