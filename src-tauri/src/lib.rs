@@ -3,10 +3,10 @@ mod documents;
 mod export_file;
 mod external;
 mod import;
+mod preview_image;
 mod sync;
 mod themes;
 mod wechat;
-
 use tauri::http::{Response, StatusCode};
 use tauri::{UriSchemeContext, UriSchemeResponder};
 
@@ -62,10 +62,13 @@ fn handle_wximg<R: tauri::Runtime>(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .register_asynchronous_uri_scheme_protocol("wximg", handle_wximg)
         .invoke_handler(tauri::generate_handler![
+            preview_image::get_preview_image_asset,
+            preview_image::copy_preview_image,
             wechat::upload_image,
             wechat::get_outbound_ip,
             wechat::list_image_materials,
