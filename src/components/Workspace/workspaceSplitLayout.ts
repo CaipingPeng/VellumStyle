@@ -45,16 +45,6 @@ export function clampWorkspaceSplitRatio(ratio: unknown, containerWidth: number)
   return clamp(safeRatio, bounds.min, bounds.max);
 }
 
-export function getWorkspacePaneWidths(
-  ratio: unknown,
-  containerWidth: number,
-): {editor: number; preview: number} {
-  const distributable = Math.max(containerWidth - WORKSPACE_SEPARATOR_WIDTH, 0);
-  const safeRatio = clampWorkspaceSplitRatio(ratio, containerWidth);
-  const editor = Math.round(distributable * safeRatio);
-  return {editor, preview: distributable - editor};
-}
-
 export function ratioFromPointer(
   clientX: number,
   containerLeft: number,
