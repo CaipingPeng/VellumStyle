@@ -9,6 +9,8 @@ const STYLE_LABELS: Record<string, string> = {
   fontWeight: "字重",
   textAlign: "对齐",
   marginPadding: "外边距 / 内边距",
+  margin: "外边距",
+  padding: "内边距",
   marginTop: "上边距",
   marginBottom: "下边距",
   marginLeft: "左边距",

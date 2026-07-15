@@ -3,10 +3,15 @@ import type {StyleItem} from "../../themes/themeModel.ts";
 interface CtrlProps {
   item: StyleItem;
   onChange: (value: string) => void;
+  compact?: boolean;
 }
 
-const inputClass =
-  "w-full h-7 text-[13px] px-2 border border-border rounded-sm bg-bg outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] focus:border-accent";
+function inputClass(compact: boolean): string {
+  return [
+    "h-[26px] w-full appearance-none rounded-sm border-0 bg-bg-tertiary text-[12px] shadow-none outline-none transition-colors duration-fast hover:bg-bg-secondary focus-visible:bg-bg focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]",
+    compact ? "px-1.5" : "px-2",
+  ].join(" ");
+}
 
 export interface NumericValue {
   amount: string;
@@ -39,48 +44,56 @@ export function colorValueToHex(value: string | null | undefined): string {
   return "#000000";
 }
 
-// 数值+单位（fontSize/lineHeight/letterSpacing）。文本框，保留原单位写法。
-function TextControl({item, onChange}: CtrlProps) {
+function TextControl({item, onChange, compact = false}: CtrlProps) {
   const numeric = parseNumericValue(item.value);
   if (numeric) {
-    return <NumericControl value={numeric} onChange={onChange} />;
+    return <NumericControl value={numeric} compact={compact} onChange={onChange} />;
   }
   return (
     <input
       type="text"
       value={item.value ?? ""}
       onChange={(e) => onChange(e.target.value)}
-      className={inputClass}
+      className={inputClass(compact)}
     />
   );
 }
 
-function NumericControl({value, onChange}: {value: NumericValue; onChange: (value: string) => void}) {
+function NumericControl({
+  value,
+  onChange,
+  compact,
+}: {
+  value: NumericValue;
+  onChange: (value: string) => void;
+  compact: boolean;
+}) {
   return (
-    <div className="flex items-center overflow-hidden rounded-sm border border-border bg-bg focus-within:ring-2 focus-within:ring-[color:var(--ring)]">
+    <div className="flex min-w-0 items-center overflow-hidden rounded-sm border-0 bg-bg-tertiary shadow-none transition-colors duration-fast hover:bg-bg-secondary focus-within:bg-bg focus-within:ring-2 focus-within:ring-[color:var(--ring)]">
       <input
         type="number"
         step={value.unit === "em" || value.unit === "rem" ? "0.1" : "1"}
         value={value.amount}
         onChange={(e) => onChange(`${e.target.value}${value.unit}`)}
-        className="h-7 min-w-0 flex-1 border-0 bg-transparent px-2 text-[13px] outline-none"
+        className={`h-[26px] min-w-0 flex-1 appearance-none border-0 bg-transparent text-[12px] shadow-none outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${compact ? "px-1.5" : "px-2"}`}
       />
-      <span className="flex h-7 min-w-9 items-center justify-center border-l border-border bg-bg-secondary px-2 text-[11px] text-text-muted">
-        {value.unit || "数值"}
+      <span
+        className={`flex h-[26px] flex-none items-center justify-center bg-transparent text-[9px] text-text-muted ${compact ? "min-w-7 px-1" : "min-w-9 px-2"}`}
+      >
+        {value.unit || "值"}
       </span>
     </div>
   );
 }
 
-// rgba 取色器：文本框存原始 rgba/hex 写法。
-function ColorControl({item, onChange}: CtrlProps) {
+function ColorControl({item, onChange, compact = false}: CtrlProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 items-center gap-1.5">
       <input
         type="color"
         value={colorValueToHex(item.value)}
         onChange={(e) => onChange(e.target.value)}
-        className="h-7 w-9 flex-none cursor-pointer rounded-sm border border-border bg-bg p-0.5"
+        className="h-[26px] w-8 flex-none cursor-pointer appearance-none rounded-sm border-0 bg-bg-tertiary p-1 shadow-none transition-colors duration-fast hover:bg-bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-[3px] [&::-webkit-color-swatch]:border-0 [&::-moz-color-swatch]:border-0"
         aria-label="选择颜色"
       />
       <input
@@ -88,7 +101,7 @@ function ColorControl({item, onChange}: CtrlProps) {
         value={item.value ?? ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder="rgba(0,0,0,1)"
-        className={inputClass}
+        className={inputClass(compact)}
       />
     </div>
   );
@@ -96,10 +109,10 @@ function ColorControl({item, onChange}: CtrlProps) {
 
 function toggleButtonClass(active: boolean): string {
   return [
-    "flex-1 h-7 text-xs rounded-sm cursor-pointer transition-colors duration-fast",
+    "h-[26px] flex-1 cursor-pointer appearance-none rounded-sm border-0 text-[11px] shadow-none transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]",
     active
-      ? "border border-accent bg-accent text-white"
-      : "border border-border bg-bg text-text hover:border-accent",
+      ? "bg-bg-secondary text-text"
+      : "bg-bg-tertiary text-text-muted hover:bg-bg-secondary hover:text-text",
   ].join(" ");
 }
 
@@ -111,9 +124,14 @@ function AlignControl({item, onChange}: CtrlProps) {
   ];
   return (
     <div className="flex gap-1">
-      {opts.map((o) => (
-        <button key={o.value} onClick={() => onChange(o.value)} className={toggleButtonClass(item.value === o.value)}>
-          {o.label}
+      {opts.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange(option.value)}
+          className={toggleButtonClass(item.value === option.value)}
+        >
+          {option.label}
         </button>
       ))}
     </div>
@@ -121,14 +139,20 @@ function AlignControl({item, onChange}: CtrlProps) {
 }
 
 function WeightControl({item, onChange}: CtrlProps) {
+  const options = [
+    {value: "normal", label: "常规"},
+    {value: "bold", label: "加粗"},
+  ];
   return (
     <div className="flex gap-1">
-      {[
-        {value: "normal", label: "常规"},
-        {value: "bold", label: "加粗"},
-      ].map((o) => (
-        <button key={o.value} onClick={() => onChange(o.value)} className={toggleButtonClass(item.value === o.value)}>
-          {o.label}
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange(option.value)}
+          className={toggleButtonClass(item.value === option.value)}
+        >
+          {option.label}
         </button>
       ))}
     </div>
@@ -141,17 +165,18 @@ function CommonControl({item, onChange}: CtrlProps) {
       value={item.value ?? ""}
       onChange={(e) => onChange(e.target.value)}
       rows={4}
-      className="w-full text-xs font-mono p-2 border border-border rounded-sm bg-bg outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] focus:border-accent"
+      className="w-full appearance-none resize-y rounded-sm border-0 bg-bg-tertiary p-1.5 font-mono text-[11px] leading-5 shadow-none outline-none transition-colors duration-fast hover:bg-bg-secondary focus-visible:bg-bg focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
     />
   );
 }
 
-// 按 style.id 选控件。作为真正的组件导出，保证 Fast Refresh 正常。
-export function StyleControl({item, onChange}: CtrlProps) {
+export function StyleControl({item, onChange, compact = false}: CtrlProps) {
   const id = item.id;
-  if (/Color$/i.test(id) || id === "fontColor") return <ColorControl item={item} onChange={onChange} />;
+  if (/Color$/i.test(id) || id === "fontColor") {
+    return <ColorControl item={item} compact={compact} onChange={onChange} />;
+  }
   if (id === "textAlign") return <AlignControl item={item} onChange={onChange} />;
   if (id === "fontWeight") return <WeightControl item={item} onChange={onChange} />;
   if (id === "common") return <CommonControl item={item} onChange={onChange} />;
-  return <TextControl item={item} onChange={onChange} />;
+  return <TextControl item={item} compact={compact} onChange={onChange} />;
 }
