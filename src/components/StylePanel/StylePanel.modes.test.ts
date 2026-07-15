@@ -27,9 +27,11 @@ test("用户主题同 id 时覆盖内置主题以支持永久修改回读", () =
   assert.doesNotMatch(loaderSource, /\.filter\(\(u\) => !builtinIds\.has\(u\.id\)/);
 });
 
-test("样式面板使用视口固定右侧抽屉，避免被父级 flex 裁切", () => {
+test("样式面板使用视口固定且自适应宽度的右侧抽屉，避免裁切和横向滚动", () => {
   assert.match(source, /className=\{`fixed right-2 top-\[60px\] bottom-9 z-\[70\]/);
-  assert.match(source, /w-\[min\(392px,calc\(100vw-12px\)\)\]/);
-  assert.match(source, /max-w-\[calc\(100vw-12px\)\]/);
+  assert.match(source, /w-\[clamp\(420px,31vw,480px\)\]/);
+  assert.match(source, /max-w-\[calc\(100vw-16px\)\]/);
+  assert.match(source, /min-h-0 flex-1 overflow-x-hidden overflow-y-auto bg-bg/);
+  assert.doesNotMatch(source, /w-\[min\(392px,calc\(100vw-12px\)\)\]/);
   assert.doesNotMatch(source, /animate=\{\{width: isOpen \? 280 : 0\}\}/);
 });
