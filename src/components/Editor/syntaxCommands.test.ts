@@ -90,3 +90,46 @@ test("有序无序列表直接互转", () => {
 test("多层引用每次只取消一层", () => {
   assert.equal(applyAction("> > 内容", "blockquote", 5).doc, "> 内容");
 });
+
+
+test("代码块完整选中或光标位于正文时取消围栏", () => {
+  const doc = "```js\nconst x = 1;\n```";
+  assert.equal(applyAction(doc, "codeBlock", 0, doc.length).doc, "const x = 1;");
+  assert.equal(applyAction(doc, "codeBlock", 10).doc, "const x = 1;");
+});
+
+test("光标位于语言标识和首尾围栏时也取消", () => {
+  const doc = "```ts\n代码\n```";
+  assert.equal(applyAction(doc, "codeBlock", 4).doc, "代码");
+  assert.equal(applyAction(doc, "codeBlock", 1).doc, "代码");
+  assert.equal(applyAction(doc, "codeBlock", doc.length - 1).doc, "代码");
+});
+
+test("局部选区位于同一代码块内部时取消并映射选区", () => {
+  const doc = "```\nabcdef\n```";
+  const result = applyAction(doc, "codeBlock", 5, 8);
+  assert.deepEqual(result, {doc: "abcdef", anchor: 1, head: 4});
+});
+
+test("波浪线围栏可以取消", () => {
+  assert.equal(applyAction("~~~js\ncode\n~~~", "codeBlock", 8).doc, "code");
+});
+
+test("跨多个代码块不猜测取消而是包裹选区", () => {
+  const doc = "```\n甲\n```\n\n```\n乙\n```";
+  const result = applyAction(doc, "codeBlock", 4, doc.length - 4);
+  assert.match(result.doc, /```[\s\S]*```[\s\S]*```/);
+  assert.notEqual(result.doc, "甲\n\n乙");
+});
+
+test("不完整围栏不被破坏性删除", () => {
+  const doc = "```\n未闭合";
+  const result = applyAction(doc, "codeBlock", doc.length);
+  assert.match(result.doc, /未闭合/);
+  assert.ok(result.doc.length > doc.length);
+});
+
+test("链接与分割线保持插入型", () => {
+  assert.equal(applyAction("文字", "link", 0, 2).doc, "[文字](链接地址)");
+  assert.equal(applyAction("正文", "horizontalRule", 2).doc, "正文\n---\n");
+});

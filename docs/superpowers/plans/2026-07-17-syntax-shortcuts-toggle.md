@@ -671,9 +671,10 @@ test("跨多个代码块不猜测取消而是包裹选区", () => {
 });
 
 test("不完整围栏不被破坏性删除", () => {
-  const result = applyAction("```\n未闭合", "codeBlock", 5);
+  const doc = "```\n未闭合";
+  const result = applyAction(doc, "codeBlock", doc.length);
   assert.match(result.doc, /未闭合/);
-  assert.ok(result.doc.length > "```\n未闭合".length);
+  assert.ok(result.doc.length > doc.length);
 });
 ```
 

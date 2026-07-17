@@ -1,7 +1,14 @@
 import {syntaxTree} from "@codemirror/language";
 import {EditorSelection, type EditorState, type TransactionSpec} from "@codemirror/state";
 import type {EditorView} from "@codemirror/view";
-import {toggleLineSyntax, wrapSelection, type LineSyntax} from "./editing.ts";
+import {
+  insertCodeBlock,
+  insertLink,
+  toggleLineSyntax,
+  wrapSelection,
+  type EditResult,
+  type LineSyntax,
+} from "./editing.ts";
 import type {SyntaxAction} from "./syntaxActions.ts";
 
 interface InlineActionConfig {
@@ -88,6 +95,108 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
+interface FencedCodeRange {
+  from: number;
+  to: number;
+  openFrom: number;
+  closeFrom: number;
+}
+
+function findFencedCodeRange(state: EditorState): FencedCodeRange | null {
+  const selection = state.selection.main;
+  const candidates: FencedCodeRange[] = [];
+
+  for (const side of [-1, 1] as const) {
+    let node = syntaxTree(state).resolveInner(selection.from, side);
+    while (node) {
+      if (node.name === "FencedCode" && node.from <= selection.from && node.to >= selection.to) {
+        const marks: Array<{from: number; to: number}> = [];
+        for (let child = node.firstChild; child; child = child.nextSibling) {
+          if (child.name === "CodeMark") marks.push({from: child.from, to: child.to});
+        }
+        if (marks.length === 2) {
+          candidates.push({
+            from: node.from,
+            to: node.to,
+            openFrom: marks[0].from,
+            closeFrom: marks[1].from,
+          });
+        }
+      }
+      node = node.parent;
+    }
+  }
+
+  const unique = candidates.filter((candidate, index) =>
+    candidates.findIndex((other) => other.from === candidate.from && other.to === candidate.to) === index,
+  );
+  return unique.length === 1 ? unique[0] : null;
+}
+
+function transactionFromEditResult(
+  state: EditorState,
+  result: EditResult,
+  from: number,
+  to: number,
+  preserveDirection: boolean,
+): TransactionSpec {
+  const forward = state.selection.main.anchor <= state.selection.main.head;
+  return {
+    changes: {from, to, insert: result.insert},
+    selection: EditorSelection.single(
+      preserveDirection && !forward ? result.selTo : result.selFrom,
+      preserveDirection && !forward ? result.selFrom : result.selTo,
+    ),
+    userEvent: "input.format",
+    scrollIntoView: true,
+  };
+}
+
+function createCodeBlockTransaction(state: EditorState): TransactionSpec {
+  const selection = state.selection.main;
+  const fenced = findFencedCodeRange(state);
+  if (!fenced) {
+    const result = insertCodeBlock(state.doc.toString(), selection.from, selection.to);
+    return transactionFromEditResult(state, result, selection.from, selection.to, true);
+  }
+
+  const openLine = state.doc.lineAt(fenced.openFrom);
+  const closeLine = state.doc.lineAt(fenced.closeFrom);
+  const contentFrom = Math.min(openLine.to + 1, fenced.to);
+  let contentTo = closeLine.from;
+  if (contentTo > contentFrom && state.doc.sliceString(contentTo - 1, contentTo) === "\n") {
+    contentTo -= 1;
+  }
+  const content = state.doc.sliceString(contentFrom, contentTo);
+  const mapPosition = (position: number) => fenced.from + clamp(position, contentFrom, contentTo) - contentFrom;
+  return {
+    changes: {from: fenced.from, to: fenced.to, insert: content},
+    selection: EditorSelection.single(
+      mapPosition(selection.anchor),
+      mapPosition(selection.head),
+    ),
+    userEvent: "input.format",
+    scrollIntoView: true,
+  };
+}
+
+function createLinkTransaction(state: EditorState): TransactionSpec {
+  const selection = state.selection.main;
+  const result = insertLink(state.doc.toString(), selection.from, selection.to);
+  return transactionFromEditResult(state, result, selection.from, selection.to, false);
+}
+
+function createHorizontalRuleTransaction(state: EditorState): TransactionSpec {
+  const selection = state.selection.main;
+  const insert = "\n---\n";
+  return {
+    changes: {from: selection.from, to: selection.to, insert},
+    selection: EditorSelection.cursor(selection.from + insert.length),
+    userEvent: "input.format",
+    scrollIntoView: true,
+  };
+}
+
 function createInlineTransaction(
   state: EditorState,
   config: InlineActionConfig,
@@ -166,7 +275,11 @@ export function createSyntaxActionTransaction(
   const inline = inlineActions[action];
   if (inline) return createInlineTransaction(state, inline);
   const lineSyntax = lineSyntaxByAction[action];
-  return lineSyntax ? createLineTransaction(state, lineSyntax) : null;
+  if (lineSyntax) return createLineTransaction(state, lineSyntax);
+  if (action === "codeBlock") return createCodeBlockTransaction(state);
+  if (action === "link") return createLinkTransaction(state);
+  if (action === "horizontalRule") return createHorizontalRuleTransaction(state);
+  return null;
 }
 
 export function runSyntaxAction(view: EditorView, action: SyntaxAction): boolean {
