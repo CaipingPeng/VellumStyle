@@ -86,6 +86,20 @@ test("快捷键提示不会把中间含 win 的未知平台识别为 Windows", (
   assert.equal(detectSyntaxShortcutPlatform("UnknownWinPlatform"), "linux");
 });
 
+test("快捷键提示仅在平台前缀识别 macOS 标识", () => {
+  const platforms = [
+    "UnknownDarwinPlatform",
+    "NotMacPlatform",
+    "NotiPhonePlatform",
+    "NotiPadPlatform",
+    "NotiPodPlatform",
+  ];
+  assert.deepEqual(
+    platforms.map((platform) => detectSyntaxShortcutPlatform(platform)),
+    platforms.map(() => "linux"),
+  );
+});
+
 test("keymap 将按键分派到对应 SyntaxAction", () => {
   const calls: SyntaxAction[] = [];
   const bindings = createSyntaxKeymap((_view, action) => {

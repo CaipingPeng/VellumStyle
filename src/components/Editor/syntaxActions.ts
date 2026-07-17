@@ -24,7 +24,7 @@ export type SyntaxShortcutPlatform = "win" | "linux" | "mac";
 export function detectSyntaxShortcutPlatform(
   platform: string = typeof navigator === "undefined" ? "" : navigator.platform,
 ): SyntaxShortcutPlatform {
-  if (/Mac|Darwin|iPhone|iPad|iPod/i.test(platform)) return "mac";
+  if (/^(?:Mac|Darwin|iPhone|iPad|iPod)/i.test(platform)) return "mac";
   if (/^Win/i.test(platform)) return "win";
   return "linux";
 }
