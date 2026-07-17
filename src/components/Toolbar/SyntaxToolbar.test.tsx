@@ -8,6 +8,24 @@ import type {SyntaxAction} from "../Editor/syntaxActions.ts";
 
 (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
 
+function withNavigatorPlatform(platform: string, callback: () => void) {
+  const originalDescriptor = Object.getOwnPropertyDescriptor(navigator, "platform");
+  Object.defineProperty(navigator, "platform", {
+    configurable: true,
+    value: platform,
+  });
+
+  try {
+    callback();
+  } finally {
+    if (originalDescriptor) {
+      Object.defineProperty(navigator, "platform", originalDescriptor);
+    } else {
+      delete (navigator as Navigator & {platform?: string}).platform;
+    }
+  }
+}
+
 function createEditorHandle(calls: SyntaxAction[]): MarkdownEditorHandle {
   return {
     insertAtCursor: () => {},
@@ -24,65 +42,105 @@ function createEditorHandle(calls: SyntaxAction[]): MarkdownEditorHandle {
   };
 }
 
-test("语法按钮和标题菜单统一提交 SyntaxAction", () => {
-  const originalConsoleError = console.error;
-  console.error = (...args: unknown[]) => {
-    const [format] = args;
-    const isKnownFramerMotionWarning =
-      typeof format === "string"
-      && format.includes("`ref` is not a prop. Trying to access it will result in `undefined`");
-    if (!isKnownFramerMotionWarning) originalConsoleError(...args);
-  };
+test("Windows 语法按钮标题包含注册的快捷键并统一提交 SyntaxAction", () => {
+  withNavigatorPlatform("Win32", () => {
+    const originalConsoleError = console.error;
+    console.error = (...args: unknown[]) => {
+      const [format] = args;
+      const isKnownFramerMotionWarning =
+        typeof format === "string"
+        && format.includes("`ref` is not a prop. Trying to access it will result in `undefined`");
+      if (!isKnownFramerMotionWarning) originalConsoleError(...args);
+    };
 
-  const calls: SyntaxAction[] = [];
-  const host = document.createElement("div");
-  document.body.appendChild(host);
-  const root = createRoot(host);
-  act(() => {
-    root.render(
-      <SyntaxToolbar
-        editorRef={{current: createEditorHandle(calls)}}
-        onPickFile={async () => {}}
-        onPickLocal={async () => {}}
-        onOpenMaterialLibrary={() => {}}
-      />,
-    );
+    const calls: SyntaxAction[] = [];
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    act(() => {
+      root.render(
+        <SyntaxToolbar
+          editorRef={{current: createEditorHandle(calls)}}
+          onPickFile={async () => {}}
+          onPickLocal={async () => {}}
+          onOpenMaterialLibrary={() => {}}
+        />,
+      );
+    });
+
+    try {
+      const expected = [
+        ["加粗 (Ctrl+B)", "bold"],
+        ["斜体 (Ctrl+I)", "italic"],
+        ["删除线 (Shift+Alt+5)", "strikethrough"],
+        ["行内代码 (Ctrl+Shift+`)", "inlineCode"],
+        ["链接 (Ctrl+K)", "link"],
+        ["无序列表 (Ctrl+Shift+])", "unorderedList"],
+        ["有序列表 (Ctrl+Shift+[)", "orderedList"],
+        ["引用 (Ctrl+Shift+Q)", "blockquote"],
+        ["代码块 (Ctrl+Shift+K)", "codeBlock"],
+        ["分割线 (Ctrl+Shift+H)", "horizontalRule"],
+      ] as const;
+
+      for (const [title, action] of expected) {
+        const button = host.querySelector<HTMLButtonElement>(`button[title="${title}"]`);
+        assert.ok(button, title);
+        act(() => button.click());
+        assert.equal(calls[calls.length - 1], action);
+      }
+
+      for (let level = 1; level <= 4; level++) {
+        const headingButton = host.querySelector<HTMLButtonElement>('button[title="标题 (Ctrl+1–4)"]');
+        assert.ok(headingButton);
+        act(() => headingButton.click());
+        const item = Array.from(document.body.querySelectorAll<HTMLButtonElement>("button"))
+          .find((button) => button.textContent === `H${level}`);
+        assert.ok(item, `H${level}`);
+        act(() => item.click());
+        assert.equal(calls[calls.length - 1], `heading${level}`);
+      }
+    } finally {
+      act(() => root.unmount());
+      host.remove();
+      console.error = originalConsoleError;
+    }
   });
+});
 
-  try {
-    const expected = [
-      ["加粗", "bold"],
-      ["斜体", "italic"],
-      ["删除线", "strikethrough"],
-      ["行内代码", "inlineCode"],
-      ["链接", "link"],
-      ["无序列表", "unorderedList"],
-      ["有序列表", "orderedList"],
-      ["引用", "blockquote"],
-      ["代码块", "codeBlock"],
-      ["分割线", "horizontalRule"],
-    ] as const;
+test("macOS 语法按钮标题使用符号快捷键", () => {
+  withNavigatorPlatform("MacIntel", () => {
+    const originalConsoleError = console.error;
+    console.error = (...args: unknown[]) => {
+      const [format] = args;
+      const isKnownFramerMotionWarning =
+        typeof format === "string"
+        && format.includes("`ref` is not a prop. Trying to access it will result in `undefined`");
+      if (!isKnownFramerMotionWarning) originalConsoleError(...args);
+    };
 
-    for (const [title, action] of expected) {
-      const button = host.querySelector<HTMLButtonElement>(`button[title="${title}"]`);
-      assert.ok(button, title);
-      act(() => button.click());
-      assert.equal(calls[calls.length - 1], action);
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    act(() => {
+      root.render(
+        <SyntaxToolbar
+          editorRef={{current: createEditorHandle([])}}
+          onPickFile={async () => {}}
+          onPickLocal={async () => {}}
+          onOpenMaterialLibrary={() => {}}
+        />,
+      );
+    });
+
+    try {
+      assert.ok(host.querySelector<HTMLButtonElement>('button[title="加粗 (⌘B)"]'));
+      assert.ok(host.querySelector<HTMLButtonElement>('button[title="删除线 (⌃⇧`)"]'));
+      assert.ok(host.querySelector<HTMLButtonElement>('button[title="有序列表 (⌘⌥O)"]'));
+      assert.ok(host.querySelector<HTMLButtonElement>('button[title="标题 (⌘1–4)"]'));
+    } finally {
+      act(() => root.unmount());
+      host.remove();
+      console.error = originalConsoleError;
     }
-
-    for (let level = 1; level <= 4; level++) {
-      const headingButton = host.querySelector<HTMLButtonElement>('button[title="标题"]');
-      assert.ok(headingButton);
-      act(() => headingButton.click());
-      const item = Array.from(document.body.querySelectorAll<HTMLButtonElement>("button"))
-        .find((button) => button.textContent === `H${level}`);
-      assert.ok(item, `H${level}`);
-      act(() => item.click());
-      assert.equal(calls[calls.length - 1], `heading${level}`);
-    }
-  } finally {
-    act(() => root.unmount());
-    host.remove();
-    console.error = originalConsoleError;
-  }
+  });
 });
