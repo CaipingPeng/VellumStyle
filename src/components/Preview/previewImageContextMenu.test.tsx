@@ -604,6 +604,46 @@ test("Preview copy and save close and restore image focus before awaiting their 
   }
 });
 
+test("Preview shows an unadjusted image as 100% even when its rendered width is slightly smaller", async () => {
+  const previousResizeObserver = Object.getOwnPropertyDescriptor(globalThis, "ResizeObserver");
+  const previousRaf = Object.getOwnPropertyDescriptor(globalThis, "requestAnimationFrame");
+  const previousCancelRaf = Object.getOwnPropertyDescriptor(globalThis, "cancelAnimationFrame");
+  class TestResizeObserver {
+    observe() {}
+    disconnect() {}
+    unobserve() {}
+  }
+  Object.defineProperty(globalThis, "ResizeObserver", {configurable: true, value: TestResizeObserver});
+  Object.defineProperty(globalThis, "requestAnimationFrame", {configurable: true, value: (callback: FrameRequestCallback) => {
+    callback(0);
+    return 1;
+  }});
+  Object.defineProperty(globalThis, "cancelAnimationFrame", {configurable: true, value: () => {}});
+
+  const view = await renderPreview(IMAGE_HTML);
+  try {
+    const article = view.article();
+    const image = article.querySelector<HTMLImageElement>("img")!;
+    const articleBox = view.host.querySelector<HTMLElement>("#article-box")!;
+    image.getBoundingClientRect = () => ({x: 20, y: 30, left: 20, top: 30, right: 602, bottom: 321, width: 582, height: 291, toJSON() { return {}; }});
+    article.getBoundingClientRect = () => ({x: 0, y: 0, left: 0, top: 0, right: 600, bottom: 500, width: 600, height: 500, toJSON() { return {}; }});
+    articleBox.getBoundingClientRect = () => ({x: 0, y: 0, left: 0, top: 0, right: 640, bottom: 540, width: 640, height: 540, toJSON() { return {}; }});
+
+    act(() => image.dispatchEvent(new window.MouseEvent("mousemove", {bubbles: true})));
+
+    const percentage = view.host.querySelector<HTMLElement>(".vs-image-resize-size-badge span:first-child");
+    assert.equal(percentage?.textContent, "100%");
+  } finally {
+    view.cleanup();
+    if (previousResizeObserver) Object.defineProperty(globalThis, "ResizeObserver", previousResizeObserver);
+    else Reflect.deleteProperty(globalThis, "ResizeObserver");
+    if (previousRaf) Object.defineProperty(globalThis, "requestAnimationFrame", previousRaf);
+    else Reflect.deleteProperty(globalThis, "requestAnimationFrame");
+    if (previousCancelRaf) Object.defineProperty(globalThis, "cancelAnimationFrame", previousCancelRaf);
+    else Reflect.deleteProperty(globalThis, "cancelAnimationFrame");
+  }
+});
+
 test("Preview maps resize-overlay contextmenu back to its current article image", async () => {
   const previousResizeObserver = Object.getOwnPropertyDescriptor(globalThis, "ResizeObserver");
   const previousRaf = Object.getOwnPropertyDescriptor(globalThis, "requestAnimationFrame");

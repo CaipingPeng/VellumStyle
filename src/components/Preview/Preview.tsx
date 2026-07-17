@@ -267,10 +267,13 @@ const Preview = forwardRef<PreviewHandle, Props>(
       if (imageRect.width <= 0 || imageRect.height <= 0) {
         return null;
       }
-      const widthPercent = Math.min(
-        Math.max(Math.round((imageRect.width / Math.max(imageContainerWidth(image), 1)) * 100), 1),
-        100,
-      );
+      const hasExplicitWidth = image.hasAttribute("width") || image.style.width.trim().length > 0;
+      const widthPercent = hasExplicitWidth
+        ? Math.min(
+            Math.max(Math.round((imageRect.width / Math.max(imageContainerWidth(image), 1)) * 100), 1),
+            100,
+          )
+        : 100;
       return {
         image,
         imageIndex: index,
