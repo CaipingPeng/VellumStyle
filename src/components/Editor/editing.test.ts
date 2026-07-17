@@ -10,6 +10,7 @@ import {
   shouldHandleDirectTextInput,
   shouldRecoverCompositionTextInput,
   getFallbackChineseSymbolFromKey,
+  toggleLineSyntax,
 } from "./editing.ts";
 
 test("wrap 有选区：包裹并选中原文字", () => {
@@ -243,4 +244,42 @@ test("编辑器不再从符号 keyup 中猜测并补写中文标点", () => {
   assert.equal(getFallbackChineseSymbolFromKey({key: "$", ctrlKey: false, altKey: false, metaKey: false}), null);
   assert.equal(getFallbackChineseSymbolFromKey({key: "a", ctrlKey: false, altKey: false, metaKey: false}), null);
   assert.equal(getFallbackChineseSymbolFromKey({key: ",", ctrlKey: true, altKey: false, metaKey: false}), null);
+});
+
+
+function applyTextChanges(doc: string, changes: readonly {from: number; to: number; insert: string}[]) {
+  return [...changes]
+    .sort((a, b) => b.from - a.from)
+    .reduce((text, change) => text.slice(0, change.from) + change.insert + text.slice(change.to), doc);
+}
+
+test("标题支持添加、同级取消和跨级替换", () => {
+  assert.equal(applyTextChanges("正文", toggleLineSyntax("正文", 0, 0, {type: "heading", level: 2})), "## 正文");
+  assert.equal(applyTextChanges("## 正文", toggleLineSyntax("## 正文", 3, 3, {type: "heading", level: 2})), "正文");
+  assert.equal(applyTextChanges("# 正文", toggleLineSyntax("# 正文", 2, 2, {type: "heading", level: 2})), "## 正文");
+});
+
+test("列表支持同类取消和有序无序互转并保留缩进", () => {
+  assert.equal(applyTextChanges("  内容", toggleLineSyntax("  内容", 2, 2, {type: "unorderedList"})), "  - 内容");
+  assert.equal(applyTextChanges("  - 内容", toggleLineSyntax("  - 内容", 4, 4, {type: "unorderedList"})), "  内容");
+  assert.equal(applyTextChanges("- 内容", toggleLineSyntax("- 内容", 2, 2, {type: "orderedList"})), "1. 内容");
+  assert.equal(applyTextChanges("1. 内容", toggleLineSyntax("1. 内容", 3, 3, {type: "unorderedList"})), "- 内容");
+});
+
+test("引用每次只增减一层", () => {
+  assert.equal(applyTextChanges("内容", toggleLineSyntax("内容", 0, 0, {type: "blockquote"})), "> 内容");
+  assert.equal(applyTextChanges("> 内容", toggleLineSyntax("> 内容", 2, 2, {type: "blockquote"})), "内容");
+  assert.equal(applyTextChanges("> > 内容", toggleLineSyntax("> > 内容", 4, 4, {type: "blockquote"})), "> 内容");
+});
+
+test("多行列表忽略空行且选区结束在下一行行首时不处理下一行", () => {
+  const doc = "甲\n\n乙";
+  assert.equal(applyTextChanges(doc, toggleLineSyntax(doc, 0, 3, {type: "unorderedList"})), "- 甲\n\n乙");
+});
+
+test("多行中只有全部同类时才统一取消", () => {
+  const mixed = "- 甲\n乙";
+  assert.equal(applyTextChanges(mixed, toggleLineSyntax(mixed, 0, mixed.length, {type: "unorderedList"})), "- 甲\n- 乙");
+  const quoted = "> 甲\n> 乙";
+  assert.equal(applyTextChanges(quoted, toggleLineSyntax(quoted, 0, quoted.length, {type: "blockquote"})), "甲\n乙");
 });

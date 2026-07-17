@@ -160,3 +160,108 @@ export function insertCodeBlock(doc: string, from: number, to: number): EditResu
   const start = from + "\n```\n".length;
   return {insert, selFrom: start, selTo: start + inner.length};
 }
+
+
+export interface TextChange {
+  from: number;
+  to: number;
+  insert: string;
+}
+
+export type LineSyntax =
+  | {type: "heading"; level: 1 | 2 | 3 | 4}
+  | {type: "orderedList"}
+  | {type: "unorderedList"}
+  | {type: "blockquote"};
+
+interface SelectedLine {
+  from: number;
+  text: string;
+}
+
+const headingPattern = /^([\t ]{0,3})(#{1,6})(?:[\t ]+|$)/;
+const listPattern = /^([\t ]*)(?:(?:[-+*])[\t ]+|(?:\d+)[.)][\t ]+)/;
+const orderedListPattern = /^([\t ]*)\d+[.)][\t ]+/;
+const unorderedListPattern = /^([\t ]*)[-+*][\t ]+/;
+const quotePattern = /^([\t ]*)>[\t ]?/;
+const indentPattern = /^[\t ]*/;
+
+function getSelectedLines(doc: string, anchor: number, head: number): SelectedLine[] {
+  const selectionFrom = Math.min(anchor, head);
+  const selectionTo = Math.max(anchor, head);
+  const inclusiveTo = selectionTo > selectionFrom && doc[selectionTo - 1] === "\n"
+    ? selectionTo - 1
+    : selectionTo;
+  let lineFrom = selectionFrom === 0 ? 0 : doc.lastIndexOf("\n", selectionFrom - 1) + 1;
+  const lines: SelectedLine[] = [];
+
+  while (lineFrom <= inclusiveTo) {
+    const newline = doc.indexOf("\n", lineFrom);
+    const lineTo = newline === -1 ? doc.length : newline;
+    lines.push({from: lineFrom, text: doc.slice(lineFrom, lineTo)});
+    if (newline === -1) break;
+    lineFrom = newline + 1;
+  }
+  return lines;
+}
+
+function prefixChange(line: SelectedLine, match: RegExpMatchArray, insert: string): TextChange {
+  const indentLength = match[1].length;
+  return {
+    from: line.from + indentLength,
+    to: line.from + match[0].length,
+    insert,
+  };
+}
+
+function indentEnd(line: SelectedLine): number {
+  return line.from + (line.text.match(indentPattern)?.[0].length ?? 0);
+}
+
+export function toggleLineSyntax(
+  doc: string,
+  anchor: number,
+  head: number,
+  syntax: LineSyntax,
+): TextChange[] {
+  const collapsed = anchor === head;
+  const targets = getSelectedLines(doc, anchor, head)
+    .filter((line) => collapsed || line.text.trim().length > 0);
+  if (targets.length === 0) return [];
+
+  if (syntax.type === "heading") {
+    const targetMark = "#".repeat(syntax.level);
+    const matches = targets.map((line) => line.text.match(headingPattern));
+    const remove = matches.every((match) => match?.[2] === targetMark);
+    return targets.map((line, index) => {
+      const match = matches[index];
+      if (match) return prefixChange(line, match, remove ? "" : `${targetMark} `);
+      const from = indentEnd(line);
+      return {from, to: from, insert: `${targetMark} `};
+    });
+  }
+
+  if (syntax.type === "blockquote") {
+    const matches = targets.map((line) => line.text.match(quotePattern));
+    const remove = matches.every(Boolean);
+    return targets.map((line, index) => {
+      const match = matches[index];
+      if (remove && match) return prefixChange(line, match, "");
+      const from = indentEnd(line);
+      return {from, to: from, insert: "> "};
+    });
+  }
+
+  const targetPattern = syntax.type === "orderedList" ? orderedListPattern : unorderedListPattern;
+  const targetPrefix = syntax.type === "orderedList" ? "1. " : "- ";
+  const targetMatches = targets.map((line) => line.text.match(targetPattern));
+  const remove = targetMatches.every(Boolean);
+  return targets.map((line, index) => {
+    const targetMatch = targetMatches[index];
+    if (remove && targetMatch) return prefixChange(line, targetMatch, "");
+    const anyListMatch = line.text.match(listPattern);
+    if (anyListMatch) return prefixChange(line, anyListMatch, targetPrefix);
+    const from = indentEnd(line);
+    return {from, to: from, insert: targetPrefix};
+  });
+}
