@@ -78,6 +78,14 @@ test("快捷键提示按平台格式化真实注册键位", () => {
   assert.equal(formatSyntaxShortcut("heading1", "mac"), "⌘1");
 });
 
+test("快捷键提示将 Darwin 识别为 macOS", () => {
+  assert.equal(detectSyntaxShortcutPlatform("Darwin"), "mac");
+});
+
+test("快捷键提示不会把中间含 win 的未知平台识别为 Windows", () => {
+  assert.equal(detectSyntaxShortcutPlatform("UnknownWinPlatform"), "linux");
+});
+
 test("keymap 将按键分派到对应 SyntaxAction", () => {
   const calls: SyntaxAction[] = [];
   const bindings = createSyntaxKeymap((_view, action) => {
