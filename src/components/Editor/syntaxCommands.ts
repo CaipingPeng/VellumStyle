@@ -1,7 +1,7 @@
 import {syntaxTree} from "@codemirror/language";
 import {EditorSelection, type EditorState, type TransactionSpec} from "@codemirror/state";
 import type {EditorView} from "@codemirror/view";
-import {wrapSelection} from "./editing.ts";
+import {toggleLineSyntax, wrapSelection, type LineSyntax} from "./editing.ts";
 import type {SyntaxAction} from "./syntaxActions.ts";
 
 interface InlineActionConfig {
@@ -20,6 +20,16 @@ interface InlineSyntaxRange {
   closeFrom: number;
   closeTo: number;
 }
+
+const lineSyntaxByAction: Partial<Record<SyntaxAction, LineSyntax>> = {
+  heading1: {type: "heading", level: 1},
+  heading2: {type: "heading", level: 2},
+  heading3: {type: "heading", level: 3},
+  heading4: {type: "heading", level: 4},
+  orderedList: {type: "orderedList"},
+  unorderedList: {type: "unorderedList"},
+  blockquote: {type: "blockquote"},
+};
 
 const inlineActions: Partial<Record<SyntaxAction, InlineActionConfig>> = {
   bold: {node: "StrongEmphasis", mark: "EmphasisMark", before: "**", after: "**", placeholder: "加粗文本"},
@@ -123,12 +133,40 @@ function createInlineTransaction(
   };
 }
 
+function createLineTransaction(state: EditorState, syntax: LineSyntax): TransactionSpec | null {
+  const selection = state.selection.main;
+  const changes = toggleLineSyntax(
+    state.doc.toString(),
+    selection.anchor,
+    selection.head,
+    syntax,
+  );
+  if (changes.length === 0) return null;
+
+  const changeSet = state.changes(changes);
+  const mapSelectionPosition = (position: number) => {
+    if (selection.empty) return changeSet.mapPos(position, 1);
+    return changeSet.mapPos(position, position === selection.from ? 1 : -1);
+  };
+  return {
+    changes: changeSet,
+    selection: EditorSelection.single(
+      mapSelectionPosition(selection.anchor),
+      mapSelectionPosition(selection.head),
+    ),
+    userEvent: "input.format",
+    scrollIntoView: true,
+  };
+}
+
 export function createSyntaxActionTransaction(
   state: EditorState,
   action: SyntaxAction,
 ): TransactionSpec | null {
   const inline = inlineActions[action];
-  return inline ? createInlineTransaction(state, inline) : null;
+  if (inline) return createInlineTransaction(state, inline);
+  const lineSyntax = lineSyntaxByAction[action];
+  return lineSyntax ? createLineTransaction(state, lineSyntax) : null;
 }
 
 export function runSyntaxAction(view: EditorView, action: SyntaxAction): boolean {
