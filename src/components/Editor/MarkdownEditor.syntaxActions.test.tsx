@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import React, {act, createRef} from "react";
+import {act, createRef} from "react";
 import {createRoot} from "react-dom/client";
 import MarkdownEditor, {type MarkdownEditorHandle} from "./MarkdownEditor.tsx";
 

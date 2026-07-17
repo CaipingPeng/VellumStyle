@@ -62,7 +62,8 @@ function findInlineSyntaxRange(
 
   for (const position of positions) {
     for (const side of [-1, 1] as const) {
-      let node = syntaxTree(state).resolveInner(position, side);
+      const startNode = syntaxTree(state).resolveInner(position, side);
+      let node: typeof startNode | null = startNode;
       while (node) {
         if (node.name === nodeName && node.from <= selection.from && node.to >= selection.to) {
           const marks: Array<{from: number; to: number}> = [];
@@ -107,7 +108,8 @@ function findFencedCodeRange(state: EditorState): FencedCodeRange | null {
   const candidates: FencedCodeRange[] = [];
 
   for (const side of [-1, 1] as const) {
-    let node = syntaxTree(state).resolveInner(selection.from, side);
+    const startNode = syntaxTree(state).resolveInner(selection.from, side);
+    let node: typeof startNode | null = startNode;
     while (node) {
       if (node.name === "FencedCode" && node.from <= selection.from && node.to >= selection.to) {
         const marks: Array<{from: number; to: number}> = [];
