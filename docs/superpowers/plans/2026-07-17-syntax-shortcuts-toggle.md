@@ -485,10 +485,10 @@ Expected: 当前 3 tests PASS。
 
 ```ts
 test("不完整语法不执行破坏性取消", () => {
-  assert.deepEqual(applyAction("**未闭合", "bold", 4), {
+  assert.deepEqual(applyAction("**未闭合", "bold", 3), {
     doc: "**未**加粗文本**闭合",
-    anchor: 6,
-    head: 10,
+    anchor: 5,
+    head: 9,
   });
 });
 
