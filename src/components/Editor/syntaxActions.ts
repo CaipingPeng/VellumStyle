@@ -48,6 +48,7 @@ export type SyntaxActionRunner = (view: EditorView, action: SyntaxAction) => boo
 
 export function createSyntaxKeymap(runAction: SyntaxActionRunner): KeyBinding[] {
   return SYNTAX_SHORTCUTS.map(({action, win, linux, mac}) => ({
+    key: win,
     win,
     linux,
     mac,

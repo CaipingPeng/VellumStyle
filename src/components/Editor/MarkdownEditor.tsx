@@ -7,28 +7,20 @@ import {EditorView, keymap, ViewPlugin} from "@codemirror/view";
 import {undo, redo} from "@codemirror/commands";
 import {openSearchPanel, search, searchPanelOpen} from "@codemirror/search";
 import {
-  wrapSelection as wrapSel,
-  insertLink as insLink,
-  prefixLines as prefixLn,
-  insertCodeBlock as insCode,
   shouldReplaceEditorDoc,
   shouldQueueExternalValueDuringComposition,
 } from "./editing.ts";
 import {getCodeMirrorCspNonce} from "../../utils/cspNonce.ts";
 import type {AppearanceMode} from "../../appearance/appearanceMode.ts";
 import {createEditorAppearanceExtension} from "./editorAppearance.ts";
+import {createSyntaxKeymap, type SyntaxAction} from "./syntaxActions.ts";
+import {runSyntaxAction} from "./syntaxCommands.ts";
 
 export interface MarkdownEditorHandle {
   // 在当前光标处插入文本（替换选区）。供工具栏上传按钮调用。
   insertAtCursor: (text: string) => void;
-  // 行内包裹：有选区包裹，无选区插占位符并选中。
-  wrapSelection: (before: string, after: string, placeholder: string) => void;
-  // 插入链接：选区当文字，选中 url 占位。
-  insertLink: () => void;
-  // 行级前缀：选区涉及的每行行首加 prefix。
-  prefixLines: (prefix: string) => void;
-  // 插入代码块围栏：有选区进围栏，无选区光标落中间空行。
-  insertCodeBlock: () => void;
+  // 统一语法动作入口，供工具栏与 CodeMirror 快捷键共用。
+  runSyntaxAction: (action: SyntaxAction) => void;
   // 撤销/重做（CodeMirror history）。
   undo: () => void;
   redo: () => void;
@@ -237,52 +229,10 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         view.dispatch(view.state.replaceSelection(text));
         view.focus();
       },
-      wrapSelection: (before, after, placeholder) => {
+      runSyntaxAction: (action) => {
         const view = viewRef.current;
         if (!view) return;
-        const {from, to} = view.state.selection.main;
-        const doc = view.state.doc.toString();
-        const r = wrapSel(doc, from, to, before, after, placeholder);
-        view.dispatch({
-          changes: {from, to, insert: r.insert},
-          selection: {anchor: r.selFrom, head: r.selTo},
-        });
-        view.focus();
-      },
-      insertLink: () => {
-        const view = viewRef.current;
-        if (!view) return;
-        const {from, to} = view.state.selection.main;
-        const doc = view.state.doc.toString();
-        const r = insLink(doc, from, to);
-        view.dispatch({
-          changes: {from, to, insert: r.insert},
-          selection: {anchor: r.selFrom, head: r.selTo},
-        });
-        view.focus();
-      },
-      prefixLines: (prefix) => {
-        const view = viewRef.current;
-        if (!view) return;
-        const {from, to} = view.state.selection.main;
-        const doc = view.state.doc.toString();
-        const r = prefixLn(doc, from, to, prefix);
-        view.dispatch({
-          changes: {from: r.replaceFrom, to: r.replaceTo, insert: r.insert},
-          selection: {anchor: r.selFrom, head: r.selTo},
-        });
-        view.focus();
-      },
-      insertCodeBlock: () => {
-        const view = viewRef.current;
-        if (!view) return;
-        const {from, to} = view.state.selection.main;
-        const doc = view.state.doc.toString();
-        const r = insCode(doc, from, to);
-        view.dispatch({
-          changes: {from, to, insert: r.insert},
-          selection: {anchor: r.selFrom, head: r.selTo},
-        });
+        runSyntaxAction(view, action);
         view.focus();
       },
       undo: () => {
@@ -349,7 +299,10 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         searchLoadedField,
         searchCompartment.of([]),
         appearanceCompartment.of(createEditorAppearanceExtension(initialAppearanceModeRef.current)),
-        Prec.highest(keymap.of([{key: "Ctrl-h", run: openLocalizedSearchPanel}])),
+        Prec.highest(keymap.of([
+          {key: "Ctrl-h", run: openLocalizedSearchPanel},
+          ...createSyntaxKeymap(runSyntaxAction),
+        ])),
         EditorView.lineWrapping,
         // 聚焦时不加任何边框；让内容区撑满高度，使空白区域点击也能定位光标。
         EditorView.theme({
