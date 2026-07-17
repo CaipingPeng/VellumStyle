@@ -19,6 +19,15 @@ export const SYNTAX_ACTIONS = [
 ] as const;
 
 export type SyntaxAction = (typeof SYNTAX_ACTIONS)[number];
+export type SyntaxShortcutPlatform = "win" | "linux" | "mac";
+
+export function detectSyntaxShortcutPlatform(
+  platform: string = typeof navigator === "undefined" ? "" : navigator.platform,
+): SyntaxShortcutPlatform {
+  if (/Mac|iPhone|iPad|iPod/i.test(platform)) return "mac";
+  if (/Win/i.test(platform)) return "win";
+  return "linux";
+}
 
 export interface SyntaxShortcut {
   action: SyntaxAction;
@@ -43,6 +52,30 @@ export const SYNTAX_SHORTCUTS: readonly SyntaxShortcut[] = [
   {action: "codeBlock", win: "Ctrl-Shift-k", linux: "Ctrl-Shift-k", mac: "Cmd-Alt-c"},
   {action: "horizontalRule", win: "Ctrl-Shift-h", linux: "Ctrl-Shift-h", mac: "Cmd-Shift-h"},
 ];
+
+const macModifierLabels: Record<string, string> = {
+  Cmd: "⌘",
+  Ctrl: "⌃",
+  Shift: "⇧",
+  Alt: "⌥",
+};
+
+export function formatSyntaxShortcut(
+  action: SyntaxAction,
+  platform: SyntaxShortcutPlatform = detectSyntaxShortcutPlatform(),
+): string {
+  const shortcut = SYNTAX_SHORTCUTS.find((item) => item.action === action);
+  if (!shortcut) return "";
+
+  const parts = shortcut[platform].split("-");
+  const key = parts.pop() ?? "";
+  const displayKey = key.length === 1 && /[a-z]/i.test(key) ? key.toUpperCase() : key;
+
+  if (platform === "mac") {
+    return parts.map((part) => macModifierLabels[part] ?? part).join("") + displayKey;
+  }
+  return [...parts, displayKey].join("+");
+}
 
 export type SyntaxActionRunner = (view: EditorView, action: SyntaxAction) => boolean;
 
