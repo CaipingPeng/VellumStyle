@@ -144,6 +144,8 @@ interface Harness {
   closeCount: () => number;
   draftCalls: () => InvokeCall[];
   holdDraft: () => Deferred<string>;
+  holdThumb: () => Deferred<string>;
+  uploadCover: (file?: File) => Promise<void>;
   publish: () => Promise<void>;
   continuePublish: () => Promise<void>;
   setContent: (content: string) => Promise<void>;
@@ -230,6 +232,7 @@ async function createHarness(content = WARNING_FIXTURE, options: HarnessOptions 
 
   const calls: InvokeCall[] = [];
   let draftGate: Deferred<string> | null = null;
+  let thumbGate: Deferred<string> | null = null;
   const tauriWindow = window as typeof window & {
     __TAURI_INTERNALS__?: {invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>};
   };
@@ -244,6 +247,7 @@ async function createHarness(content = WARNING_FIXTURE, options: HarnessOptions 
           items: [{mediaId: "THUMB_ID", name: "cover.png", updateTime: 1780000000, url: "https://mmbiz.qpic.cn/cover/0"}],
         };
       }
+      if (cmd === "upload_thumb") return thumbGate?.promise ?? "UPLOADED_THUMB_ID";
       if (cmd === "add_draft") return draftGate?.promise ?? "DRAFT_ID";
       throw new Error(`unexpected Tauri command: ${cmd}`);
     },
@@ -347,6 +351,19 @@ async function createHarness(content = WARNING_FIXTURE, options: HarnessOptions 
       draftGate = deferred<string>();
       return draftGate;
     },
+    holdThumb: () => {
+      thumbGate = deferred<string>();
+      return thumbGate;
+    },
+    uploadCover: async (file = new File(["cover"], "cover.png", {type: "image/png"})) => {
+      await act(async () => {
+        const input = document.getElementById("publish-thumb") as HTMLInputElement | null;
+        assert.ok(input, "cover input should exist");
+        Object.defineProperty(input, "files", {configurable: true, value: [file]});
+        input.dispatchEvent(new window.Event("change", {bubbles: true}));
+        await flushPromises();
+      });
+    },
     publish: async () => {
       await act(async () => {
         buttonWithText("发布到草稿箱").click();
@@ -411,6 +428,37 @@ after(async () => {
 afterEach(() => {
   activeCleanup?.();
   document.body.innerHTML = originalBodyHtml;
+});
+
+test("local cover upload shows loading in the cover area and disables publishing until complete", async () => {
+  const harness = await createHarness(INLINE_IMAGE_FIXTURE);
+  const gate = harness.holdThumb();
+
+  await harness.uploadCover();
+
+  const coverButton = document.querySelector<HTMLButtonElement>('button[aria-label="封面图上传中"]');
+  assert.ok(coverButton);
+  assert.equal(coverButton.getAttribute("aria-busy"), "true");
+  assert.match(coverButton.textContent ?? "", /封面上传中/);
+  assert.equal(buttonWithText("发布到草稿箱").disabled, true);
+  assert.equal(buttonWithText("取消").disabled, false);
+  assert.equal(Array.from(document.querySelectorAll("button")).some((button) => button.textContent?.includes("发布中")), false);
+
+  await act(async () => {
+    gate.resolve("UPLOADED_THUMB_ID");
+    await gate.promise;
+    await flushPromises();
+  });
+  assert.equal(buttonWithText("发布到草稿箱").disabled, false);
+});
+
+test("selected cover preview does not overlay the article title", async () => {
+  const harness = await createHarness(INLINE_IMAGE_FIXTURE);
+  await harness.setInput("publish-title", "这段标题不应出现在封面上");
+
+  const coverButton = document.querySelector<HTMLButtonElement>('button[aria-label="更换封面图"]');
+  assert.ok(coverButton);
+  assert.doesNotMatch(coverButton.textContent ?? "", /这段标题不应出现在封面上/);
 });
 
 test("publish request replaces the existing dialog with diagnostics and does not publish", async () => {
@@ -713,6 +761,8 @@ test("successful confirmation closes at 900ms and reopening requires a fresh sca
 
   await harness.setOpen(false);
   await harness.setOpen(true);
+  assert.equal(buttonWithText("发布到草稿箱").disabled, true);
+  await harness.selectCover();
   await harness.publish();
   assert.ok(warningRegion());
   assert.equal(harness.draftCalls().length, 1);
@@ -812,11 +862,11 @@ test("empty title is rejected behaviorally before addDraft", async () => {
   assert.ok(harness.toastMessages().some(({message, type}) => type === "error" && message === "请填写标题"));
 });
 
-test("missing cover is rejected behaviorally before addDraft", async () => {
+test("missing cover disables publishing before addDraft", async () => {
   const harness = await createHarness(INLINE_IMAGE_FIXTURE, {selectCover: false});
-  await harness.publish();
+
+  assert.equal(buttonWithText("发布到草稿箱").disabled, true);
   assert.equal(harness.draftCalls().length, 0);
-  assert.ok(harness.toastMessages().some(({message, type}) => type === "error" && message === "请选择封面图"));
 });
 
 test("author and comment settings are persisted and passed to addDraft", async () => {

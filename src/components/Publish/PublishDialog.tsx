@@ -17,7 +17,7 @@ import {
   type CommentFlag,
 } from "../../utils/publishSettings.ts";
 import {toast} from "../Toast/toast.ts";
-import {FileText, Globe2, ImageIcon, Library, MessageCircle, MessageCircleOff, RefreshCw, UploadCloud, UserRound, Users} from "lucide-react";
+import {FileText, Globe2, ImageIcon, Library, Loader2, MessageCircle, MessageCircleOff, RefreshCw, UploadCloud, UserRound, Users} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import Button, {type ButtonState} from "../ui/Button.tsx";
 import UnuploadedImagesWarning from "./UnuploadedImagesWarning.tsx";
@@ -87,7 +87,8 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const [materialLoading, setMaterialLoading] = useState(false);
   const [materialError, setMaterialError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // 发布结果态：发布动作的 loading/success/error 由它 + busy 推导，封面操作仍走 busy
+  const [thumbUploading, setThumbUploading] = useState(false);
+  // 发布结果态只由正式发布动作推导，封面上传使用独立的局部 loading。
   const [pubResult, setPubResult] = useState<"none" | "ok" | "fail">("none");
   const [imageWarning, setImageWarning] = useState<ImageWarningState | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -97,6 +98,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   const sessionRef = useRef(0);
   const mountedRef = useRef(true);
   const nextOperationIdRef = useRef(0);
+  const nextThumbUploadIdRef = useRef(0);
   const publishingRef = useRef<{id: number; session: number} | null>(null);
   const terminalTimeoutRef = useRef<number | null>(null);
   const warningBackButtonRef = useRef<HTMLButtonElement>(null);
@@ -139,6 +141,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   useEffect(() => {
     clearTerminalTimeout();
     sessionRef.current += 1;
+    nextThumbUploadIdRef.current += 1;
     if (!open) {
       restorePublishFocusRef.current = false;
       setImageWarning(null);
@@ -162,6 +165,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       return null;
     });
     setBusy(publishingRef.current !== null);
+    setThumbUploading(false);
     setPubResult("none");
     restorePublishFocusRef.current = false;
     setImageWarning(null);
@@ -188,6 +192,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     return () => {
       mountedRef.current = false;
       sessionRef.current += 1;
+      nextThumbUploadIdRef.current += 1;
       clearTerminalTimeout();
       revokePreview(previewRef.current);
     };
@@ -237,9 +242,15 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   }, [open]);
 
   const pickThumb = async (file: File) => {
-    setBusy(true);
+    const operation = {id: ++nextThumbUploadIdRef.current, session: sessionRef.current};
+    const isCurrentOperation = () =>
+      mountedRef.current &&
+      sessionRef.current === operation.session &&
+      nextThumbUploadIdRef.current === operation.id;
+    setThumbUploading(true);
     try {
       const id = await uploadThumb(file);
+      if (!isCurrentOperation()) return;
       setThumbId(id);
       setSelectedMaterialId(null);
       setThumbPreview((prev) => {
@@ -247,14 +258,14 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
         return URL.createObjectURL(file);
       });
     } catch (e) {
-      handleThumbError(e);
+      if (isCurrentOperation()) handleThumbError(e);
     } finally {
-      setBusy(false);
+      if (isCurrentOperation()) setThumbUploading(false);
     }
   };
 
   const pickMaterialThumb = (item: MaterialImage) => {
-    if (busy) return;
+    if (busy || thumbUploading) return;
     setThumbId(item.mediaId);
     setSelectedMaterialId(item.mediaId);
     setThumbPreview((prev) => {
@@ -359,6 +370,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
   };
 
   const requestPublish = () => {
+    if (thumbUploading) return;
     const contentSnapshot = useStore.getState().content;
     const diagnostics = findUnuploadedImages(contentSnapshot);
     if (diagnostics.length > 0) {
@@ -388,7 +400,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     pubResult === "ok" ? "success" : pubResult === "fail" ? "error" : busy ? "loading" : "idle";
 
   const openThumbPicker = () => {
-    if (busy) return;
+    if (busy || thumbUploading) return;
     if (fileRef.current) {
       fileRef.current.value = "";
       fileRef.current.click();
@@ -414,7 +426,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
               type="button"
               variant="primary"
               state={publishState}
-              disabled={pubResult === "ok"}
+              disabled={pubResult === "ok" || !thumbId || thumbUploading}
               loadingText="发布中…"
               successText="已发布"
               errorText="发布失败"
@@ -557,36 +569,27 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
             <button
               type="button"
               onClick={openThumbPicker}
-              disabled={busy}
-              aria-label={thumbPreview ? "更换封面图" : "上传封面图"}
+              disabled={busy || thumbUploading}
+              aria-label={thumbUploading ? "封面图上传中" : thumbPreview ? "更换封面图" : "上传封面图"}
+              aria-busy={thumbUploading}
               className={`group relative flex aspect-[2.35/1] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-bg-secondary text-left outline-none transition-all duration-fast ease-smooth focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
                 thumbPreview
                   ? "border border-border shadow-[0_1px_2px_rgba(0,0,0,0.04),0_3px_10px_rgba(0,0,0,0.05)]"
                   : "border border-dashed border-border-strong hover:border-[rgba(94,106,210,0.5)] hover:bg-accent-subtle"
               }`}
             >
-              {thumbPreview ? (
+              {thumbUploading ? (
+                <div role="status" className="flex flex-col items-center px-6 text-center text-accent">
+                  <Loader2 size={26} className="animate-spin" />
+                  <div className="mt-2 text-sm font-semibold">封面上传中…</div>
+                </div>
+              ) : thumbPreview ? (
                 <>
                   <img src={thumbPreview} alt="已选择的封面图预览" className="absolute inset-0 h-full w-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/18 to-transparent" />
                   <span className="absolute right-2 top-2 inline-flex h-8 items-center gap-1.5 rounded-md bg-bg/95 px-2.5 text-[12px] font-medium text-text shadow-sm transition-colors group-hover:bg-bg">
                     <UploadCloud size={14} />
                     更换
                   </span>
-                  <div className="relative mt-auto w-full p-3.5 text-white">
-                    <div
-                      className="text-[15px] font-semibold leading-5"
-                      style={{
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {title.trim() || "未命名标题"}
-                    </div>
-                  </div>
                 </>
               ) : (
                 <div className="flex flex-col items-center px-6 text-center">
@@ -624,7 +627,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                 type="button"
                 title="刷新素材库"
                 aria-label="刷新素材库"
-                disabled={busy || materialLoading}
+                disabled={busy || thumbUploading || materialLoading}
                 onClick={() => void loadMaterialLibrary(0)}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-border bg-bg-secondary text-text-secondary outline-none transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-50"
               >
@@ -674,7 +677,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                       <button
                         key={item.mediaId}
                         type="button"
-                        disabled={busy}
+                        disabled={busy || thumbUploading}
                         onClick={() => pickMaterialThumb(item)}
                         className={`group relative block aspect-[2.35/1] w-full appearance-none overflow-hidden rounded-md border bg-bg-secondary p-0 outline-none transition-all duration-fast hover:-translate-y-px hover:border-accent/60 focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
                           selected ? "border-accent/70 shadow-[0_0_0_2px_var(--ring),0_4px_14px_rgba(94,106,210,0.16)] hover:shadow-[0_0_0_2px_var(--ring),0_6px_20px_rgba(94,106,210,0.22)]" : "border border-border shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.05),0_8px_20px_rgba(0,0,0,0.05)]"
@@ -708,7 +711,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                     <Button
                       type="button"
                       variant="secondary"
-                      disabled={busy || materialLoading}
+                      disabled={busy || thumbUploading || materialLoading}
                       onClick={() => void loadMaterialLibrary(materialItems.length)}
                     >
                       {materialLoading ? "加载中…" : "加载更多"}
