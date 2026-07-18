@@ -11,12 +11,12 @@ test("发布弹窗提供从永久素材库选择封面的入口", async () => {
   assert.match(source, /selectedMaterialId/);
 });
 
-test("发布弹窗封面预览和候选图按公众号默认横图比例展示", async () => {
+test("发布弹窗封面预览和候选图按公众号默认横图比例展示且不叠加标题", async () => {
   const source = await readFile(new URL("./PublishDialog.tsx", import.meta.url), "utf8");
 
   assert.match(source, /aspect-\[2\.35\/1\]/);
-  assert.match(source, /WebkitLineClamp: 2/);
-  assert.match(source, /title\.trim\(\) \|\| "未命名标题"/);
+  assert.doesNotMatch(source, /WebkitLineClamp: 2/);
+  assert.doesNotMatch(source, /title\.trim\(\) \|\| "未命名标题"/);
 });
 
 test("发布弹窗评论开关的打开和关闭使用不同图标", async () => {
