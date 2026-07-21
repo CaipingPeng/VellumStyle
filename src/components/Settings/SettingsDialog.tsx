@@ -39,6 +39,7 @@ const inputShellClass =
 
 const labelClass = "mb-1.5 block text-[13px] font-medium text-text";
 const helpDocumentUrl = "https://my.feishu.cn/docx/RUDpd1zWnoWuuyx0uFxcahIGnmC";
+const wechatDeveloperConsoleUrl = "https://developers.weixin.qq.com/console/member/manage/mp";
 
 type IpStatus = "idle" | "loading" | "ok" | "error";
 type CopyStatus = "idle" | "ok" | "fail";
@@ -185,6 +186,19 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
     }
   };
 
+  const handleOpenWechatDeveloperConsole = async () => {
+    try {
+      if (isTauriRuntime(window)) {
+        await invoke("open_external_url", {url: wechatDeveloperConsoleUrl});
+      } else {
+        window.open(wechatDeveloperConsoleUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (e) {
+      const msg = typeof e === "string" ? e : (e as Error)?.message || "打开微信开发者平台失败";
+      toast.show(msg, "error");
+    }
+  };
+
   const handleOpenHelpDocument = async (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
     try {
@@ -284,7 +298,7 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
                     </span>
                   </div>
                   <p className="m-0 mt-1 text-xs leading-5 text-text-secondary">
-                    用于上传图片到公众号素材库，凭证仅保存在本机配置文件。
+                    用于上传图片到公众号素材库，凭证仅保存在本机配置文件。可前往微信开发者平台扫码登录后，在公众号详情页查看 AppID / AppSecret。
                   </p>
                 </div>
               </div>
@@ -334,6 +348,16 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
                     </button>
                   </div>
                 </div>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void handleOpenWechatDeveloperConsole()}
+                  className="w-full min-w-0 gap-2"
+                >
+                  <ExternalLink size={14} />
+                  前往微信开发者平台获取凭证
+                </Button>
               </div>
             </div>
           )}

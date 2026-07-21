@@ -231,3 +231,42 @@ test("network helper opens the saved AppID whitelist page", async () => {
     delete tauriWindow.__TAURI_INTERNALS__;
   }
 });
+
+test("wechat settings opens the WeChat developer console", async () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const calls: Array<{cmd: string; args?: Record<string, unknown>}> = [];
+  const tauriWindow = window as typeof window & {
+    __TAURI_INTERNALS__?: {
+      invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
+      transformCallback: () => number;
+    };
+  };
+  tauriWindow.__TAURI_INTERNALS__ = {
+    invoke: (cmd, args) => {
+      calls.push({cmd, args});
+      return Promise.resolve(cmd === "get_config" ? {wechat: {app_id: "", app_secret: ""}} : undefined);
+    },
+    transformCallback: () => 0,
+  };
+
+  const {cleanup} = renderSettingsDialog();
+  try {
+    const openButton = Array.from(document.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("前往微信开发者平台获取凭证"),
+    );
+    assert.ok(openButton, "wechat developer console shortcut should render");
+    await act(async () => {
+      openButton.click();
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    });
+
+    assert.deepEqual(calls[calls.length - 1], {
+      cmd: "open_external_url",
+      args: {url: "https://developers.weixin.qq.com/console/member/manage/mp"},
+    });
+  } finally {
+    cleanup();
+    delete tauriWindow.__TAURI_INTERNALS__;
+  }
+});
+
