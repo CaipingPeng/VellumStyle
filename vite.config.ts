@@ -53,7 +53,8 @@ export default defineConfig({
   base: "./",
   clearScreen: false,
   server: {
-    port: 5173,
+    // 使用不常见的固定端口，避免与其他前端项目的默认端口冲突。
+    port: 41737,
     strictPort: true,
   },
   build: {

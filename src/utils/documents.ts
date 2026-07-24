@@ -1,6 +1,11 @@
 // 前端封装文档树 Tauri 命令。DocNode 与 Rust documents.rs 同构。
 import {invoke} from "@tauri-apps/api/core";
 import {isTauriRuntime} from "./tauriEnv.ts";
+import {
+  DOCUMENT_THEME_MAP_FILE,
+  parseDocumentThemeMap,
+  type DocumentThemeMap,
+} from "./documentThemes.ts";
 
 export interface DocNode {
   name: string;
@@ -96,7 +101,9 @@ function buildWebTree(): DocNode[] {
     dirs.set(path, node.children);
   }
 
-  const sortedFiles = Array.from(webFiles.keys()).sort((a, b) => a.localeCompare(b, "zh-CN"));
+  const sortedFiles = Array.from(webFiles.keys())
+    .filter((path) => /\.md$/i.test(path))
+    .sort((a, b) => a.localeCompare(b, "zh-CN"));
   for (const path of sortedFiles) {
     const parent = dirname(path);
     const node: DocNode = {name: basename(path), path, isDir: false, children: []};
@@ -128,6 +135,29 @@ export function writeDocument(path: string, text: string): Promise<void> {
     return Promise.resolve();
   }
   return invoke("write_document", {path, text});
+}
+
+// 主题映射是文档目录中的隐藏元数据文件：不出现在文档树，但会被云同步扫描。
+// exists 用于区分“文件尚未创建”和“文件明确为空”，避免升级迁移时覆盖云端数据。
+export async function readDocumentThemeMap(): Promise<{exists: boolean; map: DocumentThemeMap}> {
+  if (!isTauriRuntime()) {
+    const text = webFiles.get(DOCUMENT_THEME_MAP_FILE);
+    return {
+      exists: text !== undefined,
+      map: parseDocumentThemeMap(text ?? ""),
+    };
+  }
+
+  try {
+    const text = await readDocument(DOCUMENT_THEME_MAP_FILE);
+    return {exists: true, map: parseDocumentThemeMap(text)};
+  } catch {
+    return {exists: false, map: {}};
+  }
+}
+
+export function writeDocumentThemeMap(map: DocumentThemeMap): Promise<void> {
+  return writeDocument(DOCUMENT_THEME_MAP_FILE, `${JSON.stringify(map, null, 2)}\n`);
 }
 
 export function createDocument(dir: string, name: string): Promise<string> {

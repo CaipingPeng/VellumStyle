@@ -17,12 +17,11 @@ import ImageMaterialPickerDialog from "./components/Upload/ImageMaterialPickerDi
 import IconButton from "./components/ui/IconButton.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
 import {toast} from "./components/Toast/toast.ts";
-import {useStore, getThemeById, flushSave} from "./store/index.ts";
+import {useStore, getThemeById, flushDocumentThemeWrite, flushSave} from "./store/index.ts";
 import {getCodeThemeById} from "./markdown/codeThemes.ts";
 import {formatMarkdownImage, replaceMarkdownImageSizeByIndex} from "./markdown/imageMarkdown.ts";
 import {getActiveOutlineLine, parseMarkdownOutline} from "./utils/outline.ts";
 import {loadAllThemes} from "./themes/loader.ts";
-import {defaultMarkdownTheme} from "./themes/index.ts";
 import {uploadImage, uploadLocalImage, type UploadError} from "./utils/upload.ts";
 import {createScrollSync} from "./utils/syncScroll.ts";
 import {createDocument, writeDocument, type DocNode} from "./utils/documents.ts";
@@ -90,7 +89,7 @@ function StatusDivider() {
 }
 
 export default function App() {
-  const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, outlineOpen, saveStatus, lastSavedAt, syncStatus, lastSyncedAt, syncMessage, workspaceSplitRatio, appearanceMode, setContent, setThemes, setMarkdownTheme, loadTree, openDocument, toggleSidebar, toggleOutline, setWorkspaceSplitRatio} = useStore();
+  const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, outlineOpen, saveStatus, lastSavedAt, syncStatus, lastSyncedAt, syncMessage, workspaceSplitRatio, appearanceMode, setContent, setThemes, loadTree, loadDocumentThemes, openDocument, toggleSidebar, toggleOutline, setWorkspaceSplitRatio} = useStore();
   useEffect(() => {
     applyAppearanceMode(appearanceMode, document.documentElement);
   }, [appearanceMode]);
@@ -250,22 +249,19 @@ export default function App() {
   }), [availableUpdate?.body, availableUpdate?.version, currentVersion, handleCheckForUpdates, handleInstallUpdate, updateChecking, updateInstalling, updateMessage, updateStatus]);
 
   // 启动扫描主题：内置（编译进包）+ 用户目录 *.json 合并。
-  // 合并后若当前 markdownThemeId 已不存在（如 localStorage 残留旧主题 id），
-  // 重置为默认，避免选中态/编辑指向不存在的主题。
+  // setThemes 会根据当前文章记录解析本机可用主题；缺少自定义主题时只回退展示，
+  // 不会覆盖随文档同步的原始主题选择。
   useEffect(() => {
     loadAllThemes().then((all) => {
       setThemes(all);
-      const cur = useStore.getState().markdownThemeId;
-      if (!all.some((t) => t.id === cur)) {
-        setMarkdownTheme(defaultMarkdownTheme.id);
-      }
     });
-  }, [setThemes, setMarkdownTheme]);
+  }, [setThemes]);
 
-  // 启动：加载文档树；迁移旧 localStorage 草稿；决定打开哪篇。
+  // 启动：加载文档树和主题元数据；迁移旧 localStorage 草稿；决定打开哪篇。
   useEffect(() => {
     (async () => {
       await loadTree();
+      await loadDocumentThemes();
       const tree = useStore.getState().tree;
       const persistedPath = useStore.getState().currentDocPath;
       const legacyContent = useStore.getState().content;
@@ -415,6 +411,7 @@ export default function App() {
       // 保存失败也必须放行关闭，否则窗口永远关不掉。
       try {
         await flushSave();
+        await flushDocumentThemeWrite();
       } catch (err) {
         console.error("关窗前保存失败：", err);
       } finally {

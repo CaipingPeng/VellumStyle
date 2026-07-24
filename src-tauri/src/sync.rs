@@ -9,6 +9,7 @@ use tauri::{AppHandle, Manager};
 const NUTSTORE_DAV_ROOT: &str = "https://dav.jianguoyun.com/dav";
 const MANIFEST_NAME: &str = ".vellumstyle-sync.json";
 const LOCAL_STATE_NAME: &str = "sync-state.json";
+const THEME_METADATA_PREFIX: &str = ".vellumstyle-theme-map";
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 struct SyncIndex {
@@ -390,7 +391,12 @@ fn scan_local_dir(
             .and_then(|e| e.to_str())
             .map(|e| e.eq_ignore_ascii_case("md"))
             .unwrap_or(false);
-        if !is_md {
+        let is_theme_metadata = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .map(is_theme_metadata_file)
+            .unwrap_or(false);
+        if !is_md && !is_theme_metadata {
             continue;
         }
         let rel = rel_path(base, &path);
@@ -398,6 +404,12 @@ fn scan_local_dir(
         files.insert(rel, bytes);
     }
     Ok(())
+}
+
+fn is_theme_metadata_file(name: &str) -> bool {
+    name == format!("{THEME_METADATA_PREFIX}.json")
+        || (name.starts_with(&format!("{THEME_METADATA_PREFIX} (坚果云冲突 "))
+            && name.ends_with(".json"))
 }
 
 fn resolve_local_path(base: &Path, rel: &str) -> Result<PathBuf, String> {
@@ -655,7 +667,14 @@ fn civil_from_days(days: i64) -> (i64, i64, i64) {
 
 #[cfg(test)]
 mod tests {
-    use super::{classify_connection_status, conflict_path, content_fingerprint, normalize_remote_dir};
+    use super::{
+        classify_connection_status,
+        conflict_path,
+        content_fingerprint,
+        is_theme_metadata_file,
+        normalize_remote_dir,
+        scan_local_files,
+    };
     use reqwest::StatusCode;
 
     #[test]
@@ -680,6 +699,36 @@ mod tests {
             conflict_path("无扩展", "20260614-090800"),
             "无扩展 (坚果云冲突 20260614-090800)"
         );
+    }
+
+    #[test]
+    fn theme_metadata_and_its_conflicts_are_syncable_but_other_json_is_not() {
+        assert!(is_theme_metadata_file(".vellumstyle-theme-map.json"));
+        assert!(is_theme_metadata_file(
+            ".vellumstyle-theme-map (坚果云冲突 20260724-120000).json"
+        ));
+        assert!(!is_theme_metadata_file("theme.json"));
+        assert!(!is_theme_metadata_file(".vellumstyle-theme-map.backup.json"));
+    }
+
+    #[test]
+    fn local_scan_includes_theme_metadata_without_exposing_arbitrary_json() {
+        let root = std::env::temp_dir().join(format!(
+            "vellumstyle-sync-theme-map-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("article.md"), "# article").unwrap();
+        std::fs::write(root.join(".vellumstyle-theme-map.json"), "{}").unwrap();
+        std::fs::write(root.join("theme.json"), "{}").unwrap();
+
+        let files = scan_local_files(&root).unwrap();
+        assert!(files.contains_key("article.md"));
+        assert!(files.contains_key(".vellumstyle-theme-map.json"));
+        assert!(!files.contains_key("theme.json"));
+
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

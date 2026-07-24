@@ -7,7 +7,9 @@ import {
   deleteEntry,
   listDocuments,
   openEntryLocation,
+  readDocumentThemeMap,
   readDocument,
+  writeDocumentThemeMap,
   writeDocument,
 } from "./documents.ts";
 
@@ -29,6 +31,14 @@ test("非 Tauri 环境下文档 fallback 支持创建和写入", async () => {
 
   assert.equal(await readDocument(path), "# Web 调试草稿\n\n正文");
   assert.ok((await listDocuments()).some((node) => node.path === path));
+});
+
+test("非 Tauri 环境下主题元数据单独保存且不出现在文档树", async () => {
+  await writeDocumentThemeMap({"主题元数据测试.md": "ink"});
+
+  const metadata = await readDocumentThemeMap();
+  assert.deepEqual(metadata, {exists: true, map: {"主题元数据测试.md": "ink"}});
+  assert.ok(!(await listDocuments()).some((node) => node.path === ".vellumstyle-theme-map.json"));
 });
 
 test("ancestorDirsForPath 返回文档路径中需要展开的父级目录", () => {

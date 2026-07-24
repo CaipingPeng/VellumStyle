@@ -389,7 +389,7 @@ npx tauri build          # 出 .msi/.exe 安装包（src-tauri/target/release/bu
 ### Web 模式（仅调试用，保留 server/ 退路）
 
 ```
-npm run dev:web          # 仅前端，http://localhost:5173（图片代理在纯 web 下不可用）
+npm run dev:web          # 仅前端，http://localhost:41737（图片代理在纯 web 下不可用）
 npm run dev              # 前端 + Express 后端
 npx tsc --noEmit         # 类型检查
 ```
@@ -796,3 +796,24 @@ npx tsc --noEmit         # 类型检查
 - ✅ `cargo check --manifest-path src-tauri/Cargo.toml` 通过。
 - ✅ `cargo test --manifest-path src-tauri/Cargo.toml` 10 passed / 1 ignored。
 - ⏳ 待真实凭证运行时手测：素材库分页加载、素材图预览、选择后发布到草稿箱。
+
+## 升级 — 排版主题按文章保存并随文档云同步（✅ 代码与自动化验证完成，2026-07-24）
+
+> 目标：文章 A、B 可以分别选择不同排版主题，切换文章后恢复各自选择；主题记录跟随坚果云文档同步。
+
+### 关键设计
+
+- store 增加 `documentThemeIds`（文档相对路径 → 排版主题 id），`markdownThemeId` 只表示当前打开文章的有效选择。
+- 主题映射写入文档目录隐藏文件 `.vellumstyle-theme-map.json`，不修改 Markdown 原文，也不出现在文档树。
+- Rust 云同步扫描除 `.md` 外额外纳入该隐藏文件及其冲突副本；同步完成后前端重新加载映射。
+- 新建文章固定使用默认排版主题；旧版本全局主题只迁移给上次打开的文章，其余文章使用默认主题。
+- 文档/文件夹重命名、移动时批量迁移映射 key，删除时清理对应路径及子路径。
+- 启动时先读取本机元数据；后台云同步完成后重新加载映射。旧版本迁移映射只在同步结果确认没有远端元数据后写入，避免本机旧全局状态覆盖另一台设备已同步的按文章主题。
+- 若另一台设备缺少映射中引用的自定义主题，仅在本机预览时回退默认主题，不改写同步映射；安装同 ID 主题后会自动恢复。
+
+### 验证状态
+
+- ✅ `npm test`：448/448 通过。
+- ✅ `npm run build`：生产构建通过。
+- ✅ `cargo test`：55 passed / 1 ignored。
+- ⏳ 待双设备真实坚果云手测：A/B 两篇不同主题、重命名/移动后保持、另一台设备同步恢复。

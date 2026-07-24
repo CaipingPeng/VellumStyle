@@ -1,11 +1,11 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "VellumStyle",
-  "version": "1.7.6",
+  "version": "1.7.7",
   "identifier": "com.vellumstyle.desktop",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:5173",
+    "devUrl": "http://localhost:41737",
     "beforeDevCommand": "npm run dev:web",
     "beforeBuildCommand": "npm run build"
   },

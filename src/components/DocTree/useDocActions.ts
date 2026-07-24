@@ -1,13 +1,21 @@
 // 文档树操作封装：create/rename/delete + 操作后 loadTree 刷新。
 // 错误统一 toast；删除当前文档后由调用方决定切到哪篇（这里只负责数据）。
-import {scheduleCloudSync, useStore} from "../../store/index.ts";
+import {flushSave, scheduleCloudSync, useStore} from "../../store/index.ts";
 import {createDocument, createFolder, renameEntry, deleteEntry, moveEntry, openEntryLocation} from "../../utils/documents.ts";
 import {toast} from "../Toast/toast.ts";
 import {copyAbsolutePath as copyAbsolutePathToClipboard} from "./copyAbsolutePath.ts";
 
+function remapPath(path: string | null, fromPath: string, toPath: string): string | null {
+  if (!path) return path;
+  if (path === fromPath) return toPath;
+  return path.startsWith(`${fromPath}/`) ? `${toPath}${path.slice(fromPath.length)}` : path;
+}
+
 export function useDocActions() {
   const loadTree = useStore((s) => s.loadTree);
   const openDocument = useStore((s) => s.openDocument);
+  const remapDocumentThemePaths = useStore((s) => s.remapDocumentThemePaths);
+  const removeDocumentThemePaths = useStore((s) => s.removeDocumentThemePaths);
 
   return {
     async newDocument(dir: string, name: string) {
@@ -31,12 +39,16 @@ export function useDocActions() {
     },
     async rename(path: string, newName: string) {
       try {
+        // 先完成当前文章保存，避免重命名后 autosave 又把旧路径写回来。
+        await flushSave();
         const newPath = await renameEntry(path, newName);
         await loadTree();
-        // 若重命名的是当前文档，切到新路径（内容不变，仅 path 变）。
-        if (useStore.getState().currentDocPath === path) {
-          await openDocument(newPath);
-        }
+        remapDocumentThemePaths(path, newPath);
+        const state = useStore.getState();
+        const nextCurrentPath = remapPath(state.currentDocPath, path, newPath);
+        const nextSelectedPath = remapPath(state.selectedPath, path, newPath);
+        if (nextCurrentPath !== state.currentDocPath) state.setCurrentDocPath(nextCurrentPath);
+        if (nextSelectedPath !== state.selectedPath) state.setSelectedPath(nextSelectedPath);
         scheduleCloudSync();
       } catch (e) {
         toast.show(String(e), "error");
@@ -44,9 +56,11 @@ export function useDocActions() {
     },
     async remove(path: string, firstDocPath: string | null, options: {recursive?: boolean} = {}) {
       try {
+        await flushSave();
         const previousDocPath = useStore.getState().currentDocPath;
         await deleteEntry(path, {recursive: options.recursive});
         await loadTree();
+        removeDocumentThemePaths(path);
         if (previousDocPath === path || previousDocPath?.startsWith(`${path}/`)) {
           if (firstDocPath) {
             await openDocument(firstDocPath);
@@ -55,6 +69,10 @@ export function useDocActions() {
             useStore.getState().setContent("");
           }
         }
+        const selectedPath = useStore.getState().selectedPath;
+        if (selectedPath === path || selectedPath?.startsWith(`${path}/`)) {
+          useStore.getState().setSelectedPath(null);
+        }
         scheduleCloudSync();
       } catch (e) {
         toast.show(String(e), "error");
@@ -62,16 +80,15 @@ export function useDocActions() {
     },
     async move(src: string, destDir: string) {
       try {
+        await flushSave();
         const newPath = await moveEntry(src, destDir);
         await loadTree();
-        // 若移动的是当前文档（或当前文档在被移动的文件夹内），同步当前 path。
-        const cur = useStore.getState().currentDocPath;
-        if (cur === src) {
-          useStore.getState().setCurrentDocPath(newPath);
-        } else if (cur && cur.startsWith(src + "/")) {
-          // 当前文档在被移动的文件夹内：用新前缀替换。
-          useStore.getState().setCurrentDocPath(newPath + cur.slice(src.length));
-        }
+        remapDocumentThemePaths(src, newPath);
+        const state = useStore.getState();
+        const nextCurrentPath = remapPath(state.currentDocPath, src, newPath);
+        const nextSelectedPath = remapPath(state.selectedPath, src, newPath);
+        if (nextCurrentPath !== state.currentDocPath) state.setCurrentDocPath(nextCurrentPath);
+        if (nextSelectedPath !== state.selectedPath) state.setSelectedPath(nextSelectedPath);
         scheduleCloudSync();
       } catch (e) {
         toast.show(String(e), "error");
