@@ -38,3 +38,39 @@ test("image upload tasks retain failures until cleared", () => {
 
   imageUploadTasks.clearFinished();
 });
+
+test("completed article tasks expire from the in-memory log", () => {
+  const taskId = imageUploadTasks.start("cover.png", "封面图片", {
+    documentPath: "专题/文章.md",
+    documentTitle: "文章.md",
+  });
+  imageUploadTasks.complete(taskId);
+
+  const completed = imageUploadTasks.getSnapshot().find((task) => task.id === taskId);
+  assert.equal(completed?.documentPath, "专题/文章.md");
+  assert.equal(completed?.documentTitle, "文章.md");
+  assert.equal(typeof completed?.expiresAt, "number");
+
+  imageUploadTasks.pruneExpired((completed?.expiresAt || 0) + 1);
+  assert.equal(imageUploadTasks.getSnapshot().some((task) => task.id === taskId), false);
+});
+
+test("multiple tasks remain visible until the last active task has settled", () => {
+  imageUploadTasks.clearFinished();
+  const first = imageUploadTasks.start("first.jpg", "正文图片");
+  const second = imageUploadTasks.start("second.jpg", "正文图片");
+  imageUploadTasks.complete(first);
+
+  const firstCompleted = imageUploadTasks.getSnapshot().find((task) => task.id === first);
+  imageUploadTasks.pruneExpired((firstCompleted?.expiresAt || 0) + 1);
+  assert.equal(imageUploadTasks.getSnapshot().length, 2);
+
+  imageUploadTasks.complete(second);
+  const snapshot = imageUploadTasks.getSnapshot();
+  assert.equal(snapshot.length, 2);
+  assert.equal(snapshot.every((task) => task.status === "success"), true);
+
+  const latestExpiry = Math.max(...snapshot.map((task) => task.expiresAt || 0));
+  imageUploadTasks.pruneExpired(latestExpiry + 1);
+  assert.equal(imageUploadTasks.getSnapshot().length, 0);
+});

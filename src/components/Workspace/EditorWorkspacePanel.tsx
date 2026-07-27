@@ -7,6 +7,7 @@ interface EditorWorkspacePanelProps {
   onPickFile: (file: File) => Promise<void>;
   onPickLocal: (path: string) => Promise<void>;
   onOpenMaterialLibrary: () => void;
+  toolbarActions?: ReactNode;
   children: ReactNode;
 }
 
@@ -15,6 +16,7 @@ export default function EditorWorkspacePanel({
   onPickFile,
   onPickLocal,
   onOpenMaterialLibrary,
+  toolbarActions,
   children,
 }: EditorWorkspacePanelProps) {
   return (
@@ -27,14 +29,21 @@ export default function EditorWorkspacePanel({
         role="toolbar"
         aria-label="编辑器工具栏"
         data-editor-toolbar
-        className="workspace-editor-toolbar flex h-[42px] min-h-[42px] flex-none items-center overflow-x-auto px-2"
+        className="workspace-editor-toolbar flex h-[42px] min-h-[42px] flex-none items-center px-2"
       >
-        <SyntaxToolbar
-          editorRef={editorRef}
-          onPickFile={onPickFile}
-          onPickLocal={onPickLocal}
-          onOpenMaterialLibrary={onOpenMaterialLibrary}
-        />
+        <div className="min-w-0 flex-1 overflow-x-auto">
+          <SyntaxToolbar
+            editorRef={editorRef}
+            onPickFile={onPickFile}
+            onPickLocal={onPickLocal}
+            onOpenMaterialLibrary={onOpenMaterialLibrary}
+          />
+        </div>
+        {toolbarActions && (
+          <div data-editor-toolbar-actions className="flex flex-none items-center">
+            {toolbarActions}
+          </div>
+        )}
       </div>
       <div data-editor-content className="min-h-0 min-w-0 flex-1 overflow-hidden">
         {children}

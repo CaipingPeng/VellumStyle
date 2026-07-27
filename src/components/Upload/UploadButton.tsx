@@ -21,24 +21,24 @@ export interface UploadButtonHandle {
 const UploadButton = forwardRef<UploadButtonHandle, Props>(
   ({onPickFile, onPickLocal, onOpenMaterialLibrary, variant = "secondary", showTrigger = true, display = "button"}, ref) => {
     const inputRef = useRef<HTMLInputElement>(null);
-    const [uploading, setUploading] = useState(false);
+    const [picking, setPicking] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
 
     const pickLocalImage = useCallback(async () => {
-      if (uploading) return;
-      setUploading(true);
+      if (picking) return;
+      setPicking(true);
       try {
         const selected = await pickImageFile();
         if (selected) {
-          await onPickLocal(selected);
+          void onPickLocal(selected);
         }
       } catch {
-        setUploading(false);
+        setPicking(false);
         inputRef.current?.click();
         return;
       }
-      setUploading(false);
-    }, [onPickLocal, uploading]);
+      setPicking(false);
+    }, [onPickLocal, picking]);
 
     useImperativeHandle(ref, () => ({pick: pickLocalImage}), [pickLocalImage]);
 
@@ -46,12 +46,7 @@ const UploadButton = forwardRef<UploadButtonHandle, Props>(
       const file = e.target.files?.[0];
       e.target.value = "";
       if (!file) return;
-      setUploading(true);
-      try {
-        await onPickFile(file);
-      } finally {
-        setUploading(false);
-      }
+      void onPickFile(file);
     };
 
     return (
@@ -65,9 +60,9 @@ const UploadButton = forwardRef<UploadButtonHandle, Props>(
               minWidth={148}
               trigger={
                 <IconButton
-                  title={uploading ? "处理并上传中…" : "插入图片"}
+                  title={picking ? "选择图片中…" : "插入图片"}
                   active={menuOpen}
-                  disabled={uploading}
+                  disabled={picking}
                   onClick={() => setMenuOpen((open) => !open)}
                 >
                   <ImageUp size={16} />
@@ -94,15 +89,15 @@ const UploadButton = forwardRef<UploadButtonHandle, Props>(
               </MenuItem>
             </Menu>
           ) : (
-            <IconButton title={uploading ? "处理并上传中…" : "上传图片"} disabled={uploading} onClick={() => void pickLocalImage()}>
+            <IconButton title={picking ? "选择图片中…" : "上传图片"} disabled={picking} onClick={() => void pickLocalImage()}>
               <ImageUp size={16} />
             </IconButton>
           )
         )}
         {showTrigger && display === "button" && (
-          <Button variant={variant} disabled={uploading} onClick={() => void pickLocalImage()}>
+          <Button variant={variant} disabled={picking} onClick={() => void pickLocalImage()}>
             <ImageUp size={14} />
-            {uploading ? "处理并上传中…" : "上传图片"}
+            {picking ? "选择图片中…" : "上传图片"}
           </Button>
         )}
       </>

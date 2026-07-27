@@ -2,7 +2,11 @@
 // 粘贴走 bytes 上传；上传按钮走本地路径上传，避免浏览器文件选择框位置不可控。
 
 import {invoke} from "@tauri-apps/api/core";
-import {imageUploadTasks, type ImageUploadTask} from "./imageUploadTasks.ts";
+import {
+  imageUploadTasks,
+  type ImageUploadTask,
+  type ImageUploadTaskContext,
+} from "./imageUploadTasks.ts";
 
 export interface UploadError extends Error {
   // "NOT_CONFIGURED" 时调用方应提示去配置凭证，其余为普通失败提示。
@@ -24,8 +28,9 @@ export async function uploadLocalImage(
   path: string,
   category: ImageUploadTask["category"] = "正文图片",
   onTaskStart?: (taskId: string) => void,
+  context: Omit<ImageUploadTaskContext, "category"> = {},
 ): Promise<string> {
-  const taskId = imageUploadTasks.start(fileNameFromPath(path), category);
+  const taskId = imageUploadTasks.start(fileNameFromPath(path), category, context);
   onTaskStart?.(taskId);
   try {
     const url = await invoke<string>("upload_local_image", {path, taskId});
@@ -41,8 +46,9 @@ export async function uploadLocalImage(
 export async function uploadRemoteImage(
   url: string,
   category: ImageUploadTask["category"] = "导入图片",
+  context: Omit<ImageUploadTaskContext, "category"> = {},
 ): Promise<string> {
-  const taskId = imageUploadTasks.start(fileNameFromUrl(url), category);
+  const taskId = imageUploadTasks.start(fileNameFromUrl(url), category, context);
   try {
     const uploadedUrl = await invoke<string>("upload_remote_image", {url, taskId});
     imageUploadTasks.complete(taskId);
@@ -55,7 +61,11 @@ export async function uploadRemoteImage(
 }
 
 // 上传单张图片，成功返回微信永久链接（mmbiz.qpic.cn）。失败抛 UploadError。
-export async function uploadImage(file: File, onTaskStart?: (taskId: string) => void): Promise<string> {
+export async function uploadImage(
+  file: File,
+  onTaskStart?: (taskId: string) => void,
+  context: Omit<ImageUploadTaskContext, "category"> = {},
+): Promise<string> {
   if (!isImageFile(file)) {
     throw makeError("仅支持 jpg/png/gif 图片", "BAD_TYPE");
   }
@@ -63,7 +73,7 @@ export async function uploadImage(file: File, onTaskStart?: (taskId: string) => 
     throw makeError("原始图片不能超过 50MB", "TOO_LARGE");
   }
 
-  const taskId = imageUploadTasks.start(file.name || "image", "正文图片");
+  const taskId = imageUploadTasks.start(file.name || "image", "正文图片", context);
   onTaskStart?.(taskId);
   try {
     const buf = await file.arrayBuffer();

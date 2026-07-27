@@ -2,9 +2,13 @@ import {forwardRef, useImperativeHandle, useState} from "react";
 import {invoke} from "@tauri-apps/api/core";
 import {FileInput} from "lucide-react";
 import ImportMarkdownDialog from "./ImportMarkdownDialog.tsx";
-import {useStore} from "../../store/index.ts";
+import {flushSave, useStore} from "../../store/index.ts";
 import {createDocument, writeDocument, targetDirFor, treeHasPath} from "../../utils/documents.ts";
-import {importMarkdownFile, type ImportMarkdownProgress, type ImportMarkdownResult} from "../../utils/markdownImport.ts";
+import {
+  enqueueMarkdownImageImport,
+  prepareMarkdownImport,
+  type PreparedMarkdownImport,
+} from "../../utils/markdownImport.ts";
 import {toast} from "../Toast/toast.ts";
 import Button, {type ButtonVariant} from "../ui/Button.tsx";
 
@@ -33,8 +37,6 @@ const ImportButton = forwardRef<ImportButtonHandle, Props>(
     const [markdownPaths, setMarkdownPaths] = useState<string[]>([]);
     const [resourceRoot, setResourceRoot] = useState("");
     const [showResourceRoot, setShowResourceRoot] = useState(false);
-    const [progress, setProgress] = useState<ImportMarkdownProgress | null>(null);
-    const [result, setResult] = useState<ImportMarkdownResult | null>(null);
     const [error, setError] = useState("");
     const [importing, setImporting] = useState(false);
 
@@ -44,7 +46,6 @@ const ImportButton = forwardRef<ImportButtonHandle, Props>(
       const selected = await invoke<string[] | null>("pick_markdown_files");
       if (Array.isArray(selected) && selected.length > 0) {
         setMarkdownPaths(selected);
-        setResult(null);
         setError("");
       }
     };
@@ -53,7 +54,6 @@ const ImportButton = forwardRef<ImportButtonHandle, Props>(
       const selected = await invoke<string | null>("pick_resource_dir");
       if (typeof selected === "string") {
         setResourceRoot(selected);
-        setResult(null);
         setError("");
       }
     };
@@ -61,7 +61,6 @@ const ImportButton = forwardRef<ImportButtonHandle, Props>(
     const toggleResourceRoot = (checked: boolean) => {
       setShowResourceRoot(checked);
       if (!checked) setResourceRoot("");
-      setResult(null);
       setError("");
     };
 
@@ -69,54 +68,50 @@ const ImportButton = forwardRef<ImportButtonHandle, Props>(
       if (markdownPaths.length === 0 || importing) return;
       setImporting(true);
       setError("");
-      setResult(null);
       try {
         const dir = targetDirFor(tree, selectedPath);
         const importedTargets = new Set<string>();
         const manualResourceRoot = showResourceRoot ? resourceRoot || null : null;
-        let needsImportReview = false;
+        const backgroundJobs: Array<{prepared: PreparedMarkdownImport; documentPath: string}> = [];
         let newPath = "";
         let lastName = "";
 
-        for (const [index, markdownPath] of markdownPaths.entries()) {
-          if (markdownPaths.length > 1) {
-            setProgress({
-              phase: "reading",
-              current: `(${index + 1}/${markdownPaths.length}) ${markdownPath}`,
-              completed: index,
-              total: markdownPaths.length,
-            });
-          }
+        await flushSave();
 
-          const next = await importMarkdownFile(
-            {markdownPath, resourceRoot: manualResourceRoot},
-            setProgress,
-          );
-          setResult(next);
-          needsImportReview = needsImportReview || next.failed.length > 0 || next.unsupported.length > 0;
+        for (const markdownPath of markdownPaths) {
+          const prepared = await prepareMarkdownImport({
+            markdownPath,
+            resourceRoot: manualResourceRoot,
+          });
 
           // 不覆盖当前文档：在目录树落点新建（或覆盖）同名文档并打开。
-          const name = docNameFromPath(next.markdownPath);
+          const name = docNameFromPath(prepared.markdownPath);
           const target = dir ? `${dir}/${name}.md` : `${name}.md`;
           if (treeHasPath(tree, target) || importedTargets.has(target)) {
-            await writeDocument(target, next.content);
+            await writeDocument(target, prepared.content);
             newPath = target;
           } else {
             newPath = await createDocument(dir, name);
-            await writeDocument(newPath, next.content);
+            await writeDocument(newPath, prepared.content);
           }
           importedTargets.add(newPath);
+          backgroundJobs.push({prepared, documentPath: newPath});
           lastName = name;
         }
 
         await loadTree();
         if (newPath) await openDocument(newPath);
+        setOpenDialog(false);
         toast.show(
-          markdownPaths.length > 1 ? `已导入 ${markdownPaths.length} 个 Markdown 文件` : `已导入到「${lastName}」`,
+          markdownPaths.length > 1
+            ? `已导入 ${markdownPaths.length} 个 Markdown 文件，图片将在后台处理`
+            : `已导入到「${lastName}」，图片将在后台处理`,
           "info",
         );
-        if (!needsImportReview) {
-          setOpenDialog(false);
+        for (const job of backgroundJobs) {
+          void enqueueMarkdownImageImport(job.prepared, job.documentPath).catch((reason) => {
+            console.error("后台处理导入图片失败：", reason);
+          });
         }
       } catch (e) {
         const msg = typeof e === "string" ? e : (e as Error)?.message || "导入失败";
@@ -139,8 +134,6 @@ const ImportButton = forwardRef<ImportButtonHandle, Props>(
           markdownPaths={markdownPaths}
           resourceRoot={resourceRoot}
           showResourceRoot={showResourceRoot}
-          progress={progress}
-          result={result}
           error={error}
           importing={importing}
           onPickMarkdown={pickMarkdown}

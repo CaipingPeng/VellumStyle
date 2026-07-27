@@ -11,6 +11,8 @@ test("全局顶栏只保留抽屉开关，语法工具栏归属编辑器", async
   assert.match(header, /aria-pressed=\{sidebarOpen\}/);
   assert.match(header, /aria-pressed=\{outlineOpen\}/);
   assert.match(source, /<EditorWorkspacePanel/);
+  assert.doesNotMatch(header, /<ArticleTaskLog/);
+  assert.match(source, /<EditorWorkspacePanel[\s\S]*?toolbarActions=\{<ArticleTaskLog currentDocumentPath=\{currentDocPath\} \/>\}/);
 });
 
 test("双抽屉可独立渲染且顺序稳定地位于核心分栏之前", async () => {

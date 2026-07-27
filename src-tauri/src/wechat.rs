@@ -2,9 +2,10 @@
 // secret 不出前端：前端只调 upload_image command，凭证仅 Rust 读 config。
 
 use crate::config::load_wechat_config;
-use image::codecs::jpeg::{JpegDecoder, JpegEncoder};
+use image::codecs::jpeg::JpegDecoder;
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{DynamicImage, ImageDecoder, ImageEncoder, ImageFormat};
+use jpeg_encoder::{ColorType as FastJpegColorType, Encoder as FastJpegEncoder, SamplingFactor};
 use reqwest::redirect::Policy;
 use resvg::tiny_skia;
 use resvg::usvg;
@@ -13,7 +14,7 @@ use std::fs;
 use std::io::{self, Cursor};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
@@ -21,6 +22,7 @@ const MAX_SIZE: usize = 10 * 1024 * 1024; // add_material 图片限制 10MB
 const TARGET_SIZE: usize = MAX_SIZE; // 实测微信接受正好 10MiB，超出 1 字节返回 45001
 const MAX_SOURCE_SIZE: usize = 50 * 1024 * 1024;
 const MAX_DECODED_PIXELS: u64 = 50_000_000;
+const PNG_LOSSLESS_RETRY_RATIO: usize = 5;
 const ALLOWED_TYPES: [&str; 3] = ["image/jpeg", "image/png", "image/gif"];
 
 // 防盗链图片域名白名单，防 SSRF。
@@ -33,6 +35,28 @@ struct TokenCache {
 }
 
 static TOKEN_CACHE: Mutex<Option<TokenCache>> = Mutex::new(None);
+static IMAGE_COMPRESSION_LIMIT: OnceLock<tokio::sync::Semaphore> = OnceLock::new();
+
+fn jpeg_probe_count() -> usize {
+    match std::thread::available_parallelism()
+        .map(usize::from)
+        .unwrap_or(1)
+    {
+        16.. => 7,
+        12..=15 => 5,
+        6..=11 => 3,
+        3..=5 => 2,
+        _ => 1,
+    }
+}
+
+fn compression_worker_count() -> usize {
+    std::thread::available_parallelism()
+        .map(usize::from)
+        .unwrap_or(1)
+        .div_ceil(jpeg_probe_count())
+        .max(1)
+}
 
 const OUTBOUND_IP_ENDPOINTS: [&str; 4] = [
     "https://ifconfig.me/ip",
@@ -588,6 +612,19 @@ async fn prepare_upload_async(
     filename: String,
     mime: String,
 ) -> Result<PreparedUpload, String> {
+    if bytes.len() <= MAX_SIZE {
+        return Ok(PreparedUpload {
+            bytes,
+            filename,
+            mime,
+        });
+    }
+    let compression_limit = IMAGE_COMPRESSION_LIMIT
+        .get_or_init(|| tokio::sync::Semaphore::new(compression_worker_count()));
+    let _permit = compression_limit
+        .acquire()
+        .await
+        .map_err(|_| "图片压缩队列已关闭".to_string())?;
     tokio::task::spawn_blocking(move || {
         prepare_upload_for_limit(bytes, filename, mime, MAX_SIZE, TARGET_SIZE)
     })
@@ -634,7 +671,7 @@ fn prepare_upload_for_limit(
     let prepared = if mime == "image/jpeg" {
         compress_jpeg(image, filename, target_size)?
     } else {
-        compress_png(image, filename, target_size)?
+        compress_png(image, filename, target_size, original_size)?
     };
     if prepared.bytes.len() > max_size {
         return Err("图片在保持原分辨率后仍超过 10MB，请先转换或裁剪图片".into());
@@ -669,9 +706,10 @@ fn compress_jpeg(
     target_size: usize,
 ) -> Result<PreparedUpload, String> {
     let encoded = best_jpeg_under(&image, target_size)?;
-    if let Some(bytes) = encoded {
+    if let Some(candidate) = encoded {
+        eprintln!("JPEG 自动压缩采用质量 {}", candidate.quality);
         return Ok(PreparedUpload {
-            bytes,
+            bytes: candidate.bytes,
             filename: replace_extension(&filename, "jpg"),
             mime: "image/jpeg".into(),
         });
@@ -683,49 +721,96 @@ fn compress_png(
     image: DynamicImage,
     filename: String,
     target_size: usize,
+    original_size: usize,
 ) -> Result<PreparedUpload, String> {
-    let has_alpha = image.color().has_alpha();
-    let compression = if has_alpha {
-        CompressionType::Default
-    } else {
-        CompressionType::Fast
-    };
-    let encoded = encode_png(&image, compression)?;
-    if encoded.len() <= target_size {
-        return Ok(PreparedUpload {
-            bytes: encoded,
-            filename: replace_extension(&filename, "png"),
-            mime: "image/png".into(),
-        });
+    if original_size <= target_size.saturating_mul(PNG_LOSSLESS_RETRY_RATIO) / 4 {
+        let encoded = encode_png(&image, CompressionType::Fast)?;
+        if encoded.len() <= target_size {
+            return Ok(PreparedUpload {
+                bytes: encoded,
+                filename: replace_extension(&filename, "png"),
+                mime: "image/png".into(),
+            });
+        }
     }
 
     compress_jpeg(image, replace_extension(&filename, "jpg"), target_size)
 }
 
-fn best_jpeg_under(image: &DynamicImage, target_size: usize) -> Result<Option<Vec<u8>>, String> {
+#[derive(Debug)]
+struct JpegCandidate {
+    quality: u8,
+    bytes: Vec<u8>,
+}
+
+fn best_jpeg_under(
+    image: &DynamicImage,
+    target_size: usize,
+) -> Result<Option<JpegCandidate>, String> {
     let rgb = rgb_on_white(image);
-    let mut low = 1i16;
-    let mut high = 100i16;
-    let mut best = None;
-    while low <= high {
-        let quality = ((low + high) / 2) as u8;
-        let mut bytes = Vec::new();
-        JpegEncoder::new_with_quality(&mut bytes, quality)
-            .encode(
-                rgb.as_raw(),
-                rgb.width(),
-                rgb.height(),
-                image::ExtendedColorType::Rgb8,
-            )
-            .map_err(|e| format!("JPEG 编码失败：{e}"))?;
-        if bytes.len() <= target_size {
-            best = Some(bytes);
-            low = quality as i16 + 1;
-        } else {
-            high = quality as i16 - 1;
+    let probe_count = jpeg_probe_count();
+    let mut low_quality = 0u16;
+    let mut high_quality = 101u16;
+    let mut best: Option<JpegCandidate> = None;
+
+    while high_quality > low_quality + 1 {
+        let span = usize::from(high_quality - low_quality);
+        let mut qualities = (1..=probe_count)
+            .map(|index| low_quality + ((span * index) / (probe_count + 1)) as u16)
+            .filter(|quality| *quality > low_quality && *quality < high_quality)
+            .map(|quality| quality as u8)
+            .collect::<Vec<_>>();
+        qualities.sort_unstable();
+        qualities.dedup();
+        if qualities.is_empty() {
+            qualities.push((low_quality + 1) as u8);
+        }
+
+        let mut candidates = std::thread::scope(|scope| {
+            let rgb = &rgb;
+            let handles = qualities
+                .into_iter()
+                .map(|quality| {
+                    scope.spawn(move || encode_jpeg(rgb, quality).map(|bytes| (quality, bytes)))
+                })
+                .collect::<Vec<_>>();
+            handles
+                .into_iter()
+                .map(|handle| {
+                    handle
+                        .join()
+                        .map_err(|_| "JPEG 并行编码任务异常退出".to_string())?
+                })
+                .collect::<Result<Vec<_>, String>>()
+        })?;
+        candidates.sort_unstable_by_key(|candidate| candidate.0);
+
+        for (quality, bytes) in candidates {
+            if bytes.len() <= target_size {
+                low_quality = u16::from(quality);
+                best = Some(JpegCandidate { quality, bytes });
+            } else {
+                high_quality = u16::from(quality);
+                break;
+            }
         }
     }
+
     Ok(best)
+}
+
+fn encode_jpeg(image: &image::RgbImage, quality: u8) -> Result<Vec<u8>, String> {
+    let width =
+        u16::try_from(image.width()).map_err(|_| "图片宽度超过 JPEG 编码上限".to_string())?;
+    let height =
+        u16::try_from(image.height()).map_err(|_| "图片高度超过 JPEG 编码上限".to_string())?;
+    let mut bytes = Vec::new();
+    let mut encoder = FastJpegEncoder::new(&mut bytes, quality);
+    encoder.set_sampling_factor(SamplingFactor::F_1_1);
+    encoder
+        .encode(image.as_raw(), width, height, FastJpegColorType::Rgb)
+        .map_err(|e| format!("JPEG 编码失败：{e}"))?;
+    Ok(bytes)
 }
 
 fn rgb_on_white(image: &DynamicImage) -> image::RgbImage {
@@ -744,7 +829,7 @@ fn rgb_on_white(image: &DynamicImage) -> image::RgbImage {
 
 fn encode_png(image: &DynamicImage, compression: CompressionType) -> Result<Vec<u8>, String> {
     let mut bytes = Vec::new();
-    PngEncoder::new_with_quality(&mut bytes, compression, FilterType::Adaptive)
+    PngEncoder::new_with_quality(&mut bytes, compression, FilterType::Paeth)
         .write_image(
             image.as_bytes(),
             image.width(),
@@ -1447,6 +1532,21 @@ mod tests {
                 .unwrap();
 
         assert!(error.contains("保留动画"));
+    }
+
+    #[test]
+    fn jpeg_search_returns_the_highest_quality_that_fits() {
+        let image = noisy_rgb(256, 256);
+        let rgb = image.to_rgb8();
+        let target = super::encode_jpeg(&rgb, 63).unwrap().len();
+        let candidate = super::best_jpeg_under(&image, target).unwrap().unwrap();
+
+        assert!(candidate.bytes.len() <= target);
+        assert!(candidate.quality >= 63);
+        if candidate.quality < 100 {
+            let next = super::encode_jpeg(&rgb, candidate.quality + 1).unwrap();
+            assert!(next.len() > target);
+        }
     }
 
     #[test]

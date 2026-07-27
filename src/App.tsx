@@ -14,6 +14,7 @@ import EditorWorkspacePanel from "./components/Workspace/EditorWorkspacePanel.ts
 import UpdatePromptDialog from "./components/Update/UpdatePromptDialog.tsx";
 import IpChangedDialog from "./components/Update/IpChangedDialog.tsx";
 import ImageMaterialPickerDialog from "./components/Upload/ImageMaterialPickerDialog.tsx";
+import ArticleTaskLog from "./components/Tasks/ArticleTaskLog.tsx";
 import IconButton from "./components/ui/IconButton.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
 import {toast} from "./components/Toast/toast.ts";
@@ -29,7 +30,8 @@ import {
   type ImageUploadTask,
 } from "./utils/imageUploadTasks.ts";
 import {createScrollSync} from "./utils/syncScroll.ts";
-import {createDocument, writeDocument, type DocNode} from "./utils/documents.ts";
+import {createDocument, readDocument, writeDocument, type DocNode} from "./utils/documents.ts";
+import {registerBackgroundDocumentUpdater} from "./utils/backgroundDocumentUpdates.ts";
 import {formatSyncStatus as formatCloudSyncStatus, syncStatusTone, type CloudSyncTone} from "./utils/cloudSync.ts";
 import {isTauriRuntime} from "./utils/tauriEnv.ts";
 import {
@@ -94,7 +96,10 @@ function StatusDivider() {
 }
 
 const uploadPhaseLabels: Record<ImageUploadTask["phase"], string> = {
+  queued: "等待处理",
   reading: "读取文件",
+  resolving: "解析路径",
+  processing: "处理图片",
   downloading: "下载图片",
   preparing: "准备上传",
   compressing: "压缩中",
@@ -130,6 +135,28 @@ export default function App() {
   useEffect(() => {
     applyAppearanceMode(appearanceMode, document.documentElement);
   }, [appearanceMode]);
+
+  useEffect(() => registerBackgroundDocumentUpdater(async (documentPath, transform) => {
+    const updateOpenDocument = (): boolean | null => {
+      const state = useStore.getState();
+      if (state.currentDocPath !== documentPath) return null;
+      const next = transform(state.content);
+      if (next === state.content) return false;
+      state.setContent(next);
+      return true;
+    };
+
+    const openResult = updateOpenDocument();
+    if (openResult !== null) return openResult;
+    await flushSave();
+    const diskContent = await readDocument(documentPath);
+    const becameOpenResult = updateOpenDocument();
+    if (becameOpenResult !== null) return becameOpenResult;
+    const next = transform(diskContent);
+    if (next === diskContent) return false;
+    await writeDocument(documentPath, next);
+    return updateOpenDocument() ?? true;
+  }), []);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [startupUpdatePromptOpen, setStartupUpdatePromptOpen] = useState(false);
@@ -212,10 +239,14 @@ export default function App() {
   const handleUploadFile = async (file: File) => {
     let taskId: string | null = null;
     try {
-      const url = await uploadImage(file, (id) => {
-        taskId = id;
-        beginInlineUpload(id);
-      });
+      const url = await uploadImage(
+        file,
+        (id) => {
+          taskId = id;
+          beginInlineUpload(id);
+        },
+        {documentPath: currentDocPath, documentTitle: currentDocPath?.split("/").pop()},
+      );
       if (taskId) finishInlineUpload(taskId, url);
     } catch (e) {
       handleUploadError(e);
@@ -225,10 +256,15 @@ export default function App() {
   const handleUploadLocal = async (path: string) => {
     let taskId: string | null = null;
     try {
-      const url = await uploadLocalImage(path, "正文图片", (id) => {
-        taskId = id;
-        beginInlineUpload(id);
-      });
+      const url = await uploadLocalImage(
+        path,
+        "正文图片",
+        (id) => {
+          taskId = id;
+          beginInlineUpload(id);
+        },
+        {documentPath: currentDocPath, documentTitle: currentDocPath?.split("/").pop()},
+      );
       if (taskId) finishInlineUpload(taskId, url);
     } catch (e) {
       handleUploadError(e);
@@ -611,6 +647,7 @@ export default function App() {
               onPickFile={handleUploadFile}
               onPickLocal={handleUploadLocal}
               onOpenMaterialLibrary={handleOpenImageMaterialPicker}
+              toolbarActions={<ArticleTaskLog currentDocumentPath={currentDocPath} />}
             >
               <MarkdownEditor
                 ref={editorRef}

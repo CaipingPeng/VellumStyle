@@ -20,6 +20,7 @@ test("编辑器面板提供唯一的局部工具栏和独立内容区", () => {
         onPickFile: async () => {},
         onPickLocal: async () => {},
         onOpenMaterialLibrary: () => {},
+        toolbarActions: React.createElement("button", {"data-test-action": true}, "任务"),
         children: React.createElement("div", {"data-test-editor": true}, "编辑正文"),
       },
     ));
@@ -31,6 +32,7 @@ test("编辑器面板提供唯一的局部工具栏和独立内容区", () => {
     assert.equal(container.querySelector("[data-editor-toolbar]")?.getAttribute("role"), "toolbar");
     assert.equal(container.querySelector("[data-editor-toolbar]")?.getAttribute("aria-label"), "编辑器工具栏");
     assert.equal(container.querySelector("[data-editor-toolbar]")?.classList.contains("workspace-editor-toolbar"), true);
+    assert.ok(container.querySelector("[data-editor-toolbar-actions] [data-test-action]"));
     assert.equal(container.querySelectorAll("[data-editor-content]").length, 1);
     assert.ok(container.querySelector("[data-test-editor]"));
     assert.equal(container.textContent?.includes("预览"), false);

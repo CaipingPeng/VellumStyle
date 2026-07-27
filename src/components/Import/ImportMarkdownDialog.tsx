@@ -1,6 +1,5 @@
 import type {ReactNode} from "react";
-import type {ImportMarkdownProgress, ImportMarkdownResult} from "../../utils/markdownImport.ts";
-import {CheckCircle2, FileText, FolderOpen, Loader2, Play, RotateCcw} from "lucide-react";
+import {FileText, FolderOpen, Loader2, Play} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 
 interface Props {
@@ -8,8 +7,6 @@ interface Props {
   markdownPaths: string[];
   resourceRoot: string;
   showResourceRoot: boolean;
-  progress: ImportMarkdownProgress | null;
-  result: ImportMarkdownResult | null;
   error: string;
   importing: boolean;
   onPickMarkdown: () => void;
@@ -18,15 +15,6 @@ interface Props {
   onStart: () => void;
   onClose: () => void;
 }
-
-const phaseText: Record<string, string> = {
-  reading: "读取 Markdown",
-  scanning: "扫描图片引用",
-  resolving: "解析本地路径",
-  uploading: "上传图片素材",
-  replacing: "替换 Markdown 链接",
-  done: "处理完成",
-};
 
 const fieldShellClass =
   "group flex min-h-[46px] items-center overflow-hidden rounded-md bg-bg-secondary " +
@@ -72,8 +60,6 @@ export default function ImportMarkdownDialog({
   markdownPaths,
   resourceRoot,
   showResourceRoot,
-  progress,
-  result,
   error,
   importing,
   onPickMarkdown,
@@ -84,9 +70,6 @@ export default function ImportMarkdownDialog({
 }: Props) {
   const canStart = markdownPaths.length > 0 && !importing;
   const markdownValue = formatMarkdownSelection(markdownPaths);
-  const totalUploaded = result ? result.uploadedLocal.length + result.uploadedRemote.length : 0;
-  const totalFailed = result ? result.failed.length : 0;
-  const totalUnsupported = result ? result.unsupported.length : 0;
 
   return (
     <Dialog
@@ -97,18 +80,13 @@ export default function ImportMarkdownDialog({
       footer={
         <>
           <button type="button" className={footerGhostButton} onClick={onClose}>
-            {result ? "关闭" : "取消"}
+            取消
           </button>
           <button type="button" className={footerPrimaryButton} onClick={onStart} disabled={!canStart}>
             {importing ? (
               <>
                 <Loader2 size={14} className="animate-spin" />
                 导入中...
-              </>
-            ) : result ? (
-              <>
-                <RotateCcw size={14} />
-                重新导入
               </>
             ) : (
               <>
@@ -123,10 +101,10 @@ export default function ImportMarkdownDialog({
       <div className="flex flex-col gap-4">
         <div className="rounded-md bg-bg-secondary px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
           <p className="m-0 text-[13px] leading-[1.7] text-text-secondary">
-            选择一个或多个 Markdown 文件后，会识别本地和在线图片，上传到公众号永久素材库并替换为微信素材链接。Obsidian 的 <code>![[...]]</code> 图片语法也会转换成标准 Markdown 图片。
+            选择一个或多个 Markdown 文件后会立即创建并打开文章，图片将在后台上传到公众号永久素材库。Obsidian 的 <code>![[...]]</code> 图片语法也会在上传成功后转换为标准 Markdown 图片。
           </p>
           <p className="m-0 mt-1 text-xs leading-relaxed text-text-muted">
-            导入成功后会在目录树当前位置为每个文件新建同名文档（已存在则覆盖）并打开最后一个导入文档；视频会被识别但暂不自动上传。
+            后台图片任务不会阻塞编辑；视频会被识别但暂不自动上传。
           </p>
         </div>
 
@@ -168,37 +146,7 @@ export default function ImportMarkdownDialog({
           />
         )}
 
-        {progress && (
-          <div className={statusClass}>
-            <div className="flex items-center gap-2 font-semibold text-text">
-              {progress.phase === "done" ? (
-                <CheckCircle2 size={14} className="text-success" />
-              ) : (
-                <Loader2 size={14} className="animate-spin text-accent" />
-              )}
-              {phaseText[progress.phase] || progress.phase}
-            </div>
-            {typeof progress.total === "number" && (
-              <div className="text-text-muted">进度 {progress.completed || 0} / {progress.total}</div>
-            )}
-            {progress.current && <div className={pathClass}>{progress.current}</div>}
-          </div>
-        )}
-
         {error && <div className="rounded-md bg-danger/10 px-3.5 py-3 text-xs leading-relaxed text-danger shadow-[inset_0_0_0_1px_rgba(229,72,77,0.14)]">{error}</div>}
-
-        {result && (
-          <div className={statusClass}>
-            <div className="mb-1.5 flex items-center gap-2 font-semibold text-text">
-              <CheckCircle2 size={14} className="text-success" />
-              导入结果
-            </div>
-            <div>共识别 {result.totalRefs} 个媒体引用，成功上传 {totalUploaded} 张图片。</div>
-            <div>本地图片 {result.uploadedLocal.length}，在线图片 {result.uploadedRemote.length}，失败 {totalFailed}，未处理 {totalUnsupported}。</div>
-            {totalFailed > 0 && <DetailList title="失败项" items={result.failed} />}
-            {totalUnsupported > 0 && <DetailList title="未处理项" items={result.unsupported} />}
-          </div>
-        )}
       </div>
     </Dialog>
   );
@@ -255,24 +203,3 @@ function FieldPicker({
     </div>
   );
 }
-
-function DetailList({title, items}: {title: string; items: Array<{originalUrl: string; reason?: string}>}) {
-  return (
-    <details className="mt-2">
-      <summary className="cursor-pointer">{title}</summary>
-      <ul className="mt-1.5 max-h-[120px] overflow-auto pl-[18px]">
-        {items.slice(0, 20).map((item, index) => (
-          <li key={`${item.originalUrl}-${index}`} className="leading-normal">
-            <span className="text-text-secondary">{item.originalUrl}</span>
-            {item.reason && <span className="text-text-muted"> — {item.reason}</span>}
-          </li>
-        ))}
-      </ul>
-    </details>
-  );
-}
-
-const statusClass =
-  "rounded-md bg-bg-secondary px-3.5 py-3 text-xs leading-relaxed text-text " +
-  "shadow-[inset_0_0_0_1px_rgba(26,26,30,0.05),inset_0_1px_0_rgba(255,255,255,0.94)]";
-const pathClass = "overflow-hidden text-ellipsis whitespace-nowrap text-text-muted";

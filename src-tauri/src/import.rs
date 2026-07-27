@@ -23,20 +23,28 @@ pub struct ResolvedMedia {
 }
 
 #[tauri::command]
-pub fn pick_markdown_file(app: tauri::AppHandle) -> Result<Option<String>, String> {
+pub async fn pick_markdown_file(
+    app: tauri::AppHandle,
+    window: tauri::Window,
+) -> Result<Option<String>, String> {
     let path = app
         .dialog()
         .file()
+        .set_parent(&window)
         .add_filter("Markdown", &["md", "markdown"])
         .blocking_pick_file();
     Ok(path.and_then(|p| p.as_path().map(path_to_string)))
 }
 
 #[tauri::command]
-pub fn pick_markdown_files(app: tauri::AppHandle) -> Result<Option<Vec<String>>, String> {
+pub async fn pick_markdown_files(
+    app: tauri::AppHandle,
+    window: tauri::Window,
+) -> Result<Option<Vec<String>>, String> {
     let paths = app
         .dialog()
         .file()
+        .set_parent(&window)
         .add_filter("Markdown", &["md", "markdown"])
         .blocking_pick_files();
     Ok(paths.map(|paths| {
@@ -48,18 +56,29 @@ pub fn pick_markdown_files(app: tauri::AppHandle) -> Result<Option<Vec<String>>,
 }
 
 #[tauri::command]
-pub fn pick_image_file(app: tauri::AppHandle) -> Result<Option<String>, String> {
+pub async fn pick_image_file(
+    app: tauri::AppHandle,
+    window: tauri::Window,
+) -> Result<Option<String>, String> {
     let path = app
         .dialog()
         .file()
+        .set_parent(&window)
         .add_filter("图片", &IMAGE_EXTS)
         .blocking_pick_file();
     Ok(path.and_then(|p| p.as_path().map(path_to_string)))
 }
 
 #[tauri::command]
-pub fn pick_resource_dir(app: tauri::AppHandle) -> Result<Option<String>, String> {
-    let path = app.dialog().file().blocking_pick_folder();
+pub async fn pick_resource_dir(
+    app: tauri::AppHandle,
+    window: tauri::Window,
+) -> Result<Option<String>, String> {
+    let path = app
+        .dialog()
+        .file()
+        .set_parent(&window)
+        .blocking_pick_folder();
     Ok(path.and_then(|p| p.as_path().map(path_to_string)))
 }
 

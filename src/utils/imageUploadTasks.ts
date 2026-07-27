@@ -1,7 +1,10 @@
 import {listen, type UnlistenFn} from "@tauri-apps/api/event";
 
 export type ImageUploadPhase =
+  | "queued"
   | "reading"
+  | "resolving"
+  | "processing"
   | "downloading"
   | "preparing"
   | "compressing"
@@ -14,7 +17,9 @@ export type ImageUploadStatus = "active" | "success" | "error";
 export interface ImageUploadTask {
   id: string;
   filename: string;
-  category: "正文图片" | "导入图片" | "封面图片";
+  category: "正文图片" | "导入图片" | "封面图片" | "文章导入";
+  documentPath?: string;
+  documentTitle?: string;
   phase: ImageUploadPhase;
   status: ImageUploadStatus;
   originalSize?: number;
@@ -22,6 +27,13 @@ export interface ImageUploadTask {
   error?: string;
   startedAt: number;
   updatedAt: number;
+  expiresAt?: number;
+}
+
+export interface ImageUploadTaskContext {
+  category?: ImageUploadTask["category"];
+  documentPath?: string | null;
+  documentTitle?: string;
 }
 
 export interface ImageUploadProgressEvent {
@@ -37,6 +49,7 @@ type Listener = () => void;
 const listeners = new Set<Listener>();
 let tasks: ImageUploadTask[] = [];
 let fallbackId = 0;
+const FINISHED_RETENTION_MS = 60_000;
 
 function emit() {
   for (const listener of listeners) listener();
@@ -62,12 +75,16 @@ function newTaskId(): string {
 
 function trimHistory(items: ImageUploadTask[]): ImageUploadTask[] {
   const active = items.filter((task) => task.status === "active");
-  const finished = items.filter((task) => task.status !== "active").slice(0, 20);
+  const finished = items.filter((task) => task.status !== "active").slice(0, 50);
   return [...active, ...finished].sort((a, b) => b.startedAt - a.startedAt);
 }
 
 export const imageUploadTasks = {
-  start(filename: string, category: ImageUploadTask["category"]): string {
+  start(
+    filename: string,
+    category: ImageUploadTask["category"],
+    context: Omit<ImageUploadTaskContext, "category"> = {},
+  ): string {
     const id = newTaskId();
     const now = Date.now();
     tasks = trimHistory([
@@ -75,6 +92,8 @@ export const imageUploadTasks = {
         id,
         filename: filename || "图片",
         category,
+        documentPath: context.documentPath || undefined,
+        documentTitle: context.documentTitle,
         phase: "reading",
         status: "active",
         startedAt: now,
@@ -98,29 +117,63 @@ export const imageUploadTasks = {
   },
 
   complete(id: string) {
-    replaceTask(id, (task) => ({
-      ...task,
-      phase: "completed",
-      status: "success",
-      updatedAt: Date.now(),
-    }));
+    const now = Date.now();
+    let changed = false;
+    tasks = tasks.map((task) => {
+      if (task.id === id) {
+        changed = true;
+        return {
+          ...task,
+          phase: "completed",
+          status: "success",
+          updatedAt: now,
+          expiresAt: now + FINISHED_RETENTION_MS,
+        };
+      }
+      if (task.status === "success") {
+        return {...task, expiresAt: now + FINISHED_RETENTION_MS};
+      }
+      return task;
+    });
     tasks = trimHistory(tasks);
+    if (changed) emit();
   },
 
   fail(id: string, error: unknown) {
     const message = typeof error === "string" ? error : (error as Error)?.message || "图片上传失败";
-    replaceTask(id, (task) => ({
-      ...task,
-      phase: "failed",
-      status: "error",
-      error: message,
-      updatedAt: Date.now(),
-    }));
+    const now = Date.now();
+    let changed = false;
+    tasks = tasks.map((task) => {
+      if (task.id === id) {
+        changed = true;
+        return {
+          ...task,
+          phase: "failed",
+          status: "error",
+          error: message,
+          updatedAt: now,
+          expiresAt: undefined,
+        };
+      }
+      if (task.status === "success") {
+        return {...task, expiresAt: now + FINISHED_RETENTION_MS};
+      }
+      return task;
+    });
     tasks = trimHistory(tasks);
+    if (changed) emit();
   },
 
   clearFinished() {
     tasks = tasks.filter((task) => task.status === "active");
+    emit();
+  },
+
+  pruneExpired(now = Date.now()) {
+    if (tasks.some((task) => task.status === "active")) return;
+    const next = tasks.filter((task) => task.expiresAt === undefined || task.expiresAt > now);
+    if (next.length === tasks.length) return;
+    tasks = next;
     emit();
   },
 

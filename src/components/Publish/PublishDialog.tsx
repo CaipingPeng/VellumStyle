@@ -249,7 +249,10 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       nextThumbUploadIdRef.current === operation.id;
     setThumbUploading(true);
     try {
-      const id = await uploadThumb(file);
+      const id = await uploadThumb(file, {
+        documentPath: currentDocPath,
+        documentTitle: defaultTitle,
+      });
       if (!isCurrentOperation()) return;
       setThumbId(id);
       setSelectedMaterialId(null);
