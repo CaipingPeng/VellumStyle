@@ -99,7 +99,7 @@ function setValueByPath(styles: StyleItem[], path: string[], value: string): Sty
 }
 
 const AUTOSAVE_DELAY_MS = 1200;
-const CLOUD_SYNC_DELAY_MS = 1800;
+export const CLOUD_SYNC_DELAY_MS = 3 * 60 * 1000;
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
 let syncDrainPromise: Promise<void> | null = null;
 let syncQueued = false;
@@ -211,10 +211,12 @@ async function runCloudSyncOnce(): Promise<void> {
     // 远端可能刚下载/删除了主题映射；同步完成后重新读取文件，
     // 这样切换到远端文章时即可使用另一台设备的主题选择。
     await useStore.getState().loadDocumentThemes({persistMissing: true});
+    const hasPendingSync = syncTimer !== null || syncQueued;
+    const hasConflicts = summary.conflicts > 0;
     useStore.setState({
-      syncStatus: summary.conflicts > 0 ? "conflict" : "synced",
+      syncStatus: hasConflicts ? "conflict" : hasPendingSync ? "idle" : "synced",
       lastSyncedAt: summary.syncedAt ?? Date.now(),
-      syncMessage: summary.message,
+      syncMessage: hasPendingSync && !hasConflicts ? "" : summary.message,
     });
   } catch (error) {
     const message = typeof error === "string" ? error : (error as Error)?.message || "同步失败";
@@ -239,6 +241,10 @@ function startCloudSyncDrain(): Promise<void> {
 export function scheduleCloudSync(delayMs = CLOUD_SYNC_DELAY_MS): void {
   if (syncTimer) {
     clearTimeout(syncTimer);
+  }
+  const state = useStore.getState();
+  if (state.syncStatus === "synced" || state.syncStatus === "disabled") {
+    useStore.setState({syncStatus: "idle", syncMessage: ""});
   }
   syncTimer = setTimeout(() => {
     syncTimer = null;
@@ -443,7 +449,11 @@ export const useStore = create<EditorState>()(
           lastSavedAt: Date.now(),
         });
       },
-      runSyncNow: () => flushCloudSync(),
+      runSyncNow: async () => {
+        // 主动同步必须先落盘当前防抖中的编辑，确保云端读取的是最新本地快照。
+        await flushSave();
+        await flushCloudSync();
+      },
       updateStyleValue: (modelId, stylePath, value) =>
         set((s) => {
           // 用与显示一致的「有效主题」解析：若 markdownThemeId 在 themes 中找不到

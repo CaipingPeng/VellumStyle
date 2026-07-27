@@ -58,6 +58,7 @@ import {getCurrentWindow} from "@tauri-apps/api/window";
 import {ListTree, PanelLeft} from "lucide-react";
 import defaultContent from "./content.md?raw";
 import {applyAppearanceMode} from "./appearance/appearanceMode.ts";
+import {isManualSyncShortcut} from "./utils/manualSyncShortcut.ts";
 
 // 取树里第一篇文档路径（深度优先）。
 function flattenFirst(nodes: DocNode[]): string | null {
@@ -585,6 +586,22 @@ export default function App() {
     return () => {
       void unlisten.then((f) => f());
     };
+  }, []);
+
+  useEffect(() => {
+    const handleManualSync = (event: KeyboardEvent) => {
+      if (!isManualSyncShortcut(event)) return;
+      event.preventDefault();
+      if (event.repeat) return;
+      void (async () => {
+        await flushBackgroundDocumentOperations();
+        await useStore.getState().runSyncNow();
+      })().catch((error) => {
+        console.error("主动保存并同步失败：", error);
+      });
+    };
+    window.addEventListener("keydown", handleManualSync, true);
+    return () => window.removeEventListener("keydown", handleManualSync, true);
   }, []);
 
   // 编辑器 ↔ 预览 双向同步滚动。CodeMirror 的 .cm-scroller 首帧可能未挂载，rAF 重试到拿到为止。

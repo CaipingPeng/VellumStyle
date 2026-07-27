@@ -59,3 +59,16 @@ test("预览面板提供克制的活动边框触发点", async () => {
   assert.match(preview, /tabIndex=\{-1\}/);
   assert.match(preview, /onPointerDown=/);
 });
+
+test("Ctrl+S 先保存后台正文更新，再主动触发云同步", async () => {
+  const source = await appSource;
+  const shortcut = source.slice(
+    source.indexOf("const handleManualSync"),
+    source.indexOf("// 编辑器 ↔ 预览", source.indexOf("const handleManualSync")),
+  );
+  assert.match(shortcut, /isManualSyncShortcut\(event\)/);
+  assert.match(shortcut, /event\.preventDefault\(\)/);
+  assert.match(shortcut, /if \(event\.repeat\) return/);
+  assert.ok(shortcut.indexOf("flushBackgroundDocumentOperations()") < shortcut.indexOf("runSyncNow()"));
+  assert.match(shortcut, /addEventListener\("keydown", handleManualSync, true\)/);
+});
