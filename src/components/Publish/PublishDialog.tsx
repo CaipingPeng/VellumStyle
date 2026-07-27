@@ -581,7 +581,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
               {thumbUploading ? (
                 <div role="status" className="flex flex-col items-center px-6 text-center text-accent">
                   <Loader2 size={26} className="animate-spin" />
-                  <div className="mt-2 text-sm font-semibold">封面上传中…</div>
+                  <div className="mt-2 text-sm font-semibold">封面处理并上传中…</div>
                 </div>
               ) : thumbPreview ? (
                 <>

@@ -23,6 +23,11 @@ import {formatMarkdownImage, replaceMarkdownImageSizeByIndex} from "./markdown/i
 import {getActiveOutlineLine, parseMarkdownOutline} from "./utils/outline.ts";
 import {loadAllThemes} from "./themes/loader.ts";
 import {uploadImage, uploadLocalImage, type UploadError} from "./utils/upload.ts";
+import {
+  imageUploadTasks,
+  listenForImageUploadProgress,
+  type ImageUploadTask,
+} from "./utils/imageUploadTasks.ts";
 import {createScrollSync} from "./utils/syncScroll.ts";
 import {createDocument, writeDocument, type DocNode} from "./utils/documents.ts";
 import {formatSyncStatus as formatCloudSyncStatus, syncStatusTone, type CloudSyncTone} from "./utils/cloudSync.ts";
@@ -88,6 +93,38 @@ function StatusDivider() {
   return <span aria-hidden="true" className="h-3 w-px flex-none bg-border" />;
 }
 
+const uploadPhaseLabels: Record<ImageUploadTask["phase"], string> = {
+  reading: "读取文件",
+  downloading: "下载图片",
+  preparing: "准备上传",
+  compressing: "压缩中",
+  uploading: "上传中",
+  completed: "处理完成",
+  failed: "处理失败",
+};
+
+function cleanUploadLabel(value: string): string {
+  return value.replace(/[\r\n]+/g, " ").trim().slice(0, 120) || "图片";
+}
+
+function formatUploadSize(bytes: number): string {
+  return `${(bytes / 1024 / 1024).toFixed(bytes >= 10 * 1024 * 1024 ? 1 : 2)} MiB`;
+}
+
+function formatUploadPlaceholder(task: ImageUploadTask): string {
+  const sizes = task.originalSize
+    ? task.outputSize && task.outputSize !== task.originalSize
+      ? `，${formatUploadSize(task.originalSize)} → ${formatUploadSize(task.outputSize)}`
+      : `，${formatUploadSize(task.originalSize)}`
+    : "";
+  return `\n> 图片处理中：${cleanUploadLabel(task.filename)}（${uploadPhaseLabels[task.phase]}${sizes}）\n`;
+}
+
+function formatUploadFailure(task: ImageUploadTask): string {
+  const reason = cleanUploadLabel(task.error || "图片上传失败");
+  return `\n> 图片上传失败：${cleanUploadLabel(task.filename)}（${reason}）\n`;
+}
+
 export default function App() {
   const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, outlineOpen, saveStatus, lastSavedAt, syncStatus, lastSyncedAt, syncMessage, workspaceSplitRatio, appearanceMode, setContent, setThemes, loadTree, loadDocumentThemes, openDocument, toggleSidebar, toggleOutline, setWorkspaceSplitRatio} = useStore();
   useEffect(() => {
@@ -113,8 +150,52 @@ export default function App() {
     ? {duration: 0}
     : {duration: 0.14, ease: "easeOut" as const};
 
-  const insertUploadedImage = (url: string) => {
-    editorRef.current?.insertAtCursor(`\n${formatMarkdownImage({alt: "", url})}\n`);
+  const inlineUploadIdsRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    const unsubscribeTasks = imageUploadTasks.subscribe(() => {
+      for (const task of imageUploadTasks.getSnapshot()) {
+        if (!inlineUploadIdsRef.current.has(task.id)) continue;
+        if (task.status === "active") {
+          editorRef.current?.replaceUploadPlaceholder(task.id, formatUploadPlaceholder(task));
+        } else if (task.status === "error") {
+          editorRef.current?.replaceUploadPlaceholder(task.id, formatUploadFailure(task), true);
+          inlineUploadIdsRef.current.delete(task.id);
+        }
+      }
+    });
+
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    if (isTauriRuntime()) {
+      void listenForImageUploadProgress()
+        .then((cleanup) => {
+          if (disposed) cleanup();
+          else unlisten = cleanup;
+        })
+        .catch(() => undefined);
+    }
+    return () => {
+      disposed = true;
+      unsubscribeTasks();
+      unlisten?.();
+    };
+  }, []);
+
+  const beginInlineUpload = (taskId: string) => {
+    const task = imageUploadTasks.getSnapshot().find((item) => item.id === taskId);
+    if (!task) return;
+    inlineUploadIdsRef.current.add(taskId);
+    editorRef.current?.insertUploadPlaceholder(taskId, formatUploadPlaceholder(task));
+  };
+
+  const finishInlineUpload = (taskId: string, url: string) => {
+    editorRef.current?.replaceUploadPlaceholder(
+      taskId,
+      `\n${formatMarkdownImage({alt: "", url})}\n`,
+      true,
+    );
+    inlineUploadIdsRef.current.delete(taskId);
   };
 
   const handleUploadError = (e: unknown) => {
@@ -129,16 +210,26 @@ export default function App() {
 
   // 上传按钮和粘贴共用一条路径：上传 → 光标处插入 → 统一错误提示。
   const handleUploadFile = async (file: File) => {
+    let taskId: string | null = null;
     try {
-      insertUploadedImage(await uploadImage(file));
+      const url = await uploadImage(file, (id) => {
+        taskId = id;
+        beginInlineUpload(id);
+      });
+      if (taskId) finishInlineUpload(taskId, url);
     } catch (e) {
       handleUploadError(e);
     }
   };
 
   const handleUploadLocal = async (path: string) => {
+    let taskId: string | null = null;
     try {
-      insertUploadedImage(await uploadLocalImage(path));
+      const url = await uploadLocalImage(path, "正文图片", (id) => {
+        taskId = id;
+        beginInlineUpload(id);
+      });
+      if (taskId) finishInlineUpload(taskId, url);
     } catch (e) {
       handleUploadError(e);
     }

@@ -6,6 +6,7 @@ import {
   type MediaSourceType,
 } from "./markdownMediaScanner.ts";
 import {formatMarkdownImage} from "../markdown/imageMarkdown.ts";
+import {uploadLocalImage, uploadRemoteImage} from "./upload.ts";
 
 export type ImportPhase = "reading" | "scanning" | "resolving" | "uploading" | "replacing" | "done";
 
@@ -160,7 +161,7 @@ async function uploadLocalRef(
     return cached;
   }
 
-  const url = await invoke<string>("upload_local_image", {path: resolved.path});
+  const url = await uploadLocalImage(resolved.path, "导入图片");
   uploadCache.set(cacheKey, url);
   result.uploadedLocal.push(toItem(ref, undefined, resolved.path, url));
   return url;
@@ -179,7 +180,7 @@ async function uploadRemoteRef(
     return cached;
   }
 
-  const url = await invoke<string>("upload_remote_image", {url: normalized});
+  const url = await uploadRemoteImage(normalized, "导入图片");
   uploadCache.set(cacheKey, url);
   result.uploadedRemote.push(toItem(ref, undefined, undefined, url));
   return url;

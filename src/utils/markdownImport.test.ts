@@ -20,7 +20,10 @@ test("importMarkdownFile normalizes html img tags to standard Markdown image syn
         };
       }
       if (cmd === "upload_remote_image") {
-        assert.deepEqual(args, {url: sourceUrl});
+        const uploadArgs = args as {url: string; taskId: string};
+        assert.equal(uploadArgs.url, sourceUrl);
+        assert.equal(typeof uploadArgs.taskId, "string");
+        assert.ok(uploadArgs.taskId.length > 0);
         return uploadedUrl;
       }
       throw new Error(`unexpected command: ${cmd}`);
@@ -77,7 +80,9 @@ test("importMarkdownFile ignores code-example media while importing one genuine 
         };
       }
       if (cmd === "upload_remote_image") {
-        assert.deepEqual(args, {url: sourceUrl});
+        const uploadArgs = args as {url: string; taskId: string};
+        assert.equal(uploadArgs.url, sourceUrl);
+        assert.equal(typeof uploadArgs.taskId, "string");
         return uploadedUrl;
       }
       throw new Error(`unexpected command: ${cmd}`);
@@ -88,10 +93,11 @@ test("importMarkdownFile ignores code-example media while importing one genuine 
     const result = await importMarkdownFile({markdownPath: "C:\\article.md"});
 
     assert.equal(result.totalRefs, 1);
-    assert.deepEqual(commands, [
-      {cmd: "read_markdown_file", args: {path: "C:\\article.md"}},
-      {cmd: "upload_remote_image", args: {url: sourceUrl}},
-    ]);
+    assert.equal(commands.length, 2);
+    assert.deepEqual(commands[0], {cmd: "read_markdown_file", args: {path: "C:\\article.md"}});
+    assert.equal(commands[1].cmd, "upload_remote_image");
+    assert.equal((commands[1].args as {url: string}).url, sourceUrl);
+    assert.equal(typeof (commands[1].args as {taskId: string}).taskId, "string");
     assert.equal(result.uploadedRemote.length, 1);
     assert.equal(result.uploadedRemote[0].originalUrl, sourceUrl);
     assert.equal(result.uploadedRemote[0].replacementUrl, uploadedUrl);

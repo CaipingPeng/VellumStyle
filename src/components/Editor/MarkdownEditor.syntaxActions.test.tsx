@@ -46,6 +46,30 @@ test("runSyntaxAction 通过统一命令修改文档", async () => {
   }
 });
 
+test("图片占位符在继续编辑后仍能原位替换", async () => {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const ref = createRef<MarkdownEditorHandle>();
+  const changes: string[] = [];
+  await act(async () => {
+    root.render(<MarkdownEditor ref={ref} value="" appearanceMode="light" onChange={(value) => changes.push(value)} />);
+  });
+  try {
+    act(() => ref.current?.insertUploadPlaceholder("upload-1", "\n> 图片处理中\n"));
+    act(() => ref.current?.insertAtCursor("继续编辑"));
+    let replaced = false;
+    act(() => {
+      replaced = ref.current?.replaceUploadPlaceholder("upload-1", "\n![图片](https://example.com/image.jpg)\n", true) ?? false;
+    });
+    assert.equal(replaced, true);
+    assert.equal(changes[changes.length - 1], "\n![图片](https://example.com/image.jpg)\n继续编辑");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
 
 test("语法快捷键只在 CodeMirror 聚焦区域生效", async () => {
   const host = document.createElement("div");

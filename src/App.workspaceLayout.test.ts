@@ -45,6 +45,7 @@ test("状态栏保留完整信息并只用细竖线分隔相邻项目", async ()
   }
   assert.match(footer, /formatSaveStatus/);
   assert.match(footer, /formatCloudSyncStatus/);
+  assert.doesNotMatch(footer, /ImageUploadTaskCenter/);
   assert.match(footer, /<PreviewModeToggle variant="status"/);
   assert.equal((footer.match(/<StatusDivider \/>/g) ?? []).length, 7);
 });

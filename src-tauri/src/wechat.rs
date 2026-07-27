@@ -2,19 +2,25 @@
 // secret 不出前端：前端只调 upload_image command，凭证仅 Rust 读 config。
 
 use crate::config::load_wechat_config;
+use image::codecs::jpeg::{JpegDecoder, JpegEncoder};
+use image::codecs::png::{CompressionType, FilterType, PngEncoder};
+use image::{DynamicImage, ImageDecoder, ImageEncoder, ImageFormat};
 use reqwest::redirect::Policy;
+use resvg::tiny_skia;
+use resvg::usvg;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::io;
+use std::io::{self, Cursor};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::path::Path;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
-use tauri::AppHandle;
-use resvg::usvg;
-use resvg::tiny_skia;
+use tauri::{AppHandle, Emitter};
 
 const MAX_SIZE: usize = 10 * 1024 * 1024; // add_material 图片限制 10MB
+const TARGET_SIZE: usize = MAX_SIZE; // 实测微信接受正好 10MiB，超出 1 字节返回 45001
+const MAX_SOURCE_SIZE: usize = 50 * 1024 * 1024;
+const MAX_DECODED_PIXELS: u64 = 50_000_000;
 const ALLOWED_TYPES: [&str; 3] = ["image/jpeg", "image/png", "image/gif"];
 
 // 防盗链图片域名白名单，防 SSRF。
@@ -36,6 +42,39 @@ const OUTBOUND_IP_ENDPOINTS: [&str; 4] = [
 ];
 
 const WECHAT_IP_WHITELIST_HINT: &str = "请去微信后台 IP 白名单设置：在微信公众平台「设置与开发 → 基本配置 → IP 白名单」添加/更换当前出口 IP；可在本软件设置页一键获取出口 IP。";
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ImageUploadProgress {
+    task_id: String,
+    phase: &'static str,
+    filename: String,
+    original_size: Option<usize>,
+    output_size: Option<usize>,
+}
+
+fn emit_upload_progress(
+    app: &AppHandle,
+    task_id: &Option<String>,
+    phase: &'static str,
+    filename: &str,
+    original_size: Option<usize>,
+    output_size: Option<usize>,
+) {
+    let Some(task_id) = task_id.as_ref() else {
+        return;
+    };
+    let _ = app.emit(
+        "image-upload-progress",
+        ImageUploadProgress {
+            task_id: task_id.clone(),
+            phase,
+            filename: filename.to_string(),
+            original_size,
+            output_size,
+        },
+    );
+}
 
 #[derive(Deserialize)]
 struct TokenResp {
@@ -221,8 +260,8 @@ fn is_wechat_ip_whitelist_error(errcode: Option<i64>, errmsg: &str) -> bool {
 }
 
 fn parse_material_page_response(body: &str) -> Result<MaterialImagePage, (Option<i64>, String)> {
-    let data: MaterialListResp = serde_json::from_str(body)
-        .map_err(|e| (None, format!("解析素材库响应失败：{e}")))?;
+    let data: MaterialListResp =
+        serde_json::from_str(body).map_err(|e| (None, format!("解析素材库响应失败：{e}")))?;
 
     if let Some(code) = data.errcode {
         if code != 0 {
@@ -378,15 +417,29 @@ pub async fn upload_image(
     bytes: Vec<u8>,
     filename: String,
     mime: String,
+    task_id: Option<String>,
 ) -> Result<String, String> {
-    upload_image_bytes(app, bytes, filename, mime).await
+    upload_image_bytes(app, bytes, filename, mime, task_id).await
 }
 
 #[tauri::command]
-pub async fn upload_local_image(app: AppHandle, path: String) -> Result<String, String> {
+pub async fn upload_local_image(
+    app: AppHandle,
+    path: String,
+    task_id: Option<String>,
+) -> Result<String, String> {
+    let display_name = Path::new(&path)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("本地图片");
+    emit_upload_progress(&app, &task_id, "reading", display_name, None, None);
     let path = fs::canonicalize(path).map_err(|e| format!("读取本地图片路径失败：{e}"))?;
     if !path.is_file() {
         return Err("本地图片不存在".into());
+    }
+    let meta = fs::metadata(&path).map_err(|e| format!("读取本地图片信息失败：{e}"))?;
+    if meta.len() as usize > MAX_SOURCE_SIZE {
+        return Err("原始图片不能超过 50MB".into());
     }
 
     // 检查是否为 SVG 文件
@@ -395,41 +448,30 @@ pub async fn upload_local_image(app: AppHandle, path: String) -> Result<String, 
         .and_then(|v| v.to_str())
         .map(|s| s.to_ascii_lowercase())
         .unwrap_or_default();
-    
+
     let (bytes, filename, mime) = if ext == "svg" {
         // SVG 转 PNG
         let png_bytes = convert_svg_to_png(&path)?;
-        
-        if png_bytes.len() > MAX_SIZE {
-            return Err("SVG 转换后的 PNG 超过 10MB，请尝试缩小 SVG 尺寸".into());
-        }
-        
-        let original_name = path
-            .file_stem()
-            .and_then(|v| v.to_str())
-            .unwrap_or("image");
+
+        let original_name = path.file_stem().and_then(|v| v.to_str()).unwrap_or("image");
         let new_filename = format!("{}.png", original_name);
-        
+
         (png_bytes, new_filename, "image/png")
     } else {
         // 常规图片处理
-        let meta = fs::metadata(&path).map_err(|e| format!("读取本地图片信息失败：{e}"))?;
-        if meta.len() as usize > MAX_SIZE {
-            return Err("图片不能超过 10MB".into());
-        }
-
-        let mime = mime_from_path(&path).ok_or_else(|| "仅支持 jpg/png/gif/svg 图片".to_string())?;
+        let mime =
+            mime_from_path(&path).ok_or_else(|| "仅支持 jpg/png/gif/svg 图片".to_string())?;
         let filename = path
             .file_name()
             .and_then(|v| v.to_str())
             .unwrap_or("image")
             .to_string();
         let bytes = fs::read(&path).map_err(|e| format!("读取本地图片失败：{e}"))?;
-        
+
         (bytes, filename, mime)
     };
 
-    upload_image_bytes(app, bytes, filename, mime.into()).await
+    upload_image_bytes(app, bytes, filename, mime.into(), task_id).await
 }
 
 struct DownloadedImage {
@@ -439,9 +481,14 @@ struct DownloadedImage {
 }
 
 #[tauri::command]
-pub async fn upload_remote_image(app: AppHandle, url: String) -> Result<String, String> {
+pub async fn upload_remote_image(
+    app: AppHandle,
+    url: String,
+    task_id: Option<String>,
+) -> Result<String, String> {
+    emit_upload_progress(&app, &task_id, "downloading", "远程图片", None, None);
     let image = download_remote_image(&url).await?;
-    upload_image_bytes(app, image.bytes, image.filename, image.mime).await
+    upload_image_bytes(app, image.bytes, image.filename, image.mime, task_id).await
 }
 
 async fn download_remote_image(raw_url: &str) -> Result<DownloadedImage, String> {
@@ -486,8 +533,8 @@ async fn download_remote_image(raw_url: &str) -> Result<DownloadedImage, String>
     }
 
     if let Some(len) = resp.content_length() {
-        if len as usize > MAX_SIZE {
-            return Err("图片不能超过 10MB".into());
+        if len as usize > MAX_SOURCE_SIZE {
+            return Err("原始图片不能超过 50MB".into());
         }
     }
 
@@ -497,13 +544,21 @@ async fn download_remote_image(raw_url: &str) -> Result<DownloadedImage, String>
         .and_then(|v| v.to_str().ok())
         .and_then(normalize_mime)
         .map(str::to_string);
-    let bytes = resp
-        .bytes()
+    let mut resp = resp;
+    let mut bytes = Vec::with_capacity(
+        resp.content_length()
+            .unwrap_or(0)
+            .min(MAX_SOURCE_SIZE as u64) as usize,
+    );
+    while let Some(chunk) = resp
+        .chunk()
         .await
         .map_err(|e| format!("读取远程图片失败：{e}"))?
-        .to_vec();
-    if bytes.len() > MAX_SIZE {
-        return Err("图片不能超过 10MB".into());
+    {
+        if bytes.len().saturating_add(chunk.len()) > MAX_SOURCE_SIZE {
+            return Err("原始图片不能超过 50MB".into());
+        }
+        bytes.extend_from_slice(&chunk);
     }
 
     let mime = content_type
@@ -521,11 +576,200 @@ async fn download_remote_image(raw_url: &str) -> Result<DownloadedImage, String>
     })
 }
 
+#[derive(Debug)]
+struct PreparedUpload {
+    bytes: Vec<u8>,
+    filename: String,
+    mime: String,
+}
+
+async fn prepare_upload_async(
+    bytes: Vec<u8>,
+    filename: String,
+    mime: String,
+) -> Result<PreparedUpload, String> {
+    tokio::task::spawn_blocking(move || {
+        prepare_upload_for_limit(bytes, filename, mime, MAX_SIZE, TARGET_SIZE)
+    })
+    .await
+    .map_err(|e| format!("图片压缩任务失败：{e}"))?
+}
+
+fn prepare_upload_for_limit(
+    bytes: Vec<u8>,
+    filename: String,
+    mime: String,
+    max_size: usize,
+    target_size: usize,
+) -> Result<PreparedUpload, String> {
+    if bytes.len() > MAX_SOURCE_SIZE {
+        return Err("原始图片不能超过 50MB".into());
+    }
+    if bytes.len() <= max_size {
+        return Ok(PreparedUpload {
+            bytes,
+            filename,
+            mime,
+        });
+    }
+    if mime == "image/gif" {
+        return Err("GIF 超过 10MB，暂时无法在保留动画的情况下自动压缩".into());
+    }
+
+    let format = match mime.as_str() {
+        "image/jpeg" => ImageFormat::Jpeg,
+        "image/png" => ImageFormat::Png,
+        _ => return Err("仅支持 jpg/png/gif 图片".into()),
+    };
+    let (width, height) = image::ImageReader::with_format(Cursor::new(bytes.as_slice()), format)
+        .into_dimensions()
+        .map_err(|e| format!("读取图片尺寸失败：{e}"))?;
+    let pixels = u64::from(width) * u64::from(height);
+    if pixels > MAX_DECODED_PIXELS {
+        return Err("图片像素过大，最大支持 5000 万像素".into());
+    }
+
+    let image = decode_for_reencoding(&bytes, format)?;
+    let original_size = bytes.len();
+    let prepared = if mime == "image/jpeg" {
+        compress_jpeg(image, filename, target_size)?
+    } else {
+        compress_png(image, filename, target_size)?
+    };
+    if prepared.bytes.len() > max_size {
+        return Err("图片在保持原分辨率后仍超过 10MB，请先转换或裁剪图片".into());
+    }
+    eprintln!(
+        "图片已自动压缩：{:.2}MB -> {:.2}MB",
+        original_size as f64 / 1024.0 / 1024.0,
+        prepared.bytes.len() as f64 / 1024.0 / 1024.0
+    );
+    Ok(prepared)
+}
+
+fn decode_for_reencoding(bytes: &[u8], format: ImageFormat) -> Result<DynamicImage, String> {
+    if format == ImageFormat::Jpeg {
+        let mut decoder =
+            JpegDecoder::new(Cursor::new(bytes)).map_err(|e| format!("解码 JPEG 失败：{e}"))?;
+        let orientation = decoder
+            .orientation()
+            .map_err(|e| format!("读取 JPEG 方向失败：{e}"))?;
+        let mut image =
+            DynamicImage::from_decoder(decoder).map_err(|e| format!("解码 JPEG 失败：{e}"))?;
+        image.apply_orientation(orientation);
+        Ok(image)
+    } else {
+        image::load_from_memory_with_format(bytes, format).map_err(|e| format!("解码图片失败：{e}"))
+    }
+}
+
+fn compress_jpeg(
+    image: DynamicImage,
+    filename: String,
+    target_size: usize,
+) -> Result<PreparedUpload, String> {
+    let encoded = best_jpeg_under(&image, target_size)?;
+    if let Some(bytes) = encoded {
+        return Ok(PreparedUpload {
+            bytes,
+            filename: replace_extension(&filename, "jpg"),
+            mime: "image/jpeg".into(),
+        });
+    }
+    Err("图片在保持原分辨率后仍超过 10MB，请先转换或裁剪图片".into())
+}
+
+fn compress_png(
+    image: DynamicImage,
+    filename: String,
+    target_size: usize,
+) -> Result<PreparedUpload, String> {
+    let has_alpha = image.color().has_alpha();
+    let compression = if has_alpha {
+        CompressionType::Default
+    } else {
+        CompressionType::Fast
+    };
+    let encoded = encode_png(&image, compression)?;
+    if encoded.len() <= target_size {
+        return Ok(PreparedUpload {
+            bytes: encoded,
+            filename: replace_extension(&filename, "png"),
+            mime: "image/png".into(),
+        });
+    }
+
+    compress_jpeg(image, replace_extension(&filename, "jpg"), target_size)
+}
+
+fn best_jpeg_under(image: &DynamicImage, target_size: usize) -> Result<Option<Vec<u8>>, String> {
+    let rgb = rgb_on_white(image);
+    let mut low = 1i16;
+    let mut high = 100i16;
+    let mut best = None;
+    while low <= high {
+        let quality = ((low + high) / 2) as u8;
+        let mut bytes = Vec::new();
+        JpegEncoder::new_with_quality(&mut bytes, quality)
+            .encode(
+                rgb.as_raw(),
+                rgb.width(),
+                rgb.height(),
+                image::ExtendedColorType::Rgb8,
+            )
+            .map_err(|e| format!("JPEG 编码失败：{e}"))?;
+        if bytes.len() <= target_size {
+            best = Some(bytes);
+            low = quality as i16 + 1;
+        } else {
+            high = quality as i16 - 1;
+        }
+    }
+    Ok(best)
+}
+
+fn rgb_on_white(image: &DynamicImage) -> image::RgbImage {
+    if !image.color().has_alpha() {
+        return image.to_rgb8();
+    }
+    let rgba = image.to_rgba8();
+    image::RgbImage::from_fn(rgba.width(), rgba.height(), |x, y| {
+        let pixel = rgba.get_pixel(x, y).0;
+        let alpha = u16::from(pixel[3]);
+        let blend =
+            |channel: u8| ((u16::from(channel) * alpha + 255 * (255 - alpha) + 127) / 255) as u8;
+        image::Rgb([blend(pixel[0]), blend(pixel[1]), blend(pixel[2])])
+    })
+}
+
+fn encode_png(image: &DynamicImage, compression: CompressionType) -> Result<Vec<u8>, String> {
+    let mut bytes = Vec::new();
+    PngEncoder::new_with_quality(&mut bytes, compression, FilterType::Adaptive)
+        .write_image(
+            image.as_bytes(),
+            image.width(),
+            image.height(),
+            image.color().into(),
+        )
+        .map_err(|e| format!("PNG 编码失败：{e}"))?;
+    Ok(bytes)
+}
+
+fn replace_extension(filename: &str, extension: &str) -> String {
+    let stem = Path::new(filename)
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.is_empty())
+        .unwrap_or("image");
+    format!("{stem}.{extension}")
+}
+
 async fn upload_image_bytes(
     app: AppHandle,
     bytes: Vec<u8>,
     filename: String,
     mime: String,
+    task_id: Option<String>,
 ) -> Result<String, String> {
     let cfg = load_wechat_config(&app);
     if !cfg.is_configured() {
@@ -534,23 +778,42 @@ async fn upload_image_bytes(
     if !ALLOWED_TYPES.contains(&mime.as_str()) {
         return Err("仅支持 jpg/png/gif 图片".into());
     }
-    if bytes.len() > MAX_SIZE {
-        return Err("图片不能超过 10MB".into());
-    }
-
     let name = if filename.is_empty() {
         "image".to_string()
     } else {
         filename
     };
+    let original_size = bytes.len();
+    let phase = if original_size > MAX_SIZE {
+        "compressing"
+    } else {
+        "preparing"
+    };
+    emit_upload_progress(&app, &task_id, phase, &name, Some(original_size), None);
+    let prepared = prepare_upload_async(bytes, name, mime).await?;
+    emit_upload_progress(
+        &app,
+        &task_id,
+        "uploading",
+        &prepared.filename,
+        Some(original_size),
+        Some(prepared.bytes.len()),
+    );
     let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
-    match upload_to_wechat(&token, bytes.clone(), &name, &mime).await {
+    match upload_to_wechat(
+        &token,
+        prepared.bytes.clone(),
+        &prepared.filename,
+        &prepared.mime,
+    )
+    .await
+    {
         Ok(url) => Ok(url),
         Err((errcode, msg)) => {
             if matches!(errcode, Some(40001) | Some(42001) | Some(40014)) {
                 clear_token_blocking();
                 let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
-                upload_to_wechat(&token, bytes, &name, &mime)
+                upload_to_wechat(&token, prepared.bytes, &prepared.filename, &prepared.mime)
                     .await
                     .map_err(|(_, m)| m)
             } else {
@@ -624,32 +887,34 @@ fn mime_from_ext(ext: &str) -> Option<&'static str> {
     }
 }
 
-
 fn convert_svg_to_png(svg_path: &Path) -> Result<Vec<u8>, String> {
     let svg_data = fs::read(svg_path).map_err(|e| format!("读取 SVG 文件失败：{e}"))?;
-    
+
     let mut opt = usvg::Options::default();
     opt.fontdb_mut().load_system_fonts();
-    
-    let tree = usvg::Tree::from_data(&svg_data, &opt)
-        .map_err(|e| format!("解析 SVG 文件失败：{e}"))?;
-    
+
+    let tree =
+        usvg::Tree::from_data(&svg_data, &opt).map_err(|e| format!("解析 SVG 文件失败：{e}"))?;
+
     let size = tree.size();
     let width = size.width() as u32;
     let height = size.height() as u32;
-    
+
     // 限制最大尺寸，避免内存溢出
     let max_dimension = 4096;
     let (width, height) = if width > max_dimension || height > max_dimension {
         let scale = (max_dimension as f32) / width.max(height) as f32;
-        ((width as f32 * scale) as u32, (height as f32 * scale) as u32)
+        (
+            (width as f32 * scale) as u32,
+            (height as f32 * scale) as u32,
+        )
     } else {
         (width, height)
     };
-    
-    let mut pixmap = tiny_skia::Pixmap::new(width, height)
-        .ok_or_else(|| "创建图片缓冲区失败".to_string())?;
-    
+
+    let mut pixmap =
+        tiny_skia::Pixmap::new(width, height).ok_or_else(|| "创建图片缓冲区失败".to_string())?;
+
     let transform = if width != size.width() as u32 || height != size.height() as u32 {
         let scale_x = width as f32 / size.width();
         let scale_y = height as f32 / size.height();
@@ -657,10 +922,12 @@ fn convert_svg_to_png(svg_path: &Path) -> Result<Vec<u8>, String> {
     } else {
         tiny_skia::Transform::identity()
     };
-    
+
     resvg::render(&tree, transform, &mut pixmap.as_mut());
-    
-    pixmap.encode_png().map_err(|e| format!("PNG 编码失败：{e}"))
+
+    pixmap
+        .encode_png()
+        .map_err(|e| format!("PNG 编码失败：{e}"))
 }
 
 fn normalize_mime(content_type: &str) -> Option<&'static str> {
@@ -796,14 +1063,20 @@ pub async fn upload_thumb(
     bytes: Vec<u8>,
     filename: String,
     mime: String,
+    task_id: Option<String>,
 ) -> Result<String, String> {
-    upload_thumb_bytes(app, bytes, filename, mime).await
+    upload_thumb_bytes(app, bytes, filename, mime, task_id).await
 }
 
 #[tauri::command]
-pub async fn upload_remote_thumb(app: AppHandle, url: String) -> Result<String, String> {
+pub async fn upload_remote_thumb(
+    app: AppHandle,
+    url: String,
+    task_id: Option<String>,
+) -> Result<String, String> {
+    emit_upload_progress(&app, &task_id, "downloading", "远程封面", None, None);
     let image = download_remote_image(&url).await?;
-    upload_thumb_bytes(app, image.bytes, image.filename, image.mime).await
+    upload_thumb_bytes(app, image.bytes, image.filename, image.mime, task_id).await
 }
 
 async fn upload_thumb_bytes(
@@ -811,6 +1084,7 @@ async fn upload_thumb_bytes(
     bytes: Vec<u8>,
     filename: String,
     mime: String,
+    task_id: Option<String>,
 ) -> Result<String, String> {
     let cfg = load_wechat_config(&app);
     if !cfg.is_configured() {
@@ -819,22 +1093,42 @@ async fn upload_thumb_bytes(
     if !ALLOWED_TYPES.contains(&mime.as_str()) {
         return Err("仅支持 jpg/png/gif 图片".into());
     }
-    if bytes.len() > MAX_SIZE {
-        return Err("图片不能超过 10MB".into());
-    }
     let name = if filename.is_empty() {
         "thumb".to_string()
     } else {
         filename
     };
+    let original_size = bytes.len();
+    let phase = if original_size > MAX_SIZE {
+        "compressing"
+    } else {
+        "preparing"
+    };
+    emit_upload_progress(&app, &task_id, phase, &name, Some(original_size), None);
+    let prepared = prepare_upload_async(bytes, name, mime).await?;
+    emit_upload_progress(
+        &app,
+        &task_id,
+        "uploading",
+        &prepared.filename,
+        Some(original_size),
+        Some(prepared.bytes.len()),
+    );
     let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
-    match upload_thumb_inner(&token, bytes.clone(), &name, &mime).await {
+    match upload_thumb_inner(
+        &token,
+        prepared.bytes.clone(),
+        &prepared.filename,
+        &prepared.mime,
+    )
+    .await
+    {
         Ok(id) => Ok(id),
         Err((errcode, msg)) => {
             if matches!(errcode, Some(40001) | Some(42001) | Some(40014)) {
                 clear_token_blocking();
                 let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
-                upload_thumb_inner(&token, bytes, &name, &mime)
+                upload_thumb_inner(&token, prepared.bytes, &prepared.filename, &prepared.mime)
                     .await
                     .map_err(|(_, m)| m)
             } else {
@@ -969,9 +1263,191 @@ pub async fn add_draft(
 #[cfg(test)]
 mod tests {
     use super::{
-        build_add_draft_body, format_wechat_error, get_outbound_ip, is_allowed_redirect_target,
-        parse_material_page_response, parse_outbound_ip_response, OUTBOUND_IP_ENDPOINTS,
+        build_add_draft_body, decode_for_reencoding, format_wechat_error, get_outbound_ip,
+        is_allowed_redirect_target, parse_material_page_response, parse_outbound_ip_response,
+        prepare_upload_for_limit, OUTBOUND_IP_ENDPOINTS,
     };
+    use image::{DynamicImage, ImageFormat, Rgb, RgbImage, Rgba, RgbaImage};
+    use std::io::Cursor;
+
+    fn noisy_rgb(width: u32, height: u32) -> DynamicImage {
+        DynamicImage::ImageRgb8(RgbImage::from_fn(width, height, |x, y| {
+            let value = x.wrapping_mul(73_856_093) ^ y.wrapping_mul(19_349_663);
+            Rgb([
+                value as u8,
+                value.rotate_left(9) as u8,
+                value.rotate_left(17) as u8,
+            ])
+        }))
+    }
+
+    fn noisy_rgba(width: u32, height: u32) -> DynamicImage {
+        DynamicImage::ImageRgba8(RgbaImage::from_fn(width, height, |x, y| {
+            let value = x.wrapping_mul(83_492_791) ^ y.wrapping_mul(2_654_435_761);
+            Rgba([
+                value as u8,
+                value.rotate_left(7) as u8,
+                value.rotate_left(15) as u8,
+                64 + value.rotate_left(23) as u8 % 192,
+            ])
+        }))
+    }
+
+    fn encode(image: &DynamicImage, format: ImageFormat) -> Vec<u8> {
+        let mut cursor = Cursor::new(Vec::new());
+        image.write_to(&mut cursor, format).unwrap();
+        cursor.into_inner()
+    }
+
+    fn with_exif_orientation(jpeg: &[u8], orientation: u8) -> Vec<u8> {
+        let mut exif = vec![
+            b'E',
+            b'x',
+            b'i',
+            b'f',
+            0,
+            0,
+            b'I',
+            b'I',
+            0x2a,
+            0,
+            8,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0x12,
+            1,
+            3,
+            0,
+            1,
+            0,
+            0,
+            0,
+            orientation,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        ];
+        let segment_len = (exif.len() + 2) as u16;
+        let mut result = Vec::with_capacity(jpeg.len() + exif.len() + 4);
+        result.extend_from_slice(&jpeg[..2]);
+        result.extend_from_slice(&[0xff, 0xe1]);
+        result.extend_from_slice(&segment_len.to_be_bytes());
+        result.append(&mut exif);
+        result.extend_from_slice(&jpeg[2..]);
+        result
+    }
+
+    #[test]
+    fn jpeg_exif_orientation_is_applied_before_reencoding() {
+        let jpeg = encode(&noisy_rgb(3, 2), ImageFormat::Jpeg);
+        let oriented = with_exif_orientation(&jpeg, 6);
+        let decoded = decode_for_reencoding(&oriented, ImageFormat::Jpeg).unwrap();
+
+        assert_eq!((decoded.width(), decoded.height()), (2, 3));
+    }
+
+    #[test]
+    fn images_within_the_limit_pass_through_unchanged() {
+        let bytes = vec![1, 2, 3];
+        let prepared = prepare_upload_for_limit(
+            bytes.clone(),
+            "small.jpg".into(),
+            "image/jpeg".into(),
+            10,
+            9,
+        )
+        .unwrap();
+
+        assert_eq!(prepared.bytes, bytes);
+        assert_eq!(prepared.filename, "small.jpg");
+        assert_eq!(prepared.mime, "image/jpeg");
+    }
+
+    #[test]
+    fn oversized_jpeg_is_reencoded_below_the_target() {
+        let original = encode(&noisy_rgb(512, 512), ImageFormat::Jpeg);
+        assert!(original.len() > 80_000);
+
+        let prepared = prepare_upload_for_limit(
+            original,
+            "photo.jpeg".into(),
+            "image/jpeg".into(),
+            80_000,
+            70_000,
+        )
+        .unwrap();
+
+        assert!(prepared.bytes.len() <= 70_000);
+        assert_eq!(prepared.filename, "photo.jpg");
+        assert_eq!(prepared.mime, "image/jpeg");
+        let decoded =
+            image::load_from_memory_with_format(&prepared.bytes, ImageFormat::Jpeg).unwrap();
+        assert_eq!((decoded.width(), decoded.height()), (512, 512));
+    }
+
+    #[test]
+    fn oversized_opaque_png_can_become_a_jpeg() {
+        let original = encode(&noisy_rgb(256, 256), ImageFormat::Png);
+        assert!(original.len() > 50_000);
+
+        let prepared = prepare_upload_for_limit(
+            original,
+            "screenshot.png".into(),
+            "image/png".into(),
+            50_000,
+            40_000,
+        )
+        .unwrap();
+
+        assert!(prepared.bytes.len() <= 40_000);
+        assert_eq!(prepared.filename, "screenshot.jpg");
+        assert_eq!(prepared.mime, "image/jpeg");
+        let decoded =
+            image::load_from_memory_with_format(&prepared.bytes, ImageFormat::Jpeg).unwrap();
+        assert_eq!((decoded.width(), decoded.height()), (256, 256));
+    }
+
+    #[test]
+    fn oversized_transparent_png_is_flattened_without_changing_dimensions() {
+        let original_image = noisy_rgba(256, 256);
+        let original = encode(&original_image, ImageFormat::Png);
+        assert!(original.len() > 50_000);
+
+        let prepared = prepare_upload_for_limit(
+            original,
+            "overlay.png".into(),
+            "image/png".into(),
+            50_000,
+            40_000,
+        )
+        .unwrap();
+        let decoded =
+            image::load_from_memory_with_format(&prepared.bytes, ImageFormat::Jpeg).unwrap();
+
+        assert!(prepared.bytes.len() <= 40_000);
+        assert_eq!(prepared.filename, "overlay.jpg");
+        assert_eq!(prepared.mime, "image/jpeg");
+        assert_eq!((decoded.width(), decoded.height()), (256, 256));
+    }
+
+    #[test]
+    fn oversized_gif_is_not_flattened() {
+        let mut bytes = b"GIF89a".to_vec();
+        bytes.resize(101, 0);
+        let error =
+            prepare_upload_for_limit(bytes, "animation.gif".into(), "image/gif".into(), 100, 90)
+                .err()
+                .unwrap();
+
+        assert!(error.contains("保留动画"));
+    }
 
     #[test]
     fn redirect_targets_must_remain_public_http_urls() {
@@ -1108,8 +1584,3 @@ mod tests {
         assert_eq!(actual, expected);
     }
 }
-
-
-
-
-

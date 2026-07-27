@@ -439,7 +439,7 @@ test("local cover upload shows loading in the cover area and disables publishing
   const coverButton = document.querySelector<HTMLButtonElement>('button[aria-label="封面图上传中"]');
   assert.ok(coverButton);
   assert.equal(coverButton.getAttribute("aria-busy"), "true");
-  assert.match(coverButton.textContent ?? "", /封面上传中/);
+  assert.match(coverButton.textContent ?? "", /封面处理并上传中/);
   assert.equal(buttonWithText("发布到草稿箱").disabled, true);
   assert.equal(buttonWithText("取消").disabled, false);
   assert.equal(Array.from(document.querySelectorAll("button")).some((button) => button.textContent?.includes("发布中")), false);

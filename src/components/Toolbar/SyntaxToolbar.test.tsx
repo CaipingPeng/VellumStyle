@@ -29,6 +29,8 @@ function withNavigatorPlatform(platform: string, callback: () => void) {
 function createEditorHandle(calls: SyntaxAction[]): MarkdownEditorHandle {
   return {
     insertAtCursor: () => {},
+    insertUploadPlaceholder: () => {},
+    replaceUploadPlaceholder: () => false,
     runSyntaxAction: (action) => calls.push(action),
     undo: () => {},
     redo: () => {},

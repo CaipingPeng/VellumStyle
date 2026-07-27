@@ -1,5 +1,7 @@
 // 发布草稿箱：上传封面拿 media_id + add_draft；发布前校验正文无未上传外链图。
 import {invoke} from "@tauri-apps/api/core";
+import {MAX_IMAGE_SOURCE_SIZE} from "./upload.ts";
+import {imageUploadTasks} from "./imageUploadTasks.ts";
 import type {MediaRef, MediaSourceType, MediaSyntax} from "./markdownMediaScanner.ts";
 import {scanMarkdownMedia} from "./markdownMediaScanner.ts";
 import {DEFAULT_PUBLISH_SETTINGS, type PublishSettings} from "./publishSettings.ts";
@@ -70,17 +72,37 @@ export function getCoverCandidates(markdown: string): CoverCandidate[] {
 }
 
 export async function uploadThumb(file: File): Promise<string> {
-  const buf = await file.arrayBuffer();
-  const bytes = Array.from(new Uint8Array(buf));
-  return invoke<string>("upload_thumb", {
-    bytes,
-    filename: file.name || "thumb",
-    mime: file.type,
-  });
+  if (file.size > MAX_IMAGE_SOURCE_SIZE) {
+    throw new Error("原始图片不能超过 50MB");
+  }
+  const taskId = imageUploadTasks.start(file.name || "thumb", "封面图片");
+  try {
+    const buf = await file.arrayBuffer();
+    const bytes = Array.from(new Uint8Array(buf));
+    const mediaId = await invoke<string>("upload_thumb", {
+      bytes,
+      filename: file.name || "thumb",
+      mime: file.type,
+      taskId,
+    });
+    imageUploadTasks.complete(taskId);
+    return mediaId;
+  } catch (error) {
+    imageUploadTasks.fail(taskId, error);
+    throw error;
+  }
 }
 
-export function uploadRemoteThumb(url: string): Promise<string> {
-  return invoke<string>("upload_remote_thumb", {url});
+export async function uploadRemoteThumb(url: string): Promise<string> {
+  const taskId = imageUploadTasks.start("远程封面", "封面图片");
+  try {
+    const mediaId = await invoke<string>("upload_remote_thumb", {url, taskId});
+    imageUploadTasks.complete(taskId);
+    return mediaId;
+  } catch (error) {
+    imageUploadTasks.fail(taskId, error);
+    throw error;
+  }
 }
 
 export function listImageMaterials(offset: number, count: number): Promise<MaterialImagePage> {

@@ -19,6 +19,9 @@ import {runSyntaxAction} from "./syntaxCommands.ts";
 export interface MarkdownEditorHandle {
   // 在当前光标处插入文本（替换选区）。供工具栏上传按钮调用。
   insertAtCursor: (text: string) => void;
+  // 插入并跟踪异步图片占位符；后续编辑造成的位置变化会自动映射。
+  insertUploadPlaceholder: (id: string, text: string) => void;
+  replaceUploadPlaceholder: (id: string, text: string, finish?: boolean) => boolean;
   // 统一语法动作入口，供工具栏与 CodeMirror 快捷键共用。
   runSyntaxAction: (action: SyntaxAction) => void;
   // 撤销/重做（CodeMirror history）。
@@ -62,6 +65,33 @@ const searchLoadedField = StateField.define<boolean>({
       }
     }
     return value;
+  },
+});
+
+interface UploadPlaceholderRange {
+  from: number;
+  to: number;
+  text: string;
+}
+
+const setUploadPlaceholderEffect = StateEffect.define<{id: string; range: UploadPlaceholderRange}>();
+const removeUploadPlaceholderEffect = StateEffect.define<string>();
+const uploadPlaceholderField = StateField.define<Map<string, UploadPlaceholderRange>>({
+  create: () => new Map(),
+  update(value, transaction) {
+    const next = new Map<string, UploadPlaceholderRange>();
+    for (const [id, range] of value) {
+      next.set(id, {
+        ...range,
+        from: transaction.changes.mapPos(range.from, 1),
+        to: transaction.changes.mapPos(range.to, -1),
+      });
+    }
+    for (const effect of transaction.effects) {
+      if (effect.is(setUploadPlaceholderEffect)) next.set(effect.value.id, effect.value.range);
+      if (effect.is(removeUploadPlaceholderEffect)) next.delete(effect.value);
+    }
+    return next;
   },
 });
 
@@ -229,6 +259,39 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         view.dispatch(view.state.replaceSelection(text));
         view.focus();
       },
+      insertUploadPlaceholder: (id, text) => {
+        const view = viewRef.current;
+        if (!view) return;
+        const selection = view.state.selection.main;
+        view.dispatch({
+          changes: {from: selection.from, to: selection.to, insert: text},
+          selection: {anchor: selection.from + text.length},
+          effects: setUploadPlaceholderEffect.of({
+            id,
+            range: {from: selection.from, to: selection.from + text.length, text},
+          }),
+        });
+        view.focus();
+      },
+      replaceUploadPlaceholder: (id, text, finish = false) => {
+        const view = viewRef.current;
+        if (!view) return false;
+        const range = view.state.field(uploadPlaceholderField).get(id);
+        if (!range || view.state.sliceDoc(range.from, range.to) !== range.text) {
+          if (range) view.dispatch({effects: removeUploadPlaceholderEffect.of(id)});
+          return false;
+        }
+        view.dispatch({
+          changes: {from: range.from, to: range.to, insert: text},
+          effects: finish
+            ? removeUploadPlaceholderEffect.of(id)
+            : setUploadPlaceholderEffect.of({
+                id,
+                range: {from: range.from, to: range.from + text.length, text},
+              }),
+        });
+        return true;
+      },
       runSyntaxAction: (action) => {
         const view = viewRef.current;
         if (!view) return;
@@ -297,6 +360,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         ...(cspNonce ? [EditorView.cspNonce.of(cspNonce)] : []),
         markdown({base: markdownLanguage, codeLanguages: languages}),
         searchLoadedField,
+        uploadPlaceholderField,
         searchCompartment.of([]),
         appearanceCompartment.of(createEditorAppearanceExtension(initialAppearanceModeRef.current)),
         Prec.highest(keymap.of([

@@ -65,7 +65,7 @@ const UploadButton = forwardRef<UploadButtonHandle, Props>(
               minWidth={148}
               trigger={
                 <IconButton
-                  title={uploading ? "上传中…" : "插入图片"}
+                  title={uploading ? "处理并上传中…" : "插入图片"}
                   active={menuOpen}
                   disabled={uploading}
                   onClick={() => setMenuOpen((open) => !open)}
@@ -94,7 +94,7 @@ const UploadButton = forwardRef<UploadButtonHandle, Props>(
               </MenuItem>
             </Menu>
           ) : (
-            <IconButton title={uploading ? "上传中…" : "上传图片"} disabled={uploading} onClick={() => void pickLocalImage()}>
+            <IconButton title={uploading ? "处理并上传中…" : "上传图片"} disabled={uploading} onClick={() => void pickLocalImage()}>
               <ImageUp size={16} />
             </IconButton>
           )
@@ -102,7 +102,7 @@ const UploadButton = forwardRef<UploadButtonHandle, Props>(
         {showTrigger && display === "button" && (
           <Button variant={variant} disabled={uploading} onClick={() => void pickLocalImage()}>
             <ImageUp size={14} />
-            {uploading ? "上传中…" : "上传图片"}
+            {uploading ? "处理并上传中…" : "上传图片"}
           </Button>
         )}
       </>
