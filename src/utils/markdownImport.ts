@@ -8,7 +8,13 @@ import {
 import {formatMarkdownImage} from "../markdown/imageMarkdown.ts";
 import {uploadLocalImage, uploadRemoteImage} from "./upload.ts";
 import {imageUploadTasks} from "./imageUploadTasks.ts";
-import {updateDocumentInBackground} from "./backgroundDocumentUpdates.ts";
+import {
+  createBackgroundDocumentTarget,
+  isBackgroundDocumentTargetCancelled,
+  releaseBackgroundDocumentTarget,
+  updateDocumentInBackground,
+  type BackgroundDocumentTarget,
+} from "./backgroundDocumentUpdates.ts";
 
 export type ImportPhase = "reading" | "scanning" | "resolving" | "uploading" | "replacing" | "done";
 
@@ -104,15 +110,23 @@ export async function processMarkdownImportInBackground(
   documentPath: string,
 ): Promise<ImportMarkdownResult> {
   const documentTitle = documentPath.split("/").pop() || documentPath;
-  return processPreparedMarkdownImport(prepared, undefined, {
-    documentPath,
-    documentTitle,
-    onUploaded: async (ref, uploadedUrl) => {
-      await updateDocumentInBackground(documentPath, (content) =>
-        replaceMatchingImageRefs(content, ref, uploadedUrl),
-      );
-    },
-  });
+  const documentTarget = createBackgroundDocumentTarget(documentPath);
+  try {
+    return await processPreparedMarkdownImport(prepared, undefined, {
+      documentTitle,
+      documentTarget,
+      onUploaded: async (ref, uploadedUrl) => {
+        await updateDocumentInBackground(documentTarget, (content) =>
+          replaceMatchingImageRefs(content, ref, uploadedUrl),
+        );
+        if (isBackgroundDocumentTargetCancelled(documentTarget)) {
+          throw new Error("文章已删除，图片写回已取消");
+        }
+      },
+    });
+  } finally {
+    releaseBackgroundDocumentTarget(documentTarget);
+  }
 }
 
 export function enqueueMarkdownImageImport(
@@ -159,8 +173,8 @@ export function enqueueMarkdownImageImport(
 }
 
 interface ProcessImportOptions {
-  documentPath: string;
   documentTitle: string;
+  documentTarget: BackgroundDocumentTarget;
   onUploaded: (ref: MediaRef, uploadedUrl: string) => Promise<void>;
 }
 
@@ -202,6 +216,11 @@ async function processPreparedMarkdownImport(
   }
 
   const processRef = async (ref: MediaRef) => {
+    if (background && isBackgroundDocumentTargetCancelled(background.documentTarget)) {
+      result.failed.push(toItem(ref, "文章已删除，图片处理已取消"));
+      completed += 1;
+      return;
+    }
     onProgress?.({
       phase: ref.sourceType === "local" ? "resolving" : "uploading",
       current: ref.originalUrl,
@@ -279,7 +298,11 @@ async function uploadLocalRef(
     const reason = resolved.reason || resolveFailureReason(resolved.status);
     result.failed.push(toItem(ref, reason));
     if (background) {
-      const taskId = imageUploadTasks.start(displayNameForRef(ref), "导入图片", background);
+      const taskId = imageUploadTasks.start(
+        displayNameForRef(ref),
+        "导入图片",
+        backgroundTaskContext(background),
+      );
       imageUploadTasks.progress({taskId, filename: displayNameForRef(ref), phase: "resolving"});
       imageUploadTasks.fail(taskId, reason);
     }
@@ -293,7 +316,7 @@ async function uploadLocalRef(
       resolved.path,
       "导入图片",
       undefined,
-      background || {},
+      backgroundTaskContext(background),
     );
     uploadCache.set(cacheKey, upload);
   }
@@ -312,12 +335,24 @@ async function uploadRemoteRef(
   const cacheKey = `remote:${normalized}`;
   let upload = uploadCache.get(cacheKey);
   if (!upload) {
-    upload = uploadRemoteImage(normalized, "导入图片", background || {});
+    upload = uploadRemoteImage(normalized, "导入图片", backgroundTaskContext(background));
     uploadCache.set(cacheKey, upload);
   }
   const url = await upload;
   result.uploadedRemote.push(toItem(ref, undefined, undefined, url));
   return url;
+}
+
+function backgroundTaskContext(background?: ProcessImportOptions): {
+  documentPath?: string;
+  documentTitle?: string;
+} {
+  if (!background) return {};
+  const documentPath = background.documentTarget.path;
+  return {
+    documentPath,
+    documentTitle: documentPath.split("/").pop() || background.documentTitle,
+  };
 }
 
 function replaceMatchingImageRefs(content: string, originalRef: MediaRef, uploadedUrl: string): string {

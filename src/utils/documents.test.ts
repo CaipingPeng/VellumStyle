@@ -33,6 +33,22 @@ test("非 Tauri 环境下文档 fallback 支持创建和写入", async () => {
   assert.ok((await listDocuments()).some((node) => node.path === path));
 });
 
+test("创建同名文档时自动生成唯一名称而不覆盖已有内容", async () => {
+  const first = await createDocument("", "导入重名测试");
+  await writeDocument(first, "第一篇");
+  const second = await createDocument("", "导入重名测试");
+  await writeDocument(second, "第二篇");
+
+  try {
+    assert.notEqual(second, first);
+    assert.equal(await readDocument(first), "第一篇");
+    assert.equal(await readDocument(second), "第二篇");
+  } finally {
+    await deleteEntry(first);
+    await deleteEntry(second);
+  }
+});
+
 test("非 Tauri 环境下主题元数据单独保存且不出现在文档树", async () => {
   await writeDocumentThemeMap({"主题元数据测试.md": "ink"});
 

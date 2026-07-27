@@ -169,6 +169,22 @@ export const imageUploadTasks = {
     emit();
   },
 
+  remapDocumentPaths(fromPath: string, toPath: string) {
+    let changed = false;
+    tasks = tasks.map((task) => {
+      if (!task.documentPath) return task;
+      const nextPath = task.documentPath === fromPath
+        ? toPath
+        : task.documentPath.startsWith(`${fromPath}/`)
+          ? `${toPath}${task.documentPath.slice(fromPath.length)}`
+          : null;
+      if (nextPath === null) return task;
+      changed = true;
+      return {...task, documentPath: nextPath, documentTitle: nextPath.split("/").pop()};
+    });
+    if (changed) emit();
+  },
+
   pruneExpired(now = Date.now()) {
     if (tasks.some((task) => task.status === "active")) return;
     const next = tasks.filter((task) => task.expiresAt === undefined || task.expiresAt > now);

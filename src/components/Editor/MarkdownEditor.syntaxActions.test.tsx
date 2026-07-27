@@ -23,6 +23,12 @@ function installEditorDomPolyfills() {
   });
   win.requestAnimationFrame = requestFrame;
   win.cancelAnimationFrame = cancelFrame;
+  if (!window.Range.prototype.getClientRects) {
+    window.Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
+  }
+  if (!window.Range.prototype.getBoundingClientRect) {
+    window.Range.prototype.getBoundingClientRect = () => new DOMRect();
+  }
 }
 
 installEditorDomPolyfills();
@@ -64,6 +70,32 @@ test("图片占位符在继续编辑后仍能原位替换", async () => {
     });
     assert.equal(replaced, true);
     assert.equal(changes[changes.length - 1], "\n![图片](https://example.com/image.jpg)\n继续编辑");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
+test("切换文章会清除旧文章的占位符范围", async () => {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const ref = createRef<MarkdownEditorHandle>();
+  await act(async () => {
+    root.render(<MarkdownEditor ref={ref} documentKey="a.md" value="文章 A" appearanceMode="light" onChange={() => {}} />);
+  });
+  try {
+    act(() => ref.current?.insertUploadPlaceholder("upload-a", "\n> 图片处理中\n"));
+    await act(async () => {
+      root.render(<MarkdownEditor ref={ref} documentKey="b.md" value="文章 B" appearanceMode="light" onChange={() => {}} />);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    let replaced = true;
+    act(() => {
+      replaced = ref.current?.replaceUploadPlaceholder("upload-a", "不应写入", true) ?? true;
+    });
+    assert.equal(replaced, false);
+    assert.equal(host.querySelector(".cm-content")?.textContent, "文章 B");
   } finally {
     await act(async () => root.unmount());
     host.remove();

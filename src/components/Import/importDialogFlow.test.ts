@@ -25,6 +25,17 @@ test("导入按钮使用批量 Markdown 文件选择命令", async () => {
   assert.match(source, /setMarkdownPaths\(selected\)/);
 });
 
+test("批量导入先完整预读源文件并始终创建唯一文章，失败时回滚", async () => {
+  const source = await readFile(new URL("./ImportButton.tsx", import.meta.url), "utf8");
+  const preflight = source.indexOf("preparedImports.push(await prepareMarkdownImport");
+  const creation = source.indexOf("for (const prepared of preparedImports)");
+
+  assert.ok(preflight >= 0 && creation > preflight);
+  assert.doesNotMatch(source, /treeHasPath|writeDocument\(target/);
+  assert.match(source, /newPath = await createDocument\(dir, name\)/);
+  assert.match(source, /Promise\.allSettled\(createdPaths\.map\(\(path\) => deleteEntry\(path\)\)\)/);
+});
+
 test("资源根目录选择作为 Markdown 文件标题行里的内联高级选项", async () => {
   const source = await readFile(new URL("./ImportMarkdownDialog.tsx", import.meta.url), "utf8");
 

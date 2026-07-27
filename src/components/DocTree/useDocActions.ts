@@ -4,6 +4,12 @@ import {flushSave, scheduleCloudSync, useStore} from "../../store/index.ts";
 import {createDocument, createFolder, renameEntry, deleteEntry, moveEntry, openEntryLocation} from "../../utils/documents.ts";
 import {toast} from "../Toast/toast.ts";
 import {copyAbsolutePath as copyAbsolutePathToClipboard} from "./copyAbsolutePath.ts";
+import {
+  cancelBackgroundDocumentTargets,
+  remapBackgroundDocumentTargets,
+  runBackgroundDocumentMutation,
+} from "../../utils/backgroundDocumentUpdates.ts";
+import {imageUploadTasks} from "../../utils/imageUploadTasks.ts";
 
 function remapPath(path: string | null, fromPath: string, toPath: string): string | null {
   if (!path) return path;
@@ -39,16 +45,22 @@ export function useDocActions() {
     },
     async rename(path: string, newName: string) {
       try {
-        // 先完成当前文章保存，避免重命名后 autosave 又把旧路径写回来。
-        await flushSave();
-        const newPath = await renameEntry(path, newName);
-        await loadTree();
+        const newPath = await runBackgroundDocumentMutation(
+          async () => {
+            // 队列中更早的后台写回可能刚触发 autosave，变更路径前必须再次落盘。
+            await flushSave();
+            return renameEntry(path, newName);
+          },
+          (nextPath) => remapBackgroundDocumentTargets(path, nextPath),
+        );
+        imageUploadTasks.remapDocumentPaths(path, newPath);
         remapDocumentThemePaths(path, newPath);
         const state = useStore.getState();
         const nextCurrentPath = remapPath(state.currentDocPath, path, newPath);
         const nextSelectedPath = remapPath(state.selectedPath, path, newPath);
         if (nextCurrentPath !== state.currentDocPath) state.setCurrentDocPath(nextCurrentPath);
         if (nextSelectedPath !== state.selectedPath) state.setSelectedPath(nextSelectedPath);
+        await loadTree();
         scheduleCloudSync();
       } catch (e) {
         toast.show(String(e), "error");
@@ -56,22 +68,28 @@ export function useDocActions() {
     },
     async remove(path: string, firstDocPath: string | null, options: {recursive?: boolean} = {}) {
       try {
-        await flushSave();
         const previousDocPath = useStore.getState().currentDocPath;
-        await deleteEntry(path, {recursive: options.recursive});
-        await loadTree();
+        await runBackgroundDocumentMutation(
+          async () => {
+            await flushSave();
+            return deleteEntry(path, {recursive: options.recursive});
+          },
+          () => cancelBackgroundDocumentTargets(path),
+        );
         removeDocumentThemePaths(path);
+        const state = useStore.getState();
         if (previousDocPath === path || previousDocPath?.startsWith(`${path}/`)) {
-          if (firstDocPath) {
-            await openDocument(firstDocPath);
-          } else {
-            useStore.getState().setCurrentDocPath(null);
-            useStore.getState().setContent("");
-          }
+          // 删除成功后立即解除编辑器与旧路径的绑定，避免刷新目录树期间重建已删文件。
+          state.setCurrentDocPath(null);
+          state.setContent("");
         }
-        const selectedPath = useStore.getState().selectedPath;
+        const selectedPath = state.selectedPath;
         if (selectedPath === path || selectedPath?.startsWith(`${path}/`)) {
-          useStore.getState().setSelectedPath(null);
+          state.setSelectedPath(null);
+        }
+        await loadTree();
+        if ((previousDocPath === path || previousDocPath?.startsWith(`${path}/`)) && firstDocPath) {
+          await openDocument(firstDocPath);
         }
         scheduleCloudSync();
       } catch (e) {
@@ -80,15 +98,21 @@ export function useDocActions() {
     },
     async move(src: string, destDir: string) {
       try {
-        await flushSave();
-        const newPath = await moveEntry(src, destDir);
-        await loadTree();
+        const newPath = await runBackgroundDocumentMutation(
+          async () => {
+            await flushSave();
+            return moveEntry(src, destDir);
+          },
+          (nextPath) => remapBackgroundDocumentTargets(src, nextPath),
+        );
+        imageUploadTasks.remapDocumentPaths(src, newPath);
         remapDocumentThemePaths(src, newPath);
         const state = useStore.getState();
         const nextCurrentPath = remapPath(state.currentDocPath, src, newPath);
         const nextSelectedPath = remapPath(state.selectedPath, src, newPath);
         if (nextCurrentPath !== state.currentDocPath) state.setCurrentDocPath(nextCurrentPath);
         if (nextSelectedPath !== state.selectedPath) state.setSelectedPath(nextSelectedPath);
+        await loadTree();
         scheduleCloudSync();
       } catch (e) {
         toast.show(String(e), "error");

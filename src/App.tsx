@@ -31,7 +31,14 @@ import {
 } from "./utils/imageUploadTasks.ts";
 import {createScrollSync} from "./utils/syncScroll.ts";
 import {createDocument, readDocument, writeDocument, type DocNode} from "./utils/documents.ts";
-import {registerBackgroundDocumentUpdater} from "./utils/backgroundDocumentUpdates.ts";
+import {
+  createBackgroundDocumentTarget,
+  flushBackgroundDocumentOperations,
+  releaseBackgroundDocumentTarget,
+  registerBackgroundDocumentUpdater,
+  updateDocumentInBackground,
+  type BackgroundDocumentTarget,
+} from "./utils/backgroundDocumentUpdates.ts";
 import {formatSyncStatus as formatCloudSyncStatus, syncStatusTone, type CloudSyncTone} from "./utils/cloudSync.ts";
 import {isTauriRuntime} from "./utils/tauriEnv.ts";
 import {
@@ -122,7 +129,7 @@ function formatUploadPlaceholder(task: ImageUploadTask): string {
       ? `，${formatUploadSize(task.originalSize)} → ${formatUploadSize(task.outputSize)}`
       : `，${formatUploadSize(task.originalSize)}`
     : "";
-  return `\n> 图片处理中：${cleanUploadLabel(task.filename)}（${uploadPhaseLabels[task.phase]}${sizes}）\n`;
+  return `\n<!-- vellum-upload:${task.id} -->\n> 图片处理中：${cleanUploadLabel(task.filename)}（${uploadPhaseLabels[task.phase]}${sizes}）\n`;
 }
 
 function formatUploadFailure(task: ImageUploadTask): string {
@@ -177,17 +184,43 @@ export default function App() {
     ? {duration: 0}
     : {duration: 0.14, ease: "easeOut" as const};
 
-  const inlineUploadIdsRef = useRef(new Set<string>());
+  const inlineUploadsRef = useRef(new Map<string, {
+    target: BackgroundDocumentTarget;
+    placeholder: string;
+  }>());
+
+  const replaceInlineUpload = (
+    taskId: string,
+    replacement: string,
+    finish = false,
+  ) => {
+    const upload = inlineUploadsRef.current.get(taskId);
+    if (!upload) return;
+    const previous = upload.placeholder;
+    upload.placeholder = replacement;
+    const update = updateDocumentInBackground(upload.target, (current) => {
+      const position = current.indexOf(previous);
+      if (position === -1) return current;
+      return current.slice(0, position) + replacement + current.slice(position + previous.length);
+    });
+    if (finish) {
+      inlineUploadsRef.current.delete(taskId);
+      void update
+        .finally(() => releaseBackgroundDocumentTarget(upload.target))
+        .catch((error) => console.error("写回图片上传结果失败：", error));
+    } else {
+      void update.catch((error) => console.error("更新图片占位符失败：", error));
+    }
+  };
 
   useEffect(() => {
     const unsubscribeTasks = imageUploadTasks.subscribe(() => {
       for (const task of imageUploadTasks.getSnapshot()) {
-        if (!inlineUploadIdsRef.current.has(task.id)) continue;
+        if (!inlineUploadsRef.current.has(task.id)) continue;
         if (task.status === "active") {
-          editorRef.current?.replaceUploadPlaceholder(task.id, formatUploadPlaceholder(task));
+          replaceInlineUpload(task.id, formatUploadPlaceholder(task));
         } else if (task.status === "error") {
-          editorRef.current?.replaceUploadPlaceholder(task.id, formatUploadFailure(task), true);
-          inlineUploadIdsRef.current.delete(task.id);
+          replaceInlineUpload(task.id, formatUploadFailure(task), true);
         }
       }
     });
@@ -206,23 +239,26 @@ export default function App() {
       disposed = true;
       unsubscribeTasks();
       unlisten?.();
+      for (const upload of inlineUploadsRef.current.values()) {
+        releaseBackgroundDocumentTarget(upload.target);
+      }
+      inlineUploadsRef.current.clear();
     };
   }, []);
 
   const beginInlineUpload = (taskId: string) => {
     const task = imageUploadTasks.getSnapshot().find((item) => item.id === taskId);
-    if (!task) return;
-    inlineUploadIdsRef.current.add(taskId);
-    editorRef.current?.insertUploadPlaceholder(taskId, formatUploadPlaceholder(task));
+    if (!task || !task.documentPath) return;
+    const placeholder = formatUploadPlaceholder(task);
+    inlineUploadsRef.current.set(taskId, {
+      target: createBackgroundDocumentTarget(task.documentPath),
+      placeholder,
+    });
+    editorRef.current?.insertUploadPlaceholder(taskId, placeholder);
   };
 
   const finishInlineUpload = (taskId: string, url: string) => {
-    editorRef.current?.replaceUploadPlaceholder(
-      taskId,
-      `\n${formatMarkdownImage({alt: "", url})}\n`,
-      true,
-    );
-    inlineUploadIdsRef.current.delete(taskId);
+    replaceInlineUpload(taskId, `\n${formatMarkdownImage({alt: "", url})}\n`, true);
   };
 
   const handleUploadError = (e: unknown) => {
@@ -537,6 +573,7 @@ export default function App() {
       event.preventDefault();
       // 保存失败也必须放行关闭，否则窗口永远关不掉。
       try {
+        await flushBackgroundDocumentOperations();
         await flushSave();
         await flushDocumentThemeWrite();
       } catch (err) {

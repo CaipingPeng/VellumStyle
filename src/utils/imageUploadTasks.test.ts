@@ -74,3 +74,19 @@ test("multiple tasks remain visible until the last active task has settled", () 
   imageUploadTasks.pruneExpired(latestExpiry + 1);
   assert.equal(imageUploadTasks.getSnapshot().length, 0);
 });
+
+test("active and finished task logs follow article and folder renames", () => {
+  imageUploadTasks.clearFinished();
+  const taskId = imageUploadTasks.start("photo.jpg", "正文图片", {
+    documentPath: "drafts/topic/article.md",
+    documentTitle: "article.md",
+  });
+
+  imageUploadTasks.remapDocumentPaths("drafts", "published");
+  const remapped = imageUploadTasks.getSnapshot().find((task) => task.id === taskId);
+  assert.equal(remapped?.documentPath, "published/topic/article.md");
+  assert.equal(remapped?.documentTitle, "article.md");
+
+  imageUploadTasks.complete(taskId);
+  imageUploadTasks.clearFinished();
+});

@@ -376,7 +376,7 @@ enum NetworkPolicy {
     AllowLocalForTests,
 }
 
-fn is_globally_routable_ip(ip: IpAddr) -> bool {
+pub(crate) fn is_globally_routable_ip(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(ip) => {
             let [a, b, c, _] = ip.octets();

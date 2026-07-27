@@ -76,9 +76,13 @@ interface UploadPlaceholderRange {
 
 const setUploadPlaceholderEffect = StateEffect.define<{id: string; range: UploadPlaceholderRange}>();
 const removeUploadPlaceholderEffect = StateEffect.define<string>();
+const clearUploadPlaceholdersEffect = StateEffect.define<null>();
 const uploadPlaceholderField = StateField.define<Map<string, UploadPlaceholderRange>>({
   create: () => new Map(),
   update(value, transaction) {
+    if (transaction.effects.some((effect) => effect.is(clearUploadPlaceholdersEffect))) {
+      return new Map();
+    }
     const next = new Map<string, UploadPlaceholderRange>();
     for (const [id, range] of value) {
       next.set(id, {
@@ -217,6 +221,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       try {
         view.dispatch({
           changes: {from: 0, to: currentDoc.length, insert: incomingValue},
+          effects: documentChanged ? clearUploadPlaceholdersEffect.of(null) : undefined,
         });
       } finally {
         suppressChangeRef.current = false;

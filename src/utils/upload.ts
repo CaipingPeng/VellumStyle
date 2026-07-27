@@ -77,12 +77,12 @@ export async function uploadImage(
   onTaskStart?.(taskId);
   try {
     const buf = await file.arrayBuffer();
-    const bytes = Array.from(new Uint8Array(buf));
-    const url = await invoke<string>("upload_image", {
-      bytes,
-      filename: file.name || "image",
-      mime: file.type,
-      taskId,
+    const url = await invoke<string>("upload_image", new Uint8Array(buf), {
+      headers: {
+        "x-vellum-filename": encodeURIComponent(file.name || "image"),
+        "x-vellum-mime": file.type,
+        "x-vellum-task-id": taskId,
+      },
     });
     imageUploadTasks.complete(taskId);
     return url;

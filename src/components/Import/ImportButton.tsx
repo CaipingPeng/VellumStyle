@@ -3,7 +3,7 @@ import {invoke} from "@tauri-apps/api/core";
 import {FileInput} from "lucide-react";
 import ImportMarkdownDialog from "./ImportMarkdownDialog.tsx";
 import {flushSave, useStore} from "../../store/index.ts";
-import {createDocument, writeDocument, targetDirFor, treeHasPath} from "../../utils/documents.ts";
+import {createDocument, deleteEntry, writeDocument, targetDirFor} from "../../utils/documents.ts";
 import {
   enqueueMarkdownImageImport,
   prepareMarkdownImport,
@@ -70,33 +70,36 @@ const ImportButton = forwardRef<ImportButtonHandle, Props>(
       setError("");
       try {
         const dir = targetDirFor(tree, selectedPath);
-        const importedTargets = new Set<string>();
         const manualResourceRoot = showResourceRoot ? resourceRoot || null : null;
         const backgroundJobs: Array<{prepared: PreparedMarkdownImport; documentPath: string}> = [];
+        const preparedImports: PreparedMarkdownImport[] = [];
+        const createdPaths: string[] = [];
         let newPath = "";
         let lastName = "";
 
         await flushSave();
 
+        // 先把所有源文件读完；任一源文件失败时，不在文档目录留下半成品。
         for (const markdownPath of markdownPaths) {
-          const prepared = await prepareMarkdownImport({
+          preparedImports.push(await prepareMarkdownImport({
             markdownPath,
             resourceRoot: manualResourceRoot,
-          });
+          }));
+        }
 
-          // 不覆盖当前文档：在目录树落点新建（或覆盖）同名文档并打开。
-          const name = docNameFromPath(prepared.markdownPath);
-          const target = dir ? `${dir}/${name}.md` : `${name}.md`;
-          if (treeHasPath(tree, target) || importedTargets.has(target)) {
-            await writeDocument(target, prepared.content);
-            newPath = target;
-          } else {
+        try {
+          for (const prepared of preparedImports) {
+            // createDocument 会为已存在或批量重名的文章自动生成唯一名称。
+            const name = docNameFromPath(prepared.markdownPath);
             newPath = await createDocument(dir, name);
+            createdPaths.push(newPath);
             await writeDocument(newPath, prepared.content);
+            backgroundJobs.push({prepared, documentPath: newPath});
+            lastName = (newPath.split("/").pop() || name).replace(/\.md$/i, "");
           }
-          importedTargets.add(newPath);
-          backgroundJobs.push({prepared, documentPath: newPath});
-          lastName = name;
+        } catch (error) {
+          await Promise.allSettled(createdPaths.map((path) => deleteEntry(path)));
+          throw error;
         }
 
         await loadTree();

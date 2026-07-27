@@ -6,13 +6,14 @@ use image::codecs::jpeg::JpegDecoder;
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{DynamicImage, ImageDecoder, ImageEncoder, ImageFormat};
 use jpeg_encoder::{ColorType as FastJpegColorType, Encoder as FastJpegEncoder, SamplingFactor};
-use reqwest::redirect::Policy;
 use resvg::tiny_skia;
 use resvg::usvg;
 use serde::{Deserialize, Serialize};
+use std::collections::hash_map::DefaultHasher;
 use std::fs;
-use std::io::{self, Cursor};
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::hash::{Hash, Hasher};
+use std::io::Cursor;
+use std::net::{IpAddr, Ipv4Addr};
 use std::path::Path;
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
@@ -32,9 +33,11 @@ pub const ALLOWED_IMG_HOSTS: [&str; 2] = ["mmbiz.qpic.cn", "mmbiz.qlogo.cn"];
 struct TokenCache {
     token: String,
     expire_at: Instant,
+    credential_key: u64,
 }
 
 static TOKEN_CACHE: Mutex<Option<TokenCache>> = Mutex::new(None);
+static TOKEN_FETCH_LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
 static IMAGE_COMPRESSION_LIMIT: OnceLock<tokio::sync::Semaphore> = OnceLock::new();
 
 fn jpeg_probe_count() -> usize {
@@ -150,7 +153,22 @@ pub struct MaterialImagePage {
     items: Vec<MaterialImageItem>,
 }
 
-async fn fetch_access_token(app_id: &str, app_secret: &str) -> Result<String, String> {
+fn credential_key(app_id: &str, app_secret: &str) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    app_id.hash(&mut hasher);
+    app_secret.hash(&mut hasher);
+    hasher.finish()
+}
+
+fn cached_access_token(key: u64) -> Option<String> {
+    let cache = TOKEN_CACHE.lock().unwrap();
+    cache.as_ref().and_then(|cached| {
+        (cached.credential_key == key && Instant::now() < cached.expire_at)
+            .then(|| cached.token.clone())
+    })
+}
+
+async fn fetch_access_token(app_id: &str, app_secret: &str, key: u64) -> Result<String, String> {
     let url = format!(
         "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={}&secret={}",
         urlencoding::encode(app_id),
@@ -158,11 +176,11 @@ async fn fetch_access_token(app_id: &str, app_secret: &str) -> Result<String, St
     );
     let resp = reqwest::get(&url)
         .await
-        .map_err(|e| format!("请求 access_token 失败：{e}"))?;
+        .map_err(|e| format!("请求 access_token 失败：{}", e.without_url()))?;
     let data: TokenResp = resp
         .json()
         .await
-        .map_err(|e| format!("解析 access_token 响应失败：{e}"))?;
+        .map_err(|e| format!("解析 access_token 响应失败：{}", e.without_url()))?;
     match data.access_token {
         Some(token) => {
             // 提前 5 分钟过期，避免边界上用到已失效的 token。
@@ -171,6 +189,7 @@ async fn fetch_access_token(app_id: &str, app_secret: &str) -> Result<String, St
             *cache = Some(TokenCache {
                 token: token.clone(),
                 expire_at: Instant::now() + Duration::from_secs(ttl),
+                credential_key: key,
             });
             Ok(token)
         }
@@ -183,21 +202,32 @@ async fn fetch_access_token(app_id: &str, app_secret: &str) -> Result<String, St
 }
 
 async fn get_access_token(app_id: &str, app_secret: &str) -> Result<String, String> {
-    {
-        let cache = TOKEN_CACHE.lock().unwrap();
-        if let Some(c) = cache.as_ref() {
-            if Instant::now() < c.expire_at {
-                return Ok(c.token.clone());
-            }
-        }
+    let key = credential_key(app_id, app_secret);
+    if let Some(token) = cached_access_token(key) {
+        return Ok(token);
     }
-    fetch_access_token(app_id, app_secret).await
+    let fetch_lock = TOKEN_FETCH_LOCK.get_or_init(|| tokio::sync::Mutex::new(()));
+    let _guard = fetch_lock.lock().await;
+    if let Some(token) = cached_access_token(key) {
+        return Ok(token);
+    }
+    fetch_access_token(app_id, app_secret, key).await
 }
 
 /// 清 token 缓存（凭证变更或 token 失效时调用）。同步，供 save_config 调用。
 pub fn clear_token_blocking() {
     let mut cache = TOKEN_CACHE.lock().unwrap();
     *cache = None;
+}
+
+fn invalidate_access_token(failed_token: &str) {
+    let mut cache = TOKEN_CACHE.lock().unwrap();
+    if cache
+        .as_ref()
+        .is_some_and(|cached| cached.token == failed_token)
+    {
+        *cache = None;
+    }
 }
 
 #[tauri::command]
@@ -352,7 +382,7 @@ async fn list_image_materials_inner(
         .json(&body)
         .send()
         .await
-        .map_err(|e| (None, format!("获取素材库请求失败：{e}")))?;
+        .map_err(|e| (None, format!("获取素材库请求失败：{}", e.without_url())))?;
     let status = resp.status();
     if !status.is_success() {
         return Err((None, format!("获取素材库失败：HTTP {status}")));
@@ -360,7 +390,7 @@ async fn list_image_materials_inner(
     let body = resp
         .text()
         .await
-        .map_err(|e| (None, format!("读取素材库响应失败：{e}")))?;
+        .map_err(|e| (None, format!("读取素材库响应失败：{}", e.without_url())))?;
 
     parse_material_page_response(&body)
 }
@@ -382,7 +412,7 @@ pub async fn list_image_materials(
         Ok(page) => Ok(page),
         Err((errcode, msg)) => {
             if matches!(errcode, Some(40001) | Some(42001) | Some(40014)) {
-                clear_token_blocking();
+                invalidate_access_token(&token);
                 let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
                 list_image_materials_inner(&token, offset, count)
                     .await
@@ -415,11 +445,11 @@ async fn upload_to_wechat(
         .multipart(form)
         .send()
         .await
-        .map_err(|e| (None, format!("上传请求失败：{e}")))?;
+        .map_err(|e| (None, format!("上传请求失败：{}", e.without_url())))?;
     let data: UploadResp = resp
         .json()
         .await
-        .map_err(|e| (None, format!("解析上传响应失败：{e}")))?;
+        .map_err(|e| (None, format!("解析上传响应失败：{}", e.without_url())))?;
     match data.url {
         Some(u) => Ok(u),
         None => Err((
@@ -433,16 +463,31 @@ async fn upload_to_wechat(
     }
 }
 
-/// 上传图片到微信图床。bytes+filename+mime 由前端从 File/Blob 传入
-/// （上传按钮与粘贴共用一条路径）。未配置返回 "NOT_CONFIGURED"。
+fn request_header(request: &tauri::ipc::Request<'_>, name: &str) -> Result<String, String> {
+    request
+        .headers()
+        .get(name)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned)
+        .ok_or_else(|| format!("图片上传请求缺少 {name}"))
+}
+
+/// File/Blob 使用原始二进制 IPC 请求体，避免把大图片扩展成巨大的 JSON 数字数组。
 #[tauri::command]
 pub async fn upload_image(
     app: AppHandle,
-    bytes: Vec<u8>,
-    filename: String,
-    mime: String,
-    task_id: Option<String>,
+    request: tauri::ipc::Request<'_>,
 ) -> Result<String, String> {
+    let bytes = match request.body() {
+        tauri::ipc::InvokeBody::Raw(bytes) => bytes.clone(),
+        tauri::ipc::InvokeBody::Json(_) => return Err("图片上传请求必须使用二进制数据".into()),
+    };
+    let encoded_filename = request_header(&request, "x-vellum-filename")?;
+    let filename = urlencoding::decode(&encoded_filename)
+        .map_err(|_| "图片文件名编码无效".to_string())?
+        .into_owned();
+    let mime = request_header(&request, "x-vellum-mime")?;
+    let task_id = request_header(&request, "x-vellum-task-id").ok();
     upload_image_bytes(app, bytes, filename, mime, task_id).await
 }
 
@@ -516,42 +561,37 @@ pub async fn upload_remote_image(
 }
 
 async fn download_remote_image(raw_url: &str) -> Result<DownloadedImage, String> {
-    let target = url::Url::parse(raw_url.trim()).map_err(|_| "图片 URL 格式错误".to_string())?;
-    if !matches!(target.scheme(), "http" | "https") {
-        return Err("仅支持 http/https 图片".into());
-    }
-    ensure_public_remote_url(&target)?;
-
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(20))
-        .redirect(Policy::custom(|attempt| {
-            if attempt.previous().len() >= 5 {
-                return attempt.error(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "远程图片重定向次数过多",
-                ));
+    let mut target =
+        url::Url::parse(raw_url.trim()).map_err(|_| "图片 URL 格式错误".to_string())?;
+    let mut redirect_count = 0usize;
+    let resp = loop {
+        let client = remote_image_client(&target).await?;
+        let mut request = client.get(target.clone());
+        if ALLOWED_IMG_HOSTS.contains(&target.host_str().unwrap_or("")) {
+            request = request.header("Referer", "https://mp.weixin.qq.com");
+        }
+        let response = request
+            .send()
+            .await
+            .map_err(|e| format!("下载远程图片失败：{}", e.without_url()))?;
+        if matches!(response.status().as_u16(), 301 | 302 | 303 | 307 | 308) {
+            if redirect_count >= 5 {
+                return Err("远程图片重定向次数过多".into());
             }
-            if is_allowed_redirect_target(attempt.url()) {
-                attempt.follow()
-            } else {
-                attempt.error(io::Error::new(
-                    io::ErrorKind::PermissionDenied,
-                    "远程图片重定向到了不支持的地址",
-                ))
-            }
-        }))
-        .build()
-        .map_err(|e| format!("创建下载客户端失败：{e}"))?;
-
-    let mut req = client.get(target.clone());
-    if ALLOWED_IMG_HOSTS.contains(&target.host_str().unwrap_or("")) {
-        req = req.header("Referer", "https://mp.weixin.qq.com");
-    }
-
-    let resp = req
-        .send()
-        .await
-        .map_err(|e| format!("下载远程图片失败：{e}"))?;
+            let location = response
+                .headers()
+                .get(reqwest::header::LOCATION)
+                .and_then(|value| value.to_str().ok())
+                .ok_or_else(|| "远程图片重定向缺少有效 Location".to_string())?
+                .to_owned();
+            target = target
+                .join(&location)
+                .map_err(|_| "远程图片重定向地址无效".to_string())?;
+            redirect_count += 1;
+            continue;
+        }
+        break response;
+    };
     if !resp.status().is_success() {
         return Err(format!("下载远程图片失败：HTTP {}", resp.status()));
     }
@@ -577,7 +617,7 @@ async fn download_remote_image(raw_url: &str) -> Result<DownloadedImage, String>
     while let Some(chunk) = resp
         .chunk()
         .await
-        .map_err(|e| format!("读取远程图片失败：{e}"))?
+        .map_err(|e| format!("读取远程图片失败：{}", e.without_url()))?
     {
         if bytes.len().saturating_add(chunk.len()) > MAX_SOURCE_SIZE {
             return Err("原始图片不能超过 50MB".into());
@@ -598,6 +638,48 @@ async fn download_remote_image(raw_url: &str) -> Result<DownloadedImage, String>
         filename,
         mime,
     })
+}
+
+async fn remote_image_client(target: &url::Url) -> Result<reqwest::Client, String> {
+    ensure_public_remote_url(target)?;
+    let mut builder = reqwest::Client::builder()
+        .no_proxy()
+        .connect_timeout(Duration::from_secs(8))
+        .timeout(Duration::from_secs(20))
+        .redirect(reqwest::redirect::Policy::none());
+
+    if let Some(url::Host::Domain(host)) = target.host() {
+        let port = target
+            .port_or_known_default()
+            .ok_or_else(|| "图片 URL 缺少有效端口".to_string())?;
+        let addresses = tokio::net::lookup_host((host, port))
+            .await
+            .map_err(|e| format!("解析图片域名失败：{e}"))?
+            .collect::<Vec<_>>();
+        if addresses.is_empty() {
+            return Err("图片域名没有可用地址".into());
+        }
+        validate_remote_addresses(&addresses)?;
+        // 固定本次连接使用刚校验过的地址，消除校验与连接之间的 DNS 重绑定窗口。
+        builder = builder.resolve_to_addrs(host, &addresses);
+    }
+
+    builder
+        .build()
+        .map_err(|e| format!("创建下载客户端失败：{}", e.without_url()))
+}
+
+fn validate_remote_addresses(addresses: &[std::net::SocketAddr]) -> Result<(), String> {
+    if addresses.is_empty() {
+        return Err("图片域名没有可用地址".into());
+    }
+    if addresses
+        .iter()
+        .any(|address| !crate::preview_image::is_globally_routable_ip(address.ip()))
+    {
+        return Err("图片域名解析到了内网或本机地址".into());
+    }
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -896,7 +978,7 @@ async fn upload_image_bytes(
         Ok(url) => Ok(url),
         Err((errcode, msg)) => {
             if matches!(errcode, Some(40001) | Some(42001) | Some(40014)) {
-                clear_token_blocking();
+                invalidate_access_token(&token);
                 let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
                 upload_to_wechat(&token, prepared.bytes, &prepared.filename, &prepared.mime)
                     .await
@@ -913,41 +995,32 @@ fn ensure_public_remote_url(target: &url::Url) -> Result<(), String> {
         return Err("仅支持 http/https 图片".into());
     }
 
-    let host = target.host_str().unwrap_or("");
-    if host.eq_ignore_ascii_case("localhost") {
-        return Err("不支持下载本机地址图片".into());
-    }
-
-    if let Ok(ip) = host.parse::<IpAddr>() {
-        if is_private_or_local_ip(ip) {
-            return Err("不支持下载内网地址图片".into());
+    match target.host() {
+        Some(url::Host::Domain(host)) => {
+            let lower = host.to_ascii_lowercase();
+            if lower == "localhost" || lower.ends_with(".localhost") {
+                return Err("不支持下载本机地址图片".into());
+            }
         }
+        Some(url::Host::Ipv4(ip)) => {
+            if !crate::preview_image::is_globally_routable_ip(IpAddr::V4(ip)) {
+                return Err("不支持下载内网地址图片".into());
+            }
+        }
+        Some(url::Host::Ipv6(ip)) => {
+            if !crate::preview_image::is_globally_routable_ip(IpAddr::V6(ip)) {
+                return Err("不支持下载内网地址图片".into());
+            }
+        }
+        None => return Err("图片 URL 缺少主机名".into()),
     }
 
     Ok(())
 }
 
+#[cfg(test)]
 fn is_allowed_redirect_target(target: &url::Url) -> bool {
     ensure_public_remote_url(target).is_ok()
-}
-
-fn is_private_or_local_ip(ip: IpAddr) -> bool {
-    match ip {
-        IpAddr::V4(ip) => {
-            ip.is_private()
-                || ip.is_loopback()
-                || ip.is_link_local()
-                || ip == Ipv4Addr::UNSPECIFIED
-                || ip.octets()[0] == 169 && ip.octets()[1] == 254
-        }
-        IpAddr::V6(ip) => {
-            ip.is_loopback()
-                || ip.is_unspecified()
-                || matches!(ip.segments()[0] & 0xfe00, 0xfc00)
-                || matches!(ip.segments()[0] & 0xffc0, 0xfe80)
-                || ip == Ipv6Addr::LOCALHOST
-        }
-    }
 }
 
 fn mime_from_path(path: &Path) -> Option<&'static str> {
@@ -1123,11 +1196,11 @@ async fn upload_thumb_inner(
         .multipart(form)
         .send()
         .await
-        .map_err(|e| (None, format!("上传请求失败：{e}")))?;
+        .map_err(|e| (None, format!("上传请求失败：{}", e.without_url())))?;
     let data: UploadResp = resp
         .json()
         .await
-        .map_err(|e| (None, format!("解析上传响应失败：{e}")))?;
+        .map_err(|e| (None, format!("解析上传响应失败：{}", e.without_url())))?;
     match data.media_id {
         Some(id) => Ok(id),
         None => Err((
@@ -1211,7 +1284,7 @@ async fn upload_thumb_bytes(
         Ok(id) => Ok(id),
         Err((errcode, msg)) => {
             if matches!(errcode, Some(40001) | Some(42001) | Some(40014)) {
-                clear_token_blocking();
+                invalidate_access_token(&token);
                 let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
                 upload_thumb_inner(&token, prepared.bytes, &prepared.filename, &prepared.mime)
                     .await
@@ -1246,11 +1319,11 @@ async fn add_draft_inner(
         .json(&body)
         .send()
         .await
-        .map_err(|e| (None, format!("发布请求失败：{e}")))?;
+        .map_err(|e| (None, format!("发布请求失败：{}", e.without_url())))?;
     let data: DraftResp = resp
         .json()
         .await
-        .map_err(|e| (None, format!("解析发布响应失败：{e}")))?;
+        .map_err(|e| (None, format!("解析发布响应失败：{}", e.without_url())))?;
     match data.media_id {
         Some(id) => Ok(id),
         None => Err((
@@ -1325,7 +1398,7 @@ pub async fn add_draft(
         Ok(id) => Ok(id),
         Err((errcode, msg)) => {
             if matches!(errcode, Some(40001) | Some(42001) | Some(40014)) {
-                clear_token_blocking();
+                invalidate_access_token(&token);
                 let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
                 add_draft_inner(
                     &token,
@@ -1350,10 +1423,11 @@ mod tests {
     use super::{
         build_add_draft_body, decode_for_reencoding, format_wechat_error, get_outbound_ip,
         is_allowed_redirect_target, parse_material_page_response, parse_outbound_ip_response,
-        prepare_upload_for_limit, OUTBOUND_IP_ENDPOINTS,
+        prepare_upload_for_limit, validate_remote_addresses, OUTBOUND_IP_ENDPOINTS,
     };
     use image::{DynamicImage, ImageFormat, Rgb, RgbImage, Rgba, RgbaImage};
     use std::io::Cursor;
+    use std::net::SocketAddr;
 
     fn noisy_rgb(width: u32, height: u32) -> DynamicImage {
         DynamicImage::ImageRgb8(RgbImage::from_fn(width, height, |x, y| {
@@ -1563,6 +1637,16 @@ mod tests {
         assert!(!is_allowed_redirect_target(
             &url::Url::parse("file:///etc/passwd").unwrap()
         ));
+    }
+
+    #[test]
+    fn remote_dns_validation_rejects_any_private_answer() {
+        let public: SocketAddr = "8.8.8.8:443".parse().unwrap();
+        let private: SocketAddr = "127.0.0.1:443".parse().unwrap();
+
+        assert!(validate_remote_addresses(&[public]).is_ok());
+        assert!(validate_remote_addresses(&[public, private]).is_err());
+        assert!(validate_remote_addresses(&[]).is_err());
     }
 
     #[test]
