@@ -15,6 +15,7 @@ interface Props {
   children: ReactNode;
   footer?: ReactNode;
   headerActions?: ReactNode;
+  contentPadding?: boolean;
 }
 
 export default function Dialog({
@@ -27,6 +28,7 @@ export default function Dialog({
   children,
   footer,
   headerActions,
+  contentPadding = true,
 }: Props) {
   return createPortal(
     <AnimatePresence>
@@ -65,7 +67,7 @@ export default function Dialog({
                 </button>
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
+            <div className={`min-h-0 flex-1 ${contentPadding ? "overflow-y-auto p-4" : "overflow-hidden"}`}>{children}</div>
             {footer && <div className="flex shrink-0 justify-end gap-2 border-t border-border px-4 py-3">{footer}</div>}
           </motion.div>
         </motion.div>

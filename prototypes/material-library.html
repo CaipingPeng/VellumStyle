@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>图片素材库布局原型</title>
+  <style>
+    :root {
+      --accent: #5e6ad2;
+      --accent-hover: #4f5bc4;
+      --accent-subtle: rgba(94, 106, 210, 0.09);
+      --bg: #fff;
+      --bg-secondary: #fafafb;
+      --bg-tertiary: #f4f4f6;
+      --workspace: #f1f1f4;
+      --border: #ebebef;
+      --border-strong: #dcdce3;
+      --text: #1a1a1e;
+      --text-secondary: #6b6b76;
+      --text-muted: #9898a3;
+      --danger: #d93d42;
+      --danger-subtle: rgba(217, 61, 66, 0.08);
+      --shadow: 0 18px 54px rgba(20, 20, 30, 0.18);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: var(--workspace);
+      font-variant-numeric: tabular-nums;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    button, input { font: inherit; }
+    button { letter-spacing: 0; }
+
+    .app {
+      display: flex;
+      height: 100%;
+      flex-direction: column;
+      background: var(--workspace);
+    }
+
+    .app-header {
+      display: flex;
+      height: 52px;
+      flex: none;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.92);
+      padding: 0 16px;
+    }
+
+    .nav-tools, .nav-group, .header-actions, .selection-tools, .selection-actions,
+    .footer-left, .footer-right, .dialog-title {
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-tools { gap: 12px; }
+    .nav-group { gap: 6px; }
+    .nav-divider { width: 1px; height: 20px; background: var(--border-strong); }
+
+    .icon-button {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      padding: 0;
+      border: 0;
+      border-radius: 4px;
+      color: var(--text-secondary);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .icon-button:hover { background: var(--bg-tertiary); color: var(--text); }
+    .icon-button.active { color: var(--accent); background: var(--accent-subtle); }
+    .icon-button:disabled { cursor: default; opacity: 0.55; }
+    .icon-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+
+    .app-brand { color: var(--text-muted); font-size: 12px; }
+    .workspace-preview {
+      display: grid;
+      min-height: 0;
+      flex: 1;
+      grid-template-columns: 210px minmax(0, 1fr) minmax(0, 1fr);
+      gap: 10px;
+      padding: 10px;
+    }
+
+    .workspace-panel {
+      min-width: 0;
+      border: 1px solid #dedee5;
+      border-radius: 8px;
+      background: white;
+    }
+
+    .workspace-panel:first-child { background: #fafafb; }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: rgba(20, 20, 30, 0.42);
+    }
+
+    .overlay[hidden], .confirm-overlay[hidden] { display: none; }
+
+    .dialog {
+      display: flex;
+      width: min(920px, calc(100vw - 32px));
+      height: min(720px, calc(100vh - 32px));
+      min-height: 500px;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: 8px;
+      background: var(--bg);
+      box-shadow: var(--shadow);
+    }
+
+    .dialog-header {
+      display: flex;
+      min-height: 48px;
+      flex: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+      padding: 7px 12px 7px 16px;
+    }
+
+    .dialog-title { min-width: 0; gap: 8px; font-size: 14px; font-weight: 650; }
+    .dialog-title svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+    .header-actions { flex: none; gap: 8px; }
+
+    .button {
+      display: inline-flex;
+      height: 32px;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      padding: 0 11px;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 550;
+    }
+
+    .button:hover:not(:disabled) { color: var(--text); background: var(--bg-tertiary); }
+    .button:disabled { cursor: default; opacity: 0.45; }
+    .button.primary { color: white; background: var(--accent); }
+    .button.primary:hover:not(:disabled) { color: white; background: var(--accent-hover); }
+    .button.danger { color: var(--danger); background: transparent; }
+    .button.danger:hover:not(:disabled) { color: var(--danger); background: var(--danger-subtle); }
+    .button.danger-solid { color: white; background: var(--danger); }
+    .button.danger-solid:hover:not(:disabled) { color: white; background: #c93439; }
+    .button svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+    .selection-bar {
+      display: flex;
+      min-height: 42px;
+      flex: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      padding: 5px 16px;
+      background: var(--bg-secondary);
+    }
+
+    .selection-tools { gap: 12px; color: var(--text-muted); font-size: 12px; }
+    .selection-actions { flex: none; gap: 8px; }
+    .selection-actions .icon-button { width: 32px; height: 32px; }
+    .selection-actions .icon-button.loading svg {
+      animation: refresh-spin 700ms linear infinite;
+      transform-origin: center;
+    }
+
+    @keyframes refresh-spin {
+      to { transform: rotate(360deg); }
+    }
+    .select-all {
+      display: inline-flex;
+      height: 30px;
+      align-items: center;
+      gap: 7px;
+      border: 0;
+      border-radius: 4px;
+      padding: 0 7px;
+      color: var(--text-secondary);
+      background: transparent;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .select-all:hover { color: var(--text); background: var(--bg-tertiary); }
+    .checkbox {
+      display: grid;
+      width: 16px;
+      height: 16px;
+      place-items: center;
+      border: 1px solid var(--border-strong);
+      border-radius: 3px;
+      background: var(--bg);
+      color: transparent;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .select-all.checked .checkbox { border-color: var(--accent); color: white; background: var(--accent); }
+
+    .material-scroll {
+      min-height: 0;
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+      scrollbar-gutter: stable;
+    }
+
+    .material-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      align-content: start;
+      gap: 12px;
+    }
+
+    .material-card {
+      position: relative;
+      display: block;
+      width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      padding: 0;
+      color: var(--text);
+      background: var(--bg);
+      cursor: pointer;
+      text-align: left;
+      box-shadow: 0 1px 2px rgba(20, 20, 30, 0.03);
+    }
+
+    .material-card:focus-visible { outline: 2px solid rgba(94, 106, 210, 0.44); outline-offset: 2px; }
+    .material-card.selected {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 2px var(--accent), 0 1px 2px rgba(20, 20, 30, 0.04);
+    }
+
+    .image-frame {
+      position: relative;
+      display: grid;
+      aspect-ratio: 4 / 3;
+      place-items: center;
+      overflow: hidden;
+      background: var(--bg-tertiary);
+    }
+
+    .image-frame img { display: block; width: 100%; height: 100%; object-fit: contain; }
+    .selected-mark {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: none;
+      width: 24px;
+      height: 24px;
+      place-items: center;
+      border: 2px solid white;
+      border-radius: 50%;
+      color: white;
+      background: var(--accent);
+      box-shadow: 0 1px 5px rgba(20, 20, 30, 0.24);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .material-card.selected .selected-mark { display: grid; }
+
+    .material-meta {
+      display: flex;
+      height: 34px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border-top: 1px solid var(--border);
+      padding: 0 9px;
+      background: var(--bg-secondary);
+    }
+
+    .material-name {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 550;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .material-date { flex: none; color: var(--text-muted); font-size: 10px; }
+
+    .dialog-footer {
+      display: grid;
+      min-height: 56px;
+      flex: none;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      gap: 12px;
+      border-top: 1px solid var(--border);
+      padding: 10px 16px;
+      background: var(--bg);
+    }
+
+    .footer-left, .footer-right { gap: 10px; }
+    .footer-left { justify-self: start; }
+    .footer-right { justify-self: end; }
+    .page-status { color: var(--text-muted); font-size: 12px; }
+    .upload-input { display: none; }
+
+    .confirm-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: rgba(20, 20, 30, 0.42);
+    }
+
+    .confirm-dialog {
+      width: min(480px, calc(100vw - 32px));
+      overflow: hidden;
+      border-radius: 8px;
+      background: var(--bg);
+      box-shadow: var(--shadow);
+    }
+
+    .confirm-header {
+      display: flex;
+      height: 48px;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      padding: 0 16px;
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    .warning-icon {
+      display: grid;
+      width: 20px;
+      height: 20px;
+      place-items: center;
+      border: 1px solid var(--danger);
+      border-radius: 50%;
+      color: var(--danger);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .confirm-content { padding: 16px; color: var(--text-secondary); font-size: 13px; line-height: 1.7; }
+    .confirm-content p { margin: 0; }
+    .confirm-warning {
+      margin-top: 12px !important;
+      border: 1px solid rgba(217, 61, 66, 0.24);
+      border-radius: 6px;
+      padding: 10px 12px;
+      color: var(--danger);
+      background: var(--danger-subtle);
+    }
+
+    .confirm-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      border-top: 1px solid var(--border);
+      padding: 10px 16px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      z-index: 50;
+      transform: translateX(-50%) translateY(16px);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--text);
+      background: var(--bg);
+      box-shadow: 0 6px 24px rgba(20, 20, 30, 0.14);
+      opacity: 0;
+      pointer-events: none;
+      transition: 150ms ease;
+      font-size: 13px;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    @media (max-width: 760px) {
+      .material-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .action-label { display: none; }
+      .button.action { width: 32px; padding: 0; }
+      .dialog { min-height: 460px; }
+      .workspace-preview { grid-template-columns: 1fr; }
+      .workspace-panel:not(:nth-child(2)) { display: none; }
+    }
+
+    @media (max-width: 540px) {
+      .material-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .dialog-header { gap: 8px; padding-left: 12px; }
+      .selection-bar, .material-scroll, .dialog-footer { padding-left: 12px; padding-right: 12px; }
+      .selection-tools > span:last-child { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div class="nav-tools">
+        <div class="nav-group">
+          <button class="icon-button" title="文档" aria-label="文档">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM9 3v18"/></svg>
+          </button>
+          <button class="icon-button" title="大纲" aria-label="大纲">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+          </button>
+        </div>
+        <span class="nav-divider" aria-hidden="true"></span>
+        <button id="openLibrary" class="icon-button active" title="图片素材库" aria-label="图片素材库">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+        </button>
+      </div>
+      <span class="app-brand">文澜排版</span>
+    </header>
+    <main class="workspace-preview" aria-hidden="true">
+      <div class="workspace-panel"></div>
+      <div class="workspace-panel"></div>
+      <div class="workspace-panel"></div>
+    </main>
+  </div>
+
+  <div id="libraryOverlay" class="overlay">
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="libraryTitle">
+      <header class="dialog-header">
+        <div class="dialog-title">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+          <span id="libraryTitle">图片素材库</span>
+        </div>
+        <div class="header-actions">
+          <button id="closeLibrary" class="icon-button" title="关闭" aria-label="关闭">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="selection-bar">
+        <div class="selection-tools">
+          <button id="selectAll" class="select-all">
+            <span class="checkbox">✓</span>
+            <span id="selectAllLabel">全选已加载</span>
+          </button>
+          <span id="selectionCount">未选择图片</span>
+        </div>
+        <div class="selection-actions">
+          <button id="deleteSelected" class="button danger action" disabled title="永久删除所选图片">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg>
+            <span class="action-label">删除所选</span>
+          </button>
+          <button id="insertSelected" class="button primary action" disabled title="插入所选图片">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>
+            <span class="action-label">插入所选</span>
+          </button>
+          <button id="refresh" class="icon-button" title="刷新素材库" aria-label="刷新素材库">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 0-15-6.7L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15 6.7L21 16"/><path d="M16 16h5v5"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="material-scroll">
+        <div id="materialGrid" class="material-grid"></div>
+      </div>
+
+      <footer class="dialog-footer">
+        <div class="footer-left">
+          <label class="button" for="uploadInput">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>
+            上传图片
+          </label>
+          <input id="uploadInput" class="upload-input" type="file" accept="image/*" multiple>
+        </div>
+        <span id="pageStatus" class="page-status">已加载 12/126 张</span>
+        <div class="footer-right">
+          <button id="loadMore" class="button">加载更多</button>
+        </div>
+      </footer>
+    </section>
+  </div>
+
+  <div id="confirmOverlay" class="confirm-overlay" hidden>
+    <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <header class="confirm-header">
+        <span class="warning-icon" aria-hidden="true">!</span>
+        <span id="confirmTitle">删除永久图片素材</span>
+      </header>
+      <div class="confirm-content">
+        <p>此操作将从微信公众号永久素材库中删除所选的 <strong id="confirmCount">0</strong> 张图片，删除后无法撤销。</p>
+        <p class="confirm-warning">此操作可能使引用了待删除图片、但尚未发表且仅停留在草稿箱中的文章图片失效。</p>
+      </div>
+      <footer class="confirm-footer">
+        <button id="cancelDelete" class="button">取消</button>
+        <button id="confirmDelete" class="button danger-solid">永久删除</button>
+      </footer>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script>
+    const initialMaterials = [
+      ["../assets/image-20260713151014924.png", "article-header.png", "2026/07/28"],
+      ["../assets/image-20260713131820259.png", "layout-reference.png", "2026/07/27"],
+      ["../assets/image-20260713131445911.png", "editor-capture.png", "2026/07/26"],
+      ["../logos/vellumstyle/vellumstyle-app-icon.png", "vellumstyle-icon.png", "2026/07/25"],
+      ["../logos/vellumstyle/vellumstyle-wordmark.png", "brand-wordmark.png", "2026/07/24"],
+      ["../logos/vellumstyle/vellumstyle-combo-horizontal.png", "brand-horizontal.png", "2026/07/23"],
+      ["../logos/vellumstyle/final/vellumstyle-combo-vertical.png", "brand-vertical.png", "2026/07/22"],
+      ["../app-icon.png", "application-icon.png", "2026/07/21"],
+      ["../assets/documents-and-sync.png", "documents-sync.png", "2026/07/20"],
+      ["../assets/image-20260713131638646.png", "wechat-preview.png", "2026/07/19"],
+      ["../assets/copy-and-publish.png", "copy-publish.png", "2026/07/18"],
+      ["../assets/theme-gallery.png", "theme-gallery.png", "2026/07/17"]
+    ];
+
+    const moreMaterials = [
+      ["../logos/vellumstyle/round-1/logomark-flow-page.png", "flow-page.png", "2026/07/16"],
+      ["../logos/vellumstyle/round-1/logomark-layout-ripple.png", "layout-ripple.png", "2026/07/15"],
+      ["../logos/vellumstyle/round-1/logomark-preview-sync.png", "preview-sync.png", "2026/07/14"],
+      ["../logos/vellumstyle/round-1/logomark-publish-ripple.png", "publish-ripple.png", "2026/07/13"]
+    ];
+
+    const state = {
+      materials: initialMaterials.map((item, index) => ({id: `material-${index}`, src: item[0], name: item[1], date: item[2]})),
+      selected: new Set(),
+      total: 126,
+      loadedMore: false
+    };
+
+    const grid = document.getElementById("materialGrid");
+    const overlay = document.getElementById("libraryOverlay");
+    const confirmOverlay = document.getElementById("confirmOverlay");
+    const deleteButton = document.getElementById("deleteSelected");
+    const insertButton = document.getElementById("insertSelected");
+    const selectAll = document.getElementById("selectAll");
+    const selectionCount = document.getElementById("selectionCount");
+    const selectAllLabel = document.getElementById("selectAllLabel");
+    const pageStatus = document.getElementById("pageStatus");
+    const loadMore = document.getElementById("loadMore");
+    const toast = document.getElementById("toast");
+    let toastTimer;
+
+    function showToast(message) {
+      clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.classList.add("show");
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+
+    function render() {
+      grid.replaceChildren();
+      for (const material of state.materials) {
+        const selected = state.selected.has(material.id);
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = `material-card${selected ? " selected" : ""}`;
+        card.setAttribute("aria-pressed", String(selected));
+        card.setAttribute("aria-label", `${selected ? "取消选择" : "选择"}：${material.name}`);
+        card.innerHTML = `
+          <span class="image-frame">
+            <img src="${material.src}" alt="" loading="lazy" decoding="async">
+            <span class="selected-mark" aria-hidden="true">✓</span>
+          </span>
+          <span class="material-meta">
+            <span class="material-name" title="${material.name}">${material.name}</span>
+            <span class="material-date">${material.date}</span>
+          </span>`;
+        card.addEventListener("click", () => {
+          if (state.selected.has(material.id)) state.selected.delete(material.id);
+          else state.selected.add(material.id);
+          render();
+        });
+        grid.append(card);
+      }
+
+      const count = state.selected.size;
+      const allSelected = state.materials.length > 0 && count === state.materials.length;
+      deleteButton.disabled = count === 0;
+      insertButton.disabled = count === 0;
+      selectionCount.textContent = count ? `已选择 ${count} 张` : "未选择图片";
+      selectAll.classList.toggle("checked", allSelected);
+      selectAllLabel.textContent = allSelected ? "取消全选" : "全选已加载";
+      pageStatus.textContent = `已加载 ${state.materials.length}/${state.total} 张`;
+      loadMore.disabled = state.loadedMore;
+      loadMore.textContent = state.loadedMore ? "已显示更多" : "加载更多";
+      document.getElementById("confirmCount").textContent = String(count);
+    }
+
+    selectAll.addEventListener("click", () => {
+      if (state.selected.size === state.materials.length) state.selected.clear();
+      else state.materials.forEach((item) => state.selected.add(item.id));
+      render();
+    });
+
+    deleteButton.addEventListener("click", () => {
+      if (state.selected.size) confirmOverlay.hidden = false;
+    });
+    document.getElementById("cancelDelete").addEventListener("click", () => { confirmOverlay.hidden = true; });
+    document.getElementById("confirmDelete").addEventListener("click", () => {
+      const deleted = state.selected.size;
+      state.materials = state.materials.filter((item) => !state.selected.has(item.id));
+      state.total = Math.max(0, state.total - deleted);
+      state.selected.clear();
+      confirmOverlay.hidden = true;
+      render();
+      showToast(`已删除 ${deleted} 张素材（原型演示）`);
+    });
+
+    insertButton.addEventListener("click", () => {
+      const count = state.selected.size;
+      overlay.hidden = true;
+      showToast(`已插入 ${count} 张图片（原型演示）`);
+    });
+
+    document.getElementById("closeLibrary").addEventListener("click", () => { overlay.hidden = true; });
+    document.getElementById("openLibrary").addEventListener("click", () => { overlay.hidden = false; });
+    document.getElementById("refresh").addEventListener("click", async (event) => {
+      const button = event.currentTarget;
+      if (button.disabled) return;
+      button.disabled = true;
+      button.classList.add("loading");
+      button.title = "正在刷新素材库";
+      button.setAttribute("aria-label", "正在刷新素材库");
+      await new Promise((resolve) => setTimeout(resolve, 850));
+      button.disabled = false;
+      button.classList.remove("loading");
+      button.title = "刷新素材库";
+      button.setAttribute("aria-label", "刷新素材库");
+      showToast("素材库已刷新（原型演示）");
+    });
+    loadMore.addEventListener("click", () => {
+      const offset = state.materials.length;
+      moreMaterials.forEach((item, index) => state.materials.push({id: `material-${offset + index}`, src: item[0], name: item[1], date: item[2]}));
+      state.loadedMore = true;
+      render();
+    });
+
+    document.getElementById("uploadInput").addEventListener("change", (event) => {
+      const files = Array.from(event.target.files || []);
+      for (const file of files) {
+        state.materials.unshift({
+          id: `upload-${Date.now()}-${Math.random()}`,
+          src: URL.createObjectURL(file),
+          name: file.name,
+          date: new Date().toLocaleDateString("zh-CN")
+        });
+        state.total += 1;
+      }
+      event.target.value = "";
+      render();
+      if (files.length) showToast(`已添加 ${files.length} 张本地预览（不会真实上传）`);
+    });
+
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) overlay.hidden = true;
+    });
+    confirmOverlay.addEventListener("click", (event) => {
+      if (event.target === confirmOverlay) confirmOverlay.hidden = true;
+    });
+
+    render();
+  </script>
+</body>
+</html>

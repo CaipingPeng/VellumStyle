@@ -21,6 +21,14 @@ test("图片素材库默认多选并通过独立命令插入或删除所选素�
   assert.match(source, /插入所选/);
   assert.match(source, /全选已加载/);
   assert.match(source, /UPLOAD_CONCURRENCY = 16/);
+  assert.match(source, /contentPadding=\{false\}/);
+  assert.match(source, /grid-cols-\[minmax\(0,1fr\)_auto_minmax\(0,1fr\)\]/);
+  assert.match(source, /decoding="async"/);
+  assert.match(source, /object-contain/);
+  assert.match(source, /materialLoading \? "animate-spin"/);
+  assert.doesNotMatch(source, /group-hover:scale|placeholder="搜索已加载素材/);
+  assert.ok(source.indexOf("删除所选") < source.indexOf("刷新素材库"));
+  assert.ok(source.indexOf("插入所选") < source.indexOf("刷新素材库"));
   assert.match(confirmSource, /尚未发表且仅停留在草稿箱中的文章图片失效/);
 });
 

@@ -207,6 +207,7 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
   };
 
   const allLoadedSelected = materialItems.length > 0 && selectedIds.size === materialItems.length;
+  const busy = deleting || uploading;
 
   return (
     <>
@@ -221,91 +222,106 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
         onClose={onClose}
         closeDisabled={deleting}
         width="min(90vw,920px)"
-        headerActions={
-          <>
-            <button
-              type="button"
-              title="刷新素材库"
-              aria-label="刷新素材库"
-              disabled={materialLoading || deleting}
-              onClick={() => void loadMaterialLibrary(0)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-border bg-bg-secondary text-text-secondary outline-none transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-50"
-            >
-              <RefreshCw size={14} className={materialLoading ? "animate-spin" : ""} />
-            </button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={selectedItems.length === 0 || deleting || uploading}
-              title="永久删除所选图片素材"
-              aria-label={`删除所选图片${selectedItems.length > 0 ? `，共 ${selectedItems.length} 张` : ""}`}
-              className="text-danger hover:bg-danger/10"
-              onClick={() => setDeleteConfirmOpen(true)}
-            >
-              <Trash2 size={14} />
-              <span className="hidden sm:inline">删除所选{selectedItems.length > 0 ? ` (${selectedItems.length})` : ""}</span>
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              disabled={!canInsert || selectedItems.length === 0 || deleting || uploading}
-              title={!canInsert ? "请先打开一篇文章" : "将所选图片插入当前文章"}
-              onClick={insertSelected}
-            >
-              <ImageIcon size={14} />
-              <span className="hidden sm:inline">插入所选{selectedItems.length > 0 ? ` (${selectedItems.length})` : ""}</span>
-            </Button>
-          </>
-        }
+        contentPadding={false}
         footer={
-          <div className="flex w-full items-center justify-between gap-3">
-            <Button
-              type="button"
-              variant="secondary"
-              state={uploading ? "loading" : "idle"}
-              loadingText={`正在上传 ${uploadProgress.completed}/${uploadProgress.total}`}
-              disabled={deleting}
-              onClick={() => void uploadMaterials()}
-            >
-              <ImageUp size={14} />
-              上传图片
-            </Button>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-normal text-text-muted">
-                {selectedItems.length > 0 ? `已选择 ${selectedItems.length} 张` : `共 ${materialTotal} 张`}
-              </span>
-              <Button type="button" variant="secondary" disabled={deleting} onClick={onClose}>关闭</Button>
+          <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+            <div className="justify-self-start">
+              <Button
+                type="button"
+                variant="secondary"
+                state={uploading ? "loading" : "idle"}
+                loadingText={`正在上传 ${uploadProgress.completed}/${uploadProgress.total}`}
+                disabled={deleting}
+                onClick={() => void uploadMaterials()}
+              >
+                <ImageUp size={14} />
+                上传图片
+              </Button>
+            </div>
+            <span className="whitespace-nowrap text-xs font-normal text-text-muted">
+              已加载 {materialItems.length}/{materialTotal || materialItems.length} 张
+            </span>
+            <div className="justify-self-end">
+              {materialItems.length < materialTotal && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={materialLoading || busy}
+                  onClick={() => void loadMaterialLibrary(materialItems.length)}
+                >
+                  {materialLoading ? "加载中…" : "加载更多"}
+                </Button>
+              )}
             </div>
           </div>
         }
       >
-        <div className="flex min-h-[430px] flex-col">
-          <div className="mb-3 flex flex-none items-center justify-between gap-3">
-            <div className="text-xs leading-5 text-text-secondary">
-              点击图片可多选，再通过右上角按钮插入或永久删除。
+        <div className="flex h-[clamp(360px,calc(86vh-100px),640px)] min-h-0 flex-col">
+          <div className="flex h-[42px] flex-none items-center justify-between gap-3 border-b border-border bg-bg-secondary px-4">
+            <div className="flex min-w-0 items-center gap-3">
+              {materialItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={toggleSelectAllLoaded}
+                  className="inline-flex h-8 flex-none cursor-pointer items-center gap-1.5 rounded-sm border-0 bg-transparent px-1.5 text-xs text-text-secondary outline-none transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+                >
+                  {allLoadedSelected ? <CheckSquare2 size={14} className="text-accent" /> : <Square size={14} />}
+                  {allLoadedSelected ? "取消全选" : "全选已加载"}
+                </button>
+              )}
+              <span className="hidden truncate text-xs text-text-muted sm:inline">
+                {selectedItems.length > 0 ? `已选择 ${selectedItems.length} 张` : "未选择图片"}
+              </span>
             </div>
-            {materialItems.length > 0 && (
+            <div className="flex flex-none items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={selectedItems.length === 0 || busy}
+                title="永久删除所选图片素材"
+                aria-label={`删除所选图片${selectedItems.length > 0 ? `，共 ${selectedItems.length} 张` : ""}`}
+                className="text-danger hover:bg-danger/10"
+                onClick={() => setDeleteConfirmOpen(true)}
+              >
+                <Trash2 size={14} />
+                <span className="hidden sm:inline">删除所选</span>
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                disabled={!canInsert || selectedItems.length === 0 || busy}
+                title={!canInsert ? "请先打开一篇文章" : "将所选图片插入当前文章"}
+                onClick={insertSelected}
+              >
+                <ImageIcon size={14} />
+                <span className="hidden sm:inline">插入所选</span>
+              </Button>
               <button
                 type="button"
-                onClick={toggleSelectAllLoaded}
-                className="inline-flex h-7 flex-none items-center gap-1.5 rounded-sm px-2 text-xs text-text-secondary hover:bg-bg-tertiary hover:text-text"
+                title={materialLoading ? "正在刷新素材库" : "刷新素材库"}
+                aria-label={materialLoading ? "正在刷新素材库" : "刷新素材库"}
+                disabled={materialLoading || busy}
+                onClick={() => void loadMaterialLibrary(0)}
+                className="inline-grid h-8 w-8 flex-none place-items-center rounded-sm border-0 bg-transparent p-0 text-text-secondary outline-none transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-50"
               >
-                {allLoadedSelected ? <CheckSquare2 size={14} className="text-accent" /> : <Square size={14} />}
-                {allLoadedSelected ? "取消全选" : "全选已加载"}
+                <RefreshCw size={15} className={materialLoading ? "animate-spin" : ""} />
               </button>
-            )}
+            </div>
           </div>
 
           {materialLoading && materialItems.length === 0 ? (
-            <div className="grid auto-rows-max grid-cols-2 gap-3 overflow-hidden py-[5px] pl-[4px] pr-2 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid min-h-0 flex-1 auto-rows-max grid-cols-2 gap-3 overflow-hidden p-4 sm:grid-cols-3 lg:grid-cols-4">
               {Array.from({length: 8}).map((_, index) => (
-                <div key={index} className="aspect-[4/3] animate-pulse overflow-hidden rounded-md border border-border bg-bg-secondary p-2">
-                  <div className="h-full rounded bg-[linear-gradient(90deg,rgba(148,163,184,0.10),rgba(148,163,184,0.22),rgba(148,163,184,0.10))]" />
+                <div key={index} className="overflow-hidden rounded-md border border-border-strong bg-bg">
+                  <div className="aspect-[4/3] animate-pulse bg-bg-tertiary" />
+                  <div className="border-t border-border bg-bg-secondary px-2 py-2">
+                    <div className="h-2.5 w-3/4 animate-pulse rounded bg-bg-tertiary" />
+                  </div>
                 </div>
               ))}
             </div>
           ) : materialError && materialItems.length === 0 ? (
-            <div className="rounded-md bg-bg-secondary px-3 py-3 text-xs leading-5 text-text-secondary">
+            <div className="m-4 rounded-md bg-bg-secondary px-3 py-3 text-xs leading-5 text-text-secondary">
               <div className="font-medium text-text">素材库读取失败</div>
               <div className="mt-1 break-words">
                 {materialError.includes("NOT_CONFIGURED") ? "请先在设置中填写微信素材上传凭证。" : materialError}
@@ -315,9 +331,8 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
               </Button>
             </div>
           ) : materialItems.length > 0 ? (
-            <div className="flex min-h-0 flex-1 flex-col">
-              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable_both-edges] [scrollbar-width:thin] py-[5px] pl-[4px] pr-2">
-                <div className="grid auto-rows-max grid-cols-2 content-start gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 [scrollbar-gutter:stable] [scrollbar-width:thin]">
+              <div className="grid auto-rows-max grid-cols-2 content-start gap-3 sm:grid-cols-3 lg:grid-cols-4">
                   {materialItems.map((item, index) => {
                     const selected = selectedIds.has(item.mediaId);
                     return (
@@ -327,39 +342,40 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
                         onClick={() => toggleSelection(item.mediaId)}
                         aria-pressed={selected}
                         aria-label={`${selected ? "取消选择" : "选择"}素材库第 ${index + 1} 张图片：${item.name}`}
-                        className={`group relative block aspect-[4/3] w-full appearance-none overflow-hidden rounded-md bg-bg-secondary p-0 outline-none transition-all duration-fast focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${selected ? "border-2 border-accent shadow-[0_0_0_2px_var(--accent-subtle)]" : "border border-border hover:border-accent/60"}`}
+                        title={item.name}
+                        className={`relative block w-full cursor-pointer appearance-none overflow-hidden rounded-md bg-bg p-0 text-left outline-none transition-[border-color,box-shadow] duration-fast focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+                          selected
+                            ? "border border-accent shadow-[inset_0_0_0_2px_var(--accent)]"
+                            : "border border-border-strong shadow-[0_1px_2px_rgba(20,20,30,0.03)]"
+                        }`}
                       >
-                        <img src={toProxyImageUrl(item.url)} alt={`素材库图片：${item.name}`} className="block h-full w-full object-contain" />
-                        <span className="absolute inset-x-0 bottom-0 bg-black/60 px-2 py-1 text-left text-[11px] leading-4 text-white/90">
-                          <span className="block truncate">{item.name}</span>
-                          <span className="block text-white/70">{formatMaterialTime(item.updateTime)}</span>
+                        <span className="relative block aspect-[4/3] overflow-hidden bg-bg-tertiary">
+                          <img
+                            src={toProxyImageUrl(item.url)}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            className="block h-full w-full object-contain"
+                          />
+                          {selected && (
+                            <span aria-hidden="true" className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full border-2 border-white bg-accent text-white shadow-sm">
+                              <Check size={14} strokeWidth={3} />
+                            </span>
+                          )}
                         </span>
-                        {selected && (
-                          <span className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-accent text-white shadow-sm" aria-hidden="true">
-                            <Check size={15} strokeWidth={3} />
-                          </span>
-                        )}
+                        <span className="flex h-[34px] items-center justify-between gap-2 border-t border-border bg-bg-secondary px-2">
+                          <span className="min-w-0 truncate text-[12px] font-medium leading-4 text-text-secondary">{item.name}</span>
+                          <span className="flex-none text-[10px] leading-4 text-text-muted">{formatMaterialTime(item.updateTime)}</span>
+                        </span>
                       </button>
                     );
                   })}
-                </div>
-              </div>
-              <div className="mt-3 flex flex-none items-center justify-between gap-3">
-                <span className="text-xs text-text-muted">
-                  已加载 {materialItems.length}/{materialTotal || materialItems.length} 张
-                </span>
-                {materialItems.length < materialTotal && (
-                  <Button type="button" variant="secondary" disabled={materialLoading || deleting} onClick={() => void loadMaterialLibrary(materialItems.length)}>
-                    {materialLoading ? "加载中…" : "加载更多"}
-                  </Button>
-                )}
               </div>
             </div>
           ) : (
-            <div className="flex min-h-[260px] flex-col items-center justify-center rounded-md bg-bg-secondary px-6 text-center text-sm text-text-secondary">
+            <div className="m-4 flex min-h-0 flex-1 flex-col items-center justify-center rounded-md bg-bg-secondary px-6 text-center text-sm text-text-secondary">
               <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent-subtle text-accent"><ImageIcon size={22} /></span>
               <div className="mt-3 font-medium text-text">素材库暂无图片</div>
-              <div className="mt-1 text-xs leading-5">可通过窗口底部的上传按钮添加永久图片素材。</div>
             </div>
           )}
         </div>
