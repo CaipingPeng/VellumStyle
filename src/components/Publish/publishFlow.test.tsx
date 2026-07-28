@@ -468,7 +468,7 @@ test("publish request replaces the existing dialog with diagnostics and does not
   const warning = warningRegion();
   assert.ok(warning);
   assert.equal(document.querySelectorAll('button[title="关闭"]').length, 1, "warning must not create a nested modal");
-  assert.match(document.querySelector<HTMLButtonElement>('button[title="关闭"]')?.parentElement?.textContent ?? "", /未上传图片检查/);
+  assert.match(document.querySelector<HTMLButtonElement>('button[title="关闭"]')?.closest("[data-dialog-header]")?.textContent ?? "", /未上传图片检查/);
   assert.match(warning.textContent ?? "", /第 2 行 · 本地图片/);
   assert.match(warning.textContent ?? "", /\.\/assets\/cover\.png/);
   assert.match(warning.textContent ?? "", /第 4 行 · 外部图片/);

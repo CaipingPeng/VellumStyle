@@ -24,6 +24,10 @@ export async function pickImageFile(): Promise<string | null> {
   return invoke<string | null>("pick_image_file");
 }
 
+export async function pickImageFiles(): Promise<string[] | null> {
+  return invoke<string[] | null>("pick_image_files");
+}
+
 export async function uploadLocalImage(
   path: string,
   category: ImageUploadTask["category"] = "正文图片",

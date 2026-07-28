@@ -6,7 +6,6 @@ interface EditorWorkspacePanelProps {
   editorRef: RefObject<MarkdownEditorHandle>;
   onPickFile: (file: File) => Promise<void>;
   onPickLocal: (path: string) => Promise<void>;
-  onOpenMaterialLibrary: () => void;
   toolbarActions?: ReactNode;
   children: ReactNode;
 }
@@ -15,7 +14,6 @@ export default function EditorWorkspacePanel({
   editorRef,
   onPickFile,
   onPickLocal,
-  onOpenMaterialLibrary,
   toolbarActions,
   children,
 }: EditorWorkspacePanelProps) {
@@ -36,7 +34,6 @@ export default function EditorWorkspacePanel({
             editorRef={editorRef}
             onPickFile={onPickFile}
             onPickLocal={onPickLocal}
-            onOpenMaterialLibrary={onOpenMaterialLibrary}
           />
         </div>
         {toolbarActions && (

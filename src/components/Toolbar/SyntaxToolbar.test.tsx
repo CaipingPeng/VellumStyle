@@ -72,7 +72,6 @@ function withRenderedToolbar(
             editorRef={{current: createEditorHandle(calls)}}
             onPickFile={async () => {}}
             onPickLocal={async () => {}}
-            onOpenMaterialLibrary={() => {}}
           />,
         );
       });

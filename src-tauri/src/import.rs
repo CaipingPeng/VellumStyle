@@ -70,6 +70,25 @@ pub async fn pick_image_file(
 }
 
 #[tauri::command]
+pub async fn pick_image_files(
+    app: tauri::AppHandle,
+    window: tauri::Window,
+) -> Result<Option<Vec<String>>, String> {
+    let paths = app
+        .dialog()
+        .file()
+        .set_parent(&window)
+        .add_filter("图片", &IMAGE_EXTS)
+        .blocking_pick_files();
+    Ok(paths.map(|paths| {
+        paths
+            .into_iter()
+            .filter_map(|p| p.as_path().map(path_to_string))
+            .collect()
+    }))
+}
+
+#[tauri::command]
 pub async fn pick_resource_dir(
     app: tauri::AppHandle,
     window: tauri::Window,

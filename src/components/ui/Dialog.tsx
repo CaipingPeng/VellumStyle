@@ -14,6 +14,7 @@ interface Props {
   width?: number | string;
   children: ReactNode;
   footer?: ReactNode;
+  headerActions?: ReactNode;
 }
 
 export default function Dialog({
@@ -25,6 +26,7 @@ export default function Dialog({
   width = 440,
   children,
   footer,
+  headerActions,
 }: Props) {
   return createPortal(
     <AnimatePresence>
@@ -47,18 +49,21 @@ export default function Dialog({
             transition={{duration: 0.13, ease: [0.16, 1, 0.3, 1]}}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex h-11 shrink-0 items-center justify-between border-b border-border px-4 text-sm font-semibold text-text">
-              <span>{title}</span>
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={closeDisabled}
-                aria-disabled={closeDisabled || undefined}
-                title="关闭"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast hover:bg-bg-tertiary hover:text-text disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-text-muted"
-              >
-                <X size={16} />
-              </button>
+            <div data-dialog-header className="flex min-h-11 shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-1.5 text-sm font-semibold text-text">
+              <span className="min-w-0">{title}</span>
+              <div className="flex flex-none items-center gap-2">
+                {headerActions}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={closeDisabled}
+                  aria-disabled={closeDisabled || undefined}
+                  title="关闭"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast hover:bg-bg-tertiary hover:text-text disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-text-muted"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
             {footer && <div className="flex shrink-0 justify-end gap-2 border-t border-border px-4 py-3">{footer}</div>}

@@ -129,6 +129,12 @@ struct MaterialListResp {
 }
 
 #[derive(Deserialize)]
+struct MaterialActionResp {
+    errcode: Option<i64>,
+    errmsg: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct RawMaterialItem {
     media_id: Option<String>,
     name: Option<String>,
@@ -417,6 +423,75 @@ pub async fn list_image_materials(
                 list_image_materials_inner(&token, offset, count)
                     .await
                     .map_err(|(_, m)| m)
+            } else {
+                Err(msg)
+            }
+        }
+    }
+}
+
+fn parse_delete_material_response(body: &str) -> Result<(), (Option<i64>, String)> {
+    let data: MaterialActionResp =
+        serde_json::from_str(body).map_err(|e| (None, format!("解析素材删除响应失败：{e}")))?;
+    match data.errcode {
+        Some(0) => Ok(()),
+        errcode => Err((
+            errcode,
+            format_wechat_error(
+                errcode,
+                &data.errmsg.unwrap_or_else(|| "微信素材删除失败".into()),
+                "微信素材删除失败",
+            ),
+        )),
+    }
+}
+
+async fn delete_image_material_inner(
+    token: &str,
+    media_id: &str,
+) -> Result<(), (Option<i64>, String)> {
+    let url =
+        format!("https://api.weixin.qq.com/cgi-bin/material/del_material?access_token={token}");
+    let resp = reqwest::Client::new()
+        .post(&url)
+        .json(&serde_json::json!({"media_id": media_id}))
+        .send()
+        .await
+        .map_err(|e| (None, format!("删除素材请求失败：{}", e.without_url())))?;
+    let status = resp.status();
+    if !status.is_success() {
+        return Err((None, format!("删除素材失败：HTTP {status}")));
+    }
+    let body = resp
+        .text()
+        .await
+        .map_err(|e| (None, format!("读取素材删除响应失败：{}", e.without_url())))?;
+    parse_delete_material_response(&body)
+}
+
+/// 删除公众号永久图片素材。未配置返回 "NOT_CONFIGURED"。
+#[tauri::command]
+pub async fn delete_image_material(app: AppHandle, media_id: String) -> Result<(), String> {
+    let media_id = media_id.trim();
+    if media_id.is_empty() {
+        return Err("素材 ID 不能为空".into());
+    }
+
+    let cfg = load_wechat_config(&app);
+    if !cfg.is_configured() {
+        return Err("NOT_CONFIGURED".into());
+    }
+
+    let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
+    match delete_image_material_inner(&token, media_id).await {
+        Ok(()) => Ok(()),
+        Err((errcode, msg)) => {
+            if matches!(errcode, Some(40001) | Some(42001) | Some(40014)) {
+                invalidate_access_token(&token);
+                let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
+                delete_image_material_inner(&token, media_id)
+                    .await
+                    .map_err(|(_, message)| message)
             } else {
                 Err(msg)
             }
@@ -1422,8 +1497,9 @@ pub async fn add_draft(
 mod tests {
     use super::{
         build_add_draft_body, decode_for_reencoding, format_wechat_error, get_outbound_ip,
-        is_allowed_redirect_target, parse_material_page_response, parse_outbound_ip_response,
-        prepare_upload_for_limit, validate_remote_addresses, OUTBOUND_IP_ENDPOINTS,
+        is_allowed_redirect_target, parse_delete_material_response, parse_material_page_response,
+        parse_outbound_ip_response, prepare_upload_for_limit, validate_remote_addresses,
+        OUTBOUND_IP_ENDPOINTS,
     };
     use image::{DynamicImage, ImageFormat, Rgb, RgbImage, Rgba, RgbaImage};
     use std::io::Cursor;
@@ -1726,6 +1802,25 @@ mod tests {
         assert_eq!(json["items"][0]["mediaId"], "MEDIA_ID_1");
         assert_eq!(json["items"][0]["updateTime"], 1780000000);
         assert!(json["items"][0]["media_id"].is_null());
+    }
+
+    #[test]
+    fn delete_material_response_accepts_success_and_preserves_wechat_error() {
+        assert!(parse_delete_material_response(r#"{"errcode":0,"errmsg":"ok"}"#).is_ok());
+
+        let (code, message) =
+            parse_delete_material_response(r#"{"errcode":40007,"errmsg":"invalid media_id"}"#)
+                .unwrap_err();
+        assert_eq!(code, Some(40007));
+        assert_eq!(message, "微信素材删除失败：40007 invalid media_id");
+    }
+
+    #[test]
+    fn delete_material_response_rejects_missing_result_code() {
+        let (_, message) =
+            parse_delete_material_response(r#"{"errmsg":"unexpected"}"#).unwrap_err();
+        assert!(message.contains("微信素材删除失败"));
+        assert!(message.contains("unexpected"));
     }
 
     #[test]

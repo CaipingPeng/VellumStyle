@@ -18,7 +18,6 @@ interface Props {
   editorRef: RefObject<MarkdownEditorHandle>;
   onPickFile: (file: File) => Promise<void>;
   onPickLocal: (path: string) => Promise<void>;
-  onOpenMaterialLibrary: () => void;
 }
 
 const ICON = 16;
@@ -28,7 +27,7 @@ function Separator() {
   return <div aria-hidden="true" className="mx-1 h-[18px] w-px flex-none bg-border" />;
 }
 
-export default function SyntaxToolbar({editorRef, onPickFile, onPickLocal, onOpenMaterialLibrary}: Props) {
+export default function SyntaxToolbar({editorRef, onPickFile, onPickLocal}: Props) {
   const [headingOpen, setHeadingOpen] = useState(false);
   const shortcutPlatform = detectSyntaxShortcutPlatform();
   const syntaxTitle = (label: string, action: SyntaxAction) =>
@@ -62,7 +61,6 @@ export default function SyntaxToolbar({editorRef, onPickFile, onPickLocal, onOpe
         display="icon"
         onPickFile={onPickFile}
         onPickLocal={onPickLocal}
-        onOpenMaterialLibrary={onOpenMaterialLibrary}
       />
       <Separator />
 

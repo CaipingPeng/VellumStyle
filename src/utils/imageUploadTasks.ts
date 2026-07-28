@@ -17,7 +17,7 @@ export type ImageUploadStatus = "active" | "success" | "error";
 export interface ImageUploadTask {
   id: string;
   filename: string;
-  category: "正文图片" | "导入图片" | "封面图片" | "文章导入";
+  category: "正文图片" | "导入图片" | "封面图片" | "文章导入" | "素材库图片";
   documentPath?: string;
   documentTitle?: string;
   phase: ImageUploadPhase;

@@ -19,7 +19,6 @@ test("编辑器面板提供唯一的局部工具栏和独立内容区", () => {
         editorRef: createRef<MarkdownEditorHandle>(),
         onPickFile: async () => {},
         onPickLocal: async () => {},
-        onOpenMaterialLibrary: () => {},
         toolbarActions: React.createElement("button", {"data-test-action": true}, "任务"),
         children: React.createElement("div", {"data-test-editor": true}, "编辑正文"),
       },

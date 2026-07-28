@@ -115,6 +115,10 @@ export function listImageMaterials(offset: number, count: number): Promise<Mater
   return invoke<MaterialImagePage>("list_image_materials", {offset, count});
 }
 
+export function deleteImageMaterial(mediaId: string): Promise<void> {
+  return invoke<void>("delete_image_material", {mediaId});
+}
+
 export function addDraft(
   title: string,
   content: string,

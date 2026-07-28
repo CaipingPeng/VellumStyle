@@ -55,7 +55,7 @@ import {
 import {defaultWindowIcon} from "@tauri-apps/api/app";
 import {invoke} from "@tauri-apps/api/core";
 import {getCurrentWindow} from "@tauri-apps/api/window";
-import {ListTree, PanelLeft} from "lucide-react";
+import {Images, ListTree, PanelLeft} from "lucide-react";
 import defaultContent from "./content.md?raw";
 import {applyAppearanceMode} from "./appearance/appearanceMode.ts";
 import {isManualSyncShortcut} from "./utils/manualSyncShortcut.ts";
@@ -308,16 +308,15 @@ export default function App() {
     }
   };
 
-  const handleOpenImageMaterialPicker = useCallback(() => {
-    setImageMaterialPickerOpen(true);
-  }, []);
-
   const handleNeedSettings = useCallback(() => {
+    setImageMaterialPickerOpen(false);
     setSettingsOpen(true);
   }, []);
 
-  const handlePickMaterialImage = useCallback((url: string) => {
-    editorRef.current?.insertAtCursor(`\n${formatMarkdownImage({alt: "", url})}\n`);
+  const handlePickMaterialImages = useCallback((urls: string[]) => {
+    if (urls.length === 0) return;
+    const markdown = urls.map((url) => formatMarkdownImage({alt: "", url})).join("\n\n");
+    editorRef.current?.insertAtCursor(`\n${markdown}\n`);
   }, []);
 
   const handleResizePreviewImage = useCallback((imageIndex: number, size: {width: string}) => {
@@ -650,6 +649,15 @@ export default function App() {
           <IconButton active={outlineOpen} title="大纲" aria-pressed={outlineOpen} onClick={toggleOutline}>
             <ListTree size={16} />
           </IconButton>
+          <span aria-hidden="true" className="h-5 w-px flex-none bg-border" />
+          <IconButton
+            active={imageMaterialPickerOpen}
+            title="图片素材库"
+            aria-pressed={imageMaterialPickerOpen}
+            onClick={() => setImageMaterialPickerOpen(true)}
+          >
+            <Images size={16} />
+          </IconButton>
         </div>
         <MainToolbar
           onOpenSettings={() => setSettingsOpen(true)}
@@ -700,7 +708,6 @@ export default function App() {
               editorRef={editorRef}
               onPickFile={handleUploadFile}
               onPickLocal={handleUploadLocal}
-              onOpenMaterialLibrary={handleOpenImageMaterialPicker}
               toolbarActions={<ArticleTaskLog currentDocumentPath={currentDocPath} />}
             >
               <MarkdownEditor
@@ -791,8 +798,9 @@ export default function App() {
       />
       <ImageMaterialPickerDialog
         open={imageMaterialPickerOpen}
+        canInsert={Boolean(currentDocPath)}
         onClose={() => setImageMaterialPickerOpen(false)}
-        onPick={handlePickMaterialImage}
+        onPick={handlePickMaterialImages}
         onNeedSettings={handleNeedSettings}
       />
       <Toaster />

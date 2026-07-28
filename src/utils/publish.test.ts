@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {addDraft, findUnuploadedImages, getCoverCandidates, listImageMaterials} from "./publish.ts";
+import {addDraft, deleteImageMaterial, findUnuploadedImages, getCoverCandidates, listImageMaterials} from "./publish.ts";
 
 test("listImageMaterials 调用永久图片素材库命令并保留分页参数", async () => {
   const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
@@ -33,6 +33,30 @@ test("listImageMaterials 调用永久图片素材库命令并保留分页参数"
     });
     assert.equal(page.totalCount, 8);
     assert.equal(page.items[0].mediaId, "MEDIA_ID_1");
+  } finally {
+    if (previousInternals === undefined) {
+      delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+    } else {
+      (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
+    }
+  }
+});
+
+test("deleteImageMaterial 调用永久素材删除命令", async () => {
+  const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+  let calledWith: {cmd: string; args: unknown} | null = null;
+  (window as unknown as {__TAURI_INTERNALS__: {invoke: (cmd: string, args: unknown) => Promise<unknown>}}).__TAURI_INTERNALS__ = {
+    invoke: async (cmd, args) => {
+      calledWith = {cmd, args};
+    },
+  };
+
+  try {
+    await deleteImageMaterial("MEDIA_ID_1");
+    assert.deepEqual(calledWith, {
+      cmd: "delete_image_material",
+      args: {mediaId: "MEDIA_ID_1"},
+    });
   } finally {
     if (previousInternals === undefined) {
       delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
