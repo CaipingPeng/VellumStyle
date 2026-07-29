@@ -114,13 +114,16 @@
 
 仓库已经发布了正式版本，第一次需要从 [GitHub Releases](https://github.com/CaipingPeng/VellumStyle/releases/latest) 下载系统对应的安装包。
 
-当前 Tauri 配置主要面向 Windows：
+推送版本标签后，GitHub Actions 会自动构建并上传各平台安装包：
 
-| 平台 | 当前状态 |
+| 平台 | 构建产物 |
 | --- | --- |
-| Windows | 已配置 `msi` 和 `nsis` 打包目标 |
-| macOS | 作者没有环境，故尚未构建，期待你来贡献 |
-| Linux | 尚未构建 |
+| Windows x64 | `MSI`、`NSIS` 安装包 |
+| macOS Universal | `DMG`，同时支持 Intel 与 Apple Silicon |
+| Linux x64 | `DEB`、`AppImage` |
+
+macOS 安装包由 GitHub Actions 构建；在项目尚未配置 Apple Developer 签名与公证前，macOS 可能提示开发者身份无法验证。
+在 Actions 页面手动运行 `Release` 工作流时只生成临时构建产物，不会创建或覆盖正式 Release。
 
 软件安装后，详细的配置见[VellumStyle-文澜排版帮助文档](https://my.feishu.cn/docx/RUDpd1zWnoWuuyx0uFxcahIGnmC)
 

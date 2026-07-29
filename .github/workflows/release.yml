@@ -9,10 +9,16 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  release-windows:
-    name: Build Windows release
-    runs-on: windows-latest
+  prepare:
+    name: Validate release
+    runs-on: ubuntu-22.04
+    outputs:
+      release_body: ${{ steps.release_notes.outputs.body }}
 
     steps:
       - name: Checkout repository
@@ -24,36 +30,104 @@ jobs:
           node-version: "lts/*"
           cache: "npm"
 
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Run tests
+      - name: Run frontend tests
         run: npm test
 
       - name: Read release notes
         id: release_notes
-        shell: pwsh
+        shell: bash
         run: |
-          $notesPath = "release-notes.md"
-          if (-not (Test-Path $notesPath)) {
-            throw "Missing release notes file: $notesPath"
-          }
+          notes_path="release-notes.md"
+          if [[ ! -f "$notes_path" ]]; then
+            echo "Missing release notes file: $notes_path" >&2
+            exit 1
+          fi
 
-          $notes = (Get-Content -Raw -Path $notesPath).Trim()
-          if ([string]::IsNullOrWhiteSpace($notes)) {
-            throw "release-notes.md is empty"
-          }
-          if ($notes -match "vX\.X\.X|X\.X\.X|TODO|待补充") {
-            throw "release-notes.md still contains placeholder content"
-          }
+          notes="$(sed -e '${/^$/d;}' "$notes_path")"
+          if [[ -z "${notes//[[:space:]]/}" ]]; then
+            echo "release-notes.md is empty" >&2
+            exit 1
+          fi
+          if grep -Eq 'vX\.X\.X|X\.X\.X|TODO|待补充' <<<"$notes"; then
+            echo "release-notes.md still contains placeholder content" >&2
+            exit 1
+          fi
 
-          $delimiter = "RELEASE_NOTES_$([guid]::NewGuid().ToString('N'))"
-          "body<<$delimiter" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          $notes | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          $delimiter | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          delimiter="RELEASE_NOTES_$(date +%s%N)"
+          {
+            echo "body<<$delimiter"
+            printf '%s\n' "$notes"
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            platform: windows-latest
+            rust_targets: x86_64-pc-windows-msvc
+            tauri_args: --target x86_64-pc-windows-msvc --bundles msi,nsis
+            include_updater_json: true
+          - name: Linux x64
+            platform: ubuntu-22.04
+            rust_targets: x86_64-unknown-linux-gnu
+            tauri_args: --target x86_64-unknown-linux-gnu --bundles deb,appimage
+            include_updater_json: false
+          - name: macOS Universal
+            platform: macos-14
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            tauri_args: --target universal-apple-darwin --bundles dmg
+            include_updater_json: false
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            file \
+            libayatana-appindicator3-dev \
+            libfuse2 \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            patchelf \
+            wget
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "npm"
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+          shared-key: ${{ matrix.name }}
+
+      - name: Install frontend dependencies
+        run: npm ci
 
       - name: Build and publish Tauri app
         uses: tauri-apps/tauri-action@v0.6.2
@@ -62,12 +136,14 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: v__VERSION__
+          tagName: ${{ github.event_name == 'push' && 'v__VERSION__' || '' }}
           releaseName: "VellumStyle v__VERSION__"
-          releaseBody: ${{ steps.release_notes.outputs.body }}
+          releaseBody: ${{ needs.prepare.outputs.release_body }}
           generateReleaseNotes: true
           releaseDraft: false
           prerelease: false
-          includeUpdaterJson: true
+          uploadWorkflowArtifacts: true
+          includeUpdaterJson: ${{ matrix.include_updater_json }}
           updaterJsonPreferNsis: true
           tauriScript: npx tauri
+          args: ${{ matrix.tauri_args }}

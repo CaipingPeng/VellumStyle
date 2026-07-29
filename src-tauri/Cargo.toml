@@ -1,6 +1,6 @@
 [package]
 name = "vellumstyle"
-version = "1.7.7"
+version = "1.7.8"
 description = "文澜排版"
 edition = "2021"
 rust-version = "1.77.2"
@@ -15,8 +15,6 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["protocol-asset", "image-png"] }
 tauri-plugin-dialog = "2"
-webview2-com = "0.38.2"
-windows = "0.61.3"
 base64 = "0.22.1"
 reqwest = { version = "0.12", features = ["json", "multipart", "stream"] }
 serde = { version = "1", features = ["derive"] }
@@ -34,6 +32,10 @@ roxmltree = "0.20"
 tauri-plugin-clipboard-manager = "2.3.2"
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
 jpeg-encoder = { version = "0.6.1", features = ["simd"] }
+
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.38.2"
+windows = "0.61.3"
 
 [profile.dev]
 opt-level = 2
