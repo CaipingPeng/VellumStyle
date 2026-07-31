@@ -312,7 +312,7 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
           {materialLoading && materialItems.length === 0 ? (
             <div className="grid min-h-0 flex-1 auto-rows-max grid-cols-2 gap-3 overflow-hidden p-4 sm:grid-cols-3 lg:grid-cols-4">
               {Array.from({length: 8}).map((_, index) => (
-                <div key={index} className="box-border overflow-hidden rounded-lg border border-transparent bg-bg-secondary">
+                <div key={index} className="box-border overflow-hidden rounded-lg border border-[color:var(--card-border)] bg-bg-secondary">
                   <div className="aspect-[4/3] animate-pulse bg-bg-tertiary" />
                   <div className="border-t border-border bg-bg-secondary px-2 py-2">
                     <div className="h-2.5 w-3/4 animate-pulse rounded bg-bg-tertiary" />
@@ -343,7 +343,7 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
                         aria-pressed={selected}
                         aria-label={`${selected ? "取消选择" : "选择"}素材库第 ${index + 1} 张图片：${item.name}`}
                         title={item.name}
-                        className={`relative box-border block w-full cursor-pointer appearance-none overflow-hidden rounded-lg border border-transparent bg-bg-secondary p-0 text-left outline-none transition-[border-color,background-color,transform] duration-slow ease-bounce focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+                        className={`relative box-border block w-full cursor-pointer appearance-none overflow-hidden rounded-lg border border-[color:var(--card-border)] bg-bg-secondary p-0 text-left outline-none transition-[border-color,background-color,transform] duration-slow ease-bounce focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
                           selected
                             ? "border-accent/70"
                             : "hover:-translate-y-1 hover:bg-bg"

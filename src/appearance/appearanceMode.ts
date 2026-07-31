@@ -3,7 +3,7 @@ export type AppearanceMode = "light" | "dark";
 export const DEFAULT_APPEARANCE_MODE: AppearanceMode = "light";
 export const APPEARANCE_STORAGE_KEY = "vellumstyle";
 /** 亮暗切换过渡窗口：切换瞬间给根元素加临时类，过渡结束后移除。 */
-export const APPEARANCE_TRANSITION_MS = 240;
+export const APPEARANCE_TRANSITION_MS = 420;
 
 let appearanceSwitchTimer: number | undefined;
 

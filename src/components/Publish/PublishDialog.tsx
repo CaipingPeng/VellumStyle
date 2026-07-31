@@ -648,7 +648,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                 {Array.from({length: 6}).map((_, index) => (
                   <div
                     key={index}
-                    className="aspect-[2.35/1] animate-pulse box-border overflow-hidden rounded-lg border border-transparent bg-bg-secondary p-2"
+                    className="aspect-[2.35/1] animate-pulse box-border overflow-hidden rounded-lg border border-[color:var(--card-border)] bg-bg-secondary p-2"
                   >
                     <div className="h-full rounded bg-[linear-gradient(90deg,rgba(148,163,184,0.10),rgba(148,163,184,0.22),rgba(148,163,184,0.10))]" />
                   </div>
@@ -682,7 +682,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                         type="button"
                         disabled={busy || thumbUploading}
                         onClick={() => pickMaterialThumb(item)}
-                        className={`group relative block aspect-[2.35/1] w-full box-border appearance-none overflow-hidden rounded-lg border border-transparent bg-bg-secondary p-0 outline-none transition-[border-color,background-color,transform] duration-slow ease-bounce focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
+                        className={`group relative block aspect-[2.35/1] w-full box-border appearance-none overflow-hidden rounded-lg border border-[color:var(--card-border)] bg-bg-secondary p-0 outline-none transition-[border-color,background-color,transform] duration-slow ease-bounce focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
                           selected
                             ? "border-accent/70"
                             : "hover:-translate-y-1 hover:bg-bg"

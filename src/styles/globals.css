@@ -44,6 +44,9 @@
   --duration-fast: 130ms;
   --duration-med: 160ms;
   --duration-slow: 200ms;
+  --duration-appearance: 300ms;
+
+  --card-border: rgba(20, 20, 30, 0.09);
 
 }
 
@@ -77,6 +80,8 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.34);
   --shadow-lg: 0 18px 54px rgba(0, 0, 0, 0.46);
+
+  --card-border: rgba(255, 255, 255, 0.16);
 
 }
 
@@ -183,7 +188,7 @@ html.appearance-switching .vs-preview-image-menu,
 html.appearance-switching .update-release-notes code,
 html.appearance-switching .vs-skel {
   transition-property: background-color, border-color, color, fill, stroke, box-shadow;
-  transition-duration: var(--duration-med);
+  transition-duration: var(--duration-appearance);
   transition-timing-function: var(--ease);
 }
 
