@@ -331,7 +331,7 @@ async function loadPreview(): Promise<PreviewComponent> {
           "}",
         ].join("\n")],
         [/src[\\/]components[\\/]Preview[\\/]previewModes\.ts$/, "export function getPreviewMode() { return {width: null}; }"],
-        [/src[\\/]markdown[\\/]codeThemes\.ts$/, "export function buildMarkdownCss() { return ''; }"],
+        [/src[\\/]markdown[\\/]codeThemes\.ts$/, "export function buildMarkdownCss() { return ''; } export function subscribeCodeThemes() { return () => {}; }"],
         [/src[\\/]utils[\\/]previewImageActions\.ts$/, [
           "export async function copyPreviewImage(source) {",
           "  globalThis.__PREVIEW_IMAGE_MENU_TEST__.copySources.push(source);",

@@ -1,4 +1,4 @@
-import {useCallback, useLayoutEffect, useRef, useState, type RefObject} from "react";
+import {memo, useCallback, useLayoutEffect, useRef, useState, type RefObject} from "react";
 import {Copy as CopyIcon, Download, FileInput, MoreHorizontal, Palette, Send, Settings} from "lucide-react";
 import ImportButton, {type ImportButtonHandle} from "../Import/ImportButton.tsx";
 import ThemeMenu, {type ThemeMenuHandle} from "../Theme/ThemeMenu.tsx";
@@ -20,7 +20,7 @@ interface Props {
 const SECONDARY_ACTION_COUNT: number = SECONDARY_ACTIONS.length;
 const MIN_LEFT_TOOLBAR_WIDTH = 30;
 
-export default function MainToolbar({onOpenSettings, onNeedSettings, hasUpdateNotification = false}: Props) {
+function MainToolbar({onOpenSettings, onNeedSettings, hasUpdateNotification = false}: Props) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(SECONDARY_ACTION_COUNT);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -199,3 +199,5 @@ function parsePx(value: string): number {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
+
+export default memo(MainToolbar);

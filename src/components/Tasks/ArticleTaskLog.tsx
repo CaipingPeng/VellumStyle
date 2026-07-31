@@ -1,4 +1,4 @@
-import {useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
+import {memo, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
 import {CheckCircle2, CircleX, ListChecks, Loader2, Trash2} from "lucide-react";
 import {
@@ -43,7 +43,7 @@ function documentLabel(task: ImageUploadTask): string {
     || "未归属文章";
 }
 
-export default function ArticleTaskLog({currentDocumentPath}: Props) {
+function ArticleTaskLog({currentDocumentPath}: Props) {
   const tasks = useSyncExternalStore(
     imageUploadTasks.subscribe,
     imageUploadTasks.getSnapshot,
@@ -207,3 +207,5 @@ export default function ArticleTaskLog({currentDocumentPath}: Props) {
     </div>
   );
 }
+
+export default memo(ArticleTaskLog);

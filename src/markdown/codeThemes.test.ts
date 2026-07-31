@@ -1,11 +1,16 @@
-import {test} from "node:test";
+import {before, test} from "node:test";
 import assert from "node:assert/strict";
 import {readdirSync, statSync} from "node:fs";
 import {join, relative, sep} from "node:path";
 import {ARTICLE_ROOT_SELECTOR} from "../articleRoot.ts";
-import {buildMarkdownCss, CODE_THEMES, DEFAULT_CODE_THEME_ID, getCodeThemeById} from "./codeThemes.ts";
+import {buildMarkdownCss, CODE_THEMES, DEFAULT_CODE_THEME_ID, getCodeThemeById, loadAllCodeThemes} from "./codeThemes.ts";
 
 const HIGHLIGHT_STYLES_DIR = join(process.cwd(), "node_modules", "highlight.js", "styles");
+
+// 全量代码主题按需加载；目录/回退相关断言依赖完整列表。
+before(async () => {
+  await loadAllCodeThemes();
+});
 
 function listHljsThemeIds(dir = HIGHLIGHT_STYLES_DIR): string[] {
   return readdirSync(dir)

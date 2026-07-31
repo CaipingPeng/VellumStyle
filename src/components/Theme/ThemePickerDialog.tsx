@@ -3,7 +3,7 @@ import {createPortal} from "react-dom";
 import {motion} from "framer-motion";
 import {ArrowRight, Braces, Check, ChevronLeft, ChevronRight, FolderOpen, Palette, Search, Star, Upload, X} from "lucide-react";
 import {getThemeById, useStore} from "../../store/index.ts";
-import {CODE_THEMES, getCodeThemeById} from "../../markdown/codeThemes.ts";
+import {CODE_THEMES, getCodeThemeById, loadAllCodeThemes, subscribeCodeThemes} from "../../markdown/codeThemes.ts";
 import {loadAllThemes, openThemesDir, importThemeModel} from "../../themes/loader.ts";
 import {toast} from "../Toast/toast.ts";
 import IconButton from "../ui/IconButton.tsx";
@@ -58,7 +58,13 @@ export default function ThemePickerDialog({onClose}: Props) {
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
   const [jumpPage, setJumpPage] = useState("");
+  const [codeThemesVersion, setCodeThemesVersion] = useState(0);
   const ref = useClickOutside(onClose);
+
+  useEffect(() => {
+    void loadAllCodeThemes();
+    return subscribeCodeThemes(() => setCodeThemesVersion((version) => version + 1));
+  }, []);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -79,7 +85,7 @@ export default function ThemePickerDialog({onClose}: Props) {
   );
   const visibleCodeThemes = useMemo(
     () => filterAndRankCodeThemes(CODE_THEMES, query, pinnedCodeThemeIds, codeThemeId),
-    [codeThemeId, pinnedCodeThemeIds, query],
+    [codeThemeId, codeThemesVersion, pinnedCodeThemeIds, query],
   );
 
   const isCodeTab = activeTab === "code";

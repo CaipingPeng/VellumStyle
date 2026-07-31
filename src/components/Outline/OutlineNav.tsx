@@ -1,3 +1,4 @@
+import {memo} from "react";
 import type {OutlineItem} from "../../utils/outline.ts";
 
 interface Props {
@@ -10,7 +11,7 @@ function countLabel(count: number): string {
   return `${count} 项`;
 }
 
-export default function OutlineNav({items, activeLine, onJump}: Props) {
+function OutlineNav({items, activeLine, onJump}: Props) {
   return (
     <aside className="workspace-panel workspace-outline-panel flex w-[220px] flex-shrink-0 flex-col overflow-hidden">
       <div className="flex h-[42px] flex-none items-center justify-between border-b border-border px-3">
@@ -52,3 +53,5 @@ export default function OutlineNav({items, activeLine, onJump}: Props) {
     </aside>
   );
 }
+
+export default memo(OutlineNav);

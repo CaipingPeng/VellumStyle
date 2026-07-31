@@ -1,4 +1,4 @@
-import {GENERATED_HLJS_THEMES} from "./generatedHljsThemes.ts";
+import {GENERATED_HLJS_THEMES_CORE} from "./generatedHljsThemesCore.ts";
 import {ARTICLE_ROOT_SELECTOR} from "../articleRoot.ts";
 
 export const DEFAULT_CODE_THEME_ID = "vs2015";
@@ -158,14 +158,55 @@ function themeRank(theme: CodeTheme): [number, string] {
   return [theme.group === "Highlight.js" ? 1 : 2, theme.name];
 }
 
-export const CODE_THEMES: CodeTheme[] = GENERATED_HLJS_THEMES.map((theme) => ({
-  ...theme,
-  css: scopeHljsCss(theme.css),
-})).sort((a, b) => {
+function compareCodeThemes(a: CodeTheme, b: CodeTheme): number {
   const [rankA, nameA] = themeRank(a);
   const [rankB, nameB] = themeRank(b);
   return rankA - rankB || nameA.localeCompare(nameB);
-});
+}
+
+function buildCodeTheme(theme: {id: string; name: string; group: "Highlight.js" | "Base16"; sourcePath: string; css: string}): CodeTheme {
+  return {...theme, css: scopeHljsCss(theme.css)};
+}
+
+// 常驻主题：启动即同步可用（预览/导出立即生效），覆盖绝大多数场景。
+export let CODE_THEMES: CodeTheme[] = GENERATED_HLJS_THEMES_CORE.map(buildCodeTheme).sort(compareCodeThemes);
+
+const codeThemeListeners = new Set<() => void>();
+let fullCodeThemesPromise: Promise<void> | null = null;
+
+// 订阅代码主题目录变化（全量列表按需加载完成后触发）。
+export function subscribeCodeThemes(listener: () => void): () => void {
+  codeThemeListeners.add(listener);
+  return () => {
+    codeThemeListeners.delete(listener);
+  };
+}
+
+function notifyCodeThemesChanged(): void {
+  for (const listener of codeThemeListeners) {
+    listener();
+  }
+}
+
+// 按需加载全量代码主题（约 256 个，独立 chunk 不进主包）；幂等，可并发调用。
+export function loadAllCodeThemes(): Promise<void> {
+  if (!fullCodeThemesPromise) {
+    fullCodeThemesPromise = import("./generatedHljsThemesFull.ts")
+      .then(({GENERATED_HLJS_THEMES}) => {
+        const byId = new Map(CODE_THEMES.map((theme) => [theme.id, theme]));
+        for (const theme of GENERATED_HLJS_THEMES) {
+          byId.set(theme.id, buildCodeTheme(theme));
+        }
+        CODE_THEMES = [...byId.values()].sort(compareCodeThemes);
+        notifyCodeThemesChanged();
+      })
+      .catch((error) => {
+        fullCodeThemesPromise = null;
+        throw error;
+      });
+  }
+  return fullCodeThemesPromise;
+}
 
 export function getCodeThemeById(id?: string | null): CodeTheme {
   return CODE_THEMES.find((theme) => theme.id === id) ?? CODE_THEMES.find((theme) => theme.id === DEFAULT_CODE_THEME_ID) ?? CODE_THEMES[0];

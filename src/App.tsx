@@ -19,7 +19,7 @@ import IconButton from "./components/ui/IconButton.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
 import {toast} from "./components/Toast/toast.ts";
 import {useStore, getThemeById, flushDocumentThemeWrite, flushSave} from "./store/index.ts";
-import {getCodeThemeById} from "./markdown/codeThemes.ts";
+import {getCodeThemeById, loadAllCodeThemes, subscribeCodeThemes} from "./markdown/codeThemes.ts";
 import {formatMarkdownImage, replaceMarkdownImageSizeByIndex} from "./markdown/imageMarkdown.ts";
 import {getActiveOutlineLine, parseMarkdownOutline} from "./utils/outline.ts";
 import {loadAllThemes} from "./themes/loader.ts";
@@ -139,7 +139,30 @@ function formatUploadFailure(task: ImageUploadTask): string {
 }
 
 export default function App() {
-  const {content, markdownThemeId, codeThemeId, themes, currentDocPath, sidebarOpen, outlineOpen, saveStatus, lastSavedAt, syncStatus, lastSyncedAt, syncMessage, workspaceSplitRatio, appearanceMode, setContent, setThemes, loadTree, loadDocumentThemes, openDocument, toggleSidebar, toggleOutline, setWorkspaceSplitRatio} = useStore();
+  // 逐个 selector 订阅，避免任一 store 字段变化（如 selectedModelId、tree、预览模式）
+  // 都触发整个 App 树重渲染。
+  const content = useStore((s) => s.content);
+  const markdownThemeId = useStore((s) => s.markdownThemeId);
+  const codeThemeId = useStore((s) => s.codeThemeId);
+  const themes = useStore((s) => s.themes);
+  const currentDocPath = useStore((s) => s.currentDocPath);
+  const sidebarOpen = useStore((s) => s.sidebarOpen);
+  const outlineOpen = useStore((s) => s.outlineOpen);
+  const saveStatus = useStore((s) => s.saveStatus);
+  const lastSavedAt = useStore((s) => s.lastSavedAt);
+  const syncStatus = useStore((s) => s.syncStatus);
+  const lastSyncedAt = useStore((s) => s.lastSyncedAt);
+  const syncMessage = useStore((s) => s.syncMessage);
+  const workspaceSplitRatio = useStore((s) => s.workspaceSplitRatio);
+  const appearanceMode = useStore((s) => s.appearanceMode);
+  const setContent = useStore((s) => s.setContent);
+  const setThemes = useStore((s) => s.setThemes);
+  const loadTree = useStore((s) => s.loadTree);
+  const loadDocumentThemes = useStore((s) => s.loadDocumentThemes);
+  const openDocument = useStore((s) => s.openDocument);
+  const toggleSidebar = useStore((s) => s.toggleSidebar);
+  const toggleOutline = useStore((s) => s.toggleOutline);
+  const setWorkspaceSplitRatio = useStore((s) => s.setWorkspaceSplitRatio);
   useEffect(() => {
     applyAppearanceMode(appearanceMode, document.documentElement);
   }, [appearanceMode]);
@@ -167,6 +190,7 @@ export default function App() {
   }), []);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const openSettings = useCallback(() => setSettingsOpen(true), []);
   const [startupUpdatePromptOpen, setStartupUpdatePromptOpen] = useState(false);
   const [availableUpdate, setAvailableUpdate] = useState<AppUpdateCandidate | null>(null);
   const [currentVersion, setCurrentVersion] = useState("");
@@ -177,8 +201,14 @@ export default function App() {
   const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null);
   const [ipChanged, setIpChanged] = useState<{previousIp: string; currentIp: string} | null>(null);
   const [imageMaterialPickerOpen, setImageMaterialPickerOpen] = useState(false);
+  const [, setCodeThemesVersion] = useState(0);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
+  useEffect(() => subscribeCodeThemes(() => setCodeThemesVersion((version) => version + 1)), []);
+  // 后台预载全量代码主题（独立 chunk），选择器打开与非常驻主题预览无需等待。
+  useEffect(() => {
+    void loadAllCodeThemes().catch((error) => console.warn("加载代码主题失败：", error));
+  }, []);
   const outlineItems = useMemo(() => parseMarkdownOutline(content), [content]);
   const reduceMotion = useReducedMotion();
   const drawerTransition = reduceMotion
@@ -634,7 +664,7 @@ export default function App() {
     };
   }, []);
 
-  const lineCount = content ? content.split("\n").length : 0;
+  const lineCount = useMemo(() => (content ? content.split("\n").length : 0), [content]);
   const charCount = content.length;
   const startupReleaseNotes = availableUpdate?.body?.trim();
 
@@ -660,8 +690,8 @@ export default function App() {
           </IconButton>
         </div>
         <MainToolbar
-          onOpenSettings={() => setSettingsOpen(true)}
-          onNeedSettings={() => setSettingsOpen(true)}
+          onOpenSettings={openSettings}
+          onNeedSettings={openSettings}
           hasUpdateNotification={Boolean(availableUpdate)}
         />
       </header>

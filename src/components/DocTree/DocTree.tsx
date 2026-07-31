@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from "react";
+import {memo, useEffect, useRef, useState} from "react";
 import {FilePlus, FolderPlus} from "lucide-react";
 import {motion} from "framer-motion";
 import {useStore} from "../../store/index.ts";
@@ -24,7 +24,7 @@ function firstDocPath(nodes: DocNode[], excludedPath?: string): string | null {
   return null;
 }
 
-export default function DocTree() {
+function DocTree() {
   const tree = useStore((s) => s.tree);
   const currentDocPath = useStore((s) => s.currentDocPath);
   const selectedPath = useStore((s) => s.selectedPath);
@@ -265,3 +265,5 @@ export default function DocTree() {
     </>
   );
 }
+
+export default memo(DocTree);

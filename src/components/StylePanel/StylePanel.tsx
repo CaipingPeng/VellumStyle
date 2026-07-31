@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {memo, useEffect, useState} from "react";
 import {motion} from "framer-motion";
 import {X} from "lucide-react";
 import {useStore, getThemeById} from "../../store/index.ts";
@@ -41,7 +41,7 @@ const DIRECTION_LABELS: Record<string, string> = {
   paddingLeft: "左",
 };
 
-export default function StylePanel() {
+function StylePanel() {
   const {selectedModelId, setSelectedModel, themes, markdownThemeId, updateStyleValue} = useStore();
   const [editMode, setEditMode] = useState<StyleEditMode>("temporary");
   const [saveState, setSaveState] = useState<SaveState>("temporary");
@@ -297,3 +297,5 @@ function statusDotClass(tone: "idle" | "saving" | "success" | "error") {
   }[tone];
   return `h-1.5 w-1.5 flex-none rounded-full ${color}`;
 }
+
+export default memo(StylePanel);

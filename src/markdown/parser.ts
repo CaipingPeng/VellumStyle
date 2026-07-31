@@ -1,5 +1,63 @@
 import MarkdownIt from "markdown-it";
-import hljs from "highlight.js";
+import hljs from "highlight.js/lib/core";
+import bash from "highlight.js/lib/languages/bash";
+import c from "highlight.js/lib/languages/c";
+import cpp from "highlight.js/lib/languages/cpp";
+import csharp from "highlight.js/lib/languages/csharp";
+import css from "highlight.js/lib/languages/css";
+import diff from "highlight.js/lib/languages/diff";
+import dockerfile from "highlight.js/lib/languages/dockerfile";
+import go from "highlight.js/lib/languages/go";
+import ini from "highlight.js/lib/languages/ini";
+import java from "highlight.js/lib/languages/java";
+import javascript from "highlight.js/lib/languages/javascript";
+import json from "highlight.js/lib/languages/json";
+import kotlin from "highlight.js/lib/languages/kotlin";
+import markdownLang from "highlight.js/lib/languages/markdown";
+import php from "highlight.js/lib/languages/php";
+import powershell from "highlight.js/lib/languages/powershell";
+import python from "highlight.js/lib/languages/python";
+import ruby from "highlight.js/lib/languages/ruby";
+import rust from "highlight.js/lib/languages/rust";
+import scss from "highlight.js/lib/languages/scss";
+import sql from "highlight.js/lib/languages/sql";
+import swift from "highlight.js/lib/languages/swift";
+import typescript from "highlight.js/lib/languages/typescript";
+import xml from "highlight.js/lib/languages/xml";
+import yaml from "highlight.js/lib/languages/yaml";
+
+// 常用语言白名单：highlight.js 全量约 190 种语言，全部打包会让
+// vendor-highlight 接近 1 MB。这里只注册高频语言，未注册语言回退纯文本。
+const COMMON_LANGUAGES = {
+  bash,
+  c,
+  cpp,
+  csharp,
+  css,
+  diff,
+  dockerfile,
+  go,
+  ini,
+  java,
+  javascript,
+  json,
+  kotlin,
+  markdown: markdownLang,
+  php,
+  powershell,
+  python,
+  ruby,
+  rust,
+  scss,
+  sql,
+  swift,
+  typescript,
+  xml,
+  yaml,
+} as const;
+for (const [name, language] of Object.entries(COMMON_LANGUAGES)) {
+  hljs.registerLanguage(name, language);
+}
 
 // npm 第三方插件（无官方类型，按需 any）
 // @ts-expect-error 无类型声明

@@ -7,7 +7,7 @@ import {typesetMath} from "../../markdown/mathjax.ts";
 import {renderMermaidCharts, reuseRenderedMermaidCharts} from "../../markdown/mermaid.ts";
 import {modelIdFromElement, SELECTOR_PRIORITY} from "../StylePanel/elementMap.ts";
 import {getPreviewMode} from "./previewModes.ts";
-import {buildMarkdownCss} from "../../markdown/codeThemes.ts";
+import {buildMarkdownCss, subscribeCodeThemes} from "../../markdown/codeThemes.ts";
 import {ARTICLE_BOX_ID, ARTICLE_ROOT_ID} from "../../articleRoot.ts";
 import PreviewImageContextMenu from "./PreviewImageContextMenu.tsx";
 import {resolvePreviewImage, type PreviewImageMenuTarget} from "./previewImageContextMenu.ts";
@@ -116,6 +116,7 @@ function activeHeadingLine(scroller: HTMLElement): number | null {
 const Preview = forwardRef<PreviewHandle, Props>(
   ({content, markdownThemeId, onResizeImage}, ref) => {
     const [html, setHtml] = useState("");
+    const [codeThemesVersion, setCodeThemesVersion] = useState(0);
     const [imageOverlay, setImageOverlay] = useState<ImageResizeOverlay | null>(null);
     const [imageMenuTarget, setImageMenuTarget] = useState<PreviewImageMenuTarget | null>(null);
     const imageMenuAnchor = useRef<HTMLImageElement | null>(null);
@@ -164,10 +165,13 @@ const Preview = forwardRef<PreviewHandle, Props>(
     }));
 
     // 主题层：文章主题在前，独立代码主题在后，保证所有文章主题默认共享同一套代码高亮。
+    // codeThemesVersion 变化表示全量代码主题已加载（当前选中主题可能非常驻主题），需重注入。
     useEffect(() => {
       const css = getThemeById(themes, markdownThemeId).css;
       replaceStyle(STYLE_IDS.markdown, buildMarkdownCss(css, codeThemeId));
-    }, [codeThemeId, markdownThemeId, themes]);
+    }, [codeThemeId, codeThemesVersion, markdownThemeId, themes]);
+
+    useEffect(() => subscribeCodeThemes(() => setCodeThemesVersion((version) => version + 1)), []);
 
     // 内容渲染，100ms 节流
     useEffect(() => {
