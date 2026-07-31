@@ -1,4 +1,5 @@
 import {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
+import {FileText} from "lucide-react";
 import {render} from "../../markdown/parser.ts";
 import {useStore, getThemeById} from "../../store/index.ts";
 import {replaceStyle, STYLE_IDS} from "../../utils/style.ts";
@@ -528,10 +529,14 @@ const Preview = forwardRef<PreviewHandle, Props>(
           onContextMenu={onContextMenu}
           onKeyDown={onKeyDown}
         >
-          {html ? (
-            <section id={ARTICLE_ROOT_ID} dangerouslySetInnerHTML={{__html: html}} />
+          {content.trim() ? (
+            html ? (
+              <section id={ARTICLE_ROOT_ID} dangerouslySetInnerHTML={{__html: html}} />
+            ) : (
+              <PreviewSkeleton />
+            )
           ) : (
-            <PreviewSkeleton />
+            <PreviewEmptyState />
           )}
           {imageOverlay && (
             <ImageResizeHandles
@@ -630,6 +635,23 @@ function PreviewSkeleton() {
       <div className="vs-skel" style={{height: 18, width: "38%", marginBottom: 16}} />
       <div className="vs-skel" style={{height: 14, marginBottom: 10}} />
       <div className="vs-skel" style={{height: 14, width: "70%"}} />
+    </div>
+  );
+}
+
+// 空文档占位：区别于加载骨架，提示用户开始写作。
+function PreviewEmptyState() {
+  return (
+    <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 px-6 text-center">
+      <div className="grid h-14 w-14 place-items-center rounded-full bg-[#f4f4f6] text-[#9b9ba6]">
+        <FileText size={24} strokeWidth={1.6} />
+      </div>
+      <div>
+        <p className="text-sm font-medium text-[#6b6b76]">开始写作</p>
+        <p className="mx-auto mt-1 max-w-[280px] text-xs leading-relaxed text-[#9b9ba6]">
+          在左侧输入 Markdown 内容，这里会实时渲染公众号文章的排版效果
+        </p>
+      </div>
     </div>
   );
 }

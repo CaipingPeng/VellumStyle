@@ -2,6 +2,7 @@ import {type FormEvent, useEffect, useMemo, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import {motion} from "framer-motion";
 import {ArrowRight, Braces, Check, ChevronLeft, ChevronRight, FolderOpen, Palette, Search, Star, Upload, X} from "lucide-react";
+import {MOTION_DURATION_FAST, MOTION_SPRING_POP} from "../../utils/motion.ts";
 import {getThemeById, useStore} from "../../store/index.ts";
 import {CODE_THEMES, getCodeThemeById, loadAllCodeThemes, subscribeCodeThemes} from "../../markdown/codeThemes.ts";
 import {loadAllThemes, openThemesDir, importThemeModel} from "../../themes/loader.ts";
@@ -156,13 +157,13 @@ export default function ThemePickerDialog({onClose}: Props) {
       style={{background: "rgba(20,20,30,0.32)"}}
       initial={{opacity: 0}}
       animate={{opacity: 1}}
-      transition={{duration: 0.13}}
+      transition={{duration: MOTION_DURATION_FAST}}
     >
       <motion.div
         ref={ref}
         initial={{opacity: 0, scale: 0.96, y: 8}}
         animate={{opacity: 1, scale: 1, y: 0}}
-        transition={{duration: 0.13}}
+        transition={MOTION_SPRING_POP}
         className="flex w-[920px] max-w-[92vw] max-h-[86vh] flex-col overflow-hidden rounded bg-bg border border-border shadow-md"
       >
       <div className="flex items-start justify-between gap-4 px-7 pb-[18px] pt-6">
@@ -235,8 +236,10 @@ export default function ThemePickerDialog({onClose}: Props) {
               <div
                 key={theme.id}
                 className={[
-                  "group flex min-w-0 flex-col gap-2.5 rounded-sm border bg-bg p-3 shadow-sm transition-all duration-fast ease-smooth hover:border-border-strong hover:shadow-md",
-                  active ? "border-accent bg-[rgba(94,106,210,0.035)] ring-2 ring-[color:var(--ring)]" : "border-border",
+                  "group box-border flex min-w-0 flex-col gap-2.5 rounded-lg border border-border bg-bg-secondary p-3 transition-all duration-fast ease-smooth hover:border-border-strong hover:bg-bg",
+                  active
+                    ? "border-accent/70 bg-accent-subtle ring-2 ring-[color:var(--ring)] hover:bg-accent-subtle"
+                    : "",
                 ].join(" ")}
               >
                 <CodeThemeThumbnail theme={theme} />
@@ -248,7 +251,7 @@ export default function ThemePickerDialog({onClose}: Props) {
                       title={pinned ? "取消置顶" : "置顶代码主题"}
                       aria-label={pinned ? `取消置顶 ${theme.name}` : `置顶 ${theme.name}`}
                       className={[
-                        "inline-flex h-6 w-6 flex-none items-center justify-center rounded-sm border-0 bg-transparent cursor-pointer transition-colors duration-fast",
+                        "inline-flex h-6 w-6 flex-none items-center justify-center rounded-sm border-0 bg-transparent cursor-pointer transition-colors duration-fast outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]",
                         pinned ? "text-accent" : "text-text-muted hover:bg-bg-tertiary hover:text-text",
                       ].join(" ")}
                     >
@@ -299,8 +302,10 @@ export default function ThemePickerDialog({onClose}: Props) {
               <div
                 key={t.id}
                 className={[
-                  "group flex min-w-0 flex-col gap-2.5 rounded-sm border bg-bg p-3 shadow-sm transition-all duration-fast ease-smooth hover:border-border-strong hover:shadow-md",
-                  active ? "border-accent bg-[rgba(94,106,210,0.035)] ring-2 ring-[color:var(--ring)]" : "border-border",
+                  "group box-border flex min-w-0 flex-col gap-2.5 rounded-lg border border-border bg-bg-secondary p-3 transition-all duration-fast ease-smooth hover:border-border-strong hover:bg-bg",
+                  active
+                    ? "border-accent/70 bg-accent-subtle ring-2 ring-[color:var(--ring)] hover:bg-accent-subtle"
+                    : "",
                 ].join(" ")}
               >
                 <ThemeThumbnail themeId={t.id} css={t.css} />
@@ -311,7 +316,7 @@ export default function ThemePickerDialog({onClose}: Props) {
                       onClick={() => toggleFavoriteTheme(t.id)}
                       title={favorite ? "取消收藏" : "收藏主题"}
                       className={[
-                        "inline-flex h-6 w-6 flex-none items-center justify-center rounded-sm border-0 bg-transparent cursor-pointer transition-colors duration-fast",
+                        "inline-flex h-6 w-6 flex-none items-center justify-center rounded-sm border-0 bg-transparent cursor-pointer transition-colors duration-fast outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]",
                         favorite ? "text-accent" : "text-text-muted hover:bg-bg-tertiary hover:text-text",
                       ].join(" ")}
                     >
@@ -423,7 +428,7 @@ export default function ThemePickerDialog({onClose}: Props) {
                 <button
                   type="submit"
                   disabled={jumpPage.trim() === ""}
-                  className="inline-flex h-full w-8 items-center justify-center border-0 border-l border-border bg-bg text-text-secondary transition-colors duration-fast enabled:cursor-pointer enabled:hover:bg-bg-tertiary enabled:hover:text-text disabled:cursor-default disabled:opacity-[0.38]"
+                  className="inline-flex h-full w-8 items-center justify-center border-0 border-l border-border bg-bg text-text-secondary outline-none transition-colors duration-fast enabled:cursor-pointer enabled:hover:bg-bg-tertiary enabled:hover:text-text focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-[0.38]"
                   aria-label="跳转到输入页码"
                   title="跳转"
                 >
@@ -453,7 +458,7 @@ function tabButtonClass(active: boolean) {
 }
 
 const pageNavBtnClass =
-  "inline-flex h-full w-8 items-center justify-center border-0 bg-bg text-text-secondary transition-colors duration-fast enabled:cursor-pointer enabled:hover:bg-bg-tertiary enabled:hover:text-text disabled:cursor-default disabled:opacity-[0.38]";
+  "inline-flex h-full w-8 items-center justify-center border-0 bg-bg text-text-secondary outline-none transition-colors duration-fast enabled:cursor-pointer enabled:hover:bg-bg-tertiary enabled:hover:text-text focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-[0.38]";
 
 const pageJumpBtnClass =
   "inline-flex h-full min-w-8 items-center justify-center border-0 border-l border-border px-2 text-xs font-medium tabular-nums transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)]";

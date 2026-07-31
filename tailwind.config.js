@@ -44,10 +44,12 @@ export default {
       },
       transitionTimingFunction: {
         smooth: "var(--ease)",
+        bounce: "var(--ease-bounce)",
       },
       transitionDuration: {
-        fast: "130ms",
-        DEFAULT: "160ms",
+        fast: "var(--duration-fast)",
+        DEFAULT: "var(--duration-med)",
+        slow: "var(--duration-slow)",
       },
     },
   },

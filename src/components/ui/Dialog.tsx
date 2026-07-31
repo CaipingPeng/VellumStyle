@@ -2,6 +2,7 @@ import type {ReactNode} from "react";
 import {createPortal} from "react-dom";
 import {AnimatePresence, motion} from "framer-motion";
 import {X} from "lucide-react";
+import {MOTION_DURATION_FAST, MOTION_SPRING_POP} from "../../utils/motion.ts";
 
 interface Props {
   open: boolean;
@@ -39,7 +40,7 @@ export default function Dialog({
           initial={{opacity: 0}}
           animate={{opacity: 1}}
           exit={{opacity: 0}}
-          transition={{duration: 0.13}}
+          transition={{duration: MOTION_DURATION_FAST}}
           onClick={closeOnOverlay && !closeDisabled ? onClose : undefined}
         >
           <motion.div
@@ -48,7 +49,7 @@ export default function Dialog({
             initial={{opacity: 0, scale: 0.96, y: 8}}
             animate={{opacity: 1, scale: 1, y: 0}}
             exit={{opacity: 0, scale: 0.96, y: 8}}
-            transition={{duration: 0.13, ease: [0.16, 1, 0.3, 1]}}
+            transition={MOTION_SPRING_POP}
             onClick={(e) => e.stopPropagation()}
           >
             <div data-dialog-header className="flex min-h-11 shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-1.5 text-sm font-semibold text-text">
@@ -61,7 +62,7 @@ export default function Dialog({
                   disabled={closeDisabled}
                   aria-disabled={closeDisabled || undefined}
                   title="关闭"
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast hover:bg-bg-tertiary hover:text-text disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-text-muted"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast outline-none hover:bg-bg-tertiary hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent disabled:hover:text-text-muted"
                 >
                   <X size={16} />
                 </button>

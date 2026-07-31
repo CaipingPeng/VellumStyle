@@ -1,7 +1,8 @@
 import {useEffect, useState, type MouseEvent} from "react";
-import {ChevronRight, ChevronDown, Folder, FileText, FolderOpen, Copy, Pencil, Trash2} from "lucide-react";
+import {ChevronRight, Folder, FileText, FolderOpen, Copy, Pencil, Trash2} from "lucide-react";
 import {AnimatePresence, motion} from "framer-motion";
 import type {DocNode} from "../../utils/documents.ts";
+import {MOTION_DURATION_FAST, MOTION_DURATION_MEDIUM, MOTION_EASE_SMOOTH} from "../../utils/motion.ts";
 import DraftInput from "./DraftInput.tsx";
 
 export interface CreatingState {
@@ -152,7 +153,14 @@ export default function TreeNode({
         }}
       >
         {node.isDir ? (
-          isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />
+          <motion.span
+            initial={false}
+            animate={{rotate: isOpen ? 90 : 0}}
+            transition={{duration: MOTION_DURATION_FAST, ease: MOTION_EASE_SMOOTH}}
+            style={{display: "inline-flex", flexShrink: 0}}
+          >
+            <ChevronRight size={14} />
+          </motion.span>
         ) : (
           <span style={{width: 14, flexShrink: 0}} />
         )}
@@ -211,7 +219,7 @@ export default function TreeNode({
         >
           <button
             type="button"
-            className="flex h-8 w-full items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-[13px] text-text transition-colors duration-fast hover:bg-bg-tertiary"
+            className="flex h-8 w-full items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-[13px] text-text outline-none transition-colors duration-fast hover:bg-bg-tertiary focus-visible:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)]"
             onClick={() => {
               setContextMenu(null);
               onOpenLocation(node.path);
@@ -222,7 +230,7 @@ export default function TreeNode({
           </button>
           <button
             type="button"
-            className="flex h-8 w-full items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-[13px] text-text transition-colors duration-fast hover:bg-bg-tertiary"
+            className="flex h-8 w-full items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-[13px] text-text outline-none transition-colors duration-fast hover:bg-bg-tertiary focus-visible:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)]"
             onClick={() => {
               setContextMenu(null);
               onCopyAbsolutePath(node.path);
@@ -236,10 +244,11 @@ export default function TreeNode({
       <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
-            initial={{opacity: 0}}
-            animate={{opacity: 1}}
-            exit={{opacity: 0}}
-            transition={{duration: 0.12}}
+            initial={{opacity: 0, height: 0}}
+            animate={{opacity: 1, height: "auto"}}
+            exit={{opacity: 0, height: 0}}
+            transition={{duration: MOTION_DURATION_MEDIUM, ease: MOTION_EASE_SMOOTH}}
+            className="overflow-hidden"
           >
             {/* 草稿输入行：本文件夹是新建目标时，在子项最前占位显示 */}
             {creating && creating.dir === node.path && (

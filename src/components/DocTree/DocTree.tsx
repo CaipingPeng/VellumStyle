@@ -2,6 +2,7 @@ import {memo, useEffect, useRef, useState} from "react";
 import {FilePlus, FolderPlus} from "lucide-react";
 import {motion} from "framer-motion";
 import {useStore} from "../../store/index.ts";
+import {MOTION_DURATION_MEDIUM, MOTION_EASE_SMOOTH, MOTION_STAGGER_STEP} from "../../utils/motion.ts";
 import {ancestorDirsForPath, targetDirFor, type DocNode} from "../../utils/documents.ts";
 import TreeNode, {type CreatingState} from "./TreeNode.tsx";
 import DraftInput from "./DraftInput.tsx";
@@ -205,7 +206,7 @@ function DocTree() {
                 key={node.path}
                 initial={{opacity: 0, y: 4}}
                 animate={{opacity: 1, y: 0}}
-                transition={{duration: 0.16, delay: i * 0.02, ease: [0.16, 1, 0.3, 1]}}
+                transition={{duration: MOTION_DURATION_MEDIUM, delay: i * MOTION_STAGGER_STEP, ease: MOTION_EASE_SMOOTH}}
               >
                 <TreeNode
                   node={node}

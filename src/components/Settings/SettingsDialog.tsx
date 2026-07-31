@@ -391,7 +391,7 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
                     setConnectionMessage("");
                   }}
                   disabled={!loaded}
-                  className="h-4 w-4 accent-[color:var(--accent)] disabled:cursor-default"
+                  className="h-4 w-4 accent-[color:var(--accent)] outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default"
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium">启用文件自同步</span>

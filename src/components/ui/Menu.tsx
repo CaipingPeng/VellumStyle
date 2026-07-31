@@ -1,6 +1,7 @@
 import {useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode} from "react";
 import {createPortal} from "react-dom";
 import {AnimatePresence, motion} from "framer-motion";
+import {MOTION_SPRING_POP} from "../../utils/motion.ts";
 
 interface Props {
   open: boolean;
@@ -71,7 +72,7 @@ export default function Menu({open, onClose, trigger, children, minWidth = 120, 
               initial={{opacity: 0, scale: 0.96, y: -4}}
               animate={{opacity: 1, scale: 1, y: 0}}
               exit={{opacity: 0, scale: 0.96, y: -4}}
-              transition={{duration: 0.13, ease: [0.16, 1, 0.3, 1]}}
+              transition={MOTION_SPRING_POP}
             >
               {children}
             </motion.div>
@@ -93,7 +94,7 @@ export function MenuItem({onClick, children}: ItemProps) {
     <button
       type="button"
       onClick={onClick}
-      className="flex h-8 w-full cursor-pointer items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-[13px] text-text transition-colors duration-fast hover:bg-bg-tertiary"
+      className="flex h-8 w-full cursor-pointer items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-[13px] text-text outline-none transition-colors duration-fast hover:bg-bg-tertiary focus-visible:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)]"
     >
       {children}
     </button>

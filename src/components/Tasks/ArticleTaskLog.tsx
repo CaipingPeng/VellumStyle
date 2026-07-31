@@ -130,7 +130,7 @@ function ArticleTaskLog({currentDocumentPath}: Props) {
         aria-label="文章任务日志"
         aria-expanded={open}
         title="文章任务日志"
-        className={`relative grid h-8 w-8 place-items-center rounded-md transition-colors hover:bg-bg-hover ${activeCount > 0 ? "text-accent" : errorCount > 0 ? "text-danger" : "text-text-muted"}`}
+        className={`relative grid h-8 w-8 place-items-center rounded-md outline-none transition-colors hover:bg-bg-hover focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${activeCount > 0 ? "text-accent" : errorCount > 0 ? "text-danger" : "text-text-muted"}`}
       >
         {activeCount > 0 ? <Loader2 size={16} className="animate-spin" /> : <ListChecks size={16} />}
         {(activeCount > 0 || errorCount > 0) && (
@@ -158,7 +158,7 @@ function ArticleTaskLog({currentDocumentPath}: Props) {
                 onClick={() => imageUploadTasks.clearFinished()}
                 aria-label="清除已结束任务"
                 title="清除已结束任务"
-                className="grid h-7 w-7 place-items-center rounded text-text-muted hover:bg-bg-hover hover:text-text"
+                className="grid h-7 w-7 place-items-center rounded text-text-muted outline-none hover:bg-bg-hover hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
               >
                 <Trash2 size={14} />
               </button>

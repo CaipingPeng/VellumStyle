@@ -40,6 +40,11 @@
   --shadow-lg: 0 12px 40px rgba(20, 20, 30, 0.16);
 
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 130ms;
+  --duration-med: 160ms;
+  --duration-slow: 200ms;
+
 }
 
 :root[data-appearance="dark"] {
@@ -72,6 +77,7 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.34);
   --shadow-lg: 0 18px 54px rgba(0, 0, 0, 0.46);
+
 }
 
 html,
@@ -100,7 +106,7 @@ body {
   border: 1px solid var(--workspace-panel-border);
   border-radius: var(--workspace-panel-radius);
   background: var(--workspace-panel);
-  transition: border-color 130ms var(--ease);
+  transition: border-color var(--duration-fast) var(--ease);
 }
 
 .workspace-editor-panel:focus-within,
@@ -130,8 +136,8 @@ body {
   border-radius: 999px;
   background: var(--border-strong);
   transition:
-    background-color 130ms var(--ease),
-    width 130ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    width var(--duration-fast) var(--ease);
 }
 
 .workspace-split-separator:hover::before,
@@ -156,6 +162,29 @@ html.workspace-is-resizing * {
   .workspace-split-separator::before {
     transition: none;
   }
+}
+
+/* 亮暗模式切换过渡：切换瞬间给 <html> 加临时类，仅应用外壳参与；
+   文章画布 #article 与预览正文不受影响，避免污染公众号排版成品。 */
+html.appearance-switching body,
+html.appearance-switching header,
+html.appearance-switching footer,
+html.appearance-switching .workspace-frame,
+html.appearance-switching .workspace-panel,
+html.appearance-switching .workspace-editor-toolbar,
+html.appearance-switching .workspace-split-separator,
+html.appearance-switching .workspace-split-separator::before,
+html.appearance-switching .cm-editor,
+html.appearance-switching .cm-gutters,
+html.appearance-switching .cm-tooltip,
+html.appearance-switching .cm-panel,
+html.appearance-switching .cm-search,
+html.appearance-switching .vs-preview-image-menu,
+html.appearance-switching .update-release-notes code,
+html.appearance-switching .vs-skel {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-duration: var(--duration-med);
+  transition-timing-function: var(--ease);
 }
 
 /* 文章正文恢复比例数字：UI 等宽不影响公众号排版成品 */
@@ -201,6 +230,10 @@ html.workspace-is-resizing * {
   scrollbar-width: thin;
 }
 
+.editor-preview-scrollbar {
+  transition: background-color var(--duration-med) var(--ease);
+}
+
 .cm-scroller:hover,
 .cm-scroller:focus-within,
 .editor-preview-scrollbar:hover,
@@ -229,9 +262,9 @@ html.workspace-is-resizing * {
   background-color: transparent;
   background-clip: padding-box;
   transition:
-    background-color 130ms var(--ease),
-    border-color 130ms var(--ease),
-    border-width 130ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    border-width var(--duration-fast) var(--ease);
 }
 
 .cm-scroller:hover::-webkit-scrollbar-thumb,
@@ -280,8 +313,8 @@ html.workspace-is-resizing * {
   font-size: 13px;
   overflow: hidden;
   transition:
-    background-color 130ms var(--ease),
-    box-shadow 130ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
 }
 
 .cm-editor .cm-panel.cm-search:hover,
@@ -320,9 +353,9 @@ html.workspace-is-resizing * {
   padding: 0 9px;
   outline: none;
   transition:
-    border-color 130ms var(--ease),
-    background-color 130ms var(--ease),
-    box-shadow 130ms var(--ease);
+    border-color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
 }
 
 .cm-editor .cm-search input.cm-textfield:focus {
@@ -350,10 +383,10 @@ html.workspace-is-resizing * {
   line-height: 1;
   padding: 0 9px;
   transition:
-    border-color 130ms var(--ease),
-    background-color 130ms var(--ease),
-    color 130ms var(--ease),
-    transform 130ms var(--ease);
+    border-color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
 }
 
 .cm-editor .cm-search button.cm-button:hover {
@@ -454,9 +487,9 @@ html.workspace-is-resizing * {
   padding: 0 9px;
   white-space: nowrap;
   transition:
-    border-color 130ms var(--ease),
-    background-color 130ms var(--ease),
-    color 130ms var(--ease);
+    border-color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .cm-editor .cm-panel.cm-search input.cm-textfield,
@@ -536,8 +569,8 @@ html.workspace-is-resizing * {
   font-size: 16px;
   line-height: 1;
   transition:
-    background-color 130ms var(--ease),
-    color 130ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .cm-editor .cm-search button[name="close"]:hover {
@@ -561,8 +594,8 @@ html.workspace-is-resizing * {
   cursor: pointer;
   transform: translateY(0);
   transition:
-    background-color 130ms var(--ease),
-    border-color 130ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease);
 }
 
 .cm-editor .cm-panel.cm-search input[type="checkbox"] {
@@ -619,7 +652,7 @@ html.workspace-is-resizing * {
   border-radius: 2px;
   background: var(--text-muted);
   opacity: 0.6;
-  transition: opacity 130ms var(--ease);
+  transition: opacity var(--duration-fast) var(--ease);
 }
 
 .cm-editor:hover .cm-search .od-search-drag-handle .od-grip,
@@ -723,8 +756,8 @@ html.workspace-is-resizing * {
     0 0 0 5px rgba(94, 106, 210, 0.08);
   pointer-events: auto;
   transition:
-    border-color 130ms var(--ease),
-    box-shadow 130ms var(--ease);
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
 }
 
 .vs-image-resize-overlay.is-resizing {
@@ -755,8 +788,8 @@ html.workspace-is-resizing * {
   pointer-events: none;
   transform: translateX(-50%) translateY(4px);
   transition:
-    opacity 130ms var(--ease),
-    transform 130ms var(--ease);
+    opacity var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
   white-space: nowrap;
   backdrop-filter: blur(14px) saturate(150%);
   -webkit-backdrop-filter: blur(14px) saturate(150%);
@@ -806,10 +839,10 @@ html.workspace-is-resizing * {
     0 0 0 1px rgba(255, 255, 255, 0.92),
     0 4px 10px rgba(20, 20, 30, 0.14);
   transition:
-    background-color 130ms var(--ease),
-    border-color 130ms var(--ease),
-    box-shadow 130ms var(--ease),
-    transform 130ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
 }
 
 .vs-image-resize-handle:hover::before,
@@ -981,6 +1014,16 @@ html.workspace-is-resizing * {
   animation: vs-shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
 
+/* —— 按钮成功态对勾弹跳 —— */
+@keyframes vs-pop {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+.vs-pop {
+  animation: vs-pop 0.24s var(--ease);
+}
+
 /* —— 预览骨架屏 shimmer（首次加载 / 切文档瞬间） —— */
 @keyframes vs-shimmer {
   0%, 100% { opacity: 1; }
@@ -994,7 +1037,9 @@ html.workspace-is-resizing * {
 
 /* —— 主题切换淡入淡出过渡（Preview 文章容器） —— */
 .vs-theme-fade {
-  transition: opacity 160ms var(--ease);
+  transition:
+    opacity var(--duration-med) var(--ease),
+    width var(--duration-slow) var(--ease);
 }
 
 /* 暗色组件覆盖置于基础规则之后，确保层叠顺序稳定。 */

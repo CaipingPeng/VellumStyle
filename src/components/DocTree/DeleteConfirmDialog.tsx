@@ -1,6 +1,7 @@
 import {createPortal} from "react-dom";
 import {AnimatePresence, motion} from "framer-motion";
 import {AlertTriangle, Trash2, X} from "lucide-react";
+import {MOTION_DURATION_FAST, MOTION_SPRING_POP} from "../../utils/motion.ts";
 import type {DocNode} from "../../utils/documents.ts";
 import Button from "../ui/Button.tsx";
 import {countDescendants, isRecursiveDelete} from "./deleteConfirmation.ts";
@@ -27,7 +28,7 @@ export default function DeleteConfirmDialog({open, node, onCancel, onConfirm}: P
           initial={{opacity: 0}}
           animate={{opacity: 1}}
           exit={{opacity: 0}}
-          transition={{duration: 0.13}}
+          transition={{duration: MOTION_DURATION_FAST}}
           onClick={onCancel}
         >
           <motion.div
@@ -35,7 +36,7 @@ export default function DeleteConfirmDialog({open, node, onCancel, onConfirm}: P
             initial={{opacity: 0, scale: 0.96, y: 10}}
             animate={{opacity: 1, scale: 1, y: 0}}
             exit={{opacity: 0, scale: 0.96, y: 10}}
-            transition={{duration: 0.16, ease: [0.16, 1, 0.3, 1]}}
+            transition={MOTION_SPRING_POP}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -58,7 +59,7 @@ export default function DeleteConfirmDialog({open, node, onCancel, onConfirm}: P
                 type="button"
                 onClick={onCancel}
                 title="关闭"
-                className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-sm border-0 bg-transparent text-text-muted transition-colors duration-fast hover:bg-bg-tertiary hover:text-text"
+                className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-sm border-0 bg-transparent text-text-muted outline-none transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
               >
                 <X size={17} />
               </button>

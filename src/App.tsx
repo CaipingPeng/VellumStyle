@@ -59,6 +59,7 @@ import {Images, ListTree, PanelLeft} from "lucide-react";
 import defaultContent from "./content.md?raw";
 import {applyAppearanceMode} from "./appearance/appearanceMode.ts";
 import {isManualSyncShortcut} from "./utils/manualSyncShortcut.ts";
+import {MOTION_DURATION_DRAWER, MOTION_EASE_OUT} from "./utils/motion.ts";
 
 // 取树里第一篇文档路径（深度优先）。
 function flattenFirst(nodes: DocNode[]): string | null {
@@ -213,7 +214,7 @@ export default function App() {
   const reduceMotion = useReducedMotion();
   const drawerTransition = reduceMotion
     ? {duration: 0}
-    : {duration: 0.14, ease: "easeOut" as const};
+    : {duration: MOTION_DURATION_DRAWER, ease: MOTION_EASE_OUT};
 
   const inlineUploadsRef = useRef(new Map<string, {
     target: BackgroundDocumentTarget;
@@ -703,12 +704,20 @@ export default function App() {
             <motion.div
               key="documents"
               className="flex min-h-0 flex-none overflow-hidden"
-              initial={{width: 0, x: -8, opacity: 0}}
-              animate={{width: "auto", x: 0, opacity: 1}}
-              exit={{width: 0, x: -8, opacity: 0}}
+              initial={{opacity: 0}}
+              animate={{opacity: 1}}
+              exit={{opacity: 0}}
               transition={drawerTransition}
             >
-              <DocTree />
+              <motion.div
+                className="flex min-h-0"
+                initial={{x: -24, opacity: 0}}
+                animate={{x: 0, opacity: 1}}
+                exit={{x: -24, opacity: 0}}
+                transition={drawerTransition}
+              >
+                <DocTree />
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -717,16 +726,24 @@ export default function App() {
             <motion.div
               key="outline"
               className="flex min-h-0 flex-none overflow-hidden"
-              initial={{width: 0, x: -8, opacity: 0}}
-              animate={{width: "auto", x: 0, opacity: 1}}
-              exit={{width: 0, x: -8, opacity: 0}}
+              initial={{opacity: 0}}
+              animate={{opacity: 1}}
+              exit={{opacity: 0}}
               transition={drawerTransition}
             >
-              <OutlineNav
-                items={outlineItems}
-                activeLine={activeOutlineLine}
-                onJump={handleOutlineJump}
-              />
+              <motion.div
+                className="flex min-h-0"
+                initial={{x: -24, opacity: 0}}
+                animate={{x: 0, opacity: 1}}
+                exit={{x: -24, opacity: 0}}
+                transition={drawerTransition}
+              >
+                <OutlineNav
+                  items={outlineItems}
+                  activeLine={activeOutlineLine}
+                  onJump={handleOutlineJump}
+                />
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -788,19 +805,25 @@ export default function App() {
           <span className="tabular-nums">字数 {charCount}</span>
         </div>
         <div className="flex flex-none items-center gap-2">
-          <span>主题 {getThemeById(themes, markdownThemeId).name}</span>
-          <StatusDivider />
-          <span>代码 {getCodeThemeById(codeThemeId).name}</span>
-          <StatusDivider />
+          <span className="hidden items-center gap-2 lg:flex">
+            <span>主题 {getThemeById(themes, markdownThemeId).name}</span>
+            <StatusDivider />
+          </span>
+          <span className="hidden items-center gap-2 lg:flex">
+            <span>代码 {getCodeThemeById(codeThemeId).name}</span>
+            <StatusDivider />
+          </span>
           <span className={saveStatus === "error" ? "text-danger" : ""}>{formatSaveStatus(saveStatus, lastSavedAt)}</span>
           <StatusDivider />
-          <span
-            className={syncStatusClass(syncStatusTone(syncStatus))}
-            title={syncMessage || undefined}
-          >
-            {formatCloudSyncStatus({status: syncStatus, lastSyncedAt, message: syncMessage})}
+          <span className="hidden items-center gap-2 sm:flex">
+            <span
+              className={syncStatusClass(syncStatusTone(syncStatus))}
+              title={syncMessage || undefined}
+            >
+              {formatCloudSyncStatus({status: syncStatus, lastSyncedAt, message: syncMessage})}
+            </span>
+            <StatusDivider />
           </span>
-          <StatusDivider />
           <PreviewModeToggle variant="status" />
           <StatusDivider />
           <AppearanceToggle />

@@ -47,7 +47,7 @@ export default function ThemeThumbnail({themeId, css}: Props) {
         height: 140,
         overflow: "hidden",
         background: "#fff",
-        border: "1px solid #f0f0f0",
+        border: "1px solid var(--border)",
         borderRadius: 4,
         position: "relative",
       }}

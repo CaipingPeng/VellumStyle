@@ -37,7 +37,7 @@ const pickerButtonClass =
 const headerOptionClass =
   "inline-flex min-h-6 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-1 " +
   "text-xs font-medium text-text-muted transition-[background,color] duration-fast ease-smooth " +
-  "hover:bg-bg-tertiary hover:text-text";
+  "hover:bg-bg-tertiary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]";
 
 const footerButtonBase =
   "inline-flex h-9 min-w-[88px] items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-0 px-4 " +

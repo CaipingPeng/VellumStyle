@@ -1,6 +1,7 @@
 import {memo, useEffect, useState} from "react";
 import {motion} from "framer-motion";
 import {X} from "lucide-react";
+import {MOTION_DURATION_DRAWER, MOTION_EASE_SMOOTH} from "../../utils/motion.ts";
 import {useStore, getThemeById} from "../../store/index.ts";
 import type {StyleItem} from "../../themes/themeModel.ts";
 import {saveUserTheme} from "../../themes/loader.ts";
@@ -183,7 +184,7 @@ function StylePanel() {
       className={`fixed right-2 top-[60px] bottom-9 z-[70] flex w-[clamp(420px,31vw,480px)] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-lg border border-border bg-bg shadow-lg ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
       initial={false}
       animate={{opacity: isOpen ? 1 : 0, x: isOpen ? 0 : 420}}
-      transition={{duration: 0.18, ease: [0.16, 1, 0.3, 1]}}
+      transition={{duration: MOTION_DURATION_DRAWER, ease: MOTION_EASE_SMOOTH}}
       aria-hidden={!isOpen}
     >
       {model && (

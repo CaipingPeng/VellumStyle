@@ -43,7 +43,7 @@ export default function PreviewModeToggle({variant = "toolbar"}: Props) {
             title={mode.label}
             onClick={() => setPreviewMode(mode.id)}
             className={[
-              "inline-flex items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast",
+              "inline-flex items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]",
               size.button,
               active ? "bg-bg text-accent" : "hover:bg-bg hover:text-text",
             ].join(" ")}

@@ -577,7 +577,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
               aria-busy={thumbUploading}
               className={`group relative flex aspect-[2.35/1] w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-bg-secondary text-left outline-none transition-all duration-fast ease-smooth focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
                 thumbPreview
-                  ? "border border-border shadow-[0_1px_2px_rgba(0,0,0,0.04),0_3px_10px_rgba(0,0,0,0.05)]"
+                  ? "border border-border"
                   : "border border-dashed border-border-strong hover:border-[rgba(94,106,210,0.5)] hover:bg-accent-subtle"
               }`}
             >
@@ -648,7 +648,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                 {Array.from({length: 6}).map((_, index) => (
                   <div
                     key={index}
-                    className="aspect-[2.35/1] animate-pulse overflow-hidden rounded-md border border-border shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)] bg-bg-secondary p-2"
+                    className="aspect-[2.35/1] animate-pulse box-border overflow-hidden rounded-lg border border-transparent bg-bg-secondary p-2"
                   >
                     <div className="h-full rounded bg-[linear-gradient(90deg,rgba(148,163,184,0.10),rgba(148,163,184,0.22),rgba(148,163,184,0.10))]" />
                   </div>
@@ -682,8 +682,10 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                         type="button"
                         disabled={busy || thumbUploading}
                         onClick={() => pickMaterialThumb(item)}
-                        className={`group relative block aspect-[2.35/1] w-full appearance-none overflow-hidden rounded-md border bg-bg-secondary p-0 outline-none transition-all duration-fast hover:-translate-y-px hover:border-accent/60 focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
-                          selected ? "border-accent/70 shadow-[0_0_0_2px_var(--ring),0_4px_14px_rgba(94,106,210,0.16)] hover:shadow-[0_0_0_2px_var(--ring),0_6px_20px_rgba(94,106,210,0.22)]" : "border border-border shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.05),0_8px_20px_rgba(0,0,0,0.05)]"
+                        className={`group relative block aspect-[2.35/1] w-full box-border appearance-none overflow-hidden rounded-lg border border-transparent bg-bg-secondary p-0 outline-none transition-[border-color,background-color,transform] duration-slow ease-bounce focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
+                          selected
+                            ? "border-accent/70"
+                            : "hover:-translate-y-1 hover:bg-bg"
                         }`}
                         aria-label={`选择素材库第 ${index + 1} 张图片作为封面：${item.name}`}
                       >
@@ -697,7 +699,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
                           <span className="block text-white/70">{formatMaterialTime(item.updateTime)}</span>
                         </span>
                         {selected && (
-                          <span className="absolute right-1.5 top-1.5 rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm">
+                          <span className="absolute right-1.5 top-1.5 rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-white">
                             已选
                           </span>
                         )}

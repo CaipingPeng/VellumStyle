@@ -1,6 +1,7 @@
 import {createPortal} from "react-dom";
 import {AnimatePresence, motion} from "framer-motion";
 import {Download, X} from "lucide-react";
+import {MOTION_DURATION_FAST, MOTION_SPRING_POP} from "../../utils/motion.ts";
 import Button from "../ui/Button.tsx";
 import ReleaseNotesView from "./ReleaseNotesView.tsx";
 
@@ -37,7 +38,7 @@ export default function UpdatePromptDialog({
           initial={{opacity: 0}}
           animate={{opacity: 1}}
           exit={{opacity: 0}}
-          transition={{duration: 0.13}}
+          transition={{duration: MOTION_DURATION_FAST}}
           onClick={installing ? undefined : onClose}
         >
           <motion.div
@@ -45,7 +46,7 @@ export default function UpdatePromptDialog({
             initial={{opacity: 0, scale: 0.96, y: 10}}
             animate={{opacity: 1, scale: 1, y: 0}}
             exit={{opacity: 0, scale: 0.96, y: 10}}
-            transition={{duration: 0.16, ease: [0.16, 1, 0.3, 1]}}
+            transition={MOTION_SPRING_POP}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -68,7 +69,7 @@ export default function UpdatePromptDialog({
                 onClick={onClose}
                 disabled={installing}
                 title="关闭"
-                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast hover:bg-bg-tertiary hover:text-text disabled:cursor-default disabled:opacity-40"
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast outline-none hover:bg-bg-tertiary hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-40"
               >
                 <X size={16} />
               </button>

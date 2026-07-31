@@ -68,7 +68,7 @@ export default function Button({
   } else if (state === "success") {
     content = (
       <>
-        <Check size={14} />
+        <Check size={14} className="vs-pop" />
         {successText ?? children}
       </>
     );
