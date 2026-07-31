@@ -45,12 +45,16 @@ test("脚注编号和内容布局兜底覆盖 mdnice 双列脚注规则", () => 
   const legacyFootnoteCss = `${ARTICLE_ROOT_SELECTOR} .footnote-item { display: flex; }
 ${ARTICLE_ROOT_SELECTOR} .footnotes .footnote-num { width: 10%; }`;
   const css = buildMarkdownCss(legacyFootnoteCss);
+  const footnotesRules = css.match(/#article \.footnotes \{[^}]*\}/g) ?? [];
+  const footnotesOverride = footnotesRules[footnotesRules.length - 1] ?? "";
   const itemRules = css.match(/#article \.footnotes \.footnote-item \{[^}]*\}/g) ?? [];
   const numRules = css.match(/#article \.footnotes \.footnote-num \{[^}]*\}/g) ?? [];
   const itemOverride = itemRules[itemRules.length - 1] ?? "";
   const numOverride = numRules[numRules.length - 1] ?? "";
 
   assert.ok(css.lastIndexOf(`${ARTICLE_ROOT_SELECTOR} .footnotes .footnote-item`) > css.indexOf(`${ARTICLE_ROOT_SELECTOR} .footnote-item { display: flex; }`));
+  assert.match(footnotesOverride, /word-break:\s*break-word/);
+  assert.match(footnotesOverride, /overflow-wrap:\s*break-word/);
   assert.match(itemOverride, /display:\s*block !important/);
   assert.match(numOverride, /display:\s*inline !important/);
   assert.match(numOverride, /width:\s*auto !important/);

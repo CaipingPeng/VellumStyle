@@ -8,6 +8,7 @@ import frontEndPeak from "./presets/mdnice-12.json" with {type: "json"};
 import singularity from "./presets/mdnice-1377.json" with {type: "json"};
 import seeYue from "./presets/see-yue.json" with {type: "json"};
 import typoraSpring from "./presets/typora-spring.json" with {type: "json"};
+import mengLv from "./presets/mdnice-16.json" with {type: "json"};
 
 function parseRules(css: string): Record<string, Record<string, string>> {
   const out: Record<string, Record<string, string>> = {};
@@ -71,7 +72,7 @@ test("Typora 映射主题保留微信可渲染的手动修正", () => {
 });
 
 test("mdnice 装饰性 h3 主题的脚注标题不被压成窄列", () => {
-  for (const preset of [singularity, frontEndPeak]) {
+  for (const preset of [singularity, frontEndPeak, mengLv]) {
     const rules = parseRules(compileModel(preset.model as never));
     const sepBefore = rules["#article .footnotes-sep::before"];
 

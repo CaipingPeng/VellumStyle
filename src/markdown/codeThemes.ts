@@ -68,6 +68,10 @@ ${ARTICLE_ROOT_SELECTOR} pre.mermaid.mermaid-error {
 `;
 
 const FOOTNOTE_LAYOUT_BASE_CSS = `
+${ARTICLE_ROOT_SELECTOR} .footnotes {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
 ${ARTICLE_ROOT_SELECTOR} .footnotes .footnote-item {
   display: block !important;
 }
