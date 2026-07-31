@@ -3,16 +3,36 @@ import {test} from "node:test";
 import React, {act} from "react";
 import {createRoot} from "react-dom/client";
 import SettingsDialog, {type SettingsUpdateState} from "./SettingsDialog.tsx";
+import type {AppearanceMode} from "../../appearance/appearanceMode.ts";
+import type {ColorSchemeId} from "../../appearance/colorScheme.ts";
 
 const helpUrl = "https://my.feishu.cn/docx/RUDpd1zWnoWuuyx0uFxcahIGnmC";
 
-function renderSettingsDialog(updateState?: SettingsUpdateState) {
+function renderSettingsDialog(
+  updateState?: SettingsUpdateState,
+  appearance: {
+    appearanceMode?: AppearanceMode;
+    colorScheme?: ColorSchemeId;
+    onAppearanceModeChange?: (mode: AppearanceMode) => void;
+    onColorSchemeChange?: (scheme: ColorSchemeId) => void;
+  } = {},
+) {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
 
   act(() => {
-    root.render(React.createElement(SettingsDialog, {open: true, onClose: () => {}, updateState}));
+    root.render(
+      React.createElement(SettingsDialog, {
+        open: true,
+        onClose: () => {},
+        updateState,
+        appearanceMode: appearance.appearanceMode ?? "light",
+        colorScheme: appearance.colorScheme ?? "violet",
+        onAppearanceModeChange: appearance.onAppearanceModeChange ?? (() => {}),
+        onColorSchemeChange: appearance.onColorSchemeChange ?? (() => {}),
+      }),
+    );
   });
 
   return {
@@ -264,6 +284,92 @@ test("wechat settings opens the WeChat developer console", async () => {
       cmd: "open_external_url",
       args: {url: "https://developers.weixin.qq.com/console/member/manage/mp"},
     });
+  } finally {
+    cleanup();
+    delete tauriWindow.__TAURI_INTERNALS__;
+  }
+});
+
+test("appearance tab renders light/dark toggle and all color schemes", () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const tauriWindow = window as typeof window & {
+    __TAURI_INTERNALS__?: {invoke: () => Promise<unknown>; transformCallback: () => number};
+  };
+  tauriWindow.__TAURI_INTERNALS__ = {
+    invoke: () => Promise.resolve({wechat: {app_id: "", app_secret: ""}}),
+    transformCallback: () => 0,
+  };
+
+  const {cleanup} = renderSettingsDialog();
+  try {
+    const appearanceTab = Array.from(document.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("外观"),
+    );
+    assert.ok(appearanceTab, "appearance settings tab should render");
+
+    act(() => {
+      appearanceTab.click();
+    });
+
+    const body = document.body.textContent || "";
+    assert.match(body, /界面明暗/);
+    assert.match(body, /亮色/);
+    assert.match(body, /暗色/);
+    assert.match(body, /配色方案/);
+    assert.match(body, /文澜紫/);
+    assert.match(body, /珊瑚暖橙/);
+    assert.match(body, /薄荷青绿/);
+    assert.match(body, /海岸蓝/);
+
+    const swatches = Array.from(document.querySelectorAll("button")).filter((button) =>
+      button.getAttribute("aria-pressed") !== null && button.textContent?.includes("·"),
+    );
+    assert.ok(swatches.length >= 4, "scheme swatches should render");
+  } finally {
+    cleanup();
+    delete tauriWindow.__TAURI_INTERNALS__;
+  }
+});
+
+test("appearance tab applies light/dark and color scheme selections", () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const tauriWindow = window as typeof window & {
+    __TAURI_INTERNALS__?: {invoke: () => Promise<unknown>; transformCallback: () => number};
+  };
+  tauriWindow.__TAURI_INTERNALS__ = {
+    invoke: () => Promise.resolve({wechat: {app_id: "", app_secret: ""}}),
+    transformCallback: () => 0,
+  };
+
+  const appearanceChanges: AppearanceMode[] = [];
+  const schemeChanges: ColorSchemeId[] = [];
+  const {cleanup} = renderSettingsDialog(undefined, {
+    appearanceMode: "light",
+    colorScheme: "violet",
+    onAppearanceModeChange: (mode) => appearanceChanges.push(mode),
+    onColorSchemeChange: (scheme) => schemeChanges.push(scheme),
+  });
+
+  try {
+    const appearanceTab = Array.from(document.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("外观"),
+    );
+    assert.ok(appearanceTab);
+    act(() => appearanceTab.click());
+
+    const darkButton = Array.from(document.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("暗色"),
+    );
+    assert.ok(darkButton);
+    act(() => darkButton.click());
+    assert.deepEqual(appearanceChanges, ["dark"]);
+
+    const coralSwatch = Array.from(document.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("珊瑚暖橙"),
+    );
+    assert.ok(coralSwatch);
+    act(() => coralSwatch.click());
+    assert.deepEqual(schemeChanges, ["coral"]);
   } finally {
     cleanup();
     delete tauriWindow.__TAURI_INTERNALS__;

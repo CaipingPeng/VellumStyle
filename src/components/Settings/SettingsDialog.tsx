@@ -1,9 +1,11 @@
 import {type MouseEvent, useEffect, useState} from "react";
 import {invoke} from "@tauri-apps/api/core";
-import {Check, Cloud, Copy, ExternalLink, Eye, EyeOff, FolderSync, Info, KeyRound, LockKeyhole, Network, Save, ShieldCheck, UserRound} from "lucide-react";
+import {Check, Cloud, Copy, ExternalLink, Eye, EyeOff, FolderSync, Info, KeyRound, LockKeyhole, Moon, Network, Palette, Save, ShieldCheck, Sun, UserRound} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
+import {COLOR_SCHEMES, type ColorSchemeId} from "../../appearance/colorScheme.ts";
+import type {AppearanceMode} from "../../appearance/appearanceMode.ts";
 import {rememberOutboundIp} from "../../utils/outboundIpMonitor.ts";
 import {copyPlainText} from "../../utils/clipboard.ts";
 import {testSyncConnection} from "../../utils/cloudSync.ts";
@@ -15,6 +17,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   updateState?: SettingsUpdateState;
+  appearanceMode: AppearanceMode;
+  colorScheme: ColorSchemeId;
+  onAppearanceModeChange: (mode: AppearanceMode) => void;
+  onColorSchemeChange: (scheme: ColorSchemeId) => void;
 }
 
 interface AppConfig {
@@ -43,7 +49,7 @@ const wechatDeveloperConsoleUrl = "https://developers.weixin.qq.com/console/memb
 
 type IpStatus = "idle" | "loading" | "ok" | "error";
 type CopyStatus = "idle" | "ok" | "fail";
-type SettingsSection = "wechat" | "sync" | "network" | "about";
+type SettingsSection = "wechat" | "sync" | "network" | "appearance" | "about";
 type ConnectionStatus = "idle" | "loading" | "ok" | "error";
 
 export interface SettingsUpdateState {
@@ -59,7 +65,15 @@ export interface SettingsUpdateState {
 }
 
 // 设置弹窗：读 get_config 回显，保存调 save_config（写 config.local.yaml；微信凭证变更会清 token 缓存）。
-export default function SettingsDialog({open, onClose, updateState}: Props) {
+export default function SettingsDialog({
+  open,
+  onClose,
+  updateState,
+  appearanceMode,
+  colorScheme,
+  onAppearanceModeChange,
+  onColorSchemeChange,
+}: Props) {
   const [activeSection, setActiveSection] = useState<SettingsSection>("wechat");
   const [appId, setAppId] = useState("");
   const [appSecret, setAppSecret] = useState("");
@@ -249,6 +263,7 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
             {id: "wechat" as const, label: "微信配置", hint: "素材上传", icon: ShieldCheck},
             {id: "sync" as const, label: "文件同步", hint: syncEnabled ? "坚果云 WebDAV" : "未启用", icon: Cloud},
             {id: "network" as const, label: "网络辅助", hint: "IP 白名单", icon: Network},
+            {id: "appearance" as const, label: "外观", hint: "配色与明暗", icon: Palette},
             {
               id: "about" as const,
               label: "关于",
@@ -580,6 +595,84 @@ export default function SettingsDialog({open, onClose, updateState}: Props) {
                   </Button>
                 </div>
                 {ipError && <p className="m-0 text-[12px] leading-5 text-danger" role="alert">{ipError}</p>}
+              </div>
+            </div>
+          )}
+
+          {activeSection === "appearance" && (
+            <div className="mx-auto flex max-w-[520px] flex-col gap-5">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded bg-accent-subtle text-accent">
+                  <Palette size={18} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="m-0 text-[16px] font-semibold leading-6 text-text">外观与配色</h2>
+                  <p className="m-0 mt-1 text-xs leading-5 text-text-secondary">
+                    选择应用界面的明暗模式与主题配色，设置保存在本机。
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <span className={labelClass}>界面明暗</span>
+                <div className="flex gap-1 rounded-lg bg-bg-tertiary p-1">
+                  {(["light", "dark"] as const).map((mode) => {
+                    const active = appearanceMode === mode;
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => onAppearanceModeChange(mode)}
+                        aria-pressed={active}
+                        className={`flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border-0 bg-transparent text-[13px] font-medium transition-all duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+                          active
+                            ? "bg-bg text-accent shadow-sm"
+                            : "text-text-secondary hover:text-text"
+                        }`}
+                      >
+                        {mode === "light" ? <Sun size={15} /> : <Moon size={15} />}
+                        {mode === "light" ? "亮色" : "暗色"}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <span className={labelClass}>配色方案</span>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {COLOR_SCHEMES.map((scheme) => {
+                    const active = colorScheme === scheme.id;
+                    return (
+                      <button
+                        key={scheme.id}
+                        type="button"
+                        onClick={() => onColorSchemeChange(scheme.id)}
+                        aria-pressed={active}
+                        className={`group flex cursor-pointer items-center gap-2.5 rounded-lg border-0 p-2.5 text-left transition-all duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+                          active
+                            ? "bg-accent-subtle ring-1 ring-inset ring-[color:var(--ring)]"
+                            : "bg-bg-secondary hover:bg-bg-tertiary"
+                        }`}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="flex h-9 w-9 flex-none items-center justify-center rounded-lg ring-1 ring-black/5"
+                          style={{backgroundColor: scheme.background}}
+                        >
+                          <span className="h-5 w-5 rounded-full" style={{backgroundImage: scheme.gradient}} />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-[13px] font-semibold leading-5 text-text">{scheme.label}</span>
+                          <span className="block truncate text-[11px] leading-4 text-text-muted">
+                            {scheme.description}
+                          </span>
+                        </span>
+                        {active && <Check size={15} className="ml-auto flex-none text-accent" />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}

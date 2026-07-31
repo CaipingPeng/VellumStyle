@@ -643,7 +643,7 @@ function PreviewSkeleton() {
 function PreviewEmptyState() {
   return (
     <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 px-6 text-center">
-      <div className="grid h-14 w-14 place-items-center rounded-full bg-[#f4f4f6] text-[#9b9ba6]">
+      <div className="grid h-14 w-14 place-items-center rounded-full bg-bg-tertiary text-text-muted">
         <FileText size={24} strokeWidth={1.6} />
       </div>
       <div>

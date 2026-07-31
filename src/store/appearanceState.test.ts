@@ -13,9 +13,19 @@ test("store 提供可切换的亮暗外观状态", async () => {
   assert.match(source, /appearanceMode: s\.appearanceMode === "light" \? "dark" : "light"/);
 });
 
+test("store 提供可切换的配色方案状态", async () => {
+  const source = await storeSource;
+  assert.match(source, /colorScheme: ColorSchemeId/);
+  assert.match(source, /setColorScheme: \(scheme: ColorSchemeId\) => void/);
+  assert.match(source, /colorScheme: DEFAULT_COLOR_SCHEME/);
+  assert.match(source, /colorScheme: sanitizeColorScheme\(colorScheme\)/);
+});
+
 test("store 持久化并合法化外观状态", async () => {
   const source = await storeSource;
   const persistence = source.slice(source.indexOf("partialize:"));
   assert.match(persistence, /appearanceMode: s\.appearanceMode/);
   assert.match(persistence, /appearanceMode: sanitizeAppearanceMode\(saved\?\.appearanceMode\)/);
+  assert.match(persistence, /colorScheme: s\.colorScheme/);
+  assert.match(persistence, /colorScheme: sanitizeColorScheme\(saved\?\.colorScheme\)/);
 });

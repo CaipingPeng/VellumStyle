@@ -58,6 +58,7 @@ import {getCurrentWindow} from "@tauri-apps/api/window";
 import {Images, ListTree, PanelLeft} from "lucide-react";
 import defaultContent from "./content.md?raw";
 import {applyAppearanceMode} from "./appearance/appearanceMode.ts";
+import {applyColorScheme} from "./appearance/colorScheme.ts";
 import {isManualSyncShortcut} from "./utils/manualSyncShortcut.ts";
 import {MOTION_DURATION_DRAWER, MOTION_EASE_OUT} from "./utils/motion.ts";
 
@@ -156,6 +157,9 @@ export default function App() {
   const syncMessage = useStore((s) => s.syncMessage);
   const workspaceSplitRatio = useStore((s) => s.workspaceSplitRatio);
   const appearanceMode = useStore((s) => s.appearanceMode);
+  const colorScheme = useStore((s) => s.colorScheme);
+  const setAppearanceMode = useStore((s) => s.setAppearanceMode);
+  const setColorScheme = useStore((s) => s.setColorScheme);
   const setContent = useStore((s) => s.setContent);
   const setThemes = useStore((s) => s.setThemes);
   const loadTree = useStore((s) => s.loadTree);
@@ -167,6 +171,10 @@ export default function App() {
   useEffect(() => {
     applyAppearanceMode(appearanceMode, document.documentElement);
   }, [appearanceMode]);
+
+  useEffect(() => {
+    applyColorScheme(colorScheme, document.documentElement);
+  }, [colorScheme]);
 
   useEffect(() => registerBackgroundDocumentUpdater(async (documentPath, transform) => {
     const updateOpenDocument = (): boolean | null => {
@@ -830,7 +838,15 @@ export default function App() {
         </div>
       </footer>
 
-      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} updateState={updateState} />
+      <SettingsDialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        updateState={updateState}
+        appearanceMode={appearanceMode}
+        colorScheme={colorScheme}
+        onAppearanceModeChange={setAppearanceMode}
+        onColorSchemeChange={setColorScheme}
+      />
       <UpdatePromptDialog
         open={startupUpdatePromptOpen}
         version={availableUpdate?.version}

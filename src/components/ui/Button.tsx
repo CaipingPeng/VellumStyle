@@ -29,7 +29,7 @@ const base =
   "active:scale-[0.97] disabled:cursor-default disabled:opacity-60";
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-white border-0 hover:bg-accent-hover",
+  primary: "vs-btn-accent text-white border-0",
   secondary:
     "border border-transparent bg-bg-secondary text-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.78)] hover:bg-bg-tertiary hover:text-text",
   ghost: "bg-transparent text-text border-0 hover:bg-bg-tertiary",

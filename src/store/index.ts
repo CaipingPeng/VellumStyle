@@ -33,6 +33,11 @@ import {
   sanitizeAppearanceMode,
   type AppearanceMode,
 } from "../appearance/appearanceMode.ts";
+import {
+  DEFAULT_COLOR_SCHEME,
+  sanitizeColorScheme,
+  type ColorSchemeId,
+} from "../appearance/colorScheme.ts";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -58,6 +63,7 @@ export interface EditorState {
   previewMode: PreviewModeId; // 预览宽度模式
   workspaceSplitRatio: number; // 编辑器/预览外层分栏比例，persist
   appearanceMode: AppearanceMode; // 应用亮暗外观，persist
+  colorScheme: ColorSchemeId; // 应用配色方案，persist
   favoriteThemeIds: string[]; // 收藏主题，persist
   pinnedCodeThemeIds: CodeThemeId[]; // 置顶代码主题，persist
   setContent: (content: string) => void;
@@ -72,6 +78,8 @@ export interface EditorState {
   setSelectedPath: (path: string | null) => void;
   setPreviewMode: (mode: PreviewModeId) => void;
   setWorkspaceSplitRatio: (ratio: number) => void;
+  setAppearanceMode: (mode: AppearanceMode) => void;
+  setColorScheme: (scheme: ColorSchemeId) => void;
   toggleAppearanceMode: () => void;
   toggleFavoriteTheme: (id: string) => void;
   togglePinnedCodeTheme: (id: CodeThemeId) => void;
@@ -292,6 +300,7 @@ export const useStore = create<EditorState>()(
       previewMode: "fluid",
       workspaceSplitRatio: DEFAULT_WORKSPACE_SPLIT_RATIO,
       appearanceMode: DEFAULT_APPEARANCE_MODE,
+      colorScheme: DEFAULT_COLOR_SCHEME,
       favoriteThemeIds: [],
       pinnedCodeThemeIds: [...DEFAULT_PINNED_CODE_THEME_IDS],
       setContent: (content) => {
@@ -389,6 +398,10 @@ export const useStore = create<EditorState>()(
       setPreviewMode: (previewMode) => set({previewMode}),
       setWorkspaceSplitRatio: (workspaceSplitRatio) =>
         set({workspaceSplitRatio: sanitizeWorkspaceSplitRatio(workspaceSplitRatio)}),
+      setAppearanceMode: (appearanceMode) =>
+        set({appearanceMode: sanitizeAppearanceMode(appearanceMode)}),
+      setColorScheme: (colorScheme) =>
+        set({colorScheme: sanitizeColorScheme(colorScheme)}),
       toggleAppearanceMode: () =>
         set((s) => ({appearanceMode: s.appearanceMode === "light" ? "dark" : "light"})),
       toggleFavoriteTheme: (id) =>
@@ -487,6 +500,7 @@ export const useStore = create<EditorState>()(
         previewMode: s.previewMode,
         workspaceSplitRatio: s.workspaceSplitRatio,
         appearanceMode: s.appearanceMode,
+        colorScheme: s.colorScheme,
         favoriteThemeIds: s.favoriteThemeIds,
         pinnedCodeThemeIds: s.pinnedCodeThemeIds,
       }),
@@ -528,6 +542,7 @@ export const useStore = create<EditorState>()(
           documentThemeMapExists: Boolean(saved?.documentThemeMapExists),
           workspaceSplitRatio: sanitizeWorkspaceSplitRatio(saved?.workspaceSplitRatio),
           appearanceMode: sanitizeAppearanceMode(saved?.appearanceMode),
+          colorScheme: sanitizeColorScheme(saved?.colorScheme),
         };
       },
     },

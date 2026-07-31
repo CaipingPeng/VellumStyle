@@ -28,9 +28,9 @@ const inputClass =
 
 const pickerButtonClass =
   "mr-1 inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-0 bg-bg px-3 " +
-  "text-[13px] font-medium text-text shadow-[0_1px_2px_rgba(20,20,30,0.08),inset_0_1px_0_rgba(255,255,255,0.94)] " +
+  "text-[13px] font-medium text-text shadow-[0_1px_2px_rgba(80,66,40,0.08),inset_0_1px_0_rgba(255,255,255,0.94)] " +
   "cursor-pointer transition-[background,box-shadow,transform,color] duration-fast ease-smooth " +
-  "hover:bg-bg-tertiary hover:text-accent hover:shadow-[0_6px_18px_rgba(20,20,30,0.08),inset_0_1px_0_rgba(255,255,255,0.96)] " +
+  "hover:bg-bg-tertiary hover:text-accent hover:shadow-[0_6px_18px_rgba(80,66,40,0.08),inset_0_1px_0_rgba(255,255,255,0.96)] " +
   "active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] " +
   "disabled:cursor-default disabled:opacity-50 disabled:shadow-none disabled:hover:text-text";
 
@@ -51,9 +51,9 @@ const footerGhostButton =
 
 const footerPrimaryButton =
   footerButtonBase +
-  " bg-accent text-white shadow-[0_10px_24px_rgba(94,106,210,0.24),inset_0_1px_0_rgba(255,255,255,0.22)] " +
-  "hover:bg-accent-hover hover:shadow-[0_12px_28px_rgba(94,106,210,0.30),inset_0_1px_0_rgba(255,255,255,0.24)] " +
-  "disabled:bg-accent disabled:opacity-40 disabled:shadow-none";
+  " vs-btn-accent text-white shadow-[0_10px_24px_rgba(109,90,230,0.26),inset_0_1px_0_rgba(255,255,255,0.22)] " +
+  "hover:shadow-[0_12px_28px_rgba(139,92,246,0.34),inset_0_1px_0_rgba(255,255,255,0.24)] " +
+  "disabled:opacity-40 disabled:shadow-none";
 
 export default function ImportMarkdownDialog({
   open,

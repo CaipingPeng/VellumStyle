@@ -7,7 +7,7 @@ test("工作区使用语义令牌并提供焦点、拖动和减少动态效果�
   assert.match(css, /--workspace-frame:/);
   assert.match(css, /--workspace-panel:/);
   assert.match(css, /--workspace-panel-border:/);
-  assert.match(css, /--workspace-panel-radius: 10px/);
+  assert.match(css, /--workspace-panel-radius: 12px/);
   assert.match(css, /\.workspace-editor-panel:focus-within/);
   assert.match(css, /\.workspace-split-separator:focus-visible/);
   assert.match(css, /\.workspace-is-resizing/);

@@ -48,8 +48,8 @@ test("CodeMirror 搜索替换面板使用不挤压正文的浮层工具条", asy
   assert.match(css, /transform:\s*translateX\(-50%\)/);
   assert.match(css, /z-index:\s*20/);
   assert.match(css, /max-width:\s*calc\(100% - 24px\)/);
-  assert.match(css, /rgba\(248,\s*250,\s*252,\s*0\.06\)/);
-  assert.match(css, /rgba\(248,\s*250,\s*252,\s*0\.12\)/);
+  assert.match(css, /rgba\(250,\s*248,\s*243,\s*0\.06\)/);
+  assert.match(css, /rgba\(250,\s*248,\s*243,\s*0\.12\)/);
   assert.match(css, /backdrop-filter:\s*blur\(6px\)\s*saturate\(1\.16\)/);
   assert.match(css, /border:\s*1px solid var\(--border\)/);
   assert.match(css, /border-radius:\s*var\(--radius-lg\)/);
@@ -146,9 +146,9 @@ test("暗色搜索选项与左侧搜索按钮使用相同的表面和悬停效�
   );
 
   assert.match(darkLabelRule, /border-color:\s*var\(--border-strong\)\s*!important/);
-  assert.match(darkLabelRule, /background:\s*rgba\(39,\s*42,\s*50,\s*0\.92\)\s*!important/);
+  assert.match(darkLabelRule, /background:\s*rgba\(40,\s*36,\s*48,\s*0\.92\)\s*!important/);
   assert.match(darkLabelRule, /color:\s*var\(--text\)\s*!important/);
-  assert.match(darkLabelHoverRule, /background:\s*#30333d\s*!important/);
+  assert.match(darkLabelHoverRule, /background:\s*#383344\s*!important/);
 });
 
 test("预览滚动容器提供滚动条样式挂点", async () => {
@@ -166,8 +166,8 @@ test("图片缩放手柄使用低遮挡角标、透明热区和拖拽反馈", as
   assert.match(source, /widthPercent/);
   assert.match(source, /is-resizing/);
 
-  assert.match(cssRule(css, ".vs-image-resize-overlay"), /border:\s*1px solid rgba\(94,\s*106,\s*210,\s*0\.78\)/);
-  assert.match(cssRule(css, ".vs-image-resize-overlay"), /box-shadow:[\s\S]*0 0 0 5px rgba\(94,\s*106,\s*210,\s*0\.08\)/);
+  assert.match(cssRule(css, ".vs-image-resize-overlay"), /border:\s*1px solid rgba\(109,\s*90,\s*230,\s*0\.78\)/);
+  assert.match(cssRule(css, ".vs-image-resize-overlay"), /box-shadow:[\s\S]*0 0 0 5px rgba\(109,\s*90,\s*230,\s*0\.08\)/);
   assert.match(cssRule(css, ".vs-image-resize-overlay.is-resizing"), /border-color:\s*var\(--accent-hover\)/);
   assert.match(css, /\.vs-image-resize-size-badge/);
   assert.match(cssRule(css, ".vs-image-resize-handle"), /width:\s*32px/);
