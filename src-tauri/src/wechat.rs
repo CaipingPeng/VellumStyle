@@ -2,6 +2,7 @@
 // secret 不出前端：前端只调 upload_image command，凭证仅 Rust 读 config。
 
 use crate::config::load_wechat_config;
+use crate::ipc_util::request_header;
 use image::codecs::jpeg::JpegDecoder;
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{DynamicImage, ImageDecoder, ImageEncoder, ImageFormat};
@@ -536,15 +537,6 @@ async fn upload_to_wechat(
             ),
         )),
     }
-}
-
-fn request_header(request: &tauri::ipc::Request<'_>, name: &str) -> Result<String, String> {
-    request
-        .headers()
-        .get(name)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_owned)
-        .ok_or_else(|| format!("图片上传请求缺少 {name}"))
 }
 
 /// File/Blob 使用原始二进制 IPC 请求体，避免把大图片扩展成巨大的 JSON 数字数组。
@@ -1290,14 +1282,22 @@ async fn upload_thumb_inner(
 }
 
 /// 上传封面图到微信永久素材，返回 media_id（供 add_draft 用）。未配置返回 "NOT_CONFIGURED"。
+/// 与 upload_image 一致，使用原始二进制 IPC 请求体，元数据经 header 传递。
 #[tauri::command]
 pub async fn upload_thumb(
     app: AppHandle,
-    bytes: Vec<u8>,
-    filename: String,
-    mime: String,
-    task_id: Option<String>,
+    request: tauri::ipc::Request<'_>,
 ) -> Result<String, String> {
+    let bytes = match request.body() {
+        tauri::ipc::InvokeBody::Raw(bytes) => bytes.clone(),
+        tauri::ipc::InvokeBody::Json(_) => return Err("图片上传请求必须使用二进制数据".into()),
+    };
+    let encoded_filename = request_header(&request, "x-vellum-filename")?;
+    let filename = urlencoding::decode(&encoded_filename)
+        .map_err(|_| "图片文件名编码无效".to_string())?
+        .into_owned();
+    let mime = request_header(&request, "x-vellum-mime")?;
+    let task_id = request_header(&request, "x-vellum-task-id").ok();
     upload_thumb_bytes(app, bytes, filename, mime, task_id).await
 }
 

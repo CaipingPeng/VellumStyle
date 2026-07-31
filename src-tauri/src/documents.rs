@@ -175,11 +175,22 @@ pub fn rename_entry(app: AppHandle, path: String, new_name: String) -> Result<St
     } else {
         parent.join(format!("{new_name}.md"))
     };
-    if target.exists() {
+    // Windows/macOS 文件系统大小写不敏感：target.exists() 会命中源自身，
+    // 纯大小写改名（readme.md -> Readme.md）应放行；同名不同文件才拒绝。
+    if target.exists() && !same_file(&full, &target) {
         return Err("目标名已存在".into());
     }
     std::fs::rename(&full, &target).map_err(|e| format!("重命名失败：{e}"))?;
     Ok(rel_path(&base, &target))
+}
+
+/// 判断两个路径是否指向同一文件（用于大小写不敏感文件系统上的“自身改名”判断）。
+/// 用 canonicalize 比较：大小写不敏感的文件系统会把大小写不同的路径规范化为同一存储形式。
+fn same_file(a: &Path, b: &Path) -> bool {
+    match (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
+        (Ok(ca), Ok(cb)) => ca == cb,
+        _ => false,
+    }
 }
 
 #[tauri::command]

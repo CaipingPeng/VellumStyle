@@ -3,6 +3,7 @@ mod documents;
 mod export_file;
 mod external;
 mod import;
+mod ipc_util;
 mod preview_image;
 mod sync;
 mod themes;
@@ -19,10 +20,14 @@ fn handle_wximg<R: tauri::Runtime>(
 ) {
     // request.uri() 形如 wximg://localhost/?url=https%3A%2F%2Fmmbiz...
     let uri = request.uri().to_string();
-    let raw_url = uri
-        .split_once("url=")
-        .map(|(_, v)| v.to_string())
-        .and_then(|v| urlencoding::decode(&v).ok().map(|c| c.into_owned()));
+    let raw_url = url::Url::parse(&uri)
+        .ok()
+        .and_then(|parsed| {
+            parsed
+                .query_pairs()
+                .find(|(key, _)| key == "url")
+                .map(|(_, value)| value.into_owned())
+        });
 
     let Some(raw_url) = raw_url else {
         responder.respond(

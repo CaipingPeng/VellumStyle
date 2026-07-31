@@ -81,12 +81,12 @@ export async function uploadThumb(
   const taskId = imageUploadTasks.start(file.name || "thumb", "封面图片", context);
   try {
     const buf = await file.arrayBuffer();
-    const bytes = Array.from(new Uint8Array(buf));
-    const mediaId = await invoke<string>("upload_thumb", {
-      bytes,
-      filename: file.name || "thumb",
-      mime: file.type,
-      taskId,
+    const mediaId = await invoke<string>("upload_thumb", new Uint8Array(buf), {
+      headers: {
+        "x-vellum-filename": encodeURIComponent(file.name || "thumb"),
+        "x-vellum-mime": file.type,
+        "x-vellum-task-id": taskId,
+      },
     });
     imageUploadTasks.complete(taskId);
     return mediaId;

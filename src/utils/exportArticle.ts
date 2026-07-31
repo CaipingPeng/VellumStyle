@@ -332,8 +332,9 @@ async function saveExportBlob(blob: Blob, format: ExportFormat, fileName: string
     if (!path) {
       return {status: "cancelled", fileName};
     }
-    const bytes = Array.from(new Uint8Array(await blob.arrayBuffer()));
-    await invoke("write_export_file", {path, bytes});
+    await invoke("write_export_file", new Uint8Array(await blob.arrayBuffer()), {
+      headers: {"x-vellum-export-path": encodeURIComponent(path)},
+    });
     return {status: "saved", fileName, path};
   }
 

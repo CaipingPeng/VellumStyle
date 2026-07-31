@@ -21,10 +21,31 @@ fn themes_dir(app: &AppHandle) -> Option<PathBuf> {
     app.path().app_data_dir().ok().map(|d| d.join("themes"))
 }
 
-fn sanitize_id(id: &str) -> String {
-    id.chars()
-        .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_')
-        .collect()
+/// 生成安全主题 id/文件名：保留字母数字与 `-`/`_`/`.`。
+/// 拒绝空结果、以 `.` 开头、含 `..` 及 Windows 保留名，
+/// 避免 `my.theme.json` 这类带点号文件名保存后 id 漂移。
+fn sanitize_id(id: &str) -> Result<String, String> {
+    let safe: String = id
+        .chars()
+        .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_' || *c == '.')
+        .collect();
+    if safe.is_empty() {
+        return Err("主题 id 为空或仅含非法字符".into());
+    }
+    if safe.starts_with('.') || safe.contains("..") {
+        return Err("主题 id 不能以点开头或包含连续点号".into());
+    }
+    let upper = safe.to_ascii_uppercase();
+    let is_reserved = upper == "CON"
+        || upper == "PRN"
+        || upper == "AUX"
+        || upper == "NUL"
+        || (upper.starts_with("COM") && upper[3..].chars().all(|c| c.is_ascii_digit()))
+        || (upper.starts_with("LPT") && upper[3..].chars().all(|c| c.is_ascii_digit()));
+    if is_reserved {
+        return Err("主题 id 是 Windows 保留文件名".into());
+    }
+    Ok(safe)
 }
 
 fn is_selector_boundary(ch: Option<char>) -> bool {
@@ -150,10 +171,7 @@ pub fn save_user_theme(app: AppHandle, id: String, model_json: String) -> Result
         .map_err(|e| format!("非法 JSON：{e}"))?;
     normalize_article_root_value(&mut model_value);
     let normalized_model_json = serde_json::to_string(&model_value).map_err(|e| e.to_string())?;
-    let safe_id = sanitize_id(&id);
-    if safe_id.is_empty() {
-        return Err("非法主题 id".into());
-    }
+    let safe_id = sanitize_id(&id)?;
     let path = dir.join(format!("{safe_id}.json"));
     std::fs::write(&path, normalized_model_json).map_err(|e| format!("写入失败：{e}"))?;
     Ok(())
@@ -175,7 +193,7 @@ pub fn import_theme_model(app: AppHandle, id: String, raw_json: String) -> Resul
     let wrapped = serde_json::json!({"name": id, "model": model});
     let model_json = serde_json::to_string(&wrapped).map_err(|e| e.to_string())?;
     save_user_theme(app, id.clone(), model_json)?;
-    Ok(sanitize_id(&id))
+    Ok(sanitize_id(&id)?)
 }
 
 /// 确保 app_data_dir/themes/ 存在，返回其绝对路径（供 UI「打开主题文件夹」用）。
@@ -205,6 +223,25 @@ pub fn open_themes_dir(app: AppHandle) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sanitize_keeps_cjk_and_dots() {
+        assert_eq!(sanitize_id("琥珀"), Ok("琥珀".to_string()));
+        assert_eq!(sanitize_id("my.theme"), Ok("my.theme".to_string()));
+        assert_eq!(sanitize_id("default"), Ok("default".to_string()));
+    }
+
+    #[test]
+    fn sanitize_rejects_empty_dot_prefix_and_reserved_names() {
+        assert!(sanitize_id("").is_err());
+        assert!(sanitize_id("！？").is_err());
+        assert!(sanitize_id(".hidden").is_err());
+        assert!(sanitize_id("a..b").is_err());
+        assert!(sanitize_id("CON").is_err());
+        assert!(sanitize_id("com1").is_err());
+        assert!(sanitize_id("NUL").is_err());
+        assert_eq!(sanitize_id("a-b_c.1"), Ok("a-b_c.1".to_string()));
+    }
 
     #[test]
     fn normalizes_legacy_article_root_selector() {
