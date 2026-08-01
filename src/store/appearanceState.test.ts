@@ -21,6 +21,19 @@ test("store 提供可切换的配色方案状态", async () => {
   assert.match(source, /colorScheme: sanitizeColorScheme\(colorScheme\)/);
 });
 
+test("store 提供可持久化的背景图状态", async () => {
+  const source = await storeSource;
+  assert.match(source, /backgroundImagePath: string \| null/);
+  assert.match(source, /backgroundBlur: number/);
+  assert.match(source, /statusBarOpacity: number/);
+  assert.match(source, /setBackgroundImagePath: \(path: string \| null\) => void/);
+  assert.match(source, /setBackgroundBlur: \(blur: number\) => void/);
+  assert.match(source, /setStatusBarOpacity: \(opacity: number\) => void/);
+  assert.match(source, /backgroundImagePath: null/);
+  assert.match(source, /backgroundBlur: DEFAULT_BACKGROUND_BLUR/);
+  assert.match(source, /statusBarOpacity: DEFAULT_STATUS_BAR_OPACITY/);
+});
+
 test("store 持久化并合法化外观状态", async () => {
   const source = await storeSource;
   const persistence = source.slice(source.indexOf("partialize:"));
@@ -28,4 +41,10 @@ test("store 持久化并合法化外观状态", async () => {
   assert.match(persistence, /appearanceMode: sanitizeAppearanceMode\(saved\?\.appearanceMode\)/);
   assert.match(persistence, /colorScheme: s\.colorScheme/);
   assert.match(persistence, /colorScheme: sanitizeColorScheme\(saved\?\.colorScheme\)/);
+  assert.match(persistence, /backgroundImagePath: s\.backgroundImagePath/);
+  assert.match(persistence, /backgroundBlur: s\.backgroundBlur/);
+  assert.match(persistence, /statusBarOpacity: s\.statusBarOpacity/);
+  assert.match(persistence, /backgroundImagePath: sanitizeBackgroundImagePath\(saved\?\.backgroundImagePath\)/);
+  assert.match(persistence, /backgroundBlur: sanitizeBackgroundBlur\(saved\?\.backgroundBlur\)/);
+  assert.match(persistence, /statusBarOpacity: sanitizeStatusBarOpacity\(saved\?\.statusBarOpacity\)/);
 });

@@ -50,6 +50,8 @@
   --duration-appearance: 300ms;
 
   --card-border: rgba(80, 66, 40, 0.1);
+  --app-bg-image: none;
+  --app-bg-blur: 0px;
 
 }
 
@@ -276,14 +278,35 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   color: var(--text);
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: var(--app-bg-image);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   /* UI chrome 数字等宽（状态栏计数/时间/版本号），文章正文见下方 #article 恢复比例数字 */
   font-variant-numeric: tabular-nums;
 }
 
+/* 背景毛玻璃层：固定铺满视口，只模糊 body 背景图；位于内容之下、背景之上，
+   因此只影响透出的背景，不模糊任何 UI 内容。 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  backdrop-filter: blur(var(--app-bg-blur));
+  -webkit-backdrop-filter: blur(var(--app-bg-blur));
+}
+
 /* 工作区板块：框架底色、独立表面和可访问分隔柄。 */
 .workspace-frame {
-  background: var(--workspace-frame);
+  background-color: var(--workspace-frame);
+}
+
+/* 有背景图时工作区框架透明，让毛玻璃背景在面板间隙之间连续延伸。 */
+html.has-app-bg .workspace-frame {
+  background-color: transparent;
 }
 
 .workspace-panel {

@@ -33,7 +33,7 @@ const variants: Record<ButtonVariant, string> = {
   secondary:
     "border border-transparent bg-bg-secondary text-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.78)] hover:bg-bg-tertiary hover:text-text",
   ghost: "bg-transparent text-text border-0 hover:bg-bg-tertiary",
-  toolbar: "bg-transparent text-text-secondary border-0 hover:bg-bg-tertiary hover:text-text",
+  toolbar: "bg-bg-secondary text-text-secondary border-0 hover:bg-bg-tertiary hover:text-text",
 };
 
 // 非 idle 态覆盖 variant 的背景/文字色，确保态语义清晰

@@ -109,7 +109,7 @@ function MainToolbar({onOpenSettings, onNeedSettings, hasUpdateNotification = fa
       {isVisible("theme") ? <ThemeMenu ref={themeRef} variant="toolbar" /> : <ThemeMenu ref={themeRef} showTrigger={false} />}
       {isVisible("settings") && (
         <span className="relative inline-flex">
-          <IconButton title="设置" onClick={onOpenSettings} className="text-text-secondary hover:text-text">
+          <IconButton variant="surface" title="设置" onClick={onOpenSettings}>
             <Settings size={16} />
           </IconButton>
           {hasUpdateNotification && (
@@ -127,7 +127,7 @@ function MainToolbar({onOpenSettings, onNeedSettings, hasUpdateNotification = fa
           align="end"
           trigger={
             <span className="relative inline-flex">
-              <IconButton title="更多" active={moreOpen} onClick={() => setMoreOpen((o) => !o)}>
+              <IconButton variant="surface" title="更多" active={moreOpen} onClick={() => setMoreOpen((o) => !o)}>
                 <MoreHorizontal size={16} />
               </IconButton>
               {hasUpdateNotification && hiddenActions.includes("settings") && (

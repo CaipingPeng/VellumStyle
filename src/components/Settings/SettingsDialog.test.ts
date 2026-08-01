@@ -5,6 +5,7 @@ import {createRoot} from "react-dom/client";
 import SettingsDialog, {type SettingsUpdateState} from "./SettingsDialog.tsx";
 import type {AppearanceMode} from "../../appearance/appearanceMode.ts";
 import type {ColorSchemeId} from "../../appearance/colorScheme.ts";
+import {DEFAULT_BACKGROUND_BLUR} from "../../appearance/backgroundImage.ts";
 
 const helpUrl = "https://my.feishu.cn/docx/RUDpd1zWnoWuuyx0uFxcahIGnmC";
 
@@ -13,8 +14,14 @@ function renderSettingsDialog(
   appearance: {
     appearanceMode?: AppearanceMode;
     colorScheme?: ColorSchemeId;
+    backgroundImagePath?: string | null;
+    backgroundBlur?: number;
+    statusBarOpacity?: number;
     onAppearanceModeChange?: (mode: AppearanceMode) => void;
     onColorSchemeChange?: (scheme: ColorSchemeId) => void;
+    onBackgroundImageChange?: (path: string | null) => void;
+    onBackgroundBlurChange?: (blur: number) => void;
+    onStatusBarOpacityChange?: (opacity: number) => void;
   } = {},
 ) {
   const container = document.createElement("div");
@@ -29,8 +36,14 @@ function renderSettingsDialog(
         updateState,
         appearanceMode: appearance.appearanceMode ?? "light",
         colorScheme: appearance.colorScheme ?? "violet",
+        backgroundImagePath: appearance.backgroundImagePath ?? null,
+        backgroundBlur: appearance.backgroundBlur ?? DEFAULT_BACKGROUND_BLUR,
+        statusBarOpacity: appearance.statusBarOpacity ?? 0.7,
         onAppearanceModeChange: appearance.onAppearanceModeChange ?? (() => {}),
         onColorSchemeChange: appearance.onColorSchemeChange ?? (() => {}),
+        onBackgroundImageChange: appearance.onBackgroundImageChange ?? (() => {}),
+        onBackgroundBlurChange: appearance.onBackgroundBlurChange ?? (() => {}),
+        onStatusBarOpacityChange: appearance.onStatusBarOpacityChange ?? (() => {}),
       }),
     );
   });
@@ -321,8 +334,10 @@ test("appearance tab renders light/dark toggle and all color schemes", () => {
     assert.match(body, /薄荷青绿/);
     assert.match(body, /海岸蓝/);
 
+    const schemeLabels = ["文澜紫", "珊瑚暖橙", "薄荷青绿", "海岸蓝"];
     const swatches = Array.from(document.querySelectorAll("button")).filter((button) =>
-      button.getAttribute("aria-pressed") !== null && button.textContent?.includes("·"),
+      button.getAttribute("aria-pressed") !== null &&
+      schemeLabels.some((label) => button.textContent?.includes(label)),
     );
     assert.ok(swatches.length >= 4, "scheme swatches should render");
   } finally {
@@ -375,4 +390,99 @@ test("appearance tab applies light/dark and color scheme selections", () => {
     delete tauriWindow.__TAURI_INTERNALS__;
   }
 });
+
+test("appearance tab renders background image controls and remove flow", () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const tauriWindow = window as typeof window & {
+    __TAURI_INTERNALS__?: {invoke: () => Promise<unknown>; transformCallback: () => number};
+  };
+  tauriWindow.__TAURI_INTERNALS__ = {
+    invoke: () => Promise.resolve({wechat: {app_id: "", app_secret: ""}}),
+    transformCallback: () => 0,
+  };
+
+  const imageChanges: Array<string | null> = [];
+  const {cleanup} = renderSettingsDialog(undefined, {
+    backgroundImagePath: "C:\\app-data\\backgrounds\\bg-123.png",
+    backgroundBlur: 10,
+    onBackgroundImageChange: (path) => imageChanges.push(path),
+  });
+
+  try {
+    const appearanceTab = Array.from(document.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("外观"),
+    );
+    assert.ok(appearanceTab);
+    act(() => appearanceTab.click());
+
+    const body = document.body.textContent || "";
+    assert.match(body, /背景图/);
+    assert.match(body, /更换/);
+    assert.match(body, /移除/);
+    assert.match(body, /背景模糊/);
+    assert.match(body, /10px/);
+    assert.match(body, /状态栏透明度/);
+    assert.match(body, /70%/);
+
+    const removeButton = Array.from(document.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("移除"),
+    );
+    assert.ok(removeButton);
+    act(() => removeButton.click());
+    assert.deepEqual(imageChanges, [null]);
+  } finally {
+    cleanup();
+    delete tauriWindow.__TAURI_INTERNALS__;
+  }
+});
+
+test("appearance tab adjusts background blur and status bar opacity sliders", () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const tauriWindow = window as typeof window & {
+    __TAURI_INTERNALS__?: {invoke: () => Promise<unknown>; transformCallback: () => number};
+  };
+  tauriWindow.__TAURI_INTERNALS__ = {
+    invoke: () => Promise.resolve({wechat: {app_id: "", app_secret: ""}}),
+    transformCallback: () => 0,
+  };
+
+  const blurChanges: number[] = [];
+  const opacityChanges: number[] = [];
+  const {cleanup} = renderSettingsDialog(undefined, {
+    backgroundImagePath: "C:\\app-data\\backgrounds\\bg-123.png",
+    backgroundBlur: 10,
+    statusBarOpacity: 0.7,
+    onBackgroundBlurChange: (value) => blurChanges.push(value),
+    onStatusBarOpacityChange: (value) => opacityChanges.push(value),
+  });
+
+  try {
+    const appearanceTab = Array.from(document.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("外观"),
+    );
+    assert.ok(appearanceTab);
+    act(() => appearanceTab.click());
+
+    const blurSlider = document.querySelector<HTMLInputElement>('input[aria-label="背景模糊程度"]');
+    assert.ok(blurSlider, "blur slider should render");
+    act(() => setRangeValue(blurSlider, "20"));
+    assert.deepEqual(blurChanges, [20]);
+
+    const opacitySlider = document.querySelector<HTMLInputElement>('input[aria-label="状态栏透明度"]');
+    assert.ok(opacitySlider, "status bar opacity slider should render");
+    act(() => setRangeValue(opacitySlider, "45"));
+    assert.deepEqual(opacityChanges, [0.45]);
+  } finally {
+    cleanup();
+    delete tauriWindow.__TAURI_INTERNALS__;
+  }
+});
+
+// jsdom 里直接改受控 range 的 value 不会触发 React onChange，
+// 需要用原型原生 setter 绕过 React 的 value tracker。
+function setRangeValue(input: HTMLInputElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+  setter?.call(input, value);
+  input.dispatchEvent(new window.Event("input", {bubbles: true}));
+}
 

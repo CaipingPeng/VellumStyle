@@ -59,6 +59,7 @@ import {Images, ListTree, PanelLeft} from "lucide-react";
 import defaultContent from "./content.md?raw";
 import {applyAppearanceMode} from "./appearance/appearanceMode.ts";
 import {applyColorScheme} from "./appearance/colorScheme.ts";
+import {applyBackgroundImage} from "./appearance/backgroundImage.ts";
 import {isManualSyncShortcut} from "./utils/manualSyncShortcut.ts";
 import {MOTION_DURATION_DRAWER, MOTION_EASE_OUT} from "./utils/motion.ts";
 
@@ -158,8 +159,14 @@ export default function App() {
   const workspaceSplitRatio = useStore((s) => s.workspaceSplitRatio);
   const appearanceMode = useStore((s) => s.appearanceMode);
   const colorScheme = useStore((s) => s.colorScheme);
+  const backgroundImagePath = useStore((s) => s.backgroundImagePath);
+  const backgroundBlur = useStore((s) => s.backgroundBlur);
+  const statusBarOpacity = useStore((s) => s.statusBarOpacity);
   const setAppearanceMode = useStore((s) => s.setAppearanceMode);
   const setColorScheme = useStore((s) => s.setColorScheme);
+  const setBackgroundImagePath = useStore((s) => s.setBackgroundImagePath);
+  const setBackgroundBlur = useStore((s) => s.setBackgroundBlur);
+  const setStatusBarOpacity = useStore((s) => s.setStatusBarOpacity);
   const setContent = useStore((s) => s.setContent);
   const setThemes = useStore((s) => s.setThemes);
   const loadTree = useStore((s) => s.loadTree);
@@ -175,6 +182,10 @@ export default function App() {
   useEffect(() => {
     applyColorScheme(colorScheme, document.documentElement);
   }, [colorScheme]);
+
+  useEffect(() => {
+    applyBackgroundImage(backgroundImagePath, backgroundBlur, document.documentElement);
+  }, [backgroundImagePath, backgroundBlur]);
 
   useEffect(() => registerBackgroundDocumentUpdater(async (documentPath, transform) => {
     const updateOpenDocument = (): boolean | null => {
@@ -680,16 +691,17 @@ export default function App() {
   return (
     <div style={{display: "flex", flexDirection: "column", height: "100%"}}>
       {/* Navbar */}
-      <header className="relative z-50 flex h-[52px] flex-shrink-0 items-center justify-between gap-3 border-b border-border bg-bg/80 px-4 backdrop-blur">
+      <header className="relative z-50 flex h-[52px] flex-shrink-0 items-center justify-between gap-3 border-b border-border bg-transparent px-4">
         <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
-          <IconButton active={sidebarOpen} title="文档" aria-pressed={sidebarOpen} onClick={toggleSidebar}>
+          <IconButton variant="surface" active={sidebarOpen} title="文档" aria-pressed={sidebarOpen} onClick={toggleSidebar}>
             <PanelLeft size={16} />
           </IconButton>
-          <IconButton active={outlineOpen} title="大纲" aria-pressed={outlineOpen} onClick={toggleOutline}>
+          <IconButton variant="surface" active={outlineOpen} title="大纲" aria-pressed={outlineOpen} onClick={toggleOutline}>
             <ListTree size={16} />
           </IconButton>
           <span aria-hidden="true" className="h-5 w-px flex-none bg-border" />
           <IconButton
+            variant="surface"
             active={imageMaterialPickerOpen}
             title="图片素材库"
             aria-pressed={imageMaterialPickerOpen}
@@ -800,7 +812,12 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="flex h-7 flex-shrink-0 items-center justify-between gap-4 border-t border-border bg-bg-secondary px-4 text-xs text-text-muted">
+      <footer
+        className="flex h-7 flex-shrink-0 items-center justify-between gap-4 border-t border-border px-4 text-xs text-text-muted"
+        style={{
+          backgroundColor: `color-mix(in srgb, var(--bg) ${Math.round(statusBarOpacity * 100)}%, transparent)`,
+        }}
+      >
         <div className="flex min-w-0 items-center gap-2">
           {currentDocPath && (
             <>
@@ -844,8 +861,14 @@ export default function App() {
         updateState={updateState}
         appearanceMode={appearanceMode}
         colorScheme={colorScheme}
+        backgroundImagePath={backgroundImagePath}
+        backgroundBlur={backgroundBlur}
+        statusBarOpacity={statusBarOpacity}
         onAppearanceModeChange={setAppearanceMode}
         onColorSchemeChange={setColorScheme}
+        onBackgroundImageChange={setBackgroundImagePath}
+        onBackgroundBlurChange={setBackgroundBlur}
+        onStatusBarOpacityChange={setStatusBarOpacity}
       />
       <UpdatePromptDialog
         open={startupUpdatePromptOpen}

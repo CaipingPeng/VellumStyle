@@ -2,6 +2,7 @@ import type {ButtonHTMLAttributes, ReactNode} from "react";
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   active?: boolean;
+  variant?: "ghost" | "surface";
   children: ReactNode;
 }
 
@@ -11,8 +12,12 @@ const base =
   "focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] " +
   "active:scale-95 disabled:cursor-default disabled:opacity-50";
 
-export default function IconButton({active = false, className = "", children, ...rest}: Props) {
-  const tone = active ? "bg-accent-subtle text-accent" : "bg-transparent text-text hover:bg-bg-tertiary";
+export default function IconButton({active = false, variant = "ghost", className = "", children, ...rest}: Props) {
+  const tone = active
+    ? "bg-accent-subtle text-accent"
+    : variant === "surface"
+      ? "bg-bg-secondary text-text-secondary hover:bg-bg-tertiary hover:text-text"
+      : "bg-transparent text-text hover:bg-bg-tertiary";
   return (
     <button type="button" className={`${base} ${tone} ${className}`} {...rest}>
       {children}

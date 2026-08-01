@@ -1,10 +1,11 @@
 import {type MouseEvent, useEffect, useState} from "react";
-import {invoke} from "@tauri-apps/api/core";
-import {Check, Cloud, Copy, ExternalLink, Eye, EyeOff, FolderSync, Info, KeyRound, LockKeyhole, Moon, Network, Palette, Save, ShieldCheck, Sun, UserRound} from "lucide-react";
+import {convertFileSrc, invoke} from "@tauri-apps/api/core";
+import {Check, Cloud, Copy, ExternalLink, Eye, EyeOff, FolderSync, ImagePlus, Info, KeyRound, LockKeyhole, Moon, Network, Palette, RefreshCw, Save, ShieldCheck, Sun, Trash2, UserRound} from "lucide-react";
 import Dialog from "../ui/Dialog.tsx";
 import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
 import {COLOR_SCHEMES, type ColorSchemeId} from "../../appearance/colorScheme.ts";
+import {MAX_BACKGROUND_BLUR} from "../../appearance/backgroundImage.ts";
 import type {AppearanceMode} from "../../appearance/appearanceMode.ts";
 import {rememberOutboundIp} from "../../utils/outboundIpMonitor.ts";
 import {copyPlainText} from "../../utils/clipboard.ts";
@@ -19,8 +20,14 @@ interface Props {
   updateState?: SettingsUpdateState;
   appearanceMode: AppearanceMode;
   colorScheme: ColorSchemeId;
+  backgroundImagePath: string | null;
+  backgroundBlur: number;
+  statusBarOpacity: number;
   onAppearanceModeChange: (mode: AppearanceMode) => void;
   onColorSchemeChange: (scheme: ColorSchemeId) => void;
+  onBackgroundImageChange: (path: string | null) => void;
+  onBackgroundBlurChange: (blur: number) => void;
+  onStatusBarOpacityChange: (opacity: number) => void;
 }
 
 interface AppConfig {
@@ -71,8 +78,14 @@ export default function SettingsDialog({
   updateState,
   appearanceMode,
   colorScheme,
+  backgroundImagePath,
+  backgroundBlur,
+  statusBarOpacity,
   onAppearanceModeChange,
   onColorSchemeChange,
+  onBackgroundImageChange,
+  onBackgroundBlurChange,
+  onStatusBarOpacityChange,
 }: Props) {
   const [activeSection, setActiveSection] = useState<SettingsSection>("wechat");
   const [appId, setAppId] = useState("");
@@ -133,6 +146,38 @@ export default function SettingsDialog({
       toast.show(msg, "error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePickBackground = async () => {
+    if (!isTauriRuntime()) {
+      toast.show("背景图仅桌面版支持", "error");
+      return;
+    }
+    try {
+      const {open} = await import("@tauri-apps/plugin-dialog");
+      const picked = await open({
+        multiple: false,
+        filters: [{name: "图片", extensions: ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg"]}],
+      });
+      if (typeof picked !== "string") return;
+      const stored = await invoke<string>("copy_background_image", {sourcePath: picked});
+      onBackgroundImageChange(stored);
+    } catch (e) {
+      const msg = typeof e === "string" ? e : (e as Error)?.message || "选择背景图失败";
+      toast.show(msg, "error");
+    }
+  };
+
+  const handleRemoveBackground = async () => {
+    const current = backgroundImagePath;
+    onBackgroundImageChange(null);
+    if (current) {
+      try {
+        await invoke("remove_background_image", {storedPath: current});
+      } catch {
+        // 清理软件数据目录里的旧文件失败不影响界面状态
+      }
     }
   };
 
@@ -600,16 +645,13 @@ export default function SettingsDialog({
           )}
 
           {activeSection === "appearance" && (
-            <div className="mx-auto flex max-w-[520px] flex-col gap-5">
+            <div className="mx-auto flex w-full max-w-[520px] flex-col gap-5">
               <div className="flex items-start gap-3">
                 <span className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded bg-accent-subtle text-accent">
                   <Palette size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <h2 className="m-0 text-[16px] font-semibold leading-6 text-text">外观与配色</h2>
-                  <p className="m-0 mt-1 text-xs leading-5 text-text-secondary">
-                    选择应用界面的明暗模式与主题配色，设置保存在本机。
-                  </p>
                 </div>
               </div>
 
@@ -624,10 +666,10 @@ export default function SettingsDialog({
                         type="button"
                         onClick={() => onAppearanceModeChange(mode)}
                         aria-pressed={active}
-                        className={`flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border-0 bg-transparent text-[13px] font-medium transition-all duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+                        className={`flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border-0 text-[13px] font-medium transition-all duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
                           active
                             ? "bg-bg text-accent shadow-sm"
-                            : "text-text-secondary hover:text-text"
+                            : "bg-transparent text-text-secondary hover:text-text"
                         }`}
                       >
                         {mode === "light" ? <Sun size={15} /> : <Moon size={15} />}
@@ -664,9 +706,6 @@ export default function SettingsDialog({
                         </span>
                         <span className="min-w-0">
                           <span className="block text-[13px] font-semibold leading-5 text-text">{scheme.label}</span>
-                          <span className="block truncate text-[11px] leading-4 text-text-muted">
-                            {scheme.description}
-                          </span>
                         </span>
                         {active && <Check size={15} className="ml-auto flex-none text-accent" />}
                       </button>
@@ -674,6 +713,75 @@ export default function SettingsDialog({
                   })}
                 </div>
               </div>
+
+              <div>
+                <span className={labelClass}>背景图</span>
+                {backgroundImagePath ? (
+                  <div className="flex items-center gap-3 rounded-lg bg-bg-secondary p-2.5">
+                    <img
+                      src={isTauriRuntime() ? convertFileSrc(backgroundImagePath) : ""}
+                      alt="背景图预览"
+                      className="h-14 w-24 flex-none rounded-md object-cover ring-1 ring-black/5"
+                    />
+                    <div className="min-w-0 flex-1" />
+                    <div className="flex flex-none gap-1.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => void handlePickBackground()}
+                        className="h-8 gap-1.5 px-2.5 text-xs"
+                      >
+                        <RefreshCw size={13} />
+                        更换
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => void handleRemoveBackground()}
+                        className="h-8 gap-1.5 px-2.5 text-xs !text-danger"
+                      >
+                        <Trash2 size={13} />
+                        移除
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => void handlePickBackground()}
+                    className="gap-1.5"
+                  >
+                    <ImagePlus size={14} />
+                    选择背景图
+                  </Button>
+                )}
+              </div>
+
+              {backgroundImagePath && (
+                <div className="flex flex-col gap-5">
+                  <AppearanceSlider
+                    label="背景模糊"
+                    valueLabel={`${Math.round(backgroundBlur)}px`}
+                    min={0}
+                    max={MAX_BACKGROUND_BLUR}
+                    step={1}
+                    value={Math.round(backgroundBlur)}
+                    onChange={onBackgroundBlurChange}
+                    ariaLabel="背景模糊程度"
+                  />
+                  <AppearanceSlider
+                    label="状态栏透明度"
+                    valueLabel={`${Math.round(statusBarOpacity * 100)}%`}
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={Math.round(statusBarOpacity * 100)}
+                    onChange={(value) => onStatusBarOpacityChange(value / 100)}
+                    ariaLabel="状态栏透明度"
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -793,4 +901,45 @@ function formatUpdateStatus(updateState?: SettingsUpdateState): string {
     case "idle":
       return "未检查";
   }
+}
+
+interface AppearanceSliderProps {
+  label: string;
+  valueLabel: string;
+  min: number;
+  max: number;
+  step: number;
+  value: number;
+  onChange: (value: number) => void;
+  ariaLabel: string;
+}
+
+function AppearanceSlider({
+  label,
+  valueLabel,
+  min,
+  max,
+  step,
+  value,
+  onChange,
+  ariaLabel,
+}: AppearanceSliderProps) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[13px] font-medium leading-5 text-text">{label}</span>
+        <span className="flex-none text-xs text-text-muted tabular-nums">{valueLabel}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        aria-label={ariaLabel}
+        className="mt-2 h-1.5 w-full cursor-pointer accent-accent"
+      />
+    </div>
+  );
 }

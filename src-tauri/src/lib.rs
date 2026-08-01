@@ -1,3 +1,4 @@
+mod background;
 mod config;
 mod documents;
 mod export_file;
@@ -72,6 +73,8 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .register_asynchronous_uri_scheme_protocol("wximg", handle_wximg)
         .invoke_handler(tauri::generate_handler![
+            background::copy_background_image,
+            background::remove_background_image,
             preview_image::get_preview_image_asset,
             preview_image::write_preview_image_asset,
             preview_image::copy_preview_image,

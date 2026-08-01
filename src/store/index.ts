@@ -38,6 +38,13 @@ import {
   sanitizeColorScheme,
   type ColorSchemeId,
 } from "../appearance/colorScheme.ts";
+import {
+  DEFAULT_BACKGROUND_BLUR,
+  DEFAULT_STATUS_BAR_OPACITY,
+  sanitizeBackgroundBlur,
+  sanitizeBackgroundImagePath,
+  sanitizeStatusBarOpacity,
+} from "../appearance/backgroundImage.ts";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -64,6 +71,9 @@ export interface EditorState {
   workspaceSplitRatio: number; // 编辑器/预览外层分栏比例，persist
   appearanceMode: AppearanceMode; // 应用亮暗外观，persist
   colorScheme: ColorSchemeId; // 应用配色方案，persist
+  backgroundImagePath: string | null; // 应用背景图（软件内部路径），persist
+  backgroundBlur: number; // 背景毛玻璃模糊半径 px，persist
+  statusBarOpacity: number; // 状态栏不透明度 0-1，persist
   favoriteThemeIds: string[]; // 收藏主题，persist
   pinnedCodeThemeIds: CodeThemeId[]; // 置顶代码主题，persist
   setContent: (content: string) => void;
@@ -80,6 +90,9 @@ export interface EditorState {
   setWorkspaceSplitRatio: (ratio: number) => void;
   setAppearanceMode: (mode: AppearanceMode) => void;
   setColorScheme: (scheme: ColorSchemeId) => void;
+  setBackgroundImagePath: (path: string | null) => void;
+  setBackgroundBlur: (blur: number) => void;
+  setStatusBarOpacity: (opacity: number) => void;
   toggleAppearanceMode: () => void;
   toggleFavoriteTheme: (id: string) => void;
   togglePinnedCodeTheme: (id: CodeThemeId) => void;
@@ -301,6 +314,9 @@ export const useStore = create<EditorState>()(
       workspaceSplitRatio: DEFAULT_WORKSPACE_SPLIT_RATIO,
       appearanceMode: DEFAULT_APPEARANCE_MODE,
       colorScheme: DEFAULT_COLOR_SCHEME,
+      backgroundImagePath: null,
+      backgroundBlur: DEFAULT_BACKGROUND_BLUR,
+      statusBarOpacity: DEFAULT_STATUS_BAR_OPACITY,
       favoriteThemeIds: [],
       pinnedCodeThemeIds: [...DEFAULT_PINNED_CODE_THEME_IDS],
       setContent: (content) => {
@@ -402,6 +418,12 @@ export const useStore = create<EditorState>()(
         set({appearanceMode: sanitizeAppearanceMode(appearanceMode)}),
       setColorScheme: (colorScheme) =>
         set({colorScheme: sanitizeColorScheme(colorScheme)}),
+      setBackgroundImagePath: (backgroundImagePath) =>
+        set({backgroundImagePath: sanitizeBackgroundImagePath(backgroundImagePath)}),
+      setBackgroundBlur: (backgroundBlur) =>
+        set({backgroundBlur: sanitizeBackgroundBlur(backgroundBlur)}),
+      setStatusBarOpacity: (statusBarOpacity) =>
+        set({statusBarOpacity: sanitizeStatusBarOpacity(statusBarOpacity)}),
       toggleAppearanceMode: () =>
         set((s) => ({appearanceMode: s.appearanceMode === "light" ? "dark" : "light"})),
       toggleFavoriteTheme: (id) =>
@@ -501,6 +523,9 @@ export const useStore = create<EditorState>()(
         workspaceSplitRatio: s.workspaceSplitRatio,
         appearanceMode: s.appearanceMode,
         colorScheme: s.colorScheme,
+        backgroundImagePath: s.backgroundImagePath,
+        backgroundBlur: s.backgroundBlur,
+        statusBarOpacity: s.statusBarOpacity,
         favoriteThemeIds: s.favoriteThemeIds,
         pinnedCodeThemeIds: s.pinnedCodeThemeIds,
       }),
@@ -543,6 +568,9 @@ export const useStore = create<EditorState>()(
           workspaceSplitRatio: sanitizeWorkspaceSplitRatio(saved?.workspaceSplitRatio),
           appearanceMode: sanitizeAppearanceMode(saved?.appearanceMode),
           colorScheme: sanitizeColorScheme(saved?.colorScheme),
+          backgroundImagePath: sanitizeBackgroundImagePath(saved?.backgroundImagePath),
+          backgroundBlur: sanitizeBackgroundBlur(saved?.backgroundBlur),
+          statusBarOpacity: sanitizeStatusBarOpacity(saved?.statusBarOpacity),
         };
       },
     },
