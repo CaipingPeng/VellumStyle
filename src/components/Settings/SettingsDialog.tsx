@@ -57,7 +57,6 @@ const wechatDeveloperConsoleUrl = "https://developers.weixin.qq.com/console/memb
 type IpStatus = "idle" | "loading" | "ok" | "error";
 type CopyStatus = "idle" | "ok" | "fail";
 type SettingsSection = "wechat" | "sync" | "network" | "appearance" | "about";
-type ConnectionStatus = "idle" | "loading" | "ok" | "error";
 
 export interface SettingsUpdateState {
   status: "idle" | "checking" | "available" | "none" | "installing" | "error" | "unsupported";
@@ -93,17 +92,15 @@ export default function SettingsDialog({
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
-  const [syncEnabled, setSyncEnabled] = useState(false);
   const [syncUsername, setSyncUsername] = useState("");
   const [syncPassword, setSyncPassword] = useState("");
   const [syncRemoteDir, setSyncRemoteDir] = useState("VellumStyle");
   const [showSyncPassword, setShowSyncPassword] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("idle");
-  const [connectionMessage, setConnectionMessage] = useState("");
   const [outboundIp, setOutboundIp] = useState("");
   const [ipStatus, setIpStatus] = useState<IpStatus>("idle");
   const [ipError, setIpError] = useState("");
   const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
+  const syncConfigured = Boolean(syncUsername.trim() && syncPassword.trim());
 
   useEffect(() => {
     if (!open) return;
@@ -111,15 +108,12 @@ export default function SettingsDialog({
     setActiveSection(updateState?.status === "available" ? "about" : "wechat");
     setShowSecret(false);
     setShowSyncPassword(false);
-    setConnectionStatus("idle");
-    setConnectionMessage("");
     setIpError("");
     setCopyStatus("idle");
     invoke<AppConfig>("get_config")
       .then((cfg) => {
         setAppId(cfg.wechat?.app_id || "");
         setAppSecret(cfg.wechat?.app_secret || "");
-        setSyncEnabled(Boolean(cfg.sync?.enabled));
         setSyncUsername(cfg.sync?.username || "");
         setSyncPassword(cfg.sync?.password || "");
         setSyncRemoteDir(cfg.sync?.remote_dir || "VellumStyle");
@@ -134,7 +128,7 @@ export default function SettingsDialog({
       await invoke("save_config", {
         appId: appId.trim(),
         appSecret: appSecret.trim(),
-        syncEnabled,
+        syncEnabled: syncConfigured,
         syncProvider: "nutstore",
         syncUsername: syncUsername.trim(),
         syncPassword: syncPassword.trim(),
@@ -201,23 +195,16 @@ export default function SettingsDialog({
   };
 
   const handleTestSyncConnection = async () => {
-    if (connectionStatus === "loading") return;
-    setConnectionStatus("loading");
-    setConnectionMessage("");
     try {
-      const result = await testSyncConnection({
+      await testSyncConnection({
         provider: "nutstore",
         username: syncUsername,
         password: syncPassword,
         remoteDir: syncRemoteDir,
       });
-      setConnectionStatus("ok");
-      setConnectionMessage(result.message || "连接成功");
       toast.show("坚果云连接成功", "info");
     } catch (e) {
       const msg = typeof e === "string" ? e : (e as Error)?.message || "连接失败";
-      setConnectionStatus("error");
-      setConnectionMessage(msg);
       toast.show(msg, "error");
     }
   };
@@ -302,19 +289,14 @@ export default function SettingsDialog({
         </>
       }
     >
-      <div className="grid min-h-[460px] grid-cols-[180px_minmax(0,1fr)] overflow-hidden rounded border border-border bg-bg-secondary">
-        <nav className="flex flex-col gap-1 border-r border-border bg-bg-tertiary p-2" aria-label="设置分类">
+      <div className="grid h-[min(540px,68vh)] grid-cols-[180px_minmax(0,1fr)] overflow-hidden rounded border border-border bg-bg-secondary">
+        <nav className="flex flex-col gap-1 overflow-y-auto border-r border-border bg-bg-tertiary p-2" aria-label="设置分类">
           {[
-            {id: "wechat" as const, label: "微信配置", hint: "素材上传", icon: ShieldCheck},
-            {id: "sync" as const, label: "文件同步", hint: syncEnabled ? "坚果云 WebDAV" : "未启用", icon: Cloud},
-            {id: "network" as const, label: "网络辅助", hint: "IP 白名单", icon: Network},
-            {id: "appearance" as const, label: "外观", hint: "配色与明暗", icon: Palette},
-            {
-              id: "about" as const,
-              label: "关于",
-              hint: updateState?.status === "available" ? "有新版本" : "版本更新",
-              icon: Info,
-            },
+            {id: "wechat" as const, label: "微信配置", icon: ShieldCheck},
+            {id: "sync" as const, label: "文件同步", icon: Cloud},
+            {id: "network" as const, label: "网络辅助", icon: Network},
+            {id: "appearance" as const, label: "外观", icon: Palette},
+            {id: "about" as const, label: "关于", icon: Info},
           ].map((item) => {
             const Icon = item.icon;
             const active = activeSection === item.id;
@@ -329,14 +311,11 @@ export default function SettingsDialog({
                 }`}
               >
                 <Icon size={16} className="flex-none" />
-                <span className="min-w-0">
-                  <span className="flex items-center gap-1.5 text-[13px] font-semibold leading-5">
-                    {item.label}
-                    {item.id === "about" && updateState?.status === "available" && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-danger" aria-label="有可用更新" />
-                    )}
-                  </span>
-                  <span className="block truncate text-[11px] font-normal leading-4 text-text-muted">{item.hint}</span>
+                <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold leading-5">
+                  {item.label}
+                  {item.id === "about" && updateState?.status === "available" && (
+                    <span className="h-1.5 w-1.5 flex-none rounded-full bg-danger" aria-label="有可用更新" />
+                  )}
                 </span>
               </button>
             );
@@ -432,7 +411,7 @@ export default function SettingsDialog({
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="m-0 text-[16px] font-semibold leading-6 text-text">文件同步</h2>
                     <span className="rounded-sm bg-bg-secondary px-2 py-0.5 text-[11px] font-medium text-text-muted">
-                      {syncEnabled ? "坚果云 WebDAV" : "未启用"}
+                      {syncConfigured ? "坚果云 WebDAV" : "未启用"}
                     </span>
                   </div>
                   <p className="m-0 mt-1 text-xs leading-5 text-text-secondary">
@@ -440,24 +419,6 @@ export default function SettingsDialog({
                   </p>
                 </div>
               </div>
-
-              <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded border border-border bg-bg-secondary px-3 text-sm text-text transition-colors duration-fast hover:border-border-strong">
-                <input
-                  type="checkbox"
-                  checked={syncEnabled}
-                  onChange={(e) => {
-                    setSyncEnabled(e.target.checked);
-                    setConnectionStatus("idle");
-                    setConnectionMessage("");
-                  }}
-                  disabled={!loaded}
-                  className="h-4 w-4 accent-[color:var(--accent)] outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block font-medium">启用文件自同步</span>
-                  <span className="block text-xs leading-5 text-text-secondary">本地保存不等待网络，同步在后台自动进行。</span>
-                </span>
-              </label>
 
               <div className="grid gap-4">
                 <div>
@@ -469,13 +430,9 @@ export default function SettingsDialog({
                     <input
                       id="settings-sync-username"
                       value={syncUsername}
-                      onChange={(e) => {
-                        setSyncUsername(e.target.value);
-                        setConnectionStatus("idle");
-                        setConnectionMessage("");
-                      }}
+                      onChange={(e) => setSyncUsername(e.target.value)}
                       placeholder="坚果云登录邮箱"
-                      disabled={!loaded || !syncEnabled}
+                      disabled={!loaded}
                       autoComplete="username"
                       className={inputClass}
                     />
@@ -491,21 +448,17 @@ export default function SettingsDialog({
                     <input
                       id="settings-sync-password"
                       value={syncPassword}
-                      onChange={(e) => {
-                        setSyncPassword(e.target.value);
-                        setConnectionStatus("idle");
-                        setConnectionMessage("");
-                      }}
+                      onChange={(e) => setSyncPassword(e.target.value)}
                       placeholder="坚果云第三方应用授权密码"
                       type={showSyncPassword ? "text" : "password"}
-                      disabled={!loaded || !syncEnabled}
+                      disabled={!loaded}
                       autoComplete="current-password"
                       className={inputClass}
                     />
                     <button
                       type="button"
                       onClick={() => setShowSyncPassword((v) => !v)}
-                      disabled={!loaded || !syncEnabled}
+                      disabled={!loaded}
                       title={showSyncPassword ? "隐藏应用密码" : "显示应用密码"}
                       aria-label={showSyncPassword ? "隐藏应用密码" : "显示应用密码"}
                       className="inline-flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-sm border-0 bg-transparent text-text-muted transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-50"
@@ -524,50 +477,24 @@ export default function SettingsDialog({
                     <input
                       id="settings-sync-remote-dir"
                       value={syncRemoteDir}
-                      onChange={(e) => {
-                        setSyncRemoteDir(e.target.value);
-                        setConnectionStatus("idle");
-                        setConnectionMessage("");
-                      }}
+                      onChange={(e) => setSyncRemoteDir(e.target.value)}
                       placeholder="VellumStyle"
-                      disabled={!loaded || !syncEnabled}
+                      disabled={!loaded}
                       className={inputClass}
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 rounded border border-border bg-bg-secondary px-3 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-semibold leading-5 text-text">连接验证</div>
-                    <p className="m-0 text-xs leading-5 text-text-secondary">只验证账号和应用密码，不保存配置。</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    state={connectionStatus === "loading" ? "loading" : connectionStatus === "ok" ? "success" : connectionStatus === "error" ? "error" : "idle"}
-                    loadingText="测试中…"
-                    successText="已连接"
-                    errorText="连接失败"
-                    onClick={() => void handleTestSyncConnection()}
-                    disabled={!loaded || !syncEnabled}
-                    className="gap-2"
-                  >
-                    测试连接
-                  </Button>
-                </div>
-                {connectionMessage && (
-                  <p
-                    className={`m-0 text-xs leading-5 ${
-                      connectionStatus === "ok" ? "text-success" : connectionStatus === "error" ? "text-danger" : "text-text-secondary"
-                    }`}
-                    role={connectionStatus === "error" ? "alert" : undefined}
-                  >
-                    {connectionMessage}
-                  </p>
-                )}
-              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void handleTestSyncConnection()}
+                disabled={!loaded}
+                className="gap-2 self-center"
+              >
+                测试连接
+              </Button>
             </div>
           )}
 
