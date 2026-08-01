@@ -1250,6 +1250,20 @@ html.appearance-switching .vs-skel {
     width var(--duration-slow) var(--ease);
 }
 
+/* —— 预览文章描边与投影 ——
+   取消文章外层白色画布垫层后，由最内层文章自身承担边界与层次。
+   作用域限定在预览滚动容器内，不影响 A4/PDF 导出渲染。 */
+.editor-preview-scrollbar #article {
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-md);
+}
+
+/* 主题未给文章设实色背景时的白色兜底：透明文章在微信发布时为白底，
+   预览同样垫白保持所见即所得；仅影响预览显示，不进入导出成品。 */
+.editor-preview-scrollbar #article.vs-article-neutral-bg {
+  background-color: #fff;
+}
+
 /* 暗色组件覆盖置于基础规则之后，确保层叠顺序稳定。 */
 :root[data-appearance="dark"] .cm-editor .cm-panel.cm-search {
   border-color: var(--border-strong);

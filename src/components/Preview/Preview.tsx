@@ -1,4 +1,4 @@
-import {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
+import {forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState} from "react";
 import {FileText} from "lucide-react";
 import {render} from "../../markdown/parser.ts";
 import {useStore, getThemeById} from "../../store/index.ts";
@@ -9,6 +9,7 @@ import {renderMermaidCharts, reuseRenderedMermaidCharts} from "../../markdown/me
 import {modelIdFromElement, SELECTOR_PRIORITY} from "../StylePanel/elementMap.ts";
 import {getPreviewMode} from "./previewModes.ts";
 import {buildMarkdownCss, subscribeCodeThemes} from "../../markdown/codeThemes.ts";
+import {articleRootBackgroundIsSolid} from "../../themes/compileModel.ts";
 import {ARTICLE_BOX_ID, ARTICLE_ROOT_ID} from "../../articleRoot.ts";
 import PreviewImageContextMenu from "./PreviewImageContextMenu.tsx";
 import {resolvePreviewImage, type PreviewImageMenuTarget} from "./previewImageContextMenu.ts";
@@ -133,6 +134,12 @@ const Preview = forwardRef<PreviewHandle, Props>(
     const selectedModelId = useStore((s) => s.selectedModelId);
     const setSelectedModel = useStore((s) => s.setSelectedModel);
     const mode = getPreviewMode(previewMode);
+    // 主题未给文章设实色背景时，预览垫白色兜底（不影响导出成品），
+    // 避免透明文章直接透出预览舞台底色，与微信发布的白底不一致。
+    const needsNeutralArticleBg = useMemo(
+      () => !articleRootBackgroundIsSolid(getThemeById(themes, markdownThemeId).css),
+      [markdownThemeId, themes],
+    );
 
     // 主题切换时文章容器短暂淡入淡出，避免 CSS 整体替换的突兀感（首次进入不触发）
     const [themeSwitching, setThemeSwitching] = useState(false);
@@ -518,9 +525,10 @@ const Preview = forwardRef<PreviewHandle, Props>(
             width: mode.width ? `${mode.width}px` : "100%",
             maxWidth: "100%",
             margin: mode.width ? "0 auto" : undefined,
-            padding: "24px 32px",
             minHeight: "100%",
-            background: "#fff",
+            // 不再用白色画布垫底，文章直接铺在预览区上；
+            // 中间层已取消，边界层次由最内层文章的描边与投影承担。
+            background: "transparent",
             opacity: themeSwitching ? 0.55 : 1,
           }}
           onClick={onClick}
@@ -531,7 +539,11 @@ const Preview = forwardRef<PreviewHandle, Props>(
         >
           {content.trim() ? (
             html ? (
-              <section id={ARTICLE_ROOT_ID} dangerouslySetInnerHTML={{__html: html}} />
+              <section
+                id={ARTICLE_ROOT_ID}
+                className={needsNeutralArticleBg ? "vs-preview-article vs-article-neutral-bg" : "vs-preview-article"}
+                dangerouslySetInnerHTML={{__html: html}}
+              />
             ) : (
               <PreviewSkeleton />
             )
@@ -627,7 +639,7 @@ function ImageResizeHandles({
 // 首屏/切文档瞬间文章尚未渲染时的骨架占位
 function PreviewSkeleton() {
   return (
-    <div aria-hidden="true">
+    <div aria-hidden="true" style={{padding: "24px 32px"}}>
       <div className="vs-skel" style={{height: 26, width: "58%", marginBottom: 20}} />
       <div className="vs-skel" style={{height: 14, marginBottom: 10}} />
       <div className="vs-skel" style={{height: 14, marginBottom: 10}} />

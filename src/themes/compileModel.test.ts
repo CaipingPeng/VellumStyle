@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {fileURLToPath} from "node:url";
 import {normalizeArticleRootSelector} from "../articleRoot.ts";
-import {compileModel} from "./compileModel.ts";
+import {articleRootBackgroundIsSolid, compileModel} from "./compileModel.ts";
 import type {StyleModel} from "./themeModel.ts";
 
 // 把 CSS 解析成 {selector: {prop: value}}，比较时忽略顺序与空白
@@ -115,4 +115,24 @@ test("oracle：编译 草原绿 model 与其 data.style 规则等价", () => {
       assert.equal(actual[sel][prop], expected[sel][prop], `${sel} { ${prop} } 不匹配`);
     }
   }
+});
+
+test("articleRootBackgroundIsSolid：未设置底色视为透明", () => {
+  const css = `#article { font-size: 16px; color: #333 }`;
+  assert.equal(articleRootBackgroundIsSolid(css), false);
+});
+
+test("articleRootBackgroundIsSolid：显式透明底色视为透明", () => {
+  const css = `#article { background-color: rgba(0, 0, 0, 0); padding: 0 10px }`;
+  assert.equal(articleRootBackgroundIsSolid(css), false);
+});
+
+test("articleRootBackgroundIsSolid：实色底色返回 true", () => {
+  const css = `#article { background-color: rgba(255, 255, 255, 1); } #article p { background: #eee }`;
+  assert.equal(articleRootBackgroundIsSolid(css), true);
+});
+
+test("articleRootBackgroundIsSolid：仅子元素有背景不影响根元素判断", () => {
+  const css = `#article { font-size: 16px } #article blockquote { background: #f5f5f5 }`;
+  assert.equal(articleRootBackgroundIsSolid(css), false);
 });
