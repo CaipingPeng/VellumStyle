@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Tailwind preflight 被禁用（保护预览区文章排版），表单元素因此保留浏览器
+   默认的 outset/inset 边框样式：1px 边框会出现深色斜边（右下尤其明显）。
+   这里恢复为 solid，让 border-* 工具类按预期渲染统一描边。 */
+button,
+input,
+select,
+textarea {
+  border-style: solid;
+}
+
 :root {
   --accent: #6d5ae6;
   --accent-2: #a855f7;

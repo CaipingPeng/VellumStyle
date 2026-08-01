@@ -32,6 +32,11 @@ test("主编辑和预览滚动条默认隐藏，hover 后显现", async () => {
   assert.match(css, /::-webkit-scrollbar-thumb:active/);
 });
 
+test("preflight 禁用后表单元素边框恢复 solid，避免 UA outset/inset 斜边", async () => {
+  const css = await readFile(new URL("./globals.css", import.meta.url), "utf8");
+  assert.match(css, /button,\s*\ninput,\s*\nselect,\s*\ntextarea\s*\{[\s\S]*?border-style:\s*solid/);
+});
+
 test("CodeMirror 接收 Tauri CSP nonce，避免打包版动态样式被拦截", async () => {
   const source = await readFile(new URL("../components/Editor/MarkdownEditor.tsx", import.meta.url), "utf8");
 
