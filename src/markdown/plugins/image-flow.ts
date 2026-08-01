@@ -2,6 +2,8 @@ import type MarkdownIt from "markdown-it";
 import type StateBlock from "markdown-it/lib/rules_block/state_block.mjs";
 
 // 横屏滑动图片：<![a](x),![b](y),![c](z)> 渲染为可左右滑动的图片组。
+// 滑动结构（flex + scroll-snap）以内联样式输出，保证任何主题下都呈现逐页翻动的轮播感；
+// 提示文案由主题 .imageflow-caption::before 提供，避免与插件输出重复。
 interface ImageFlowOptions {
   limitless: boolean;
   limit: number;
@@ -11,6 +13,12 @@ const defaultOptions: ImageFlowOptions = {
   limitless: false,
   limit: 10,
 };
+
+// 结构样式内联在元素上，不依赖主题 CSS（微信导出时 juice 会保留已有内联样式）。
+const LAYER1_STYLE = "overflow:hidden";
+const LAYER2_STYLE =
+  "display:flex;flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none";
+const LAYER3_STYLE = "flex:0 0 100%;scroll-snap-align:center;scroll-snap-stop:always";
 
 export default function imageFlow(md: MarkdownIt, opt?: Partial<ImageFlowOptions>) {
   const options = {...defaultOptions, ...opt};
@@ -42,8 +50,8 @@ export default function imageFlow(md: MarkdownIt, opt?: Partial<ImageFlowOptions
   };
 
   md.renderer.rules.imageFlow = (tokens, idx) => {
-    const open = `<section class="imageflow-layer1"><section class="imageflow-layer2">`;
-    const close = `</section></section><p class="imageflow-caption"><<< 左右滑动见更多 >>></p>`;
+    const open = `<section class="imageflow-layer1" style="${LAYER1_STYLE}"><section class="imageflow-layer2" style="${LAYER2_STYLE}">`;
+    const close = `</section></section><p class="imageflow-caption"></p>`;
     const contents: string[] = tokens[idx].meta;
     let wrapped = "";
     for (const content of contents) {
@@ -55,7 +63,7 @@ export default function imageFlow(md: MarkdownIt, opt?: Partial<ImageFlowOptions
       if (!src) {
         continue;
       }
-      wrapped += `<section class="imageflow-layer3"><img alt="${alt}" src="${src}" class="imageflow-img" /></section>`;
+      wrapped += `<section class="imageflow-layer3" style="${LAYER3_STYLE}"><img alt="${alt}" src="${src}" class="imageflow-img" /></section>`;
     }
     return open + wrapped + close;
   };

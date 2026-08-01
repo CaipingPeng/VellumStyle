@@ -81,6 +81,16 @@ test("image-flow 图片语法中的 alt 不会注入额外属性", () => {
   assert.doesNotMatch(html, /\sonerror=(["'])/i);
 });
 
+test("image-flow 输出 scroll-snap 内联样式且提示文案只由主题 ::before 提供", () => {
+  const html = render('<![a](https://example.com/a.png),![b](https://example.com/b.png)>');
+
+  assert.match(html, /<section class="imageflow-layer1" style="overflow:hidden">/);
+  assert.match(html, /<section class="imageflow-layer2" style="display:flex;flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none">/);
+  assert.match(html, /<section class="imageflow-layer3" style="flex:0 0 100%;scroll-snap-align:center;scroll-snap-stop:always">/);
+  assert.match(html, /<p class="imageflow-caption"><\/p>/);
+  assert.doesNotMatch(html, /左右滑动见更多/);
+});
+
 test("mermaid 围栏代码块渲染为图表容器而不是普通代码块", () => {
   const html = render("```mermaid\ngraph TD\n  A[开始] --> B[结束]\n```");
 

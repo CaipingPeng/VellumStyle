@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Check, CheckSquare2, ImageIcon, Images, ImageUp, RefreshCw, Square, Trash2} from "lucide-react";
+import {Check, CheckSquare2, ImageIcon, Images, ImageUp, MoveHorizontal, RefreshCw, Square, Trash2} from "lucide-react";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
 import {deleteImageMaterial, listImageMaterials, type MaterialImage} from "../../utils/publish.ts";
 import {pickImageFiles, uploadLocalImage} from "../../utils/upload.ts";
@@ -14,12 +14,14 @@ interface Props {
   canInsert: boolean;
   onClose: () => void;
   onPick: (urls: string[]) => void;
+  onPickFlow: (urls: string[]) => void;
   onNeedSettings: () => void;
 }
 
 const MATERIAL_PAGE_SIZE = 20;
 const DELETE_CONCURRENCY = 4;
 const UPLOAD_CONCURRENCY = 16;
+const IMAGE_FLOW_LIMIT = 10;
 
 function mergeMaterialItems(existing: MaterialImage[], incoming: MaterialImage[]): MaterialImage[] {
   const seen = new Set(existing.map((item) => item.mediaId));
@@ -41,7 +43,7 @@ function errorMessage(error: unknown): string {
   return typeof error === "string" ? error : (error as Error)?.message || "未知错误";
 }
 
-export default function ImageMaterialPickerDialog({open, canInsert, onClose, onPick, onNeedSettings}: Props) {
+export default function ImageMaterialPickerDialog({open, canInsert, onClose, onPick, onPickFlow, onNeedSettings}: Props) {
   const [materialItems, setMaterialItems] = useState<MaterialImage[]>([]);
   const [materialTotal, setMaterialTotal] = useState(0);
   const [materialLoading, setMaterialLoading] = useState(false);
@@ -125,6 +127,17 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
     if (!canInsert || selectedItems.length === 0) return;
     onPick(selectedItems.map((item) => item.url));
     toast.show(`已插入 ${selectedItems.length} 张素材库图片`, "info");
+    onClose();
+  };
+
+  const insertFlow = () => {
+    if (!canInsert || selectedItems.length < 2) return;
+    if (selectedItems.length > IMAGE_FLOW_LIMIT) {
+      toast.show(`横滑组最多支持 ${IMAGE_FLOW_LIMIT} 张图片，请减少选择数量`, "error");
+      return;
+    }
+    onPickFlow(selectedItems.map((item) => item.url));
+    toast.show(`已插入 ${selectedItems.length} 张横滑图片`, "info");
     onClose();
   };
 
@@ -295,6 +308,22 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
               >
                 <ImageIcon size={14} />
                 <span className="hidden sm:inline">插入所选</span>
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!canInsert || selectedItems.length < 2 || busy}
+                title={
+                  !canInsert
+                    ? "请先打开一篇文章"
+                    : selectedItems.length < 2
+                      ? "请先选择至少 2 张图片"
+                      : "将所选图片以左右滑动组插入当前文章"
+                }
+                onClick={insertFlow}
+              >
+                <MoveHorizontal size={14} />
+                <span className="hidden sm:inline">插入横滑</span>
               </Button>
               <button
                 type="button"

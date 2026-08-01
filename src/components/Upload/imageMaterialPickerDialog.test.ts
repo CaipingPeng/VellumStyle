@@ -17,8 +17,11 @@ test("图片素材库默认多选并通过独立命令插入或删除所选素�
   assert.match(source, /uploadLocalImage/);
   assert.match(source, /aria-pressed=\{selected\}/);
   assert.match(source, /onPick\(selectedItems\.map\(\(item\) => item\.url\)\)/);
+  assert.match(source, /onPickFlow\(selectedItems\.map\(\(item\) => item\.url\)\)/);
+  assert.match(source, /IMAGE_FLOW_LIMIT = 10/);
   assert.match(source, /删除所选/);
   assert.match(source, /插入所选/);
+  assert.match(source, /插入横滑/);
   assert.match(source, /全选已加载/);
   assert.match(source, /UPLOAD_CONCURRENCY = 16/);
   assert.match(source, /contentPadding=\{false\}/);
@@ -60,6 +63,7 @@ test("素材库点击图片切换多选并按列表顺序一次插入", async ()
         canInsert: true,
         onClose: () => { closed += 1; },
         onPick: (urls) => picked.push(urls),
+        onPickFlow: () => {},
         onNeedSettings: () => {},
       }));
       await Promise.resolve();
@@ -77,6 +81,64 @@ test("素材库点击图片切换多选并按列表顺序一次插入", async ()
     act(() => insert.click());
 
     assert.deepEqual(picked, [["https://mmbiz.qpic.cn/first", "https://mmbiz.qpic.cn/second"]]);
+    assert.equal(closed, 1);
+  } finally {
+    act(() => root.unmount());
+    host.remove();
+    if (previousInternals === undefined) {
+      delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+    } else {
+      (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
+    }
+  }
+});
+
+test("素材库多选后可通过「插入横滑」按列表顺序拼成横滑组插入", async () => {
+  const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+  (window as unknown as {__TAURI_INTERNALS__: {invoke: (cmd: string) => Promise<unknown>}}).__TAURI_INTERNALS__ = {
+    invoke: async (cmd) => {
+      assert.equal(cmd, "list_image_materials");
+      return {
+        totalCount: 2,
+        itemCount: 2,
+        items: [
+          {mediaId: "M1", name: "first.png", updateTime: 1, url: "https://mmbiz.qpic.cn/first"},
+          {mediaId: "M2", name: "second.png", updateTime: 2, url: "https://mmbiz.qpic.cn/second"},
+        ],
+      };
+    },
+  };
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const flowPicked: string[][] = [];
+  let closed = 0;
+
+  try {
+    await act(async () => {
+      root.render(createElement(ImageMaterialPickerDialog, {
+        open: true,
+        canInsert: true,
+        onClose: () => { closed += 1; },
+        onPick: () => {},
+        onPickFlow: (urls) => flowPicked.push(urls),
+        onNeedSettings: () => {},
+      }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const cards = Array.from(document.querySelectorAll<HTMLButtonElement>('button[aria-label^="选择素材库第"]'));
+    assert.equal(cards.length, 2);
+    act(() => {
+      cards[1].click();
+      cards[0].click();
+    });
+    const insertFlow = Array.from(document.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => button.textContent?.includes("插入横滑"));
+    assert.ok(insertFlow);
+    act(() => insertFlow.click());
+
+    assert.deepEqual(flowPicked, [["https://mmbiz.qpic.cn/first", "https://mmbiz.qpic.cn/second"]]);
     assert.equal(closed, 1);
   } finally {
     act(() => root.unmount());

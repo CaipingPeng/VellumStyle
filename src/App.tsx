@@ -369,6 +369,12 @@ export default function App() {
     editorRef.current?.insertAtCursor(`\n${markdown}\n`);
   }, []);
 
+  const handlePickMaterialImageFlow = useCallback((urls: string[]) => {
+    if (urls.length === 0) return;
+    const markdown = `<${urls.map((url) => formatMarkdownImage({alt: "", url})).join(",")}>`;
+    editorRef.current?.insertAtCursor(`\n${markdown}\n`);
+  }, []);
+
   const handleResizePreviewImage = useCallback((imageIndex: number, size: {width: string}) => {
     const result = replaceMarkdownImageSizeByIndex(useStore.getState().content, imageIndex, size);
     if (result.changed) {
@@ -893,6 +899,7 @@ export default function App() {
         canInsert={Boolean(currentDocPath)}
         onClose={() => setImageMaterialPickerOpen(false)}
         onPick={handlePickMaterialImages}
+        onPickFlow={handlePickMaterialImageFlow}
         onNeedSettings={handleNeedSettings}
       />
       <Toaster />
