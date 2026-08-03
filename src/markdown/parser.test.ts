@@ -122,6 +122,21 @@ test("image-flow 输出 scroll-snap 内联样式且提示文案只由主题 ::be
   assert.doesNotMatch(html, /左右滑动见更多/);
 });
 
+test("image-flow 紧跟上一段文字（无空行）时仍渲染为横滑图组", () => {
+  const html = render('段落文字\n<![a](https://example.com/a.png),![b](https://example.com/b.png)>');
+
+  assert.match(html, /class="imageflow-layer1"/);
+  assert.equal((html.match(/class="imageflow-img"/g) ?? []).length, 2);
+  assert.match(html, /<p[^>]*>段落文字<\/p>/);
+});
+
+test("image-flow 位于列表项续行时仍渲染为横滑图组", () => {
+  const html = render('- 配图\n<![a](https://example.com/a.png),![b](https://example.com/b.png)>');
+
+  assert.match(html, /class="imageflow-layer1"/);
+  assert.equal((html.match(/class="imageflow-img"/g) ?? []).length, 2);
+});
+
 test("mermaid 围栏代码块渲染为图表容器而不是普通代码块", () => {
   const html = render("```mermaid\ngraph TD\n  A[开始] --> B[结束]\n```");
 

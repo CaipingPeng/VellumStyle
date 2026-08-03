@@ -20,34 +20,47 @@ const LAYER2_STYLE =
   "display:flex;flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none";
 const LAYER3_STYLE = "flex:0 0 100%;scroll-snap-align:center;scroll-snap-stop:always";
 
+const IMAGE_FLOW_LINE_RE = /^<((!\[[^[\]]*\]\([^()]+\)(,?\s*(?=>)|,\s*(?!>)))+)>/;
+
+// 解析一行是否为合法的横滑语法；不是则返回 null。
+function matchImageFlowLine(state: StateBlock, line: number): string[] | null {
+  const srcLine = state.src.slice(state.bMarks[line], state.eMarks[line]);
+  if (srcLine.charCodeAt(0) !== 0x3c /* < */) {
+    return null;
+  }
+  const match = IMAGE_FLOW_LINE_RE.exec(srcLine);
+  if (!match) {
+    return null;
+  }
+  return match[1].match(/\[[^\]]*\]\([^)]+\)/g) ?? null;
+}
+
 export default function imageFlow(md: MarkdownIt, opt?: Partial<ImageFlowOptions>) {
   const options = {...defaultOptions, ...opt};
 
   const tokenize = (state: StateBlock, start: number): boolean => {
-    const matchReg = /^<((!\[[^[\]]*\]\([^()]+\)(,?\s*(?=>)|,\s*(?!>)))+)>/;
-    const srcLine = state.src.slice(state.bMarks[start], state.eMarks[start]);
-
-    if (srcLine.charCodeAt(0) !== 0x3c /* < */) {
+    const images = matchImageFlowLine(state, start);
+    if (!images || (!options.limitless && images.length > options.limit)) {
       return false;
     }
-    const match = matchReg.exec(srcLine);
-    if (!match) {
-      return false;
-    }
-
-    const images = match[1].match(/\[[^\]]*\]\([^)]+\)/g);
-    if (!images) {
-      return false;
-    }
-    if (!options.limitless && images.length <= options.limit) {
-      const token = state.push("imageFlow", "", 0);
-      token.meta = images;
-      token.block = true;
-      state.line++;
-      return true;
-    }
-    return false;
+    const token = state.push("imageFlow", "", 0);
+    token.meta = images;
+    token.block = true;
+    state.line++;
+    return true;
   };
+
+  // markdown-it 的段落规则会把紧跟其后的非空行当段落续行直接吞掉，
+  // 导致「上一段文字后直接写横滑语法」时 imageFlow 规则根本没机会执行。
+  // 这里把横滑语法注册为 paragraph 的终止条件：遇到合法横滑行就提前结束段落，
+  // 下一轮块规则会由上面的 imageFlow 把该行渲染成横滑图组。
+  md.block.ruler.after("paragraph", "imageFlowParagraphTerminator", (state, startLine, endLine) => {
+    if (startLine >= endLine) {
+      return false;
+    }
+    const images = matchImageFlowLine(state, startLine);
+    return Boolean(images && (options.limitless || images.length <= options.limit));
+  }, {alt: ["paragraph"]});
 
   md.renderer.rules.imageFlow = (tokens, idx) => {
     const open = `<section class="imageflow-layer1" style="${LAYER1_STYLE}"><section class="imageflow-layer2" style="${LAYER2_STYLE}">`;

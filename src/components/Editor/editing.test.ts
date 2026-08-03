@@ -5,6 +5,7 @@ import {
   insertLink,
   prefixLines,
   insertCodeBlock,
+  buildBlockInsert,
   shouldReplaceEditorDoc,
   shouldQueueExternalValueDuringComposition,
   shouldHandleDirectTextInput,
@@ -94,6 +95,24 @@ test("codeBlock 有选区：选区文字进围栏，选中该文字", () => {
   const start = "\n```\n".length;
   assert.equal(r.selFrom, start);
   assert.equal(r.selTo, start + "代码".length);
+});
+
+test("buildBlockInsert 段落末尾插入：前后补空行避免被段落吞掉", () => {
+  const markdown = "<![a](https://example.com/a.png),![b](https://example.com/b.png)>";
+  const r = buildBlockInsert(markdown, "段落文字", "");
+  assert.equal(r.insert, `\n\n${markdown}`);
+  assert.equal(r.selFrom, "段落文字".length + 2 + markdown.length);
+  assert.equal(r.selTo, "段落文字".length + 2 + markdown.length);
+});
+
+test("buildBlockInsert 已有空行时不重复补空行", () => {
+  const r = buildBlockInsert("内容", "段落文字\n\n", "\n\n后续");
+  assert.equal(r.insert, "内容");
+});
+
+test("buildBlockInsert 文档开头/结尾插入不补多余空行", () => {
+  const r = buildBlockInsert("内容", "", "");
+  assert.equal(r.insert, "内容");
 });
 
 test("编辑器组合输入期间不使用外部 value 覆盖当前文档", () => {

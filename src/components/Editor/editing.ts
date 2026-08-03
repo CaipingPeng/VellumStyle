@@ -161,6 +161,15 @@ export function insertCodeBlock(doc: string, from: number, to: number): EditResu
   return {insert, selFrom: start, selTo: start + inner.length};
 }
 
+// 块级插入（如横滑图组）：插入内容前后各补一个空行，
+// 避免它被 markdown 当作上一段/列表的段落续行吞掉而渲染失败。
+export function buildBlockInsert(markdown: string, before: string, after: string): EditResult {
+  const prefix = before === "" ? "" : before.endsWith("\n\n") ? "" : before.endsWith("\n") ? "\n" : "\n\n";
+  const suffix = after === "" ? "" : after.startsWith("\n\n") ? "" : after.startsWith("\n") ? "\n" : "\n\n";
+  const insert = `${prefix}${markdown}${suffix}`;
+  const cursor = before.length + prefix.length + markdown.length;
+  return {insert, selFrom: cursor, selTo: cursor};
+}
 
 export interface TextChange {
   from: number;

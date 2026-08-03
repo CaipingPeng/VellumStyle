@@ -2,13 +2,14 @@ import {forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef
 import {useCodeMirror} from "@uiw/react-codemirror";
 import {markdown, markdownLanguage} from "@codemirror/lang-markdown";
 import {languages} from "@codemirror/language-data";
-import {Compartment, EditorState, Prec, StateEffect, StateField} from "@codemirror/state";
+import {Compartment, EditorSelection, EditorState, Prec, StateEffect, StateField} from "@codemirror/state";
 import {EditorView, keymap, ViewPlugin} from "@codemirror/view";
 import {undo, redo} from "@codemirror/commands";
 import {openSearchPanel, search, searchPanelOpen} from "@codemirror/search";
 import {
-  shouldReplaceEditorDoc,
+  buildBlockInsert,
   shouldQueueExternalValueDuringComposition,
+  shouldReplaceEditorDoc,
 } from "./editing.ts";
 import {getCodeMirrorCspNonce} from "../../utils/cspNonce.ts";
 import type {AppearanceMode} from "../../appearance/appearanceMode.ts";
@@ -19,6 +20,8 @@ import {runSyntaxAction} from "./syntaxCommands.ts";
 export interface MarkdownEditorHandle {
   // 在当前光标处插入文本（替换选区）。供工具栏上传按钮调用。
   insertAtCursor: (text: string) => void;
+  // 以块级方式插入内容（自动在前后补空行），供素材库横滑图组等块结构调用。
+  insertBlockAtCursor: (markdown: string) => void;
   // 插入并跟踪异步图片占位符；后续编辑造成的位置变化会自动映射。
   insertUploadPlaceholder: (id: string, text: string) => void;
   replaceUploadPlaceholder: (id: string, text: string, finish?: boolean) => boolean;
@@ -262,6 +265,24 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
           return;
         }
         view.dispatch(view.state.replaceSelection(text));
+        view.focus();
+      },
+      insertBlockAtCursor: (markdown) => {
+        const view = viewRef.current;
+        if (!view) {
+          return;
+        }
+        const selection = view.state.selection.main;
+        const doc = view.state.doc;
+        const before = doc.sliceString(0, selection.from);
+        const after = doc.sliceString(selection.to);
+        const result = buildBlockInsert(markdown, before, after);
+        view.dispatch({
+          changes: {from: selection.from, to: selection.to, insert: result.insert},
+          selection: EditorSelection.cursor(result.selTo),
+          userEvent: "input.format",
+          scrollIntoView: true,
+        });
         view.focus();
       },
       insertUploadPlaceholder: (id, text) => {

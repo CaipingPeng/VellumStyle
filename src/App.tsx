@@ -372,7 +372,7 @@ export default function App() {
   const handlePickMaterialImageFlow = useCallback((urls: string[]) => {
     if (urls.length === 0) return;
     const markdown = `<${urls.map((url) => formatMarkdownImage({alt: "", url})).join(",")}>`;
-    editorRef.current?.insertAtCursor(`\n${markdown}\n`);
+    editorRef.current?.insertBlockAtCursor(markdown);
   }, []);
 
   const handleResizePreviewImage = useCallback((imageIndex: number, size: {width: string}) => {
