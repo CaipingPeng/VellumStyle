@@ -55,6 +55,37 @@ test("带 title 的 Markdown 链接也使用同一套取整符号脚注样式", 
   assert.match(html, /<span id="fn1" class="footnote-item" style="display:block;"><span class="footnote-num" style="display:inline;width:auto;">\[1\] <\/span>术语: <em>这里是脚注的解释内容<\/em><\/span>/);
 });
 
+test("浏览器复制的编码中文 URL 在脚注中解码为可读中文", () => {
+  const html = render("[喜羊羊案](https://example.com/%E2%80%9C%E5%96%9C%E7%BE%8A%E7%BE%8A%E6%9A%B4%E5%8A%9B%E2%80%9D%E6%A1%88)");
+
+  assert.match(html, /<span id="fn1" class="footnote-item"[^>]*><span class="footnote-num"[^>]*>\[1\] <\/span>https:\/\/example\.com\/“喜羊羊暴力”案<\/span>/);
+  assert.doesNotMatch(html, /%E2%80%9C%E5%96%9C%E7%BE%8A%E7%BE%8A%E6%9A%B4%E5%8A%9B%E2%80%9D%E6%A1%88/);
+});
+
+test("手动输入的中文 URL 脚注保持可读原文", () => {
+  const html = render("[喜羊羊案](https://example.com/“喜羊羊暴力”案)");
+
+  assert.match(html, /<span id="fn1" class="footnote-item"[^>]*><span class="footnote-num"[^>]*>\[1\] <\/span>https:\/\/example\.com\/“喜羊羊暴力”案<\/span>/);
+});
+
+test("带 title 的链接脚注中 URL 同样解码为中文", () => {
+  const html = render('[链接](https://example.com/%E2%80%9C%E5%96%9C%E7%BE%8A%E7%BE%8A%E6%9A%B4%E5%8A%9B%E2%80%9D%E6%A1%88 "出处")');
+
+  assert.match(html, /出处: <em>https:\/\/example\.com\/“喜羊羊暴力”案<\/em>/);
+});
+
+test("畸形百分号编码回退原文，不中断渲染", () => {
+  const html = render("[链接](https://example.com/100%乱码)");
+
+  assert.match(html, /<span id="fn1" class="footnote-item"[^>]*><span class="footnote-num"[^>]*>\[1\] <\/span>https:\/\/example\.com\/100%乱码<\/span>/);
+});
+
+test("引用式链接的脚注 URL 同样解码为中文", () => {
+  const html = render("[喜羊羊案][ref]\n\n[ref]: https://example.com/%E2%80%9C%E5%96%9C%E7%BE%8A%E7%BE%8A%E6%9A%B4%E5%8A%9B%E2%80%9D%E6%A1%88 \"出处\"");
+
+  assert.match(html, /https:\/\/example\.com\/“喜羊羊暴力”案/);
+});
+
 test("双等号高亮语法渲染为 mark", () => {
   const html = render("这是一段==高亮==文本。");
 

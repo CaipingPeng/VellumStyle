@@ -82,6 +82,23 @@ function createTextToken(state: StateInline, content: string): Token {
   return token;
 }
 
+// 脚注展示给读者的 URL 解码为可读形式：浏览器复制的链接里，
+// 中文会以 %E2%80%9C 这类百分号编码出现，这里还原成可读中文。
+// 畸形编码（如孤立 %）解码失败时回退原文，保证显示与链接都不被破坏。
+function readableUrl(url: string): string {
+  try {
+    return decodeURIComponent(url);
+  } catch {
+    return url;
+  }
+}
+
+// 带 title 的链接会把 URL 嵌入 `*...*` 作为 Markdown 解析，
+// 解码可能引入 Markdown 特殊字符（如 %2A -> *），先转义避免破坏斜体/链接语法。
+function escapeMarkdownInline(text: string): string {
+  return text.replace(/([\\`*_~\[\]()])/g, "\\$1");
+}
+
 function footnoteDef(state: StateBlock, startLine: number, endLine: number, silent: boolean): boolean {
   const start = state.bMarks[startLine] + state.tShift[startLine];
   const max = state.eMarks[startLine];
@@ -353,7 +370,12 @@ function linkFoot(state: StateInline, silent: boolean): boolean {
       const footnoteId = footnoteList.length;
       const tokens: Token[] = [];
       // *用来让链接倾斜
-      state.md.inline.parse(`${title}: *${footnoteContent}*`, state.md, state.env, tokens);
+      state.md.inline.parse(
+        `${title}: *${escapeMarkdownInline(readableUrl(footnoteContent))}*`,
+        state.md,
+        state.env,
+        tokens,
+      );
 
       token = state.push("footnote_word", "", 0);
       token.content = state.src.slice(labelStart, labelEnd);
@@ -365,7 +387,7 @@ function linkFoot(state: StateInline, silent: boolean): boolean {
     } else {
       const footnoteList = ensureFootnoteList(state.env);
       const footnoteId = footnoteList.length;
-      const tokens = [createTextToken(state, footnoteContent || href)];
+      const tokens = [createTextToken(state, readableUrl(footnoteContent || href))];
 
       token = state.push("footnote_word_open", "span", 1);
       token.attrs = [["class", "footnote-word"]];
