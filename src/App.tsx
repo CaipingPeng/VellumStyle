@@ -249,6 +249,9 @@ export default function App() {
     if (!upload) return;
     const previous = upload.placeholder;
     upload.placeholder = replacement;
+    // 同步替换编辑器里的占位符（局部编辑，保留撤销历史），避免上传完成后
+    // 触发整篇文档替换同步，导致 CodeMirror 滚动锚点归零、文章跳回开头。
+    editorRef.current?.replaceUploadPlaceholder(taskId, replacement, finish);
     const update = updateDocumentInBackground(upload.target, (current) => {
       const position = current.indexOf(previous);
       if (position === -1) return current;

@@ -66,5 +66,25 @@ test("Markdown 编辑器顶部行用 scroller 实时像素位置反推，避免�
 
   assert.doesNotMatch(source, /view\.viewport\.from/);
   assert.match(source, /lineBlockAtHeight\(view\.scrollDOM\.scrollTop\)/);
-  assert.doesNotMatch(source, /EditorView\.scrollIntoView/);
+  // scrollIntoView 只允许出现在整篇替换同步的视口恢复场景，不得用于普通滚动。
+  assert.match(source, /lineBlockAtHeight\(view\.scrollDOM\.scrollTop\)\.from/);
+  assert.match(source, /EditorView\.scrollIntoView\(mappedTop, \{y: "start"\}\)/);
+  assert.equal(
+    (source.match(/EditorView\.scrollIntoView/g) ?? []).length,
+    1,
+    "EditorView.scrollIntoView 只能用于整篇替换后的视口恢复",
+  );
+});
+
+test("整篇替换同步后恢复原视口位置，避免外部内容同步把编辑器拽回开头", async () => {
+  const source = await readEditorSource();
+  const syncBlock = source.slice(
+    source.indexOf("const syncEditorWithValue"),
+    source.indexOf("const emitCurrentEditorDoc"),
+  );
+
+  assert.match(syncBlock, /changes: \{from: 0, to: currentDoc\.length, insert: incomingValue\}/);
+  assert.match(syncBlock, /const topPos = view\.lineBlockAtHeight\(view\.scrollDOM\.scrollTop\)\.from/);
+  assert.match(syncBlock, /const mappedTop = Math\.min\(topPos, incomingValue\.length\)/);
+  assert.match(syncBlock, /EditorView\.scrollIntoView\(mappedTop, \{y: "start"\}\)/);
 });

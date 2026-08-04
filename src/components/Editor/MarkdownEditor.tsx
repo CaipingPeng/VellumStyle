@@ -221,6 +221,12 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         return true;
       }
       suppressChangeRef.current = true;
+      // CodeMirror 整篇替换会把滚动锚点映射回文档开头（scrollTop 归零），
+      // 直接设 scrollTop 又会被下一帧 measure 按旧锚点覆盖，因此先记录
+      // 视口顶部的文档位置，替换后用 scrollIntoView 显式声明目标位置，
+      // measure 循环会尊重该目标，避免外部内容同步（如粘贴图片上传完成后）
+      // 把编辑器/文章拽回顶部。
+      const topPos = view.lineBlockAtHeight(view.scrollDOM.scrollTop).from;
       try {
         view.dispatch({
           changes: {from: 0, to: currentDoc.length, insert: incomingValue},
@@ -229,6 +235,8 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
       } finally {
         suppressChangeRef.current = false;
       }
+      const mappedTop = Math.min(topPos, incomingValue.length);
+      view.dispatch({effects: EditorView.scrollIntoView(mappedTop, {y: "start"})});
       return true;
     }, []);
 
