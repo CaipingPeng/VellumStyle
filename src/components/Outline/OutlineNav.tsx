@@ -12,6 +12,8 @@ function countLabel(count: number): string {
 }
 
 function OutlineNav({items, activeLine, onJump}: Props) {
+  const minLevel = items.length > 0 ? Math.min(...items.map((item) => item.level)) : 1;
+
   return (
     <aside className="workspace-panel workspace-outline-panel flex w-[220px] flex-shrink-0 flex-col overflow-hidden">
       <div className="flex h-[42px] flex-none items-center justify-between border-b border-border px-3">
@@ -34,7 +36,7 @@ function OutlineNav({items, activeLine, onJump}: Props) {
                 type="button"
                 title={item.text}
                 className={`group flex h-7 w-full cursor-pointer items-center gap-2 border-0 bg-transparent pr-2 text-left text-[13px] outline-none transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)] ${tone}`}
-                style={{paddingLeft: 8 + (item.level - 1) * 14}}
+                style={{paddingLeft: 8 + (item.level - minLevel) * 14}}
                 aria-current={active ? "location" : undefined}
                 onClick={() => onJump(item.line)}
               >
