@@ -40,6 +40,7 @@ function DocTree() {
   const [focused, setFocused] = useState(false);
   const [treeWidth, setTreeWidth] = useState(DEFAULT_DOC_TREE_WIDTH);
   const [pendingDelete, setPendingDelete] = useState<DocNode | null>(null);
+  const [renameSignal, setRenameSignal] = useState<{path: string; token: number} | null>(null);
   const resizeStartRef = useRef<{x: number; width: number} | null>(null);
   const cleanupResizeRef = useRef<(() => void) | null>(null);
 
@@ -82,9 +83,8 @@ function DocTree() {
   // 新建落点：选中项是文件夹→落其下；选中项是文件→落其同级目录；无选中→根。
   const targetDir = (): string => targetDirFor(tree, selectedPath);
 
-  // 开始新建：算目标目录，展开它（非根才需要），显示占位输入行。
-  const startCreate = (mode: "doc" | "folder") => {
-    const dir = targetDir();
+  // 在指定目录开始新建：展开该目录（非根才需要），显示占位输入行。
+  const startCreateIn = (dir: string, mode: "doc" | "folder") => {
     if (dir) {
       setExpanded((prev) => {
         const next = new Set(prev);
@@ -93,6 +93,19 @@ function DocTree() {
       });
     }
     setCreating({mode, dir, value: ""});
+  };
+
+  // 顶部按钮新建：选中项是文件夹→落其下；选中项是文件→落其同级目录；无选中→根。
+  const startCreate = (mode: "doc" | "folder") => startCreateIn(targetDir(), mode);
+
+  // Windows 习惯：选中文件/文件夹后按 F2 直接重命名。
+  const handlePanelKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "F2" || event.repeat) return;
+    // 只响应面板自身聚焦（避免输入框/按钮上的 F2 误触发）。
+    if (event.target !== event.currentTarget) return;
+    if (creating || !selectedPath) return;
+    event.preventDefault();
+    setRenameSignal((prev) => ({path: selectedPath, token: (prev?.token ?? 0) + 1}));
   };
 
   const commitCreate = async () => {
@@ -158,6 +171,11 @@ function DocTree() {
         tabIndex={-1}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
+        onPointerDown={(e) => {
+          // 树行本身不可聚焦，点击任意位置都让面板拿到焦点，F2 才能落到面板。
+          e.currentTarget.focus({preventScroll: true});
+        }}
+        onKeyDown={handlePanelKeyDown}
         className="workspace-panel workspace-documents-panel relative flex flex-shrink-0 flex-col overflow-hidden outline-none"
         style={{width: treeWidth}}
       >
@@ -223,6 +241,8 @@ function DocTree() {
                   onDelete={handleDelete}
                   onOpenLocation={(path) => void actions.openLocation(path)}
                   onCopyAbsolutePath={(path) => void actions.copyAbsolutePath(path)}
+                  onCreateIn={startCreateIn}
+                  renameSignal={renameSignal}
                   onDragStartNode={setDragSrc}
                   onDragOverNode={setDragOverPath}
                   onDropNode={handleDrop}

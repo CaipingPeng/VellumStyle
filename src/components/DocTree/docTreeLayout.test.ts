@@ -26,6 +26,27 @@ test("文件树节点 hover 时显示完整名称且操作区不常驻占位", a
   assert.match(source, /group-hover:max-w-12/);
 });
 
+test("文件夹行 hover 显示新建文档/新建文件夹按钮，文件行不显示", async () => {
+  const nodeSource = await readFile(new URL("./TreeNode.tsx", import.meta.url), "utf8");
+  const docTreeSource = await readFile(new URL("./DocTree.tsx", import.meta.url), "utf8");
+
+  assert.match(nodeSource, /title="新建文档"/);
+  assert.match(nodeSource, /title="新建文件夹"/);
+  assert.match(nodeSource, /onCreateIn\(node\.path, "doc"\)/);
+  assert.match(nodeSource, /onCreateIn\(node\.path, "folder"\)/);
+  assert.match(docTreeSource, /onCreateIn=\{startCreateIn\}/);
+});
+
+test("文件树选中文件或文件夹后按 F2 进入重命名", async () => {
+  const docTreeSource = await readFile(new URL("./DocTree.tsx", import.meta.url), "utf8");
+  const nodeSource = await readFile(new URL("./TreeNode.tsx", import.meta.url), "utf8");
+
+  assert.match(docTreeSource, /event\.key !== "F2"/);
+  assert.match(docTreeSource, /setRenameSignal/);
+  assert.match(docTreeSource, /renameSignal=\{renameSignal\}/);
+  assert.match(nodeSource, /renameSignal\.path === node\.path/);
+});
+
 test("文件树节点提供打开文件位置的右键菜单", async () => {
   const source = await readFile(new URL("./TreeNode.tsx", import.meta.url), "utf8");
 

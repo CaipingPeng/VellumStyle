@@ -27,6 +27,8 @@ function renderTreeNode(
     onDelete: () => {},
     onOpenLocation: () => {},
     onCopyAbsolutePath: () => {},
+    onCreateIn: () => {},
+    renameSignal: null,
     onDragStartNode: () => {},
     onDragOverNode: () => {},
     onDropNode: () => {},
@@ -84,6 +86,104 @@ test("文件夹节点双击不进入重命名，避免和展开折叠冲突", ()
       container.querySelector('[aria-label="素材"]')?.dispatchEvent(new window.MouseEvent("dblclick", {bubbles: true}));
     });
 
+    assert.equal(container.querySelector("input"), null);
+  } finally {
+    cleanup();
+  }
+});
+
+test("文件夹节点 hover 显示新建文档/新建文件夹并回调对应目录", () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const created: Array<[string, "doc" | "folder"]> = [];
+  const {container, cleanup} = renderTreeNode({
+    name: "素材",
+    path: "素材",
+    isDir: true,
+    children: [],
+  }, {
+    onCreateIn: (dir, mode) => created.push([dir, mode]),
+  });
+
+  try {
+    const newDoc = container.querySelector<SVGElement>('[title="新建文档"]');
+    const newFolder = container.querySelector<SVGElement>('[title="新建文件夹"]');
+    assert.ok(newDoc);
+    assert.ok(newFolder);
+
+    act(() => newDoc.dispatchEvent(new window.MouseEvent("click", {bubbles: true})));
+    act(() => newFolder.dispatchEvent(new window.MouseEvent("click", {bubbles: true})));
+
+    assert.deepEqual(created, [["素材", "doc"], ["素材", "folder"]]);
+  } finally {
+    cleanup();
+  }
+});
+
+test("文件节点 hover 不显示新建按钮", () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const {container, cleanup} = renderTreeNode({
+    name: "草稿.md",
+    path: "草稿.md",
+    isDir: false,
+    children: [],
+  });
+
+  try {
+    assert.equal(container.querySelector('[title="新建文档"]'), null);
+    assert.equal(container.querySelector('[title="新建文件夹"]'), null);
+  } finally {
+    cleanup();
+  }
+});
+
+test("收到 F2 重命名信号后文件节点进入编辑", () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const {container, cleanup} = renderTreeNode({
+    name: "草稿.md",
+    path: "草稿.md",
+    isDir: false,
+    children: [],
+  }, {
+    renameSignal: {path: "草稿.md", token: 1},
+  });
+
+  try {
+    assert.equal(container.querySelector<HTMLInputElement>("input")?.value, "草稿.md");
+  } finally {
+    cleanup();
+  }
+});
+
+test("收到 F2 重命名信号后文件夹节点进入编辑", () => {
+  (globalThis as typeof globalThis &{IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const {container, cleanup} = renderTreeNode({
+    name: "素材",
+    path: "素材",
+    isDir: true,
+    children: [],
+  }, {
+    renameSignal: {path: "素材", token: 1},
+  });
+
+  try {
+    assert.equal(container.querySelector<HTMLInputElement>("input")?.value, "素材");
+  } finally {
+    cleanup();
+  }
+});
+
+test("F2 重命名信号只命中对应路径的节点", () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const {container, cleanup} = renderTreeNode({
+    name: "草稿.md",
+    path: "草稿.md",
+    isDir: false,
+    children: [],
+  }, {
+    renameSignal: {path: "其他.md", token: 1},
+  });
+
+  try {
     assert.equal(container.querySelector("input"), null);
   } finally {
     cleanup();

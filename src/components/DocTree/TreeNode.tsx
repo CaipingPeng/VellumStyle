@@ -1,5 +1,5 @@
 import {useEffect, useState, type MouseEvent} from "react";
-import {ChevronRight, Folder, FileText, FolderOpen, Copy, Pencil, Trash2} from "lucide-react";
+import {ChevronRight, Folder, FileText, FolderOpen, Copy, Pencil, Trash2, FilePlus, FolderPlus} from "lucide-react";
 import {AnimatePresence, motion} from "framer-motion";
 import type {DocNode} from "../../utils/documents.ts";
 import {MOTION_DURATION_FAST, MOTION_DURATION_MEDIUM, MOTION_EASE_SMOOTH} from "../../utils/motion.ts";
@@ -26,6 +26,8 @@ interface Props {
   onDelete: (node: DocNode) => void;
   onOpenLocation: (path: string) => void;
   onCopyAbsolutePath: (path: string) => void;
+  onCreateIn: (dir: string, mode: "doc" | "folder") => void;
+  renameSignal: {path: string; token: number} | null; // DocTree 收到 F2 后广播，命中的节点进入重命名
   onDragStartNode: (path: string) => void;
   onDragOverNode: (path: string | null) => void;
   onDropNode: (destDir: string) => void;
@@ -37,7 +39,7 @@ interface Props {
 export default function TreeNode({
   node, depth, selectedPath, sidebarFocused, expanded, dragOverPath, creating,
   onToggle, onSelectDoc, onSelectFolder, onRename, onDelete,
-  onOpenLocation, onCopyAbsolutePath, onDragStartNode, onDragOverNode, onDropNode,
+  onOpenLocation, onCopyAbsolutePath, onCreateIn, renameSignal, onDragStartNode, onDragOverNode, onDropNode,
   onDraftChange, onDraftCommit, onDraftCancel,
 }: Props) {
   const [editing, setEditing] = useState(false);
@@ -54,6 +56,14 @@ export default function TreeNode({
     else setDraft(node.name);
   };
 
+  // F2 重命名信号：命中当前节点时进入编辑（文件夹也可重命名，Windows 习惯）。
+  useEffect(() => {
+    if (renameSignal && renameSignal.path === node.path) {
+      setDraft(node.name);
+      setEditing(true);
+    }
+  }, [renameSignal, node.path, node.name]);
+
   // 选中样式：选中（文件/文件夹一视同仁）用 accent-subtle 底 + accent 字；
   // 拖拽落点同样用 accent-subtle 高亮；未选中悬停淡灰底。sidebarFocused 仍透传。
   void sidebarFocused;
@@ -63,6 +73,9 @@ export default function TreeNode({
       ? "bg-accent-subtle text-text"
       : "text-text hover:bg-bg-tertiary";
   const actionTone = selected || dropTarget ? "bg-accent-subtle" : "bg-bg-tertiary";
+  // 文件夹行 hover 时除重命名/删除外还显示「新建文档/新建文件夹」，操作区更宽，标题让位更多。
+  const hoverLabelPadding = node.isDir ? "group-hover:pr-20" : "group-hover:pr-12";
+  const hoverActionMaxWidth = node.isDir ? "group-hover:max-w-20" : "group-hover:max-w-12";
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -182,31 +195,63 @@ export default function TreeNode({
             style={{flex: 1, fontSize: 13, minWidth: 0}}
           />
         ) : (
-          <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap transition-[padding] duration-fast group-hover:pr-12">
+          <span className={`min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap transition-[padding] duration-fast ${hoverLabelPadding}`}>
             {node.name}
           </span>
         )}
         {!editing && (
           <span
-            className={`pointer-events-none absolute inset-y-0 right-0 flex max-w-0 items-center gap-1 overflow-hidden pl-2 pr-1.5 opacity-0 transition-[max-width,opacity] duration-fast group-hover:pointer-events-auto group-hover:max-w-12 group-hover:opacity-100 ${actionTone}`}
+            className={`pointer-events-none absolute inset-y-0 right-0 flex max-w-0 items-center gap-1 overflow-hidden pl-2 pr-1.5 opacity-0 transition-[max-width,opacity] duration-fast group-hover:pointer-events-auto ${hoverActionMaxWidth} group-hover:opacity-100 ${actionTone}`}
           >
-            <Pencil
-              size={13}
-              style={{flexShrink: 0}}
+            <button
+              type="button"
+              title="重命名"
+              className="flex flex-shrink-0 items-center justify-center border-0 bg-transparent p-0"
               onClick={(e) => {
                 e.stopPropagation();
                 setDraft(node.name);
                 setEditing(true);
               }}
-            />
-            <Trash2
-              size={13}
-              style={{flexShrink: 0}}
+            >
+              <Pencil size={13} />
+            </button>
+            <button
+              type="button"
+              title="删除"
+              className="flex flex-shrink-0 items-center justify-center border-0 bg-transparent p-0"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(node);
               }}
-            />
+            >
+              <Trash2 size={13} />
+            </button>
+            {node.isDir && (
+              <>
+                <button
+                  type="button"
+                  title="新建文档"
+                  className="flex flex-shrink-0 items-center justify-center border-0 bg-transparent p-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCreateIn(node.path, "doc");
+                  }}
+                >
+                  <FilePlus size={13} />
+                </button>
+                <button
+                  type="button"
+                  title="新建文件夹"
+                  className="flex flex-shrink-0 items-center justify-center border-0 bg-transparent p-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCreateIn(node.path, "folder");
+                  }}
+                >
+                  <FolderPlus size={13} />
+                </button>
+              </>
+            )}
           </span>
         )}
       </div>
@@ -278,6 +323,8 @@ export default function TreeNode({
                 onDelete={onDelete}
                 onOpenLocation={onOpenLocation}
                 onCopyAbsolutePath={onCopyAbsolutePath}
+                onCreateIn={onCreateIn}
+                renameSignal={renameSignal}
                 onDragStartNode={onDragStartNode}
                 onDragOverNode={onDragOverNode}
                 onDropNode={onDropNode}
