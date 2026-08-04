@@ -112,14 +112,14 @@ test("image-flow 图片语法中的 alt 不会注入额外属性", () => {
   assert.doesNotMatch(html, /\sonerror=(["'])/i);
 });
 
-test("image-flow 输出 scroll-snap 内联样式且提示文案只由主题 ::before 提供", () => {
+test("image-flow 输出 scroll-snap 内联样式且提示文案由插件直接输出", () => {
   const html = render('<![a](https://example.com/a.png),![b](https://example.com/b.png)>');
 
   assert.match(html, /<section class="imageflow-layer1" style="overflow:hidden">/);
   assert.match(html, /<section class="imageflow-layer2" style="display:flex;flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none">/);
-  assert.match(html, /<section class="imageflow-layer3" style="flex:0 0 100%;scroll-snap-align:center;scroll-snap-stop:always">/);
-  assert.match(html, /<p class="imageflow-caption"><\/p>/);
-  assert.doesNotMatch(html, /左右滑动见更多/);
+  assert.match(html, /<section class="imageflow-layer3" style="flex:0 0 100%;min-width:0;scroll-snap-align:center;scroll-snap-stop:always">/);
+  assert.match(html, /<img[^>]*class="imageflow-img" style="display:block;max-width:100%;height:auto">/);
+  assert.match(html, /<p class="imageflow-caption">&lt;&lt;&lt; 左右滑动见更多 &gt;&gt;&gt;<\/p>/);
 });
 
 test("image-flow 紧跟上一段文字（无空行）时仍渲染为横滑图组", () => {

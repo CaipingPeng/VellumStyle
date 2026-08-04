@@ -60,6 +60,17 @@ ${ARTICLE_ROOT_SELECTOR} .footnotes .footnote-num { width: 10%; }`;
   assert.match(numOverride, /width:\s*auto !important/);
 });
 
+test("横滑图片组布局由系统 CSS 兜底注入，与主题无关", () => {
+  const css = buildMarkdownCss("");
+
+  assert.match(css, /#article \.imageflow-layer2\s*\{[^}]*display:\s*flex !important/);
+  assert.match(css, /#article \.imageflow-layer2\s*\{[^}]*overflow-x:\s*auto !important/);
+  assert.match(css, /#article \.imageflow-layer3\s*\{[^}]*flex:\s*0 0 100% !important/);
+  assert.match(css, /#article \.imageflow-layer3\s*\{[^}]*min-width:\s*0 !important/);
+  assert.match(css, /#article \.imageflow-img\s*\{[^}]*max-width:\s*100% !important/);
+  assert.match(css, /#article \.imageflow-caption\s*\{[^}]*text-align:\s*center/);
+});
+
 test("切换代码主题会输出对应的 scoped hljs token 配色", () => {
   const css = buildMarkdownCss("", "night-owl");
 

@@ -89,6 +89,42 @@ ${ARTICLE_ROOT_SELECTOR} .footnotes .footnote-item p {
 }
 `;
 
+// 横滑图片组（image-flow）的系统级渲染规则：与主题完全解耦，始终随预览/复制注入。
+// 插件已输出内联样式，这里作为兜底保证任何主题（含用户自建主题）下布局一致；
+// 关键属性用 !important 防止被主题 CSS 覆盖。
+const IMAGEFLOW_LAYOUT_BASE_CSS = `
+${ARTICLE_ROOT_SELECTOR} .imageflow-layer1 {
+  overflow: hidden;
+  margin: 16px 0;
+}
+${ARTICLE_ROOT_SELECTOR} .imageflow-layer2 {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+${ARTICLE_ROOT_SELECTOR} .imageflow-layer3 {
+  flex: 0 0 100% !important;
+  min-width: 0 !important;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+${ARTICLE_ROOT_SELECTOR} .imageflow-img {
+  display: block !important;
+  max-width: 100% !important;
+  height: auto !important;
+}
+${ARTICLE_ROOT_SELECTOR} .imageflow-caption {
+  margin: 8px 0 0;
+  padding: 0;
+  text-align: center;
+  color: rgba(136, 136, 136, 1);
+  font-size: 14px;
+  line-height: 1.8em;
+}
+`;
+
 function scopeSelector(selector: string): string[] {
   const trimmed = selector.trim();
   if (!trimmed) return [];
@@ -221,5 +257,7 @@ export function buildCodeThemeCss(codeThemeId?: string | null): string {
 }
 
 export function buildMarkdownCss(markdownThemeCss: string, codeThemeId?: string | null): string {
-  return [markdownThemeCss, FOOTNOTE_LAYOUT_BASE_CSS, buildCodeThemeCss(codeThemeId)].filter(Boolean).join("\n");
+  return [markdownThemeCss, IMAGEFLOW_LAYOUT_BASE_CSS, FOOTNOTE_LAYOUT_BASE_CSS, buildCodeThemeCss(codeThemeId)]
+    .filter(Boolean)
+    .join("\n");
 }
