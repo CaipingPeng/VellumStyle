@@ -29,6 +29,9 @@ test("表情搜索弹窗接入后台搜索并以上传后的永久链接插入",
   assert.match(source, /switchTab\("search"\)/);
   assert.match(source, /switchTab\("smiley"\)/);
   assert.match(source, /border border-border bg-bg/);
+  // 当前功能用主题色强调（微表情标签 / 搜索框边框）
+  assert.match(source, /bg-accent px-3/);
+  assert.match(source, /border-accent\/60/);
   assert.match(source, /selectedCount === 0/);
   assert.match(source, /加载更多/);
   assert.match(source, /插入所选/);

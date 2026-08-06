@@ -370,11 +370,10 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
       }
     >
       <div className="flex h-[clamp(360px,calc(86vh-120px),560px)] min-h-0 flex-col">
-        <div className="flex h-[46px] flex-none items-center gap-2 border-b border-border bg-bg-secondary px-4">
+        <div className="flex h-[46px] flex-none items-center justify-between gap-3 border-b border-border bg-bg-secondary px-4">
           {activeTab === "smiley" ? (
             <>
-              <span className="text-sm font-medium text-text">微表情</span>
-              <div className="min-w-0 flex-1" />
+              <span className="inline-flex h-8 flex-none items-center rounded-md bg-accent px-3 text-sm font-medium text-white">微表情</span>
               <button
                 type="button"
                 onClick={() => switchTab("search")}
@@ -387,19 +386,21 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
             </>
           ) : (
             <>
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    startSearch();
-                  }
-                }}
-                placeholder="输入关键词后按回车搜索，如：不嘻嘻"
-                spellCheck={false}
-                className="box-border h-8 min-w-0 flex-1 rounded-md border border-border bg-bg px-3 text-sm text-text outline-none transition-colors duration-fast placeholder:text-text-muted focus:border-[color:var(--ring)] focus:ring-2 focus:ring-[color:var(--ring)]"
-              />
+              <div className="min-w-0 flex-1">
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      startSearch();
+                    }
+                  }}
+                  placeholder="输入关键词后按回车搜索，如：不嘻嘻"
+                  spellCheck={false}
+                  className="box-border h-8 w-full rounded-md border border-accent/60 bg-bg px-3 text-sm text-text outline-none transition-colors duration-fast placeholder:text-text-muted focus:border-[color:var(--ring)] focus:ring-2 focus:ring-[color:var(--ring)]"
+                />
+              </div>
               <button
                 type="button"
                 onClick={() => switchTab("smiley")}
