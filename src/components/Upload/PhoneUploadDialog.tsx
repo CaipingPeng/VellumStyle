@@ -6,6 +6,7 @@ import {
   getPhoneUploadQrcode,
 } from "../../utils/publish.ts";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
+import {waitBackendCommand} from "../../utils/wechatBackend.ts";
 import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
 import Dialog from "../ui/Dialog.tsx";
@@ -138,7 +139,11 @@ export default function PhoneUploadDialog({open, canInsert, onClose, onPick, onN
 
     void (async () => {
       try {
-        const response = await getPhoneUploadQrcode();
+        // 后台窗口可能尚未打开（首次使用/重启后），等待窗口就绪并重试
+        const response = await waitBackendCommand(
+          () => getPhoneUploadQrcode(),
+          (text) => parseQrcodeResponse(text) !== null,
+        );
         if (session !== sessionRef.current) return;
         const info = parseQrcodeResponse(response);
         if (!info) {

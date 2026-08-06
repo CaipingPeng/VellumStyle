@@ -8,6 +8,8 @@ test("手机传图对话框：取二维码→轮询上传列表→确认保存�
   assert.match(source, /getPhoneUploadQrcode/);
   assert.match(source, /getPhoneUploadPicList/);
   assert.match(source, /confirmPhoneUploadPics/);
+  // 后台窗口未打开时自动开窗等待并重试
+  assert.match(source, /waitBackendCommand/);
   assert.match(source, /qrcode_uuid/);
   assert.match(source, /qrcode_tmp_url/);
   assert.match(source, /upload_pic_info_list/);
