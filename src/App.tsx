@@ -1,6 +1,5 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {AnimatePresence, motion, useReducedMotion} from "framer-motion";
-import {Smile} from "lucide-react";
 import MarkdownEditor, {type MarkdownEditorHandle} from "./components/Editor/MarkdownEditor.tsx";
 import Preview, {type PreviewHandle} from "./components/Preview/Preview.tsx";
 import PreviewModeToggle from "./components/Preview/PreviewModeToggle.tsx";
@@ -58,7 +57,7 @@ import {
 import {defaultWindowIcon} from "@tauri-apps/api/app";
 import {invoke} from "@tauri-apps/api/core";
 import {getCurrentWindow} from "@tauri-apps/api/window";
-import {Images, ListTree, PanelLeft, Smartphone} from "lucide-react";
+import {Images, ListTree, PanelLeft} from "lucide-react";
 import defaultContent from "./content.md?raw";
 import {applyAppearanceMode} from "./appearance/appearanceMode.ts";
 import {applyColorScheme} from "./appearance/colorScheme.ts";
@@ -741,24 +740,6 @@ export default function App() {
           >
             <Images size={16} />
           </IconButton>
-          <IconButton
-            variant="surface"
-            active={emojiPickerOpen}
-            title="表情"
-            aria-pressed={emojiPickerOpen}
-            onClick={() => setEmojiPickerOpen(true)}
-          >
-            <Smile size={16} />
-          </IconButton>
-          <IconButton
-            variant="surface"
-            active={phoneUploadOpen}
-            title="手机传图"
-            aria-pressed={phoneUploadOpen}
-            onClick={() => setPhoneUploadOpen(true)}
-          >
-            <Smartphone size={16} />
-          </IconButton>
         </div>
         <MainToolbar
           onOpenSettings={openSettings}
@@ -825,6 +806,8 @@ export default function App() {
               editorRef={editorRef}
               onPickFile={handleUploadFile}
               onPickLocal={handleUploadLocal}
+              onOpenEmoji={() => setEmojiPickerOpen(true)}
+              onOpenPhoneUpload={() => setPhoneUploadOpen(true)}
               toolbarActions={<ArticleTaskLog currentDocumentPath={currentDocPath} />}
             >
               <MarkdownEditor

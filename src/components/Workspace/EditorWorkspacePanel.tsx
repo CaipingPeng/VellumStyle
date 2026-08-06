@@ -6,6 +6,8 @@ interface EditorWorkspacePanelProps {
   editorRef: RefObject<MarkdownEditorHandle>;
   onPickFile: (file: File) => Promise<void>;
   onPickLocal: (path: string) => Promise<void>;
+  onOpenEmoji?: () => void;
+  onOpenPhoneUpload?: () => void;
   toolbarActions?: ReactNode;
   children: ReactNode;
 }
@@ -14,6 +16,8 @@ export default function EditorWorkspacePanel({
   editorRef,
   onPickFile,
   onPickLocal,
+  onOpenEmoji,
+  onOpenPhoneUpload,
   toolbarActions,
   children,
 }: EditorWorkspacePanelProps) {
@@ -34,6 +38,8 @@ export default function EditorWorkspacePanel({
             editorRef={editorRef}
             onPickFile={onPickFile}
             onPickLocal={onPickLocal}
+            onOpenEmoji={onOpenEmoji}
+            onOpenPhoneUpload={onOpenPhoneUpload}
           />
         </div>
         {toolbarActions && (

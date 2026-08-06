@@ -1,7 +1,7 @@
-import {useState} from "react";
+import {useRef, useState} from "react";
 import {
   Bold, Italic, Strikethrough, Code, Link, Heading,
-  List, ListOrdered, Quote, SquareCode, Minus, Undo2, Redo2,
+  List, ListOrdered, Quote, SquareCode, Minus, Undo2, Redo2, ImageUp, Smile,
 } from "lucide-react";
 import type {RefObject} from "react";
 import type {MarkdownEditorHandle} from "../Editor/MarkdownEditor.tsx";
@@ -12,12 +12,14 @@ import {
 } from "../Editor/syntaxActions.ts";
 import IconButton from "../ui/IconButton.tsx";
 import Menu, {MenuItem} from "../ui/Menu.tsx";
-import UploadButton from "../Upload/UploadButton.tsx";
+import UploadButton, {type UploadButtonHandle} from "../Upload/UploadButton.tsx";
 
 interface Props {
   editorRef: RefObject<MarkdownEditorHandle>;
   onPickFile: (file: File) => Promise<void>;
   onPickLocal: (path: string) => Promise<void>;
+  onOpenEmoji?: () => void;
+  onOpenPhoneUpload?: () => void;
 }
 
 const ICON = 16;
@@ -27,8 +29,10 @@ function Separator() {
   return <div aria-hidden="true" className="mx-1 h-[18px] w-px flex-none bg-border" />;
 }
 
-export default function SyntaxToolbar({editorRef, onPickFile, onPickLocal}: Props) {
+export default function SyntaxToolbar({editorRef, onPickFile, onPickLocal, onOpenEmoji, onOpenPhoneUpload}: Props) {
   const [headingOpen, setHeadingOpen] = useState(false);
+  const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
+  const uploadRef = useRef<UploadButtonHandle>(null);
   const shortcutPlatform = detectSyntaxShortcutPlatform();
   const syntaxTitle = (label: string, action: SyntaxAction) =>
     `${label} (${formatSyntaxShortcut(action, shortcutPlatform)})`;
@@ -57,11 +61,37 @@ export default function SyntaxToolbar({editorRef, onPickFile, onPickLocal}: Prop
       <IconButton title={syntaxTitle("删除线", "strikethrough")} onClick={run("strikethrough")}><Strikethrough size={ICON} /></IconButton>
       <IconButton title={syntaxTitle("行内代码", "inlineCode")} onClick={run("inlineCode")}><Code size={ICON} /></IconButton>
       <IconButton title={syntaxTitle("链接", "link")} onClick={run("link")}><Link size={ICON} /></IconButton>
-      <UploadButton
-        display="icon"
-        onPickFile={onPickFile}
-        onPickLocal={onPickLocal}
-      />
+      <Menu
+        open={uploadMenuOpen}
+        onClose={() => setUploadMenuOpen(false)}
+        minWidth={132}
+        trigger={
+          <IconButton title="上传图片" active={uploadMenuOpen} onClick={() => setUploadMenuOpen((open) => !open)}>
+            <ImageUp size={ICON} />
+          </IconButton>
+        }
+      >
+        <MenuItem
+          onClick={() => {
+            setUploadMenuOpen(false);
+            void uploadRef.current?.pick();
+          }}
+        >
+          从本地上传
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setUploadMenuOpen(false);
+            onOpenPhoneUpload?.();
+          }}
+        >
+          从手机上传
+        </MenuItem>
+      </Menu>
+      <IconButton title="表情" onClick={onOpenEmoji}>
+        <Smile size={ICON} />
+      </IconButton>
+      <UploadButton ref={uploadRef} showTrigger={false} onPickFile={onPickFile} onPickLocal={onPickLocal} />
       <Separator />
 
       <Menu
