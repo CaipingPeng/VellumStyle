@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   addDraft,
+  bindVoiceMaterials,
   deleteImageMaterial,
   findUnuploadedImages,
   formatVoiceMarkup,
@@ -11,6 +12,7 @@ import {
   listVideoMaterials,
   listVoiceMaterials,
   loadVoiceBinding,
+  parseVoiceBackendResponse,
   parseVoiceCode,
   saveVoiceBinding,
 } from "./publish.ts";
@@ -236,6 +238,78 @@ test("音频素材标识绑定在本地持久化并可取回", () => {
     assert.ok(binding);
     assert.equal(binding.voiceEncodeFileid, "Mzk0NTMyNzk3N18xMDAwMDI1MzA=");
     assert.equal(loadVoiceBinding("VOICE_2"), null);
+  } finally {
+    if (previousStorage === undefined) {
+      delete (globalThis as unknown as {localStorage?: unknown}).localStorage;
+    } else {
+      Object.defineProperty(globalThis, "localStorage", previousStorage);
+    }
+  }
+});
+
+test("parseVoiceBackendResponse 解析后台音频素材列表响应", () => {
+  const source = JSON.stringify({
+    base_resp: {ret: 0},
+    file_item: [
+      {
+        file_id: 100002530,
+        name: "测试音频",
+        title: "测试音频",
+        play_length: 132000,
+        size: "258.0\tK",
+        voice_encode_fileid: "Mzk0NTMyNzk3N18xMDAwMDI1MzA=",
+        voice_low_media_size: 264152,
+        voice_high_media_size: 1063848,
+      },
+    ],
+  });
+
+  const candidates = parseVoiceBackendResponse(source);
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0].name, "测试音频");
+  assert.equal(candidates[0].voiceEncodeFileid, "Mzk0NTMyNzk3N18xMDAwMDI1MzA=");
+  assert.equal(candidates[0].playLength, "02:12");
+  assert.equal(candidates[0].lowSize, "257.96");
+  assert.equal(candidates[0].highSize, "1038.91");
+
+  assert.deepEqual(parseVoiceBackendResponse("不是 JSON"), []);
+  assert.deepEqual(parseVoiceBackendResponse('{"file_item":[{"name":"无标识音频"}]}'), []);
+  assert.deepEqual(parseVoiceBackendResponse('[{"name":"直接数组但无标识"}]'), []);
+});
+
+test("bindVoiceMaterials 按名称批量绑定素材库音频并生成可插入 mpvoice", () => {
+  const previousStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const storage = new Map<string, string>();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+      removeItem: (key: string) => storage.delete(key),
+      clear: () => storage.clear(),
+    },
+  });
+
+  try {
+    const bound = bindVoiceMaterials(
+      [
+        {mediaId: "V1", name: "测试音频", updateTime: 1},
+        {mediaId: "V2", name: "另一个音频", updateTime: 2},
+      ],
+      [
+        {name: "测试音频", voiceEncodeFileid: "Mzk0NTMyNzk3N18xMDAwMDI1MzA=", playLength: "02:12"},
+        {name: "未出现在素材库", voiceEncodeFileid: "QQ==", playLength: "01:00"},
+      ],
+    );
+    assert.equal(bound, 1);
+    assert.equal(loadVoiceBinding("V2"), null);
+
+    const binding = loadVoiceBinding("V1");
+    assert.ok(binding);
+    assert.equal(binding.voiceEncodeFileid, "Mzk0NTMyNzk3N18xMDAwMDI1MzA=");
+    assert.match(binding.src, /name=%E6%B5%8B%E8%AF%95%E9%9F%B3%E9%A2%91/);
+    assert.match(binding.src, /play_length=02:12/);
+    assert.match(formatVoiceMarkup(binding), /voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA="/);
   } finally {
     if (previousStorage === undefined) {
       delete (globalThis as unknown as {localStorage?: unknown}).localStorage;

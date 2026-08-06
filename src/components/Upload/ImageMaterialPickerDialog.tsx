@@ -4,6 +4,7 @@ import {
   CheckSquare2,
   Clapperboard,
   AudioLines,
+  ClipboardPaste,
   Film,
   ImageIcon,
   Images,
@@ -15,12 +16,14 @@ import {
 } from "lucide-react";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
 import {
+  bindVoiceMaterials,
   deleteImageMaterial,
   formatVoiceMarkup,
   listImageMaterials,
   listVideoMaterials,
   listVoiceMaterials,
   loadVoiceBinding,
+  parseVoiceBackendResponse,
   parseVoiceCode,
   saveVoiceBinding,
   type MaterialImage,
@@ -34,6 +37,7 @@ import Dialog from "../ui/Dialog.tsx";
 import DeleteMaterialConfirmDialog from "./DeleteMaterialConfirmDialog.tsx";
 import {runMaterialOperations} from "./materialBatch.ts";
 import AudioCodeBindDialog from "./AudioCodeBindDialog.tsx";
+import VoiceBatchBindDialog from "./VoiceBatchBindDialog.tsx";
 
 interface Props {
   open: boolean;
@@ -92,6 +96,8 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
   const [voiceBindOpen, setVoiceBindOpen] = useState(false);
   const [voiceBindError, setVoiceBindError] = useState<string | null>(null);
+  const [voiceBatchOpen, setVoiceBatchOpen] = useState(false);
+  const [voiceBatchError, setVoiceBatchError] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteCompleted, setDeleteCompleted] = useState(0);
@@ -228,6 +234,8 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
     setSelectedVoiceId(null);
     setVoiceBindOpen(false);
     setVoiceBindError(null);
+    setVoiceBatchOpen(false);
+    setVoiceBatchError(null);
     setDeleteConfirmOpen(false);
     setDeleting(false);
     setDeleteCompleted(0);
@@ -333,6 +341,33 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
     onPickVoices?.([formatVoiceMarkup(info)]);
     toast.show(`已插入「${selectedVoice.name}」，下次可直接插入`, "info");
     onClose();
+  };
+
+  const submitVoiceBatch = (source: string) => {
+    const candidates = parseVoiceBackendResponse(source);
+    if (candidates.length === 0) {
+      setVoiceBatchError("没有解析到音频数据，请确认复制的是音频列表接口的完整响应（JSON）。");
+      return;
+    }
+    if (voiceItems.length === 0) {
+      setVoiceBatchError("素材库音频列表尚未加载，请先加载音频素材再绑定。");
+      return;
+    }
+    const bound = bindVoiceMaterials(voiceItems, candidates);
+    if (bound === 0) {
+      setVoiceBatchError(
+        `响应里 ${candidates.length} 条音频均未与素材库列表匹配，请确认响应与素材库来自同一公众号。`,
+      );
+      return;
+    }
+    setVoiceBatchOpen(false);
+    setVoiceBatchError(null);
+    toast.show(
+      bound === candidates.length
+        ? `已批量绑定 ${bound} 个音频，之后可直接插入`
+        : `已绑定 ${bound} 个音频，${candidates.length - bound} 个名称未匹配`,
+      "info",
+    );
   };
 
   const confirmDelete = async () => {
@@ -852,6 +887,19 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
                 <div className="flex flex-none items-center gap-2">
                   <Button
                     type="button"
+                    variant="secondary"
+                    disabled={busy}
+                    title="粘贴后台音频素材列表响应，一次绑定全部音频"
+                    onClick={() => {
+                      setVoiceBatchError(null);
+                      setVoiceBatchOpen(true);
+                    }}
+                  >
+                    <ClipboardPaste size={14} />
+                    <span className="hidden sm:inline">批量绑定</span>
+                  </Button>
+                  <Button
+                    type="button"
                     variant="primary"
                     disabled={!canInsert || !selectedVoice || busy}
                     title={!canInsert ? "请先打开一篇文章" : "将所选音频插入当前文章"}
@@ -949,6 +997,12 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
         error={voiceBindError}
         onCancel={() => setVoiceBindOpen(false)}
         onSubmit={(source) => submitVoiceBinding(source)}
+      />
+      <VoiceBatchBindDialog
+        open={open && voiceBatchOpen}
+        error={voiceBatchError}
+        onCancel={() => setVoiceBatchOpen(false)}
+        onSubmit={(source) => submitVoiceBatch(source)}
       />
       <DeleteMaterialConfirmDialog
         open={open && deleteConfirmOpen}

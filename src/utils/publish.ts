@@ -223,6 +223,99 @@ export function saveVoiceBinding(mediaId: string, info: VoiceCodeInfo): void {
   }
 }
 
+// 公众号后台「素材库 → 音频」列表接口响应里的音频字段（用户从浏览器
+// Network 复制），携带官方 API 不提供的 voice_encode_fileid。
+export interface VoiceBackendCandidate {
+  name: string;
+  voiceEncodeFileid: string;
+  playLength: string;
+  lowSize?: string;
+  sourceSize?: string;
+  highSize?: string;
+  coverUrl?: string;
+}
+
+function formatVoicePlayLength(playLength: unknown): string {
+  const value = String(playLength ?? "").trim();
+  if (!value) return "";
+  if (!/^\d+$/.test(value)) return value;
+  const totalSeconds = Math.round(Number(value) / 1000);
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return value;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function kbSize(bytes: unknown, digits: number): string | undefined {
+  const value = typeof bytes === "number" ? bytes : Number(bytes);
+  if (!Number.isFinite(value) || value <= 0) return undefined;
+  return (value / 1024).toFixed(digits);
+}
+
+// 解析后台素材接口响应，兼容整体对象（file_item 数组）或直接数组两种形态。
+export function parseVoiceBackendResponse(source: string): VoiceBackendCandidate[] {
+  let data: unknown;
+  try {
+    data = JSON.parse(source);
+  } catch {
+    return [];
+  }
+  const fileItems = Array.isArray(data)
+    ? data
+    : (data as {file_item?: unknown})?.file_item;
+  if (!Array.isArray(fileItems)) return [];
+
+  const candidates: VoiceBackendCandidate[] = [];
+  for (const item of fileItems) {
+    const record = item as Record<string, unknown>;
+    const voiceEncodeFileid =
+      typeof record.voice_encode_fileid === "string" ? record.voice_encode_fileid.trim() : "";
+    if (!voiceEncodeFileid) continue;
+    const name =
+      (typeof record.name === "string" && record.name.trim()
+        ? record.name.trim()
+        : typeof record.title === "string" && record.title.trim()
+          ? record.title.trim()
+          : "");
+    if (!name) continue;
+    const lowSize = kbSize(record.voice_low_media_size, 2);
+    candidates.push({
+      name,
+      voiceEncodeFileid,
+      playLength: formatVoicePlayLength(record.play_length),
+      lowSize,
+      sourceSize: lowSize ? String(Number(lowSize).toFixed(1)) : undefined,
+      highSize: kbSize(record.voice_high_media_size, 2),
+      coverUrl:
+        typeof record.voice_cover_url === "string" ? record.voice_cover_url : undefined,
+    });
+  }
+  return candidates;
+}
+
+// 用后台响应里的标识按名称批量绑定素材库音频，返回绑定成功数量。
+export function bindVoiceMaterials(
+  voiceItems: MaterialVoice[],
+  candidates: VoiceBackendCandidate[],
+): number {
+  let bound = 0;
+  for (const item of voiceItems) {
+    const candidate = candidates.find((candidate) => candidate.name === item.name);
+    if (!candidate) continue;
+    saveVoiceBinding(item.mediaId, {
+      voiceEncodeFileid: candidate.voiceEncodeFileid,
+      name: candidate.name,
+      playLength: candidate.playLength,
+      src: `/cgi-bin/readtemplate?t=tmpl/audio_tmpl&name=${encodeURIComponent(candidate.name)}&play_length=${candidate.playLength}`,
+      lowSize: candidate.lowSize,
+      sourceSize: candidate.sourceSize,
+      highSize: candidate.highSize,
+    });
+    bound += 1;
+  }
+  return bound;
+}
+
 // 从微信后台复制来的音频代码里提取 voice_encode_fileid 及展示字段。
 // 兼容 <mpvoice> 与新版 <section class="js_editor_audio"> 两种形态。
 export function parseVoiceCode(source: string): VoiceCodeInfo | null {
