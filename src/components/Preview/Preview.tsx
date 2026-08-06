@@ -264,8 +264,10 @@ const Preview = forwardRef<PreviewHandle, Props>(
         placeholder.className = "vs-audio-placeholder";
         placeholder.setAttribute("role", "img");
         placeholder.setAttribute("aria-label", `素材库音频：${name}`);
+        const coverEl = document.createElement("span");
+        coverEl.className = "vs-audio-placeholder-cover";
         if (cover) {
-          placeholder.style.backgroundImage = `url("${cover}")`;
+          coverEl.style.backgroundImage = `url("${cover}")`;
         }
         const play = document.createElement("span");
         play.className = "vs-audio-placeholder-play";
@@ -279,10 +281,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
         meta.className = "vs-audio-placeholder-meta";
         meta.textContent = [formatVoiceDuration(playLength), author].filter(Boolean).join(" · ");
         body.append(title, meta);
-        const hint = document.createElement("span");
-        hint.className = "vs-video-placeholder-hint";
-        hint.textContent = "本地预览不播放 · 发布后显示音频卡片";
-        placeholder.append(play, body, hint);
+        placeholder.append(coverEl, body, play);
         voice.insertAdjacentElement("afterend", placeholder);
       }
     }, [html]);

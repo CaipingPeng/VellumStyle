@@ -47,6 +47,7 @@ test("预览为素材库视频注入本地占位并在导出时还原", async ()
   assert.match(css, /\.vs-video-placeholder \{/);
   assert.match(css, /mpvoice\.js_editor_audio\[data-vs-audio-hidden="true"\]/);
   assert.match(css, /\.vs-audio-placeholder \{/);
+  assert.match(css, /\.vs-audio-placeholder-cover \{/);
   assert.match(converterSource, /\.vs-video-placeholder/);
   assert.match(converterSource, /data-vs-video-src/);
   assert.match(converterSource, /\.vs-audio-placeholder/);

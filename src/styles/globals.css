@@ -1412,57 +1412,54 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
 }
 
 .vs-audio-placeholder {
-  position: relative;
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 14px;
   width: 100%;
-  max-width: 578px;
+  max-width: 350px;
   margin: 8px auto;
   padding: 16px;
-  border: 1px solid var(--border);
+  border: 1px solid #e3e4e5;
   border-radius: 8px;
-  background: var(--bg-secondary);
+  background: #fff;
+  color: #1a1b1c;
+  font-family: -apple-system, system-ui, BlinkMacSystemFont, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+.vs-audio-placeholder-cover {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  margin-right: 12px;
+  border-radius: 2px;
+  background-color: #e3e4e5;
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-  color: var(--text);
-}
-
-.vs-audio-placeholder::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.vs-audio-placeholder > * {
-  position: relative;
-  z-index: 1;
 }
 
 .vs-audio-placeholder-play {
   position: relative;
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 24px;
+  height: 24px;
+  margin-left: 8px;
   border-radius: 50%;
-  background: var(--accent);
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .vs-audio-placeholder-play::after {
   content: "";
   position: absolute;
   top: 50%;
-  left: 55%;
+  left: 56%;
   width: 0;
   height: 0;
   transform: translate(-50%, -50%);
-  border-top: 9px solid transparent;
-  border-bottom: 9px solid transparent;
-  border-left: 15px solid #fff;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 11px solid #1a1b1c;
 }
 
 .vs-audio-placeholder-body {
@@ -1470,20 +1467,26 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
   min-width: 0;
   flex: 1;
   flex-direction: column;
-  gap: 4px;
 }
 
 .vs-audio-placeholder-title {
+  display: -webkit-box;
   overflow: hidden;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 500;
   line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: #1a1b1c;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  word-break: break-all;
 }
 
 .vs-audio-placeholder-meta {
-  font-size: 12px;
+  margin-top: 4px;
+  overflow: hidden;
+  font-size: 14px;
   line-height: 1.4;
-  color: var(--text-muted);
+  color: #7e8081;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
