@@ -1,7 +1,7 @@
 import {useRef, useState} from "react";
 import {
   Bold, Italic, Strikethrough, Code, Link, Heading,
-  List, ListOrdered, Quote, SquareCode, Minus, Undo2, Redo2, ImageUp, Smile,
+  List, ListOrdered, Quote, SquareCode, Minus, Undo2, Redo2, ImageUp, Smile, Sparkles,
 } from "lucide-react";
 import type {RefObject} from "react";
 import type {MarkdownEditorHandle} from "../Editor/MarkdownEditor.tsx";
@@ -20,6 +20,7 @@ interface Props {
   onPickLocal: (path: string) => Promise<void>;
   onOpenEmoji?: () => void;
   onOpenPhoneUpload?: () => void;
+  onOpenAiImage?: () => void;
 }
 
 const ICON = 16;
@@ -29,7 +30,14 @@ function Separator() {
   return <div aria-hidden="true" className="mx-1 h-[18px] w-px flex-none bg-border" />;
 }
 
-export default function SyntaxToolbar({editorRef, onPickFile, onPickLocal, onOpenEmoji, onOpenPhoneUpload}: Props) {
+export default function SyntaxToolbar({
+  editorRef,
+  onPickFile,
+  onPickLocal,
+  onOpenEmoji,
+  onOpenPhoneUpload,
+  onOpenAiImage,
+}: Props) {
   const [headingOpen, setHeadingOpen] = useState(false);
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   const uploadRef = useRef<UploadButtonHandle>(null);
@@ -86,6 +94,15 @@ export default function SyntaxToolbar({editorRef, onPickFile, onPickLocal, onOpe
           }}
         >
           从手机上传
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setUploadMenuOpen(false);
+            onOpenAiImage?.();
+          }}
+        >
+          <Sparkles size={14} />
+          AI 配图
         </MenuItem>
       </Menu>
       <IconButton title="表情" onClick={onOpenEmoji}>

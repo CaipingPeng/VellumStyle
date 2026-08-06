@@ -321,6 +321,7 @@ fn remoticon_cdn_url_expr(
 async fn eval_backend_expr(app: AppHandle, expression: String, unsupported_hint: &str) -> Result<String, String> {
     #[cfg(windows)]
     {
+        let _ = unsupported_hint;
         eval_in_backend_window(app, expression).await
     }
     #[cfg(not(windows))]
@@ -424,6 +425,134 @@ fn phone_upload_confirm_expr(data: &str) -> String {
     )
 }
 
+/// AI 配图：GET 类接口（get_session / get_style / related_search / get_ai_pic）。
+/// params 为已编码的追加查询参数（以 & 开头）。token 从后台首页 URL 提取。
+fn ai_image_get_expr(action: &str, params: &str) -> String {
+    format!(
+        r#"(function () {{
+          try {{
+            var token = new URL(location.href).searchParams.get("token") || "";
+            var url =
+              "/cgi-bin/mpaigenpicv2?action={action}&token=" + encodeURIComponent(token) +
+              "&lang=zh_CN&f=json&ajax=1&random=" + Math.random() + "{params}";
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, false);
+            xhr.send();
+            return xhr.responseText;
+          }} catch (e) {{
+            return JSON.stringify({{ vs_error: String(e) }});
+          }}
+        }})()"#,
+        action = action,
+        params = params,
+    )
+}
+
+/// AI 配图：POST 类接口（start_ai_creation / insert_ai_pic）。
+/// data 为前端组装的完整 JSON 字符串，作为 urlencoded 的 data 字段提交。
+fn ai_image_post_expr(action: &str, data_json: &str) -> String {
+    let enc_data = urlencoding::encode(data_json);
+    format!(
+        r#"(function () {{
+          try {{
+            var token = new URL(location.href).searchParams.get("token") || "";
+            var body =
+              "data={data}&token=" + encodeURIComponent(token) +
+              "&lang=zh_CN&f=json&ajax=1&random=" + Math.random();
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/cgi-bin/mpaigenpicv2?action={action}", false);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+            xhr.send(body);
+            return xhr.responseText;
+          }} catch (e) {{
+            return JSON.stringify({{ vs_error: String(e) }});
+          }}
+        }})()"#,
+        action = action,
+        data = enc_data,
+    )
+}
+
+/// 创建 AI 配图会话：返回 get_session 原始 JSON（session_id）。
+#[tauri::command]
+pub async fn ai_image_get_session(app: AppHandle) -> Result<String, String> {
+    eval_backend_expr(app, ai_image_get_expr("get_session", ""), "AI配图").await
+}
+
+/// 获取 AI 配图比例与风格选项：返回 get_style 原始 JSON（scale_info + style_info）。
+#[tauri::command]
+pub async fn ai_image_get_style(app: AppHandle, session_id: String) -> Result<String, String> {
+    let params = format!("&session_id={}", urlencoding::encode(&session_id));
+    eval_backend_expr(app, ai_image_get_expr("get_style", &params), "AI配图").await
+}
+
+/// 获取 AI 配图示例提示词：返回 get_example 原始 JSON（example[]）。
+#[tauri::command]
+pub async fn ai_image_get_example(app: AppHandle, session_id: String) -> Result<String, String> {
+    let params = format!("&session_id={}", urlencoding::encode(&session_id));
+    eval_backend_expr(app, ai_image_get_expr("get_example", &params), "AI配图").await
+}
+
+/// 相关图搜索：返回 related_search 原始 JSON（list.image[] 带 search_url）。
+#[tauri::command]
+pub async fn ai_image_related_search(
+    app: AppHandle,
+    session_id: String,
+    prompt: String,
+    ratio: String,
+    limit: u32,
+    offset: u32,
+) -> Result<String, String> {
+    let params = format!(
+        "&session_id={}&prompt={}&ratio={}&limit={}&offset={}",
+        urlencoding::encode(&session_id),
+        urlencoding::encode(&prompt),
+        urlencoding::encode(&ratio),
+        limit.clamp(1, 60),
+        offset,
+    );
+    eval_backend_expr(app, ai_image_get_expr("related_search", &params), "AI配图").await
+}
+
+/// 把相关图注册到当前会话，返回 append_related_search 原始 JSON（id）。
+/// data 形如 {"session_id":"...","task_id":"...","img_url":"https://..."}。
+#[tauri::command]
+pub async fn ai_image_append_related_search(
+    app: AppHandle,
+    data: String,
+) -> Result<String, String> {
+    eval_backend_expr(app, ai_image_post_expr("append_related_search", &data), "AI配图").await
+}
+
+/// 提交 AI 生成任务：返回 start_ai_creation 原始 JSON（task_id + is_sensitive_prompt）。
+/// data 形如 {"session_id":"...","prompt":"...","scale":"1024x436","gen_type":5,"style":"宫崎骏风格"}。
+#[tauri::command]
+pub async fn ai_image_start_creation(app: AppHandle, data: String) -> Result<String, String> {
+    eval_backend_expr(app, ai_image_post_expr("start_ai_creation", &data), "AI配图").await
+}
+
+/// 轮询 AI 生成结果：返回 get_ai_pic 原始 JSON（ai_image_info_list.list[].image[]）。
+#[tauri::command]
+pub async fn ai_image_get_pic(
+    app: AppHandle,
+    task_id: String,
+    session_id: String,
+) -> Result<String, String> {
+    let params = format!(
+        "&task_id={}&session_id={}",
+        urlencoding::encode(&task_id),
+        urlencoding::encode(&session_id),
+    );
+    eval_backend_expr(app, ai_image_get_expr("get_ai_pic", &params), "AI配图").await
+}
+
+/// 把 AI 生成图转换为永久素材：返回 insert_ai_pic 原始 JSON（fileid + cdn_url）。
+/// data 形如 {"pic_id":"...","task_id":"...","session_id":"..."}。
+#[tauri::command]
+pub async fn ai_image_insert_pic(app: AppHandle, data: String) -> Result<String, String> {
+    eval_backend_expr(app, ai_image_post_expr("insert_ai_pic", &data), "AI配图").await
+}
+
 fn parse_evaluate_response(response_json: &str) -> Result<String, String> {
     let value: serde_json::Value = serde_json::from_str(response_json)
         .map_err(|err| format!("解析后台同步响应失败：{err}"))?;
@@ -449,8 +578,8 @@ fn parse_evaluate_response(response_json: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        parse_evaluate_response, phone_upload_confirm_expr, phone_upload_pic_list_expr,
-        phone_upload_qrcode_expr, remoticon_cdn_url_expr,
+        ai_image_get_expr, ai_image_post_expr, parse_evaluate_response, phone_upload_confirm_expr,
+        phone_upload_pic_list_expr, phone_upload_qrcode_expr, remoticon_cdn_url_expr,
     };
 
     #[test]
@@ -525,5 +654,38 @@ mod tests {
         let expr = phone_upload_confirm_expr(data);
         assert!(expr.contains("action=confirm_save"));
         assert!(expr.contains("data=%7B%22qrcode_uuid%22%3A%22u1%22"));
+    }
+
+    #[test]
+    fn ai_image_get_expr_builds_action_and_params() {
+        let expr = ai_image_get_expr(
+            "get_style",
+            "&session_id=43429653065318400%230",
+        );
+        assert!(expr.contains("/cgi-bin/mpaigenpicv2?action=get_style"));
+        assert!(expr.contains("&session_id=43429653065318400%230"));
+        assert!(expr.contains("&lang=zh_CN&f=json&ajax=1"));
+        assert!(expr.contains("Math.random()"));
+    }
+
+    #[test]
+    fn ai_image_get_expr_encodes_chinese_query() {
+        let expr = ai_image_get_expr(
+            "related_search",
+            "&session_id=s%230&prompt=%E4%B8%80%E6%9C%B5%E4%BA%91&ratio=2.35%3A1&limit=10&offset=0",
+        );
+        assert!(expr.contains("action=related_search"));
+        assert!(expr.contains("prompt=%E4%B8%80%E6%9C%B5%E4%BA%91"));
+        assert!(expr.contains("ratio=2.35%3A1"));
+    }
+
+    #[test]
+    fn ai_image_post_expr_encodes_data_json() {
+        let data = r#"{"session_id":"s#0","prompt":"一朵云","scale":"1024x436","gen_type":5,"style":"宫崎骏风格"}"#;
+        let expr = ai_image_post_expr("start_ai_creation", data);
+        assert!(expr.contains("?action=start_ai_creation"));
+        assert!(expr.contains("data=%7B%22session_id%22%3A%22s%230%22"));
+        assert!(expr.contains("Content-Type"));
+        assert!(expr.contains("xhr.open(\"POST\""));
     }
 }

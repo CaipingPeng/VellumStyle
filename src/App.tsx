@@ -15,6 +15,7 @@ import IpChangedDialog from "./components/Update/IpChangedDialog.tsx";
 import ImageMaterialPickerDialog from "./components/Upload/ImageMaterialPickerDialog.tsx";
 import EmojiPickerDialog from "./components/Upload/EmojiPickerDialog.tsx";
 import PhoneUploadDialog from "./components/Upload/PhoneUploadDialog.tsx";
+import AiImageDialog from "./components/Upload/AiImageDialog.tsx";
 import ArticleTaskLog from "./components/Tasks/ArticleTaskLog.tsx";
 import IconButton from "./components/ui/IconButton.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
@@ -225,6 +226,7 @@ export default function App() {
   const [imageMaterialPickerOpen, setImageMaterialPickerOpen] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [phoneUploadOpen, setPhoneUploadOpen] = useState(false);
+  const [aiImageOpen, setAiImageOpen] = useState(false);
   const [, setCodeThemesVersion] = useState(0);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
@@ -808,6 +810,7 @@ export default function App() {
               onPickLocal={handleUploadLocal}
               onOpenEmoji={() => setEmojiPickerOpen(true)}
               onOpenPhoneUpload={() => setPhoneUploadOpen(true)}
+              onOpenAiImage={() => setAiImageOpen(true)}
               toolbarActions={<ArticleTaskLog currentDocumentPath={currentDocPath} />}
             >
               <MarkdownEditor
@@ -941,6 +944,13 @@ export default function App() {
         open={phoneUploadOpen}
         canInsert={Boolean(currentDocPath)}
         onClose={() => setPhoneUploadOpen(false)}
+        onPick={handlePickEmoji}
+        onNeedSettings={handleNeedSettings}
+      />
+      <AiImageDialog
+        open={aiImageOpen}
+        canInsert={Boolean(currentDocPath)}
+        onClose={() => setAiImageOpen(false)}
         onPick={handlePickEmoji}
         onNeedSettings={handleNeedSettings}
       />

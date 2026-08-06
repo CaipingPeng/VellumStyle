@@ -272,6 +272,52 @@ export function confirmPhoneUploadPics(data: string): Promise<string> {
   return invoke<string>("confirm_phone_upload_pic", {data});
 }
 
+/// 创建 AI 配图会话，返回 get_session 原始 JSON 文本（session_id）。
+export function aiImageGetSession(): Promise<string> {
+  return invoke<string>("ai_image_get_session");
+}
+
+/// 获取 AI 配图比例与风格选项，返回 get_style 原始 JSON 文本。
+export function aiImageGetStyle(sessionId: string): Promise<string> {
+  return invoke<string>("ai_image_get_style", {sessionId});
+}
+
+/// 获取 AI 配图示例提示词，返回 get_example 原始 JSON 文本。
+export function aiImageGetExample(sessionId: string): Promise<string> {
+  return invoke<string>("ai_image_get_example", {sessionId});
+}
+
+/// 相关图搜索，返回 related_search 原始 JSON 文本。
+export function aiImageRelatedSearch(
+  sessionId: string,
+  prompt: string,
+  ratio: string,
+  limit: number,
+  offset: number,
+): Promise<string> {
+  return invoke<string>("ai_image_related_search", {sessionId, prompt, ratio, limit, offset});
+}
+
+/// 把相关图注册到当前会话，返回 append_related_search 原始 JSON 文本（id）。
+export function aiImageAppendRelatedSearch(data: string): Promise<string> {
+  return invoke<string>("ai_image_append_related_search", {data});
+}
+
+/// 提交 AI 生成任务，返回 start_ai_creation 原始 JSON 文本。
+export function aiImageStartCreation(data: string): Promise<string> {
+  return invoke<string>("ai_image_start_creation", {data});
+}
+
+/// 轮询 AI 生成结果，返回 get_ai_pic 原始 JSON 文本。
+export function aiImageGetPic(taskId: string, sessionId: string): Promise<string> {
+  return invoke<string>("ai_image_get_pic", {taskId, sessionId});
+}
+
+/// 把 AI 生成图转换为永久素材，返回 insert_ai_pic 原始 JSON 文本（fileid + cdn_url）。
+export function aiImageInsertPic(data: string): Promise<string> {
+  return invoke<string>("ai_image_insert_pic", {data});
+}
+
 const VIDEO_MEDIA_KEY = "vs-video-media-ids";
 
 // 本地保存 vid → media_id 映射，供预览播放取流使用（iframe 不能携带 media_id，

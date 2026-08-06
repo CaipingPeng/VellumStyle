@@ -138,3 +138,42 @@ test("macOS 语法按钮标题使用符号快捷键", () => {
     assert.ok(host.querySelector<HTMLButtonElement>('button[title="标题 (⌘1–4)"]'));
   });
 });
+
+test("上传图片菜单包含 AI 配图入口并触发回调", () => {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  let aiCalls = 0;
+  let root: ReturnType<typeof createRoot> | undefined;
+
+  try {
+    const createdRoot = createRoot(host);
+    root = createdRoot;
+    act(() => {
+      createdRoot.render(
+        <SyntaxToolbar
+          editorRef={{current: createEditorHandle([])}}
+          onPickFile={async () => {}}
+          onPickLocal={async () => {}}
+          onOpenAiImage={() => {
+            aiCalls += 1;
+          }}
+        />,
+      );
+    });
+
+    const uploadButton = host.querySelector<HTMLButtonElement>('button[title="上传图片"]');
+    assert.ok(uploadButton);
+    act(() => uploadButton.click());
+    const aiItem = Array.from(document.body.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => button.textContent?.includes("AI 配图"));
+    assert.ok(aiItem, "上传菜单应有 AI 配图项");
+    act(() => aiItem.click());
+    assert.equal(aiCalls, 1);
+  } finally {
+    if (root) {
+      const mountedRoot = root;
+      act(() => mountedRoot.unmount());
+    }
+    host.remove();
+  }
+});

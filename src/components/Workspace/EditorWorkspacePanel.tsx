@@ -8,6 +8,7 @@ interface EditorWorkspacePanelProps {
   onPickLocal: (path: string) => Promise<void>;
   onOpenEmoji?: () => void;
   onOpenPhoneUpload?: () => void;
+  onOpenAiImage?: () => void;
   toolbarActions?: ReactNode;
   children: ReactNode;
 }
@@ -18,6 +19,7 @@ export default function EditorWorkspacePanel({
   onPickLocal,
   onOpenEmoji,
   onOpenPhoneUpload,
+  onOpenAiImage,
   toolbarActions,
   children,
 }: EditorWorkspacePanelProps) {
@@ -40,6 +42,7 @@ export default function EditorWorkspacePanel({
             onPickLocal={onPickLocal}
             onOpenEmoji={onOpenEmoji}
             onOpenPhoneUpload={onOpenPhoneUpload}
+            onOpenAiImage={onOpenAiImage}
           />
         </div>
         {toolbarActions && (
