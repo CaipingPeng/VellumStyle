@@ -400,7 +400,7 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
                   }}
                   placeholder="输入关键词后按回车搜索，如：不嘻嘻"
                   spellCheck={false}
-                  className="box-border h-8 w-full rounded-md border border-accent/60 bg-bg px-3 text-sm text-text outline-none transition-colors duration-fast placeholder:text-text-muted focus:border-[color:var(--ring)] focus:ring-2 focus:ring-[color:var(--ring)]"
+                  className="box-border h-8 w-full rounded-md border border-[color:var(--ring)] bg-bg px-3 text-sm text-text outline-none transition-colors duration-fast placeholder:text-text-muted focus:border-[color:var(--ring)] focus:ring-2 focus:ring-[color:var(--ring)]"
                 />
               </div>
               <button

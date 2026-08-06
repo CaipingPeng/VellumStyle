@@ -31,7 +31,7 @@ test("表情搜索弹窗接入后台搜索并以上传后的永久链接插入",
   assert.match(source, /border border-border bg-bg/);
   // 当前功能用主题色强调（微表情标签 / 搜索框边框）
   assert.match(source, /flex h-8 min-w-0 flex-1 items-center justify-center rounded-md bg-accent/);
-  assert.match(source, /border-accent\/60/);
+  assert.match(source, /border-\[color:var\(--ring\)\]/);
   assert.match(source, /selectedCount === 0/);
   assert.match(source, /加载更多/);
   assert.match(source, /插入所选/);
