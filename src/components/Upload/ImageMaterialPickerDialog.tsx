@@ -409,11 +409,23 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
         let hint = "没有解析到音频数据，请确认已在后台窗口登录微信公众平台";
         try {
           const data = JSON.parse(response) as {
-            vs_error?: string;
+            vs_error?: unknown;
+            reason?: string;
+            url?: string;
+            token?: string;
+            status?: number;
+            body?: string;
+            message?: string;
             base_resp?: {ret?: number; err_msg?: string};
           };
           if (data.vs_error) {
-            hint = `后台脚本执行失败：${data.vs_error}`;
+            const parts: string[] = [`后台脚本返回诊断：${data.reason ?? "unknown"}`];
+            if (data.message) parts.push(data.message);
+            if (data.url) parts.push(`页面：${data.url.slice(0, 120)}`);
+            if (data.token !== undefined) parts.push(`token：${data.token ? "有" : "无"}`);
+            if (data.status !== undefined) parts.push(`HTTP ${data.status}`);
+            if (data.body) parts.push(`返回：${data.body.slice(0, 150)}`);
+            hint = parts.join("；");
           } else if (data.base_resp && data.base_resp.ret !== undefined && data.base_resp.ret !== 0) {
             hint = `后台返回错误（${data.base_resp.ret}）：${data.base_resp.err_msg ?? "请确认已登录微信后台"}`;
           }

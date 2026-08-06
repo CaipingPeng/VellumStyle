@@ -12,8 +12,17 @@ const BACKEND_HOME: &str = "https://mp.weixin.qq.com/";
 /// 音频素材列表拉取脚本（同步 XHR，返回接口响应文本）。
 /// fingerprint 参数实测不校验，可以省略；token 从后台首页 URL 提取。
 const VOICE_LIST_EXPR: &str = r#"(function () {
+  function diag(info) {
+    return JSON.stringify(Object.assign({ vs_error: true }, info));
+  }
   try {
-    var token = new URL(location.href).searchParams.get("token") || "";
+    var url = location.href || "";
+    var token = "";
+    try {
+      token = new URL(url).searchParams.get("token") || "";
+    } catch (e) {
+      return diag({ reason: "url_parse", url: url, message: String(e) });
+    }
     var xhr = new XMLHttpRequest();
     xhr.open(
       "GET",
@@ -22,9 +31,19 @@ const VOICE_LIST_EXPR: &str = r#"(function () {
       false
     );
     xhr.send();
-    return xhr.responseText;
+    var text = xhr.responseText || "";
+    if (xhr.status === 200 && text.charAt(0) === "{") {
+      return text;
+    }
+    return diag({
+      reason: "non_json",
+      url: url,
+      token: token,
+      status: xhr.status,
+      body: text.slice(0, 200)
+    });
   } catch (e) {
-    return JSON.stringify({ vs_error: String(e) });
+    return diag({ reason: "exception", url: location.href || "", message: String(e) });
   }
 })()"#;
 
@@ -146,6 +165,12 @@ async fn fetch_backend_voice_list_windows(app: AppHandle) -> Result<String, Stri
 fn parse_evaluate_response(response_json: &str) -> Result<String, String> {
     let value: serde_json::Value = serde_json::from_str(response_json)
         .map_err(|err| format!("解析后台同步响应失败：{err}"))?;
+    if let Some(exception) = value
+        .get("exceptionDetails")
+        .or_else(|| value.get("result").and_then(|result| result.get("exceptionDetails")))
+    {
+        return Err(format!("后台页面脚本异常：{exception}"));
+    }
     match value
         .get("result")
         .and_then(|result| result.get("result"))
@@ -153,6 +178,39 @@ fn parse_evaluate_response(response_json: &str) -> Result<String, String> {
     {
         Some(serde_json::Value::String(text)) => Ok(text.clone()),
         Some(other) => Ok(other.to_string()),
-        None => Err("后台同步未返回数据（可能未登录或页面未就绪）".to_string()),
+        None => {
+            let snippet = response_json.chars().take(300).collect::<String>();
+            Err(format!("后台同步未返回数据，原始响应：{snippet}"))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_evaluate_response;
+
+    #[test]
+    fn evaluate_response_extracts_string_value() {
+        let response = r#"{"id":1,"result":{"result":{"type":"string","value":"{\"file_item\":[]}"}}}"#;
+        assert_eq!(
+            parse_evaluate_response(response).unwrap(),
+            r#"{"file_item":[]}"#
+        );
+    }
+
+    #[test]
+    fn evaluate_response_reports_script_exception() {
+        let response = r#"{"id":1,"result":{"exceptionDetails":{"text":"Uncaught"}}}"#;
+        let error = parse_evaluate_response(response).unwrap_err();
+        assert!(error.contains("脚本异常"));
+        assert!(error.contains("Uncaught"));
+    }
+
+    #[test]
+    fn evaluate_response_reports_missing_value_with_snippet() {
+        let response = r#"{"id":1,"result":{"type":"undefined"}}"#;
+        let error = parse_evaluate_response(response).unwrap_err();
+        assert!(error.contains("后台同步未返回数据"));
+        assert!(error.contains("undefined"));
     }
 }
