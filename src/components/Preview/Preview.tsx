@@ -247,22 +247,26 @@ const Preview = forwardRef<PreviewHandle, Props>(
       }
     }, [html]);
 
-    // 素材库音频在本地预览不播放：mpvoice 自定义元素在 WebView 里渲染为空，
+    // 素材库音频在本地预览不播放：自定义音频元素在 WebView 里渲染为空，
     // 改为标题 + 时长 + 播放按钮样式的占位卡片；节点保留在 DOM，导出时由
     // stripPreviewArtifacts 清理占位并还原。
     useEffect(() => {
       const root = document.getElementById(ARTICLE_ROOT_ID);
       if (!root) return;
-      for (const voice of Array.from(root.querySelectorAll<HTMLElement>("mpvoice.js_editor_audio"))) {
+      for (const voice of Array.from(root.querySelectorAll<HTMLElement>("mp-common-mpaudio, mpvoice.js_editor_audio"))) {
         if (voice.dataset.vsAudioHidden === "true") continue;
         voice.dataset.vsAudioHidden = "true";
         const name = voice.getAttribute("name") ?? "音频";
         const playLength = voice.getAttribute("play_length") ?? "";
         const author = voice.getAttribute("author") ?? "";
+        const cover = voice.getAttribute("cover") ?? "";
         const placeholder = document.createElement("div");
         placeholder.className = "vs-audio-placeholder";
         placeholder.setAttribute("role", "img");
         placeholder.setAttribute("aria-label", `素材库音频：${name}`);
+        if (cover) {
+          placeholder.style.backgroundImage = `url("${cover}")`;
+        }
         const play = document.createElement("span");
         play.className = "vs-audio-placeholder-play";
         play.setAttribute("aria-hidden", "true");

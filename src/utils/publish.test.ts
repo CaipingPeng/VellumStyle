@@ -195,24 +195,27 @@ test("parseVoiceCode 兼容老版 mpvoice 与新版 js_editor_audio 源码", () 
   assert.equal(parseVoiceCode("<p>没有音频代码</p>"), null);
 });
 
-test("formatVoiceMarkup 生成微信可发布的 mpvoice 标签", () => {
+test("formatVoiceMarkup 生成带封面的 mp-common-mpaudio 标签", () => {
   const html = formatVoiceMarkup({
     voiceEncodeFileid: "Mzk0NTMyNzk3N18xMDAwMDI1MzA=",
     name: "测试音频",
     playLength: "132000",
     src: "/cgi-bin/readtemplate?t=tmpl/audio_tmpl&name=%E6%B5%8B%E8%AF%95%E9%9F%B3%E9%A2%91&play_length=02:12",
+    coverUrl: "https://wx.qlogo.cn/mmopen/example/0",
     isaac2: "1",
     lowSize: "257.96",
     sourceSize: "258",
     highSize: "1038.91",
   });
 
-  assert.match(html, /^<mpvoice class="js_editor_audio audio_iframe js_uneditable"/);
+  assert.match(html, /^<mp-common-mpaudio class="mp_common_widget"/);
+  assert.match(html, /cover="https:\/\/wx\.qlogo\.cn\/mmopen\/example\/0"/);
   assert.match(html, /voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA="/);
   assert.match(html, /name="测试音频"/);
-  assert.match(html, /play_length="132000"/);
+  assert.match(html, /play_length="02:12"/);
+  assert.match(html, /duration="132"/);
   assert.match(html, /&amp;play_length=02:12/);
-  assert.ok(html.endsWith(' data-pluginname="insertaudio"></mpvoice>'));
+  assert.ok(html.endsWith(' show-listen-later="1" data-topic_id="" data-topic_name=""></mp-common-mpaudio>'));
 });
 
 test("音频素材标识绑定在本地持久化并可取回", () => {
@@ -326,7 +329,12 @@ test("bindVoiceMaterials 按名称批量绑定素材库音频并生成可插入 
         {mediaId: "V2", name: "另一个音频", updateTime: 2},
       ],
       [
-        {name: "测试音频", voiceEncodeFileid: "Mzk0NTMyNzk3N18xMDAwMDI1MzA=", playLength: "02:12"},
+        {
+          name: "测试音频",
+          voiceEncodeFileid: "Mzk0NTMyNzk3N18xMDAwMDI1MzA=",
+          playLength: "02:12",
+          coverUrl: "https://wx.qlogo.cn/mmopen/example/0",
+        },
         {name: "未出现在素材库", voiceEncodeFileid: "QQ==", playLength: "01:00"},
       ],
     );
@@ -336,9 +344,11 @@ test("bindVoiceMaterials 按名称批量绑定素材库音频并生成可插入 
     const binding = loadVoiceBinding("V1");
     assert.ok(binding);
     assert.equal(binding.voiceEncodeFileid, "Mzk0NTMyNzk3N18xMDAwMDI1MzA=");
+    assert.equal(binding.coverUrl, "https://wx.qlogo.cn/mmopen/example/0");
     assert.match(binding.src, /name=%E6%B5%8B%E8%AF%95%E9%9F%B3%E9%A2%91/);
     assert.match(binding.src, /play_length=02:12/);
     assert.match(formatVoiceMarkup(binding), /voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA="/);
+    assert.match(formatVoiceMarkup(binding), /cover="https:\/\/wx\.qlogo\.cn\/mmopen\/example\/0"/);
   } finally {
     if (previousStorage === undefined) {
       delete (globalThis as unknown as {localStorage?: unknown}).localStorage;

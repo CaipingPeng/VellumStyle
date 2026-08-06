@@ -38,6 +38,7 @@ test("预览为素材库视频注入本地占位并在导出时还原", async ()
   assert.match(source, /vs-video-placeholder/);
   assert.match(source, /iframe\.video_iframe/);
   assert.match(source, /vsVideoHidden/);
+  assert.match(source, /mp-common-mpaudio/);
   assert.match(source, /mpvoice\.js_editor_audio/);
   assert.match(source, /vsAudioHidden/);
   assert.match(source, /vs-audio-placeholder/);

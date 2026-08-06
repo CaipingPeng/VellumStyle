@@ -1412,6 +1412,7 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
 }
 
 .vs-audio-placeholder {
+  position: relative;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -1423,7 +1424,23 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg-secondary);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
   color: var(--text);
+}
+
+.vs-audio-placeholder::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.vs-audio-placeholder > * {
+  position: relative;
+  z-index: 1;
 }
 
 .vs-audio-placeholder-play {

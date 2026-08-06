@@ -317,7 +317,7 @@ test("音频页签列出素材库音频，已绑定标识的音频可直接插�
     act(() => insert.click());
 
     assert.equal(voicePicked.length, 1);
-    assert.match(voicePicked[0][0], /^<mpvoice /);
+    assert.match(voicePicked[0][0], /^<mp-common-mpaudio /);
     assert.match(voicePicked[0][0], /voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA="/);
     assert.equal(closed, 1);
   } finally {

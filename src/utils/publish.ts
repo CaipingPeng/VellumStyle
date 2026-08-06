@@ -72,6 +72,7 @@ export interface VoiceCodeInfo {
   name: string;
   playLength: string;
   src: string;
+  coverUrl?: string;
   isaac2?: string;
   lowSize?: string;
   sourceSize?: string;
@@ -244,6 +245,32 @@ export function saveVoiceBinding(mediaId: string, info: VoiceCodeInfo): void {
   }
 }
 
+// 时长统一为 mm:ss 展示值：毫秒转 mm:ss，已是 mm:ss 则原样返回。
+function voicePlayLengthLabel(value: string): string {
+  const raw = value.trim();
+  if (!raw) return "";
+  if (!/^\d+$/.test(raw)) return raw;
+  const totalSeconds = Math.round(Number(raw) / 1000);
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return raw;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+// 从毫秒或 mm:ss 计算秒数（用于 mp-common-mpaudio 的 duration 属性）。
+function voiceDurationSeconds(value: string): string | undefined {
+  const raw = value.trim();
+  if (!raw) return undefined;
+  if (/^\d+$/.test(raw)) {
+    const seconds = Math.round(Number(raw) / 1000);
+    return Number.isFinite(seconds) && seconds > 0 ? String(seconds) : undefined;
+  }
+  const match = raw.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return undefined;
+  const seconds = Number(match[1]) * 60 + Number(match[2]);
+  return seconds > 0 ? String(seconds) : undefined;
+}
+
 // 公众号后台「素材库 → 音频」列表接口响应里的音频字段（用户从浏览器
 // Network 复制），携带官方 API 不提供的 voice_encode_fileid。
 export interface VoiceBackendCandidate {
@@ -331,6 +358,7 @@ export function bindVoiceMaterials(
       name: candidate.name,
       playLength: candidate.playLength,
       src: `/cgi-bin/readtemplate?t=tmpl/audio_tmpl&name=${encodeURIComponent(candidate.name)}&play_length=${candidate.playLength}`,
+      coverUrl: candidate.coverUrl,
       lowSize: candidate.lowSize,
       sourceSize: candidate.sourceSize,
       highSize: candidate.highSize,
@@ -359,6 +387,7 @@ export function parseVoiceCode(source: string): VoiceCodeInfo | null {
     name,
     playLength,
     src,
+    coverUrl: node.getAttribute("cover")?.trim() || undefined,
     isaac2: node.getAttribute("isaac2")?.trim() || undefined,
     lowSize: node.getAttribute("low_size")?.trim() || undefined,
     sourceSize: node.getAttribute("source_size")?.trim() || undefined,
@@ -367,22 +396,27 @@ export function parseVoiceCode(source: string): VoiceCodeInfo | null {
   };
 }
 
-// 生成微信图文可发布的 mpvoice 标签（实测 draft/add 原样保留并可播放）。
+// 生成微信图文可发布的 mp-common-mpaudio 标签（官方新版音频卡片格式，
+// 实测 draft/add 原样保留 cover/fileid 并可播放）。
 export function formatVoiceMarkup(info: VoiceCodeInfo): string {
   const attr = (name: string, value: string | undefined) =>
     value ? ` ${name}="${escapeHtmlAttribute(value)}"` : "";
+  const playLength = voicePlayLengthLabel(info.playLength);
+  const duration = voiceDurationSeconds(info.playLength);
   return (
-    `<mpvoice class="js_editor_audio audio_iframe js_uneditable"` +
+    `<mp-common-mpaudio class="mp_common_widget"` +
     attr("src", info.src) +
+    attr("cover", info.coverUrl) +
+    attr("author", info.author) +
     attr("isaac2", info.isaac2) +
     attr("low_size", info.lowSize) +
     attr("source_size", info.sourceSize) +
     attr("high_size", info.highSize) +
     attr("name", info.name) +
-    attr("play_length", info.playLength) +
-    attr("author", info.author) +
+    attr("play_length", playLength) +
+    attr("duration", duration) +
     attr("voice_encode_fileid", info.voiceEncodeFileid) +
-    ' data-pluginname="insertaudio"></mpvoice>'
+    ' show-listen-later="1" data-topic_id="" data-topic_name=""></mp-common-mpaudio>'
   );
 }
 

@@ -85,6 +85,17 @@ test("素材库音频 mpvoice 标签与标识属性在渲染后保留", () => {
   assert.match(html, /play_length="132000"/);
 });
 
+test("素材库音频 mp-common-mpaudio 组件与封面在渲染后保留", () => {
+  const html = render(
+    '<mp-common-mpaudio src="/cgi-bin/readtemplate?t=tmpl/audio_tmpl&amp;name=%E6%B5%8B%E8%AF%95%E9%9F%B3%E9%A2%91&amp;play_length=02:12" cover="https://wx.qlogo.cn/mmopen/example/0" author="时代编译日志" isaac2="1" low_size="257.96" source_size="258" high_size="1038.91" name="测试音频" play_length="02:12" duration="132" show-listen-later="1" data-topic_id="" data-topic_name="" voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA=" class="mp_common_widget"></mp-common-mpaudio>',
+  );
+
+  assert.match(html, /<mp-common-mpaudio /);
+  assert.match(html, /cover="https:\/\/wx\.qlogo\.cn\/mmopen\/example\/0"/);
+  assert.match(html, /voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA="/);
+  assert.match(html, /duration="132"/);
+});
+
 test("浏览器复制的编码中文 URL 在脚注中解码为可读中文", () => {
   const html = render("[喜羊羊案](https://example.com/%E2%80%9C%E5%96%9C%E7%BE%8A%E7%BE%8A%E6%9A%B4%E5%8A%9B%E2%80%9D%E6%A1%88)");
 
