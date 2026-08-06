@@ -344,44 +344,29 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
   const insertSelectedVoice = async () => {
     if (!canInsert || !selectedVoice || voiceBindingBusy) return;
     let binding = loadVoiceBinding(selectedVoice.mediaId);
-    if (binding && !binding.coverUrl) {
-      // 旧绑定缺少封面：静默尝试一次后台同步补充，失败不打断插入
+    // 未绑定或绑定缺封面（旧绑定数据不完整）都视为需要重新同步：
+    // 静默触发后台同步（未登录则打开后台窗口等待登录），成功后拿到
+    // fileid 与封面再插入。
+    if (!binding || !binding.coverUrl) {
+      setVoiceBindingBusy(true);
       try {
-        const response = await fetchBackendVoiceList();
-        const candidates = parseVoiceBackendResponse(response);
-        if (candidates.length > 0 && voiceItems.length > 0) {
-          bindVoiceMaterials(voiceItems, candidates);
-          binding = loadVoiceBinding(selectedVoice.mediaId) ?? binding;
+        const bound = await bindVoiceFromBackend();
+        if (!bound) return;
+        binding = loadVoiceBinding(selectedVoice.mediaId);
+        if (!binding) {
+          toast.show("同步完成但未匹配到当前音频，请重新加载音频素材后重试", "error");
+          return;
         }
-      } catch {
-        // 忽略：继续用现有绑定插入，微信端仍会显示公众号头像封面
-      }
-    }
-    if (binding) {
-      onPickVoices?.([formatVoiceMarkup(binding)]);
-      toast.show(`已插入「${selectedVoice.name}」`, "info");
-      onClose();
-      return;
-    }
-
-    // 未绑定：静默触发后台同步（未登录则打开后台窗口等待登录），成功后插入
-    setVoiceBindingBusy(true);
-    try {
-      const bound = await bindVoiceFromBackend();
-      if (!bound) return;
-      const latest = loadVoiceBinding(selectedVoice.mediaId);
-      if (!latest) {
-        toast.show("同步完成但未匹配到当前音频，请重新加载音频素材后重试", "error");
+      } catch (error) {
+        toast.show(`音频同步失败：${errorMessage(error)}`, "error");
         return;
+      } finally {
+        setVoiceBindingBusy(false);
       }
-      onPickVoices?.([formatVoiceMarkup(latest)]);
-      toast.show(`已插入「${selectedVoice.name}」`, "info");
-      onClose();
-    } catch (error) {
-      toast.show(`音频同步失败：${errorMessage(error)}`, "error");
-    } finally {
-      setVoiceBindingBusy(false);
     }
+    onPickVoices?.([formatVoiceMarkup(binding)]);
+    toast.show(`已插入「${selectedVoice.name}」`, "info");
+    onClose();
   };
 
   // 静默拉取后台音频列表并绑定全部素材库音频；后台窗口未打开时先打开并等待登录。
