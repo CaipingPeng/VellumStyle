@@ -317,6 +317,113 @@ fn remoticon_cdn_url_expr(
     )
 }
 
+/// 在后台窗口上下文执行注入脚本（Windows），非 Windows 返回平台不支持提示。
+async fn eval_backend_expr(app: AppHandle, expression: String, unsupported_hint: &str) -> Result<String, String> {
+    #[cfg(windows)]
+    {
+        eval_in_backend_window(app, expression).await
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+        let _ = expression;
+        Err(format!("{unsupported_hint}目前仅支持 Windows"))
+    }
+}
+
+/// 获取手机传图二维码：返回 get_wxa_qrcode 原始 JSON（qrcode_uuid + qrcode_tmp_url）。
+#[tauri::command]
+pub async fn get_phone_upload_qrcode(app: AppHandle) -> Result<String, String> {
+    eval_backend_expr(app, phone_upload_qrcode_expr(), "手机传图").await
+}
+
+/// 轮询手机扫码上传结果：返回 get_upload_pic_info_list 原始 JSON（upload_pic_info_list）。
+#[tauri::command]
+pub async fn get_phone_upload_pic_list(app: AppHandle, qrcode_uuid: String) -> Result<String, String> {
+    eval_backend_expr(
+        app,
+        phone_upload_pic_list_expr(&qrcode_uuid),
+        "手机传图",
+    )
+    .await
+}
+
+/// 确认保存手机上传的图片：返回 confirm_save 原始 JSON（fileid + cdn_url）。
+/// data 为前端组装的完整 JSON 字符串（qrcode_uuid + pic_info_list + seq + svr_time）。
+#[tauri::command]
+pub async fn confirm_phone_upload_pic(app: AppHandle, data: String) -> Result<String, String> {
+    eval_backend_expr(app, phone_upload_confirm_expr(&data), "手机传图").await
+}
+
+fn phone_upload_qrcode_expr() -> String {
+    r#"(function () {
+      try {
+        var token = new URL(location.href).searchParams.get("token") || "";
+        var fp = "";
+        try { fp = window.fingerprint || ""; } catch (e) {}
+        var url =
+          "/cgi-bin/phoneuploadpic?action=get_wxa_qrcode&count=20&fingerprint=" +
+          encodeURIComponent(fp) + "&token=" + encodeURIComponent(token) +
+          "&lang=zh_CN&f=json&ajax=1";
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", url, false);
+        xhr.send();
+        return xhr.responseText;
+      } catch (e) {
+        return JSON.stringify({ vs_error: String(e) });
+      }
+    })()"#
+        .to_string()
+}
+
+fn phone_upload_pic_list_expr(qrcode_uuid: &str) -> String {
+    let enc_uuid = urlencoding::encode(qrcode_uuid);
+    format!(
+        r#"(function () {{
+          try {{
+            var token = new URL(location.href).searchParams.get("token") || "";
+            var fp = "";
+            try {{ fp = window.fingerprint || ""; }} catch (e) {{}}
+            var url =
+              "/cgi-bin/phoneuploadpic?action=get_upload_pic_info_list&qrcode_uuid={uuid}&fingerprint=" +
+              encodeURIComponent(fp) + "&token=" + encodeURIComponent(token) +
+              "&lang=zh_CN&f=json&ajax=1";
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, false);
+            xhr.send();
+            return xhr.responseText;
+          }} catch (e) {{
+            return JSON.stringify({{ vs_error: String(e) }});
+          }}
+        }})()"#,
+        uuid = enc_uuid,
+    )
+}
+
+fn phone_upload_confirm_expr(data: &str) -> String {
+    let enc_data = urlencoding::encode(data);
+    format!(
+        r#"(function () {{
+          try {{
+            var token = new URL(location.href).searchParams.get("token") || "";
+            var fp = "";
+            try {{ fp = window.fingerprint || ""; }} catch (e) {{}}
+            var body =
+              "data={data}&fingerprint=" + encodeURIComponent(fp) + "&token=" +
+              encodeURIComponent(token) + "&lang=zh_CN&f=json&ajax=1";
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/cgi-bin/phoneuploadpic?action=confirm_save", false);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+            xhr.send(body);
+            return xhr.responseText;
+          }} catch (e) {{
+            return JSON.stringify({{ vs_error: String(e) }});
+          }}
+        }})()"#,
+        data = enc_data,
+    )
+}
+
 fn parse_evaluate_response(response_json: &str) -> Result<String, String> {
     let value: serde_json::Value = serde_json::from_str(response_json)
         .map_err(|err| format!("解析后台同步响应失败：{err}"))?;
@@ -341,7 +448,10 @@ fn parse_evaluate_response(response_json: &str) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_evaluate_response, remoticon_cdn_url_expr};
+    use super::{
+        parse_evaluate_response, phone_upload_confirm_expr, phone_upload_pic_list_expr,
+        phone_upload_qrcode_expr, remoticon_cdn_url_expr,
+    };
 
     #[test]
     fn evaluate_response_extracts_string_value() {
@@ -392,5 +502,28 @@ mod tests {
         );
         assert!(gen_expr.contains("emoticonType=1"));
         assert!(gen_expr.contains("aesKey="));
+    }
+
+    #[test]
+    fn phone_upload_qrcode_expr_requests_wxa_qrcode() {
+        let expr = phone_upload_qrcode_expr();
+        assert!(expr.contains("action=get_wxa_qrcode"));
+        assert!(expr.contains("count=20"));
+        assert!(expr.contains("lang=zh_CN&f=json&ajax=1"));
+    }
+
+    #[test]
+    fn phone_upload_pic_list_expr_encodes_uuid() {
+        let expr = phone_upload_pic_list_expr("aeaf4a5f9fad864e9f9a45625320301b");
+        assert!(expr.contains("action=get_upload_pic_info_list"));
+        assert!(expr.contains("qrcode_uuid=aeaf4a5f9fad864e9f9a45625320301b"));
+    }
+
+    #[test]
+    fn phone_upload_confirm_expr_encodes_data() {
+        let data = r#"{"qrcode_uuid":"u1","pic_info_list":[],"seq":123,"svr_time":"456"}"#;
+        let expr = phone_upload_confirm_expr(data);
+        assert!(expr.contains("action=confirm_save"));
+        assert!(expr.contains("data=%7B%22qrcode_uuid%22%3A%22u1%22"));
     }
 }

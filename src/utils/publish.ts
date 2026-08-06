@@ -257,6 +257,21 @@ export function getEmojiCdnUrl(
   });
 }
 
+/// 获取手机传图二维码（后台窗口同步执行），返回原始 JSON 文本。
+export function getPhoneUploadQrcode(): Promise<string> {
+  return invoke<string>("get_phone_upload_qrcode");
+}
+
+/// 轮询手机扫码上传结果（后台窗口同步执行），返回原始 JSON 文本。
+export function getPhoneUploadPicList(qrcodeUuid: string): Promise<string> {
+  return invoke<string>("get_phone_upload_pic_list", {qrcodeUuid});
+}
+
+/// 确认保存手机上传的图片（后台窗口同步执行），返回原始 JSON 文本。
+export function confirmPhoneUploadPics(data: string): Promise<string> {
+  return invoke<string>("confirm_phone_upload_pic", {data});
+}
+
 const VIDEO_MEDIA_KEY = "vs-video-media-ids";
 
 // 本地保存 vid → media_id 映射，供预览播放取流使用（iframe 不能携带 media_id，

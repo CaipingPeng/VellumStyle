@@ -15,6 +15,7 @@ import UpdatePromptDialog from "./components/Update/UpdatePromptDialog.tsx";
 import IpChangedDialog from "./components/Update/IpChangedDialog.tsx";
 import ImageMaterialPickerDialog from "./components/Upload/ImageMaterialPickerDialog.tsx";
 import EmojiPickerDialog from "./components/Upload/EmojiPickerDialog.tsx";
+import PhoneUploadDialog from "./components/Upload/PhoneUploadDialog.tsx";
 import ArticleTaskLog from "./components/Tasks/ArticleTaskLog.tsx";
 import IconButton from "./components/ui/IconButton.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
@@ -57,7 +58,7 @@ import {
 import {defaultWindowIcon} from "@tauri-apps/api/app";
 import {invoke} from "@tauri-apps/api/core";
 import {getCurrentWindow} from "@tauri-apps/api/window";
-import {Images, ListTree, PanelLeft} from "lucide-react";
+import {Images, ListTree, PanelLeft, Smartphone} from "lucide-react";
 import defaultContent from "./content.md?raw";
 import {applyAppearanceMode} from "./appearance/appearanceMode.ts";
 import {applyColorScheme} from "./appearance/colorScheme.ts";
@@ -224,6 +225,7 @@ export default function App() {
   const [ipChanged, setIpChanged] = useState<{previousIp: string; currentIp: string} | null>(null);
   const [imageMaterialPickerOpen, setImageMaterialPickerOpen] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [phoneUploadOpen, setPhoneUploadOpen] = useState(false);
   const [, setCodeThemesVersion] = useState(0);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
@@ -748,6 +750,15 @@ export default function App() {
           >
             <Smile size={16} />
           </IconButton>
+          <IconButton
+            variant="surface"
+            active={phoneUploadOpen}
+            title="手机传图"
+            aria-pressed={phoneUploadOpen}
+            onClick={() => setPhoneUploadOpen(true)}
+          >
+            <Smartphone size={16} />
+          </IconButton>
         </div>
         <MainToolbar
           onOpenSettings={openSettings}
@@ -940,6 +951,13 @@ export default function App() {
         open={emojiPickerOpen}
         canInsert={Boolean(currentDocPath)}
         onClose={() => setEmojiPickerOpen(false)}
+        onPick={handlePickEmoji}
+        onNeedSettings={handleNeedSettings}
+      />
+      <PhoneUploadDialog
+        open={phoneUploadOpen}
+        canInsert={Boolean(currentDocPath)}
+        onClose={() => setPhoneUploadOpen(false)}
         onPick={handlePickEmoji}
         onNeedSettings={handleNeedSettings}
       />
