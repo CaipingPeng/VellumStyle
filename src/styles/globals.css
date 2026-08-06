@@ -1503,3 +1503,11 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
   border-bottom: 7px solid transparent;
   border-left: 11px solid #1a1b1c;
 }
+
+.vs-audio-placeholder-play.is-playing::after {
+  width: 4px;
+  height: 14px;
+  border: 0;
+  background: #1a1b1c;
+  box-shadow: 8px 0 0 #1a1b1c;
+}
