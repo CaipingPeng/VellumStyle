@@ -46,6 +46,9 @@ export default function AudioCodeBindDialog({
       }
     >
       <div className="space-y-3 text-sm leading-6 text-text-secondary">
+        <p className="rounded-md border border-accent/25 bg-accent-subtle px-3 py-2 text-accent">
+          更省事：先关闭本窗口，点击素材库顶部的「后台同步」，登录一次即可自动绑定全部音频，之后直接插入。
+        </p>
         <p>
           微信官方接口不提供音频素材的播放标识，需要一次该音频在后台源码模式下的代码。请在公众号后台完成以下操作：
         </p>

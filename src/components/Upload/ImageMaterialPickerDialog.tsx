@@ -127,6 +127,14 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
     [voiceItems, selectedVoiceId],
   );
 
+  const boundVoiceIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const item of voiceItems) {
+      if (loadVoiceBinding(item.mediaId)) ids.add(item.mediaId);
+    }
+    return ids;
+  }, [voiceItems]);
+
   const loadMaterialLibrary = useCallback(async (offset = 0, session = librarySessionRef.current) => {
     if (materialLoadingRef.current) return;
     materialLoadingRef.current = true;
@@ -321,6 +329,11 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
     if (!canInsert || !selectedVoice) return;
     const binding = loadVoiceBinding(selectedVoice.mediaId);
     if (!binding) {
+      toast.show(
+        `「${selectedVoice.name}」尚未绑定，可先点「后台同步」一次绑定全部，或粘贴音频代码`,
+        "info",
+        4000,
+      );
       setVoiceBindError(null);
       setVoiceBindOpen(true);
       return;
@@ -415,8 +428,12 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
         toast.show("素材库音频列表尚未加载，请先加载音频素材再同步", "error");
         return;
       }
-      const bound = bindVoiceMaterials(voiceItems, candidates);
-      toast.show(
+    const bound = bindVoiceMaterials(voiceItems, candidates);
+    if (bound > 0) {
+      // 绑定写入 localStorage，刷新引用让卡片上的已绑定状态更新
+      setVoiceItems((current) => [...current]);
+    }
+    toast.show(
         bound > 0
           ? bound === candidates.length
             ? `已从后台同步并绑定 ${bound} 个音频`
@@ -1039,7 +1056,12 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
                               <AudioLines size={20} />
                             </span>
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[13px] font-medium leading-5 text-text-secondary">{item.name}</span>
+                              <span className="flex min-w-0 items-center gap-1.5">
+                                <span className="min-w-0 truncate text-[13px] font-medium leading-5 text-text-secondary">{item.name}</span>
+                                {!boundVoiceIds.has(item.mediaId) && (
+                                  <span className="flex-none rounded-sm bg-bg-tertiary px-1 py-px text-[10px] leading-4 text-text-muted">未绑定</span>
+                                )}
+                              </span>
                               <span className="mt-0.5 block text-[11px] leading-4 text-text-muted">{formatMaterialTime(item.updateTime)}</span>
                             </span>
                             {selected && (
