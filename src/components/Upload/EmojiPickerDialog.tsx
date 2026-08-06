@@ -2,7 +2,6 @@ import {useCallback, useEffect, useRef, useState} from "react";
 import {Check, Search, Smile} from "lucide-react";
 import {backendWindowUrl, getEmojiCdnUrl, openWechatBackendHidden, searchRemoticon, showWechatBackend} from "../../utils/publish.ts";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
-import {uploadRemoteImage} from "../../utils/upload.ts";
 import {WECHAT_SMILEY_EMOJIS} from "../../data/wechatSmileyEmojis.ts";
 import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
@@ -296,9 +295,8 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
         markdowns.push(`![${item.docId}](${cdnUrl})`);
       }
       for (const smiley of selectedSmileys) {
-        // 经典微表情是微信官方 CDN 图片，下载后上传为永久链接再插入
-        const mmbizUrl = await uploadRemoteImage(smiley.url, "正文图片");
-        markdowns.push(`![${smiley.title}](${mmbizUrl})`);
+        // 与官方编辑器一致：直接引用微信官方表情资源地址
+        markdowns.push(`![${smiley.title}](${smiley.url})`);
       }
       onPick(markdowns.join(" "));
       toast.show(`已插入 ${markdowns.length} 个表情`, "info");

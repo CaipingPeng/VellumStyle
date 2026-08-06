@@ -12,7 +12,7 @@ test("微信默认微表情数据完整且 URL 格式正确", () => {
     assert.match(emoji.title, /^\[.+\]$/, `${emoji.name} 的 title 应为 [xxx] 形式`);
     assert.match(
       emoji.url,
-      /^https:\/\/res\.wx\.qq\.com\/mpres\/htmledition\/images\/icon\/emotion\/\d+\.gif$/,
+      /^https:\/\/res\.wx\.qq\.com\/t\/wx_fed\/we-emoji\/res\/assets\/Expression\/Expression_\d+@2x\.png$/,
       `${emoji.name} 的 URL 格式异常：${emoji.url}`,
     );
     assert.ok(!names.has(emoji.name), `name 重复：${emoji.name}`);
