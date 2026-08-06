@@ -326,15 +326,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       if (!isCurrentSession()) return;
       stopLocalMediaPlayback();
 
-      const beforePaused = Array.from(
-        document.querySelectorAll<HTMLVideoElement>(".vs-video-placeholder-player"),
-      ).map((video) => video.paused);
-      console.log("[发布诊断] 序列化前预览 video paused 状态:", beforePaused);
       const html = solveDraftHtml();
-      const afterPaused = Array.from(
-        document.querySelectorAll<HTMLVideoElement>(".vs-video-placeholder-player"),
-      ).map((video) => video.paused);
-      console.log("[发布诊断] 序列化后预览 video paused 状态:", afterPaused);
       if (!html.trim()) {
         toast.show("正文为空，无法发布", "error");
         return;

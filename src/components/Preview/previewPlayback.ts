@@ -6,24 +6,6 @@ import {toast} from "../Toast/toast.ts";
 let playingVoiceAudio: HTMLAudioElement | null = null;
 let playingVoicePlaceholder: HTMLElement | null = null;
 
-// 临时诊断：记录任何 play 事件（用户点击 vs 发布流程自动触发），
-// 用于定位"发布后后台又开始播放"的触发源。
-if (typeof document !== "undefined") {
-  document.addEventListener(
-    "play",
-    (event) => {
-      const target = event.target as HTMLElement | null;
-      console.log(
-        "[预览播放诊断] play 触发:",
-        target?.className || target?.tagName || "unknown",
-        "at",
-        new Date().toISOString(),
-      );
-    },
-    true,
-  );
-}
-
 function errorMessage(error: unknown): string {
   return typeof error === "string" ? error : (error as Error)?.message || "未知错误";
 }
