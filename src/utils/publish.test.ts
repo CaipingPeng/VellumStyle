@@ -20,6 +20,7 @@ import {
   parseVoiceCode,
   saveVoiceBinding,
   saveVideoMediaId,
+  searchRemoticon,
 } from "./publish.ts";
 
 test("listImageMaterials 调用永久图片素材库命令并保留分页参数", async () => {
@@ -434,6 +435,29 @@ test("视频 vid 到 media_id 的本地映射可存取", () => {
       delete (globalThis as unknown as {localStorage?: unknown}).localStorage;
     } else {
       Object.defineProperty(globalThis, "localStorage", previousStorage);
+    }
+  }
+});
+
+test("searchRemoticon 调用表情搜索命令并保留参数", async () => {
+  const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+  let calledWith: {cmd: string; args: unknown} | null = null;
+  (window as unknown as {__TAURI_INTERNALS__: {invoke: (cmd: string, args: unknown) => Promise<unknown>}}).__TAURI_INTERNALS__ = {
+    invoke: async (cmd, args) => {
+      calledWith = {cmd, args};
+      return '{"base_resp":{"ret":0}}';
+    },
+  };
+
+  try {
+    const response = await searchRemoticon("不嘻嘻", 40, 0);
+    assert.deepEqual(calledWith, {cmd: "search_remoticon", args: {query: "不嘻嘻", size: 40, offset: 0}});
+    assert.match(response, /base_resp/);
+  } finally {
+    if (previousInternals === undefined) {
+      delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+    } else {
+      (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
     }
   }
 });

@@ -223,6 +223,12 @@ export function getVideoPlayUrl(mediaId: string): Promise<string> {
   return invoke<string>("get_video_play_url", {mediaId});
 }
 
+/// 在后台窗口上下文里搜索微信表情，返回原始 JSON 响应文本。
+/// 窗口未打开时命令返回 "WECHAT_BACKEND_NOT_OPENED"。
+export function searchRemoticon(query: string, size: number, offset: number): Promise<string> {
+  return invoke<string>("search_remoticon", {query, size, offset});
+}
+
 const VIDEO_MEDIA_KEY = "vs-video-media-ids";
 
 // 本地保存 vid → media_id 映射，供预览播放取流使用（iframe 不能携带 media_id，

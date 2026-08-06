@@ -95,7 +95,7 @@ pub async fn close_wechat_backend(app: AppHandle) -> Result<(), String> {
 pub async fn fetch_backend_voice_list(app: AppHandle) -> Result<String, String> {
     #[cfg(windows)]
     {
-        fetch_backend_voice_list_windows(app).await
+        eval_in_backend_window(app, VOICE_LIST_EXPR.to_string()).await
     }
     #[cfg(not(windows))]
     {
@@ -105,7 +105,7 @@ pub async fn fetch_backend_voice_list(app: AppHandle) -> Result<String, String> 
 }
 
 #[cfg(windows)]
-async fn fetch_backend_voice_list_windows(app: AppHandle) -> Result<String, String> {
+async fn eval_in_backend_window(app: AppHandle, expression: String) -> Result<String, String> {
     use tokio::sync::oneshot;
     use webview2_com::{
         Microsoft::Web::WebView2::Win32::ICoreWebView2,
@@ -148,7 +148,7 @@ async fn fetch_backend_voice_list_windows(app: AppHandle) -> Result<String, Stri
                 let method = CoTaskMemPWSTR::from("Runtime.evaluate");
                 let params = CoTaskMemPWSTR::from(
                     serde_json::json!({
-                        "expression": VOICE_LIST_EXPR,
+                        "expression": expression,
                         "returnByValue": true,
                     })
                     .to_string()
@@ -178,16 +178,53 @@ async fn fetch_backend_voice_list_windows(app: AppHandle) -> Result<String, Stri
         })
         .map_err(|err| format!("访问后台窗口 WebView 失败：{err}"))?;
 
-    let result = rx
-        .await
-        .unwrap_or_else(|_| Err("后台同步任务意外中断".to_string()));
-    if let Ok(response) = &result {
-        println!(
-            "[wechat-backend] 音频列表接口完整返回（{} 字符）：\n{response}",
-            response.chars().count()
-        );
+    rx.await
+        .unwrap_or_else(|_| Err("后台同步任务意外中断".to_string()))
+}
+
+/// 在后台窗口上下文里搜索微信表情（operateremoticon?action=search_all）。
+/// 返回原始 JSON 响应文本；窗口未打开时返回 "WECHAT_BACKEND_NOT_OPENED"。
+#[tauri::command]
+pub async fn search_remoticon(
+    app: AppHandle,
+    query: String,
+    size: u32,
+    offset: u32,
+) -> Result<String, String> {
+    let expression = remoticon_search_expr(&query, size.clamp(1, 60), offset);
+    #[cfg(windows)]
+    {
+        eval_in_backend_window(app, expression).await
     }
-    result
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+        Err("表情搜索目前仅支持 Windows".into())
+    }
+}
+
+fn remoticon_search_expr(query: &str, size: u32, offset: u32) -> String {
+    let encoded_query = urlencoding::encode(query);
+    format!(
+        r#"(function () {{
+          try {{
+            var token = new URL(location.href).searchParams.get("token") || "";
+            var body =
+              "size={size}&offset={offset}&query={query}&firstFlush=1&fingerprint=&token=" +
+              encodeURIComponent(token) + "&lang=zh_CN&f=json&ajax=1";
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/cgi-bin/operateremoticon?action=search_all", false);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+            xhr.send(body);
+            return xhr.responseText;
+          }} catch (e) {{
+            return JSON.stringify({{ vs_error: String(e) }});
+          }}
+        }})()"#,
+        size = size,
+        offset = offset,
+        query = encoded_query,
+    )
 }
 
 fn parse_evaluate_response(response_json: &str) -> Result<String, String> {

@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {AnimatePresence, motion, useReducedMotion} from "framer-motion";
+import {Smile} from "lucide-react";
 import MarkdownEditor, {type MarkdownEditorHandle} from "./components/Editor/MarkdownEditor.tsx";
 import Preview, {type PreviewHandle} from "./components/Preview/Preview.tsx";
 import PreviewModeToggle from "./components/Preview/PreviewModeToggle.tsx";
@@ -13,6 +14,7 @@ import EditorWorkspacePanel from "./components/Workspace/EditorWorkspacePanel.ts
 import UpdatePromptDialog from "./components/Update/UpdatePromptDialog.tsx";
 import IpChangedDialog from "./components/Update/IpChangedDialog.tsx";
 import ImageMaterialPickerDialog from "./components/Upload/ImageMaterialPickerDialog.tsx";
+import EmojiPickerDialog from "./components/Upload/EmojiPickerDialog.tsx";
 import ArticleTaskLog from "./components/Tasks/ArticleTaskLog.tsx";
 import IconButton from "./components/ui/IconButton.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
@@ -221,6 +223,7 @@ export default function App() {
   const [activeOutlineLine, setActiveOutlineLine] = useState<number | null>(null);
   const [ipChanged, setIpChanged] = useState<{previousIp: string; currentIp: string} | null>(null);
   const [imageMaterialPickerOpen, setImageMaterialPickerOpen] = useState(false);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [, setCodeThemesVersion] = useState(0);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
@@ -390,6 +393,10 @@ export default function App() {
   const handlePickMaterialVoices = useCallback((markups: string[]) => {
     if (markups.length === 0) return;
     editorRef.current?.insertAtCursor(`\n${markups.join("\n\n")}\n`);
+  }, []);
+
+  const handlePickEmoji = useCallback((markdown: string) => {
+    editorRef.current?.insertAtCursor(markdown);
   }, []);
 
   const handleResizePreviewImage = useCallback((imageIndex: number, size: {width: string}) => {
@@ -732,6 +739,15 @@ export default function App() {
           >
             <Images size={16} />
           </IconButton>
+          <IconButton
+            variant="surface"
+            active={emojiPickerOpen}
+            title="表情"
+            aria-pressed={emojiPickerOpen}
+            onClick={() => setEmojiPickerOpen(true)}
+          >
+            <Smile size={16} />
+          </IconButton>
         </div>
         <MainToolbar
           onOpenSettings={openSettings}
@@ -918,6 +934,13 @@ export default function App() {
         onPickFlow={handlePickMaterialImageFlow}
         onPickVideos={handlePickMaterialVideos}
         onPickVoices={handlePickMaterialVoices}
+        onNeedSettings={handleNeedSettings}
+      />
+      <EmojiPickerDialog
+        open={emojiPickerOpen}
+        canInsert={Boolean(currentDocPath)}
+        onClose={() => setEmojiPickerOpen(false)}
+        onPick={handlePickEmoji}
         onNeedSettings={handleNeedSettings}
       />
       <Toaster />

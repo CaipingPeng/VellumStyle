@@ -90,6 +90,7 @@ pub fn run() {
             wechat_backend::fetch_backend_voice_list,
             wechat_backend::backend_window_url,
             wechat_backend::close_wechat_backend,
+            wechat_backend::search_remoticon,
             wechat::upload_local_image,
             wechat::upload_remote_image,
             import::pick_markdown_file,
