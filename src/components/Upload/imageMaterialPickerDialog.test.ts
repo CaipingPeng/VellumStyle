@@ -11,6 +11,7 @@ import {saveVoiceBinding} from "../../utils/publish.ts";
 test("图片素材库默认多选并通过独立命令插入或删除所选素材", async () => {
   const source = await readFile(new URL("./ImageMaterialPickerDialog.tsx", import.meta.url), "utf8");
   const confirmSource = await readFile(new URL("./DeleteMaterialConfirmDialog.tsx", import.meta.url), "utf8");
+  const audioBindSource = await readFile(new URL("./AudioCodeBindDialog.tsx", import.meta.url), "utf8");
 
   assert.match(source, /listImageMaterials/);
   assert.match(source, /listVideoMaterials/);
@@ -25,6 +26,8 @@ test("图片素材库默认多选并通过独立命令插入或删除所选素�
   assert.match(source, /视频请在公众号后台/);
   assert.match(source, /音频请在公众号后台/);
   assert.match(source, /AudioCodeBindDialog/);
+  assert.match(audioBindSource, /box-border/);
+  assert.doesNotMatch(audioBindSource, /overflow-x-auto|overflow-x: auto/);
   assert.match(source, /aria-pressed=\{selected\}/);
   assert.match(source, /onPick\(selectedItems\.map\(\(item\) => item\.url\)\)/);
   assert.match(source, /onPickFlow\(selectedItems\.map\(\(item\) => item\.url\)\)/);

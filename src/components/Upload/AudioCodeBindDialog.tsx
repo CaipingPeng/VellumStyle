@@ -53,8 +53,8 @@ export default function AudioCodeBindDialog({
           <li>新建图文 → 点工具栏「音频」插入「{audioName}」</li>
           <li>点编辑器右上角 <code className="rounded bg-bg-tertiary px-1">{"< >"}</code> 切换到源码模式</li>
           <li>
-            复制 <code className="rounded bg-bg-tertiary px-1">{"<mpvoice ...>"}</code> 或{" "}
-            <code className="rounded bg-bg-tertiary px-1">{"<section class=\"js_editor_audio ...\">"}</code> 整段，粘贴到下方
+            复制 <code className="break-all rounded bg-bg-tertiary px-1">{"<mpvoice ...>"}</code> 或{" "}
+            <code className="break-all rounded bg-bg-tertiary px-1">{"<section class=\"js_editor_audio ...\">"}</code> 整段，粘贴到下方
           </li>
         </ol>
         <textarea
@@ -63,7 +63,7 @@ export default function AudioCodeBindDialog({
           rows={5}
           spellCheck={false}
           placeholder={'<mpvoice class="js_editor_audio audio_iframe js_uneditable" ... voice_encode_fileid="..."></mpvoice>'}
-          className="block w-full resize-y rounded-md border border-border bg-bg px-3 py-2 font-mono text-xs leading-5 text-text outline-none transition-colors duration-fast placeholder:text-text-muted focus:border-[color:var(--ring)] focus:ring-2 focus:ring-[color:var(--ring)]"
+          className="box-border block w-full resize-y rounded-md border border-border bg-bg px-3 py-2 font-mono text-xs leading-5 text-text outline-none transition-colors duration-fast placeholder:text-text-muted focus:border-[color:var(--ring)] focus:ring-2 focus:ring-[color:var(--ring)]"
         />
         {error && (
           <p className="rounded-md border border-danger/25 bg-danger/5 px-3 py-2 text-danger">
