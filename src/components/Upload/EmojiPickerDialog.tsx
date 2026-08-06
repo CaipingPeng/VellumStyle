@@ -373,7 +373,9 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
         <div className="flex h-[46px] flex-none items-center justify-between gap-3 border-b border-border bg-bg-secondary px-4">
           {activeTab === "smiley" ? (
             <>
-              <span className="inline-flex h-8 flex-none items-center rounded-md bg-accent px-3 text-sm font-medium text-white">微表情</span>
+              <div className="flex h-8 min-w-0 flex-1 items-center justify-center rounded-md bg-accent">
+                <span className="text-sm font-medium text-white">微表情</span>
+              </div>
               <button
                 type="button"
                 onClick={() => switchTab("search")}
