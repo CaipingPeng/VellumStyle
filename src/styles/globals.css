@@ -954,9 +954,7 @@ html.appearance-switching .vs-skel {
   box-sizing: border-box;
   border: 1px solid rgba(109, 90, 230, 0.78);
   border-radius: 2px;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.86),
-    0 0 0 5px rgba(109, 90, 230, 0.08);
+  box-shadow: 0 0 0 5px rgba(109, 90, 230, 0.08);
   pointer-events: auto;
   transition:
     border-color var(--duration-fast) var(--ease),
@@ -965,9 +963,7 @@ html.appearance-switching .vs-skel {
 
 .vs-image-resize-overlay.is-resizing {
   border-color: var(--accent-hover);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.92),
-    0 0 0 6px rgba(109, 90, 230, 0.12);
+  box-shadow: 0 0 0 6px rgba(109, 90, 230, 0.12);
 }
 
 .vs-image-resize-size-badge {
@@ -1037,10 +1033,8 @@ html.appearance-switching .vs-skel {
   border-style: solid;
   border-width: 0;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.84);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.92),
-    0 4px 10px rgba(80, 66, 40, 0.14);
+  background: transparent;
+  box-shadow: none;
   transition:
     background-color var(--duration-fast) var(--ease),
     border-color var(--duration-fast) var(--ease),
@@ -1052,10 +1046,8 @@ html.appearance-switching .vs-skel {
 .vs-image-resize-handle:focus-visible::before,
 .vs-image-resize-handle.is-active::before {
   border-color: var(--accent-hover);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow:
-    0 0 0 3px rgba(109, 90, 230, 0.16),
-    0 8px 18px rgba(80, 66, 40, 0.18);
+  background: transparent;
+  box-shadow: 0 0 0 3px rgba(109, 90, 230, 0.16);
   transform: scale(1.08);
 }
 
