@@ -705,18 +705,6 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
                   <Button
                     type="button"
                     variant="secondary"
-                    state={syncing ? "loading" : "idle"}
-                    loadingText="同步中…"
-                    disabled={busy}
-                    title="从已登录的微信后台窗口静默拉取音频列表并自动绑定"
-                    onClick={() => void syncVoicesFromBackend()}
-                  >
-                    <CloudDownload size={14} />
-                    <span className="hidden sm:inline">后台同步</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
                     disabled={selectedItems.length === 0 || busy}
                     title="永久删除所选图片素材"
                     aria-label={`删除所选图片${selectedItems.length > 0 ? `，共 ${selectedItems.length} 张` : ""}`}
@@ -975,6 +963,18 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
                   </span>
                 </div>
                 <div className="flex flex-none items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    state={syncing ? "loading" : "idle"}
+                    loadingText="同步中…"
+                    disabled={busy}
+                    title="从已登录的微信后台窗口静默拉取音频列表并自动绑定"
+                    onClick={() => void syncVoicesFromBackend()}
+                  >
+                    <CloudDownload size={14} />
+                    <span className="hidden sm:inline">后台同步</span>
+                  </Button>
                   <Button
                     type="button"
                     variant="secondary"
