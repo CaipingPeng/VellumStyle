@@ -3,10 +3,6 @@
 
 use crate::config::load_wechat_config;
 use crate::ipc_util::request_header;
-use aes::Aes128;
-use block_padding::Pkcs7;
-use cbc::cipher::{BlockDecryptMut, KeyIvInit};
-use cbc::Decryptor;
 use image::codecs::jpeg::JpegDecoder;
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{DynamicImage, ImageDecoder, ImageEncoder, ImageFormat};
@@ -1415,31 +1411,6 @@ fn mime_from_ext(ext: &str) -> Option<&'static str> {
     }
 }
 
-// 微信 normal 表情加密格式（实测 + 社区逆向结论一致）：
-// AES-128-CBC，key 与 IV 都是响应的 aes_key 十六进制串（32 字符 = 16 字节），
-// PKCS7 填充。openssl 等价命令：
-//   openssl enc -d -aes-128-cbc -in <加密文件> -K <aeskey> -iv <aeskey>
-fn decrypt_wechat_emoji(cipher: &[u8], aes_key_hex: &str) -> Result<Vec<u8>, String> {
-    let key_hex = aes_key_hex.trim();
-    if key_hex.len() != 32 {
-        return Err("表情解密密钥格式错误（应为 32 位十六进制）".into());
-    }
-    let mut key = [0u8; 16];
-    for (index, byte) in key.iter_mut().enumerate() {
-        *byte = u8::from_str_radix(&key_hex[index * 2..index * 2 + 2], 16)
-            .map_err(|_| "表情解密密钥不是有效十六进制".to_string())?;
-    }
-    if cipher.len() < 16 || cipher.len() % 16 != 0 {
-        return Err("表情内容长度不是 16 的整数倍，无法解密".into());
-    }
-    let decryptor = Decryptor::<Aes128>::new_from_slices(&key, &key)
-        .map_err(|_| "表情解密初始化失败".to_string())?;
-    let plain = decryptor
-        .decrypt_padded_vec_mut::<Pkcs7>(cipher)
-        .map_err(|_| "表情解密失败（密钥不匹配或内容损坏）".to_string())?;
-    Ok(plain)
-}
-
 // 部分微信表情 CDN 响应不带 Content-Type 且 URL 无扩展名，
 // 直接从文件头识别图片类型。
 fn mime_from_bytes(bytes: &[u8]) -> Option<&'static str> {
@@ -1545,11 +1516,7 @@ fn ext_from_mime(mime: &str) -> &'static str {
 
 /// 带微信 Referer 拉取图片，返回 (content_type, bytes)。
 /// 供 wximg 自定义协议处理器调用，绕过防盗链。
-/// aes_key 存在时按微信 normal 表情规则解密后再返回。
-pub async fn fetch_proxied_image(
-    raw_url: &str,
-    aes_key: Option<&str>,
-) -> Result<(String, Vec<u8>), String> {
+pub async fn fetch_proxied_image(raw_url: &str) -> Result<(String, Vec<u8>), String> {
     let mut target = url::Url::parse(raw_url).map_err(|_| "bad url".to_string())?;
     let host = target.host_str().unwrap_or("");
     if !ALLOWED_IMG_HOSTS.contains(&host) {
@@ -1579,14 +1546,7 @@ pub async fn fetch_proxied_image(
         .await
         .map_err(|e| format!("read error: {e}"))?
         .to_vec();
-    let bytes = match aes_key.filter(|key| !key.trim().is_empty()) {
-        Some(key) => decrypt_wechat_emoji(&bytes, key)?,
-        None => bytes,
-    };
-    let mime = mime_from_bytes(&bytes)
-        .map(str::to_string)
-        .unwrap_or(content_type);
-    Ok((mime, bytes))
+    Ok((content_type, bytes))
 }
 
 #[derive(Deserialize)]
@@ -1853,52 +1813,11 @@ mod tests {
         extract_video_mp4_url, is_allowed_redirect_target, parse_delete_material_response,
         parse_material_page_response, parse_outbound_ip_response, parse_video_material_page_response,
         prepare_upload_for_limit, parse_voice_material_page_response, validate_remote_addresses,
-        decrypt_wechat_emoji, OUTBOUND_IP_ENDPOINTS,
+        OUTBOUND_IP_ENDPOINTS,
     };
-    use aes::Aes128;
-    use block_padding::Pkcs7;
-    use cbc::cipher::{BlockEncryptMut, KeyIvInit};
-    use cbc::Encryptor;
     use image::{DynamicImage, ImageFormat, Rgb, RgbImage, Rgba, RgbaImage};
     use std::io::Cursor;
     use std::net::SocketAddr;
-
-    fn hex_key(key_hex: &str) -> [u8; 16] {
-        let mut key = [0u8; 16];
-        for (index, byte) in key.iter_mut().enumerate() {
-            *byte = u8::from_str_radix(&key_hex[index * 2..index * 2 + 2], 16).unwrap();
-        }
-        key
-    }
-
-    #[test]
-    fn decrypts_wechat_normal_emoji_with_key_as_iv() {
-        // 真实 normal 表情（wxapp.tc.qq.com）解密后的 GIF 文件头，密钥取自接口响应的 aes_key。
-        let key_hex = "0cd0499ac22a9de26a653c89d019b24e";
-        let header: [u8; 16] = [
-            0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0xF0, 0x00, 0xF0, 0x00, 0xF7, 0x00, 0x00, 0x00,
-            0x00, 0x00,
-        ];
-        let key = hex_key(key_hex);
-        let encryptor = Encryptor::<Aes128>::new_from_slices(&key, &key).unwrap();
-        let cipher = encryptor.encrypt_padded_vec_mut::<Pkcs7>(&header);
-
-        let plain = decrypt_wechat_emoji(&cipher, key_hex).unwrap();
-        assert!(plain.starts_with(b"GIF89a"));
-        assert_eq!(&plain[..16], &header[..]);
-    }
-
-    #[test]
-    fn rejects_invalid_emoji_keys_and_lengths() {
-        let ciphertext = vec![0u8; 32];
-        assert!(decrypt_wechat_emoji(&ciphertext, "short").is_err());
-        assert!(decrypt_wechat_emoji(&ciphertext, "zz0499ac22a9de26a653c89d019b24e").is_err());
-        assert!(decrypt_wechat_emoji(&[0u8; 17], "0cd0499ac22a9de26a653c89d019b24e").is_err());
-        // 用错误密钥解密不会恢复出真实 GIF 头（可能解密失败，也可能得到乱码）
-        let other_key = "ffffffffffffffffffffffffffffffff";
-        let plain = decrypt_wechat_emoji(&ciphertext, other_key).unwrap_or_default();
-        assert!(!plain.starts_with(b"GIF89a"));
-    }
 
     fn noisy_rgb(width: u32, height: u32) -> DynamicImage {
         DynamicImage::ImageRgb8(RgbImage::from_fn(width, height, |x, y| {

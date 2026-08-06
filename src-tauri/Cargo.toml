@@ -24,9 +24,6 @@ tokio = { version = "1", features = ["sync", "fs", "macros", "net", "rt-multi-th
 http = "1"
 urlencoding = "2"
 url = "2"
-aes = "0.8"
-cbc = { version = "0.1", features = ["alloc", "block-padding"] }
-block-padding = "0.3"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 resvg = { version = "0.45.1", features = ["text"] }

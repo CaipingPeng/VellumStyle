@@ -18,7 +18,7 @@ interface EmojiItem {
   docId: string;
   emojiUrl: string;
   thumbUrl: string;
-  // normal 表情（wxapp.tc.qq.com）是 AES 加密内容，解密密钥取自接口响应；gen 明文表情无此项。
+  // normal 表情转换永久链接时，官方 get_cdn_url 需要响应的 aes_key；gen 表情无此项。
   aesKey?: string;
   // 官方 get_cdn_url 接口参数：gen=1，normal=2。
   emoticonType: number;
@@ -382,7 +382,7 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
                     }`}
                   >
                     <img
-                      src={toProxyImageUrl(item.thumbUrl, item.aesKey)}
+                      src={toProxyImageUrl(item.thumbUrl)}
                       alt=""
                       loading="lazy"
                       decoding="async"
