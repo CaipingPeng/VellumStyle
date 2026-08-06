@@ -1,0 +1,29 @@
+#article { font-size: 16px; color: rgba(55, 53, 47, 1); line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "Noto Sans SC", "Microsoft JhengHei", "Noto Sans TC", sans-serif; background-color: rgba(255, 255, 255, 1); box-sizing: border-box; padding: 0 10ch }
+#article p { font-size: 16px; color: rgba(55, 53, 47, 1); line-height: 1.6; margin: 19.2px 0 }
+#article h1 { font-size: 30px; color: rgba(26, 26, 26, 1); font-weight: 700; line-height: 1.3; letter-spacing: -0.32px; margin: 48px 0 24px; padding-top: 8px }
+#article h2 { font-size: 24px; color: rgba(46, 46, 46, 1); font-weight: 600; line-height: 1.35; letter-spacing: -0.16px; margin: 40px 0 19.2px }
+#article h3 { font-size: 20px; color: rgba(55, 53, 47, 1); font-weight: 600; line-height: 1.4; letter-spacing: -0.08px; margin: 32px 0 16px }
+#article h4 { font-size: 18px; color: rgba(90, 90, 90, 1); font-weight: 600; line-height: 1.45; margin: 28px 0 12.8px }
+#article h5 { font-size: 16px; color: rgba(110, 110, 110, 1); font-weight: 600; line-height: 1.5; margin: 24px 0 9.6px }
+#article h6 { font-size: 16px; color: rgba(120, 119, 116, 1); font-weight: 500; font-style: italic; line-height: 1.5; margin: 24px 0 9.6px }
+#article blockquote { color: rgba(55, 53, 47, 0.85); font-style: italic; background-color: rgba(241, 241, 239, 0.5); border-left: 3px solid rgba(193, 202, 204, 1); border-radius: 5px; box-shadow: 0 1px 3px rgba(15, 15, 15, 0.1); margin: 24px 0; padding: 16px 20px 16px 48px }
+#article blockquote p { margin: 0 }
+#article a { color: rgba(43, 115, 217, 1); text-decoration: none; border-bottom: 1px solid rgba(0, 0, 0, 0); border-radius: 2px; padding: 0 2px; margin: 0 -2px }
+#article strong { color: rgba(55, 53, 47, 1); font-weight: 600 }
+#article em { font-style: italic; color: rgba(55, 53, 47, 1) }
+#article del { text-decoration: line-through; color: rgba(115, 113, 109, 0.7) }
+#article mark { background-color: rgba(255, 238, 160, 1); color: rgba(55, 53, 47, 1); padding: 2px 0; border-radius: 0 }
+#article ul { padding-left: 0; margin: 19.2px 0; line-height: 1.6 }
+#article ol { padding-left: 0; margin: 19.2px 0; line-height: 1.6 }
+#article li { margin-left: 32px; padding-left: 0 }
+#article img { display: block; max-width: 100%; height: auto; border-radius: 8px; margin: 16px auto }
+#article figcaption { font-size: 14px; color: rgba(55, 53, 47, 0.65); font-style: italic; text-align: center; margin: 8px 0 16px }
+#article table { width: auto; max-width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid rgba(225, 231, 232, 1); border-radius: 8px; box-shadow: 0 1px 3px rgba(15, 15, 15, 0.08); margin: 24px 0 }
+#article th { font-size: 14.4px; color: rgba(55, 53, 47, 0.9); font-weight: 600; text-align: left; background-color: rgba(55, 53, 47, 0.08); border-right: 1px solid rgba(225, 231, 232, 1); border-bottom: 1px solid rgba(225, 231, 232, 1); padding: 12px 16px; min-width: 120px; max-width: 560px; word-wrap: break-word; white-space: normal }
+#article td { font-size: 15.2px; word-break: break-word; white-space: normal; border-right: 1px solid rgba(225, 231, 232, 1); border-bottom: 1px solid rgba(225, 231, 232, 1); padding: 12px 16px; min-width: 120px; max-width: 560px; word-wrap: break-word }
+#article pre.custom { font-size: 15.2px; color: rgba(55, 53, 47, 1); line-height: 1.65; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: rgba(247, 246, 243, 1); border: 1px solid rgba(15, 15, 15, 0.12); border-radius: 6px; overflow: visible; margin: 20px 0 51.2px; padding: 20px 24px; white-space: pre-wrap; word-wrap: break-word; word-break: break-word }
+#article p code { font-size: 85%; color: rgba(235, 87, 87, 1); font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: rgba(135, 131, 120, 0.15); border: none; border-radius: 3px; padding: 3.2px 6.4px }
+#article li code { font-size: 85%; color: rgba(235, 87, 87, 1); font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: rgba(135, 131, 120, 0.15); border: none; border-radius: 3px; padding: 3.2px 6.4px }
+#article td code { font-size: 85%; color: rgba(235, 87, 87, 1); font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: rgba(135, 131, 120, 0.15); border: none; border-radius: 3px; padding: 3.2px 6.4px }
+#article blockquote code { font-size: 85%; color: rgba(235, 87, 87, 1); font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; background-color: rgba(135, 131, 120, 0.15); border: none; border-radius: 3px; padding: 3.2px 6.4px }
+#article hr { border: none; height: 1px; background-color: rgba(225, 231, 232, 1); margin: 48px 0 }

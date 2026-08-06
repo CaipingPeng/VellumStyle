@@ -7,7 +7,7 @@ import {
   normalizeLinksForWechat,
   normalizeMathJaxForWechat,
   solveHtml,
-  stripPreviewEditClasses,
+  stripPreviewArtifacts,
 } from "./converter.ts";
 
 test("行间 MathJax 导出为居中的 section", () => {
@@ -53,8 +53,10 @@ test("保留 mjx-solid 兼容替换", () => {
   assert.equal(html, '<path fill="none" stroke-width="70"></path>');
 });
 
-test("导出前剥离预览编辑辅助 class 但保留业务 class", () => {
-  const html = stripPreviewEditClasses('<h1 class="title preview-edit-hover preview-edit-selected">标题</h1><img src="a.png" data-vs-image-index="0"><div class="vs-image-resize-overlay"><button></button></div>');
+test("导出前剥离预览临时编辑产物但保留业务 class", () => {
+  const html = stripPreviewArtifacts(
+    '<h1 class="title">标题</h1><img src="a.png" data-vs-image-index="0"><div class="vs-image-resize-overlay"><button></button></div>',
+  );
 
   assert.equal(html, '<h1 class="title">标题</h1><img src="a.png">');
 });

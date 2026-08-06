@@ -142,23 +142,15 @@ function isWechatArticleUrl(url: string): boolean {
   }
 }
 
-export function stripPreviewEditClasses(html: string): string {
+// 剥离预览态的临时编辑产物：图片尺寸调整浮层与 data-vs-image-index 标记，
+// 避免污染粘贴到微信/导出的 HTML。
+export function stripPreviewArtifacts(html: string): string {
   const doc = new DOMParser().parseFromString(html, "text/html");
   for (const overlay of Array.from(doc.querySelectorAll(".vs-image-resize-overlay"))) {
     overlay.remove();
   }
   for (const element of Array.from(doc.querySelectorAll("[data-vs-image-index]"))) {
     element.removeAttribute("data-vs-image-index");
-  }
-  for (const element of Array.from(doc.querySelectorAll("[class]"))) {
-    const classes = (element.getAttribute("class") ?? "")
-      .split(/\s+/)
-      .filter((cls) => cls && cls !== "preview-edit-hover" && cls !== "preview-edit-selected");
-    if (classes.length > 0) {
-      element.setAttribute("class", classes.join(" "));
-    } else {
-      element.removeAttribute("class");
-    }
   }
   return doc.body.innerHTML;
 }
@@ -235,8 +227,7 @@ export function solveHtml(): string {
   html = fromProxyHtml(html);
   // 剥离同步滚动用的 data-line，避免污染粘贴到微信的 HTML
   html = html.replace(/\s*data-line="\d+"/g, "");
-  // 剥离预览点击编辑用的临时 class，避免污染粘贴到微信的 HTML
-  html = stripPreviewEditClasses(html);
+  html = stripPreviewArtifacts(html);
   html = normalizeMathJaxForWechat(html);
 
   // 复制使用预览同一份样式：文章主题 + 当前代码主题已在预览层合并注入。

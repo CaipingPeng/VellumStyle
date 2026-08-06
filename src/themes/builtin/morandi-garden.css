@@ -1,0 +1,25 @@
+#article { font-size: 16px; color: #403C3C; line-height: 1.8; font-family: "Alibaba PuHuiTi", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, sans-serif; background-color: #FBFDFB; margin: 0; padding: 0 }
+#article p { line-height: 1.7; margin: 0.5rem 0; font-size: 16px }
+#article h1 { font-size: 2.2rem; color: #7A5F52; line-height: 1.4; font-weight: 700; letter-spacing: 2px; border: none; border-bottom: 2px solid #DDE6DF; margin: 1.8rem 0 1rem; padding: 0; padding-bottom: 0.6rem }
+#article h2 { font-size: 1.8rem; color: #506956; line-height: 1.4; font-weight: 800; letter-spacing: 2px; border: none; border-left: 4px solid #506956; margin: 1.8rem 0 1rem; padding: 0; padding-left: 0.8rem }
+#article h3 { font-size: 1.5rem; color: #7A6F89; line-height: 1.4; font-weight: 700; letter-spacing: 2px; border: none; margin: 1.8rem 0 1rem; padding: 0; padding-left: 0.4rem }
+#article h4 { font-size: 1.3rem; color: #6F7F88; line-height: 1.4; font-weight: 700; letter-spacing: 2px; border: none; margin: 1.8rem 0 1rem; padding: 0 }
+#article h5 { font-size: 1.1rem; color: #8A7A6F; line-height: 1.4; font-weight: 700; font-style: italic; letter-spacing: 2px; border: none; margin: 1.8rem 0 1rem; padding: 0 }
+#article h6 { font-size: 1rem; color: #7D7A71; line-height: 1.4; font-weight: 400; letter-spacing: 2px; border: none; margin: 1.8rem 0 1rem; padding: 0 }
+#article blockquote { font-style: normal; background: #EEF4EF; border-left: 4px solid #7A5F52; border-radius: 0 10px 10px 0; margin: 1.5rem 0; padding: 1rem 1.2rem; color: #666666; background-color: #EEF4EF }
+#article a { font-size: 16px; color: #DE7487; font-weight: 600; text-decoration: none; border-bottom: 1px solid #DE7487; padding-left: 0 }
+#article ul { list-style-type: disc; margin: 1rem 0 1rem 1.6rem; margin-left: 1.2rem; padding: 0; padding-left: 0; line-height: 1.8 }
+#article ol { list-style-type: decimal; margin: 1rem 0 1rem 1.6rem; margin-left: 1.2rem; padding-left: 0; line-height: 1.8 }
+#article li { line-height: 1.8; list-style: inherit; margin: 6px 0 }
+#article img { display: block; max-width: 100%; margin: 16px auto }
+#article table { width: 100%; border-collapse: collapse; overflow: hidden; margin: 2rem 0 }
+#article th { color: #506956; font-weight: 700; background: #EAF0EB; border: 1px solid #7ea388; padding: 0.9rem 1rem }
+#article td { color: #403C3C; border: 1px solid #7ea388; padding: 0.8rem 1rem }
+#article pre.custom { font-family: Menlo, Monaco, Consolas, "Courier New", monospace; color: #403C3C; font-size: 13px; line-height: 1.8rem; background-color: #F0F5F3; padding: 12px; border-radius: 6px; margin: 16px 0 }
+#article pre.custom::before { display: block; color: #98948C; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; text-align: center; background: #F0F5F3; border-radius: 20px; width: 100%; height: 30px; padding-right: 15px; content: "" }
+#article p code { color: #7A6F89; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; letter-spacing: 0.5px; background: #F0F5F3; border-radius: 5px; padding: 3px 3px 1px }
+#article li code { color: #7A6F89; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background: #F0F5F3; border-radius: 5px; padding: 3px 3px 1px }
+#article td code { color: #7A6F89; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background: #F0F5F3; border-radius: 5px; padding: 3px 3px 1px }
+#article blockquote code { color: #7A6F89; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background: #F0F5F3; border-radius: 5px; padding: 3px 3px 1px }
+#article code { color: #7A6F89; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background: #F0F5F3; border-radius: 5px; padding: 3px 3px 1px }
+#article hr { background: #ccd8cf; border: none; height: 2px; opacity: 1; margin: 2.5rem 0; border-top: 1px solid #dddddd }

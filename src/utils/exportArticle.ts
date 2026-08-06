@@ -221,10 +221,6 @@ function cloneArticleBoxForA4(source: HTMLElement, contentWidthPx: number): HTML
   clone.style.background = "#fff";
   clone.style.boxSizing = "border-box";
 
-  for (const element of Array.from(clone.querySelectorAll<HTMLElement>(".preview-edit-hover, .preview-edit-selected"))) {
-    element.classList.remove("preview-edit-hover", "preview-edit-selected");
-  }
-
   return clone;
 }
 

@@ -6,10 +6,9 @@ import {replaceStyle, STYLE_IDS} from "../../utils/style.ts";
 import {toProxyHtml} from "../../utils/imageProxy.ts";
 import {typesetMath} from "../../markdown/mathjax.ts";
 import {renderMermaidCharts, reuseRenderedMermaidCharts} from "../../markdown/mermaid.ts";
-import {modelIdFromElement, SELECTOR_PRIORITY} from "../StylePanel/elementMap.ts";
 import {getPreviewMode} from "./previewModes.ts";
 import {buildMarkdownCss, subscribeCodeThemes} from "../../markdown/codeThemes.ts";
-import {articleRootBackgroundIsSolid} from "../../themes/compileModel.ts";
+import {articleRootBackgroundIsSolid} from "../../themes/articleRootBackground.ts";
 import {ARTICLE_BOX_ID, ARTICLE_ROOT_ID} from "../../articleRoot.ts";
 import PreviewImageContextMenu from "./PreviewImageContextMenu.tsx";
 import {resolvePreviewImage, type PreviewImageMenuTarget} from "./previewImageContextMenu.ts";
@@ -126,13 +125,9 @@ const Preview = forwardRef<PreviewHandle, Props>(
     const timer = useRef<number | undefined>(undefined);
     const scrollRef = useRef<HTMLDivElement>(null);
     const articleBoxRef = useRef<HTMLDivElement>(null);
-    const hoverEl = useRef<Element | null>(null);
-    const selectedEl = useRef<Element | null>(null);
     const themes = useStore((s) => s.themes);
     const codeThemeId = useStore((s) => s.codeThemeId);
     const previewMode = useStore((s) => s.previewMode);
-    const selectedModelId = useStore((s) => s.selectedModelId);
-    const setSelectedModel = useStore((s) => s.setSelectedModel);
     const mode = getPreviewMode(previewMode);
     // 主题未给文章设实色背景时，预览垫白色兜底（不影响导出成品），
     // 避免透明文章直接透出预览舞台底色，与微信发布的白底不一致。
@@ -193,8 +188,6 @@ const Preview = forwardRef<PreviewHandle, Props>(
         const root = document.getElementById(ARTICLE_ROOT_ID);
         const renderedHtml = toProxyHtml(render(content));
         setHtml(reuseRenderedMermaidCharts(renderedHtml, root));
-        hoverEl.current = null;
-        selectedEl.current = null;
         setImageOverlay(null);
         setResizingHandle(null);
       }, RENDER_THROTTLE_MS);
@@ -238,35 +231,6 @@ const Preview = forwardRef<PreviewHandle, Props>(
         console.error("Mermaid 图表渲染失败", error);
       });
     }, [html]);
-
-    useEffect(() => {
-      if (!selectedModelId && selectedEl.current) {
-        selectedEl.current.classList.remove("preview-edit-selected");
-        selectedEl.current = null;
-      }
-    }, [selectedModelId]);
-
-    function findEditableElement(target: Element): {element: Element; modelId: string} | null {
-      const root = document.getElementById(ARTICLE_ROOT_ID);
-      if (!root) return null;
-      for (const entry of SELECTOR_PRIORITY) {
-        const element = target.closest(entry.selector);
-        if (element && root.contains(element)) {
-          return {element, modelId: entry.modelId};
-        }
-      }
-      return null;
-    }
-
-    function replaceClass(ref: React.MutableRefObject<Element | null>, element: Element | null, className: string) {
-      if (ref.current && ref.current !== element) {
-        ref.current.classList.remove(className);
-      }
-      ref.current = element;
-      if (element) {
-        element.classList.add(className);
-      }
-    }
 
     function imageResizeOverlayFor(image: HTMLImageElement): ImageResizeOverlay | null {
       const box = articleBoxRef.current;
@@ -416,14 +380,10 @@ const Preview = forwardRef<PreviewHandle, Props>(
     }
 
     function onMouseMove(e: React.MouseEvent) {
-      const target = e.target as Element;
-      const match = findEditableElement(target);
-      replaceClass(hoverEl, match?.element ?? null, "preview-edit-hover");
-      selectResizableImage(target);
+      selectResizableImage(e.target as Element);
     }
 
     function onMouseLeave() {
-      replaceClass(hoverEl, null, "preview-edit-hover");
       if (!resizingHandle) {
         setImageOverlay(null);
       }
@@ -498,17 +458,6 @@ const Preview = forwardRef<PreviewHandle, Props>(
       }
     }
 
-    // 点击预览元素 → 识别 model id → 打开面板并保留选中高亮
-    function onClick(e: React.MouseEvent) {
-      const target = e.target as Element;
-      const match = findEditableElement(target);
-      const id = match?.modelId ?? modelIdFromElement(target);
-      if (id) {
-        setSelectedModel(id);
-      }
-      replaceClass(selectedEl, match?.element ?? null, "preview-edit-selected");
-    }
-
     return (
       <div
         ref={scrollRef}
@@ -531,7 +480,6 @@ const Preview = forwardRef<PreviewHandle, Props>(
             background: "transparent",
             opacity: themeSwitching ? 0.55 : 1,
           }}
-          onClick={onClick}
           onMouseMove={onMouseMove}
           onMouseLeave={onMouseLeave}
           onContextMenu={onContextMenu}

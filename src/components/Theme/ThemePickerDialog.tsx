@@ -5,7 +5,7 @@ import {ArrowRight, Braces, Check, ChevronLeft, ChevronRight, FolderOpen, Palett
 import {MOTION_DURATION_FAST, MOTION_SPRING_POP} from "../../utils/motion.ts";
 import {getThemeById, useStore} from "../../store/index.ts";
 import {CODE_THEMES, getCodeThemeById, loadAllCodeThemes, subscribeCodeThemes} from "../../markdown/codeThemes.ts";
-import {loadAllThemes, openThemesDir, importThemeModel} from "../../themes/loader.ts";
+import {loadAllThemes, openThemesDir, importCssTheme} from "../../themes/loader.ts";
 import {toast} from "../Toast/toast.ts";
 import IconButton from "../ui/IconButton.tsx";
 import CodeThemeThumbnail from "./CodeThemeThumbnail.tsx";
@@ -135,14 +135,14 @@ export default function ThemePickerDialog({onClose}: Props) {
   function importTheme() {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".json,application/json";
+    input.accept = ".css,text/css";
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
       const raw = await file.text();
-      const name = file.name.replace(/\.json$/i, "");
+      const name = file.name.replace(/\.css$/i, "");
       try {
-        await importThemeModel(name, raw);
+        await importCssTheme(name, raw);
         setThemes(await loadAllThemes());
       } catch (e) {
         toast.show(`导入失败：${(e as Error).message}`, "error");

@@ -1,8 +1,6 @@
 import {create} from "zustand";
 import {persist} from "zustand/middleware";
-import {compileModel} from "../themes/compileModel.ts";
-import {builtinThemes, defaultMarkdownTheme, type ThemeOption, type StyleModel} from "../themes/index.ts";
-import type {StyleItem} from "../themes/themeModel.ts";
+import {builtinThemes, defaultMarkdownTheme, type ThemeOption} from "../themes/index.ts";
 import {
   listDocuments,
   readDocument,
@@ -56,7 +54,6 @@ export interface EditorState {
   documentThemeMapExists: boolean;
   codeThemeId: CodeThemeId;
   themes: ThemeOption[];
-  selectedModelId: string | null; // 当前面板编辑的元素 model id
   tree: DocNode[]; // 整棵文档树（运行期，不 persist）
   currentDocPath: string | null; // 当前在编辑器打开的文档，persist（记住上次打开）
   selectedPath: string | null; // 树里当前高亮项（文件或文件夹），统一选中源，运行期不 persist
@@ -83,7 +80,6 @@ export interface EditorState {
   removeDocumentThemePaths: (path: string) => void;
   setCodeTheme: (id: CodeThemeId) => void;
   setThemes: (themes: ThemeOption[]) => void;
-  setSelectedModel: (modelId: string | null) => void;
   setCurrentDocPath: (path: string | null) => void;
   setSelectedPath: (path: string | null) => void;
   setPreviewMode: (mode: PreviewModeId) => void;
@@ -101,22 +97,6 @@ export interface EditorState {
   loadTree: () => Promise<void>;
   openDocument: (path: string) => Promise<void>;
   runSyncNow: () => Promise<void>;
-  // 改当前主题某个 style 项的值（按 model id + style 路径），重编译 css
-  updateStyleValue: (modelId: string, stylePath: string[], value: string) => void;
-}
-
-function recompile(theme: ThemeOption): ThemeOption {
-  return {...theme, css: compileModel(theme.model)};
-}
-
-// 按 style.id 路径（顶层或 children）定位并改值，返回新数组（不可变更新）
-function setValueByPath(styles: StyleItem[], path: string[], value: string): StyleItem[] {
-  const [head, ...rest] = path;
-  return styles.map((item) => {
-    if (item.id !== head) return item;
-    if (rest.length === 0) return {...item, value};
-    return {...item, children: item.children ? setValueByPath(item.children, rest, value) : item.children};
-  });
 }
 
 const AUTOSAVE_DELAY_MS = 1200;
@@ -299,7 +279,6 @@ export const useStore = create<EditorState>()(
       codeThemeId: DEFAULT_CODE_THEME_ID,
       // 初始为内置主题；启动后 loadAllThemes() 合并用户主题覆盖
       themes: builtinThemes,
-      selectedModelId: null,
       tree: [],
       currentDocPath: null,
       selectedPath: null,
@@ -408,7 +387,6 @@ export const useStore = create<EditorState>()(
           // markdownThemeId 只回退为默认用于展示，不反向污染同步映射。
           markdownThemeId: effectiveThemeIdForDocument({...state, themes}, state.currentDocPath),
         })),
-      setSelectedModel: (selectedModelId) => set({selectedModelId}),
       setCurrentDocPath: (currentDocPath) => set({currentDocPath}),
       setSelectedPath: (selectedPath) => set({selectedPath}),
       setPreviewMode: (previewMode) => set({previewMode}),
@@ -479,7 +457,6 @@ export const useStore = create<EditorState>()(
           ),
           documentThemeIds: map,
           themeMapMigrationThemeId: migrationThemeId,
-          selectedModelId: null,
           saveStatus: "saved",
           lastSavedAt: Date.now(),
         });
@@ -489,23 +466,6 @@ export const useStore = create<EditorState>()(
         await flushSave();
         await flushCloudSync();
       },
-      updateStyleValue: (modelId, stylePath, value) =>
-        set((s) => {
-          // 用与显示一致的「有效主题」解析：若 markdownThemeId 在 themes 中找不到
-          // （如 localStorage 残留了旧主题 id），getThemeById 回退到 default。
-          // 必须按这个有效 id 来改，否则严格 id 匹配会全不命中 → 编辑静默失效。
-          const effectiveId = getThemeById(s.themes, s.markdownThemeId).id;
-          return {
-            themes: s.themes.map((t) => {
-              if (t.id !== effectiveId) return t;
-              const model = t.model.map((m) => {
-                if (m.id !== modelId) return m;
-                return {...m, styles: setValueByPath(m.styles, stylePath, value)};
-              });
-              return recompile({...t, model});
-            }),
-          };
-        }),
     }),
     {
       name: "vellumstyle",
@@ -581,5 +541,3 @@ export const useStore = create<EditorState>()(
 export function getThemeById(themes: ThemeOption[], id: string): ThemeOption {
   return themes.find((t) => t.id === id) ?? defaultMarkdownTheme;
 }
-
-export type {StyleModel};

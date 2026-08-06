@@ -266,14 +266,11 @@ interface PreviewRuntimeControls {
   copySources: string[];
   saveSources: string[];
   toasts: Array<{message: string; type: string}>;
-  selectedModels: string[];
   resizeCalls: Array<{imageIndex: number; size: {width: string}}>;
   store: {
     themes: unknown[];
     codeThemeId: string;
     previewMode: string;
-    selectedModelId: string | null;
-    setSelectedModel: (modelId: string) => void;
   };
 }
 
@@ -289,14 +286,11 @@ function createPreviewRuntimeControls(): PreviewRuntimeControls {
     copySources: [],
     saveSources: [],
     toasts: [],
-    selectedModels: [],
     resizeCalls: [],
     store: {
       themes: [],
       codeThemeId: "default",
       previewMode: "responsive",
-      selectedModelId: null,
-      setSelectedModel: (modelId) => controls.selectedModels.push(modelId),
     },
   };
   return controls;
@@ -324,12 +318,6 @@ async function loadPreview(): Promise<PreviewComponent> {
         [/src[\\/]utils[\\/]imageProxy\.ts$/, "export function toProxyHtml(html) { return html; }"],
         [/src[\\/]markdown[\\/]mathjax\.ts$/, "export async function typesetMath() {}"],
         [/src[\\/]markdown[\\/]mermaid\.ts$/, "export async function renderMermaidCharts() {} export function reuseRenderedMermaidCharts(html) { return html; }"],
-        [/src[\\/]components[\\/]StylePanel[\\/]elementMap\.ts$/, [
-          "export const SELECTOR_PRIORITY = [{selector: 'img', modelId: 'image'}, {selector: 'p', modelId: 'p'}];",
-          "export function modelIdFromElement(element) {",
-          "  return SELECTOR_PRIORITY.find((entry) => element.closest(entry.selector))?.modelId ?? null;",
-          "}",
-        ].join("\n")],
         [/src[\\/]components[\\/]Preview[\\/]previewModes\.ts$/, "export function getPreviewMode() { return {width: null}; }"],
         [/src[\\/]markdown[\\/]codeThemes\.ts$/, "export function buildMarkdownCss() { return ''; } export function subscribeCodeThemes() { return () => {}; }"],
         [/src[\\/]utils[\\/]previewImageActions\.ts$/, [
@@ -692,14 +680,9 @@ test("Preview maps resize-overlay contextmenu back to its current article image"
   }
 });
 
-test("Preview menu interactions trigger the image action without entering the selection path", async () => {
+test("Preview menu interactions trigger the image action", async () => {
   const view = await renderPreview(IMAGE_HTML);
   try {
-    const paragraph = view.article().querySelector<HTMLElement>("#paragraph")!;
-    act(() => paragraph.click());
-    assert.deepEqual(view.controls.selectedModels, ["p"]);
-    assert.equal(paragraph.classList.contains("preview-edit-selected"), true);
-
     view.openMenu(view.article().querySelector("img")!);
     const copyItem = menuItem("拷贝图片");
     await act(async () => {
@@ -709,24 +692,6 @@ test("Preview menu interactions trigger the image action without entering the se
     });
 
     assert.deepEqual(view.controls.copySources, ["https://example.com/original.png"]);
-    assert.deepEqual(view.controls.selectedModels, ["p"]);
-    assert.equal(paragraph.classList.contains("preview-edit-selected"), true);
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("Preview keeps editable-element hover and style selection behavior", async () => {
-  const view = await renderPreview(IMAGE_HTML);
-  try {
-    const paragraph = view.article().querySelector<HTMLElement>("#paragraph")!;
-
-    act(() => paragraph.dispatchEvent(new window.MouseEvent("mousemove", {bubbles: true})));
-    assert.equal(paragraph.classList.contains("preview-edit-hover"), true);
-
-    act(() => paragraph.click());
-    assert.deepEqual(view.controls.selectedModels, ["p"]);
-    assert.equal(paragraph.classList.contains("preview-edit-selected"), true);
   } finally {
     view.cleanup();
   }

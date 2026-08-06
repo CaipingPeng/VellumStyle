@@ -1,0 +1,30 @@
+#article { font-size: 16px; color: #282c34; font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", sans-serif; text-align: justify; background-color: #fefefe; overflow-x: hidden; line-height: 1.75; padding: 0 10px }
+#article p { margin-top: 0; margin-bottom: 0.5rem; font-size: 16px; line-height: 1.8; margin: 0 0 0.5rem }
+#article h1 { font-size: 3rem; font-weight: normal; font-style: normal; text-align: center; margin-top: 2rem; margin-bottom: 1rem; line-height: 1.4; margin: 24px 0 14px }
+#article h2 .suffix { content: ""; display: block; border-bottom: 1px solid #2f2f2f; width: 6.25rem; height: 1px; margin: 0 auto }
+#article h2 { font-size: 2.4rem; font-style: normal; text-align: center; margin-top: 2rem; margin-bottom: 1rem; font-weight: bold; line-height: 1.4; margin: 24px 0 14px }
+#article h3 { font-size: 1.8rem; font-style: normal; font-weight: bold; line-height: 1.4; margin: 24px 0 14px }
+#article h4 { font-size: 18px; font-weight: bold; line-height: 1.4; margin: 24px 0 14px }
+#article h5 { font-size: 16px; font-weight: bold; line-height: 1.4; margin: 24px 0 14px }
+#article h6 { font-size: 15px; font-weight: bold; line-height: 1.4; margin: 24px 0 14px }
+#article blockquote { background-color: rgba(66, 185, 131, 0.1); border-left: 8px solid #2f845e; border-radius: 4px; padding: 0.5rem 1rem; color: #666666; margin: 16px 0 }
+#article a { color: #2484c1; font-weight: 600; text-decoration: none; background-color: inherit }
+#article strong { color: #b5302e; background-color: inherit }
+#article em { color: #949415; background-color: inherit }
+#article del { color: #999; text-decoration: line-through }
+#article mark { color: #282c34; font-weight: 500; border-radius: 2px; padding: 1px 5px 2px }
+#article ul { margin-top: 0; margin-bottom: 0; padding-left: 1.75rem; line-height: 1.8; margin: 12px 0 }
+#article ol { margin-top: 0; margin-bottom: 0; padding-left: 1.75rem; line-height: 1.8; margin: 12px 0 }
+#article li { font-size: 16px; background-color: transparent; padding-left: 0.5rem }
+#article img { border: none; display: block; max-width: 100%; margin: 16px auto }
+#article table { border: 1px solid #ddd; border-radius: 6px; border-collapse: separate; overflow: hidden; width: 100%; margin: 16px 0 }
+#article thead { color: #000; background-color: #e7ecf3 }
+#article th { border-left: 0; border-top: 0; padding: 10px 16px; border: 1px solid #dddddd }
+#article td { border-left: 0; border-top: 0; padding: 10px 16px; border: 1px solid #dddddd }
+#article pre.custom { font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background-color: #282c34; border: none; border-radius: 6px; box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12); margin-bottom: 2.5rem; padding-top: 6px; padding-bottom: 6px; padding-left: 10px; padding-right: 10px; font-size: 13px; line-height: 1.6; padding: 12px; margin: 16px 0 }
+#article p code { font-size: 1rem; color: #e96900; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background-color: rgba(34, 37, 38, 0.05); border-radius: 4px; padding: 3px 4px 1px }
+#article li code { font-size: 1rem; color: #e96900; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background-color: rgba(34, 37, 38, 0.05); border-radius: 4px; padding: 3px 4px 1px }
+#article td code { font-size: 1rem; color: #e96900; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background-color: rgba(34, 37, 38, 0.05); border-radius: 4px; padding: 3px 4px 1px }
+#article blockquote code { font-size: 1rem; color: #e96900; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background-color: rgba(34, 37, 38, 0.05); border-radius: 4px; padding: 3px 4px 1px }
+#article code { font-size: 1rem; color: #e96900; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; font-weight: 500; background-color: rgba(34, 37, 38, 0.05); border-radius: 4px; margin: 0 2px; padding: 3px 4px 1px }
+#article hr { border-top: 2px dashed #abb2bf; margin-top: 2rem; margin-bottom: 2rem; border: none; margin: 24px 0 }

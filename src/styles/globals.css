@@ -948,21 +948,6 @@ html.appearance-switching .vs-skel {
   outline: 1px solid var(--accent);
 }
 
-#article .preview-edit-hover,
-#article .preview-edit-selected {
-  cursor: pointer;
-  outline-offset: 4px;
-  transition: outline 0.13s ease, outline-offset 0.13s ease;
-}
-
-#article .preview-edit-hover {
-  outline: 1px dashed var(--accent);
-}
-
-#article .preview-edit-selected {
-  outline: 2px solid var(--accent);
-}
-
 .vs-image-resize-overlay {
   position: absolute;
   z-index: 60;

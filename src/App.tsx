@@ -5,7 +5,6 @@ import Preview, {type PreviewHandle} from "./components/Preview/Preview.tsx";
 import PreviewModeToggle from "./components/Preview/PreviewModeToggle.tsx";
 import AppearanceToggle from "./components/Appearance/AppearanceToggle.tsx";
 import SettingsDialog from "./components/Settings/SettingsDialog.tsx";
-import StylePanel from "./components/StylePanel/StylePanel.tsx";
 import MainToolbar from "./components/Toolbar/MainToolbar.tsx";
 import DocTree from "./components/DocTree/DocTree.tsx";
 import OutlineNav from "./components/Outline/OutlineNav.tsx";
@@ -142,7 +141,7 @@ function formatUploadFailure(task: ImageUploadTask): string {
 }
 
 export default function App() {
-  // 逐个 selector 订阅，避免任一 store 字段变化（如 selectedModelId、tree、预览模式）
+  // 逐个 selector 订阅，避免任一 store 字段变化（如 tree、预览模式）
   // 都触发整个 App 树重渲染。
   const content = useStore((s) => s.content);
   const markdownThemeId = useStore((s) => s.markdownThemeId);
@@ -814,7 +813,6 @@ export default function App() {
                   />
                 </div>
               </section>
-              <StylePanel />
             </div>
           }
         />

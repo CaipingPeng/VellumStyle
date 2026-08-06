@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-# 爬取 mdnice 全部主题并存为 app 可导入的 model JSON。
+# 内部参考工具：爬取 mdnice 全部主题并存为 {name, model} JSON。
+# 注意：应用已改为只读取 .css 主题文件，此 JSON 不再被应用自动加载，
+# 仅供换皮参考（可据此手写/转换出 VellumStyle 自己的 CSS 主题）。
 # 需先抓包拿到自己的 token 和某篇文章 outId（F12 看 editor.mdnice.com 的请求）：
 #   set MDNICE_TOKEN=<Bearer token 去掉 Bearer 前缀>
 #   set MDNICE_OUT_ID=<某文章 writingOutId>   （可选，有默认）

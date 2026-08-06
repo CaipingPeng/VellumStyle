@@ -1,6 +1,7 @@
 import {ARTICLE_ROOT_SELECTOR, LEGACY_ARTICLE_ROOT_SELECTORS} from "../../articleRoot.ts";
 
-// 把主题 CSS 的选择器改写到卡片唯一 scope class，使多个不同主题缩略图能同页共存。
+// 把主题 CSS 的选择器改写为指定作用域（缩略图用卡片唯一 scope class；
+// 用户 CSS 主题在加载时改写为 #article，防止裸选择器污染应用 UI）。
 // 规则：选择器以文章根开头 → 替换为 .scope；否则（裸选择器如 .hljs）→ 前面补 ".scope "。
 // 仅用于主题选择器对话框的缩略图，不影响复制管线。
 
@@ -17,23 +18,24 @@ function stripArticleRootSelector(selector: string): string | null {
 }
 
 // 单条选择器（逗号分隔后的一个）改写。
-function scopeSelector(sel: string, scopeClass: string): string {
+function scopeSelector(sel: string, scopeSelectorPrefix: string): string {
   const s = sel.trim();
   if (!s) return s;
   const suffix = stripArticleRootSelector(s);
-  if (suffix != null) return `.${scopeClass}${suffix}`;
-  return `.${scopeClass} ${s}`;
+  if (suffix != null) return `${scopeSelectorPrefix}${suffix}`;
+  return `${scopeSelectorPrefix} ${s}`;
 }
 
 // 把一段选择器列表（可能含逗号）逐个改写后用 ", " 连接。
-function scopeSelectorList(selectorList: string, scopeClass: string): string {
+function scopeSelectorList(selectorList: string, scopeSelectorPrefix: string): string {
   return selectorList
     .split(",")
-    .map((sel) => scopeSelector(sel, scopeClass))
+    .map((sel) => scopeSelector(sel, scopeSelectorPrefix))
     .join(", ");
 }
 
-export function scopeCss(css: string, scopeClass: string): string {
+// 通用作用域改写：scopeSelectorPrefix 为完整选择器前缀（如 ".tp-xxx" 或 "#article"）。
+export function scopeCssTo(css: string, scopeSelectorPrefix: string): string {
   // 去掉块注释，简化解析。
   const noComment = css.replace(/\/\*[\s\S]*?\*\//g, "");
   let out = "";
@@ -53,7 +55,7 @@ export function scopeCss(css: string, scopeClass: string): string {
       const inner = noComment.slice(braceOpen + 1, blockEnd);
       const atName = prelude.match(/^@([a-zA-Z-]+)/)?.[1].toLowerCase();
       if (atName === "media" || atName === "supports") {
-        out += `${prelude} { ${scopeCss(inner, scopeClass)} }\n`;
+        out += `${prelude} { ${scopeCssTo(inner, scopeSelectorPrefix)} }\n`;
       } else {
         out += `${prelude} {${inner}}\n`;
       }
@@ -64,10 +66,15 @@ export function scopeCss(css: string, scopeClass: string): string {
     // 普通规则：改写选择器，body 原样。
     const blockEnd = matchBrace(noComment, braceOpen);
     const body = noComment.slice(braceOpen + 1, blockEnd).trim();
-    out += `${scopeSelectorList(prelude, scopeClass)} {${body ? ` ${body} ` : ""}}\n`;
+    out += `${scopeSelectorList(prelude, scopeSelectorPrefix)} {${body ? ` ${body} ` : ""}}\n`;
     i = blockEnd + 1;
   }
   return out;
+}
+
+// 缩略图专用：改写为卡片唯一 scope class。
+export function scopeCss(css: string, scopeClass: string): string {
+  return scopeCssTo(css, `.${scopeClass}`);
 }
 
 // 从 openIdx（'{'）找到匹配的 '}' 下标（支持嵌套，用于 at-rule）。

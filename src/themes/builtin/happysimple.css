@@ -1,0 +1,63 @@
+#article { font-size: 15px; color: #222222; line-height: 1.75; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif; background-color: #eef7ff; margin-top: 0; margin-bottom: 0; padding-top: 18px; padding-bottom: 18px; padding-left: 14px; padding-right: 14px }
+#article p { font-size: 15px; color: #222222; line-height: 1.85; text-align: left; margin-top: 12px; margin-bottom: 12px; padding-top: 0; padding-bottom: 0 }
+#article h1 { font-size: 22px; color: #111111; font-weight: bold; line-height: 1.5; text-align: center; background-color: #ffffff; border: 2px solid #111111; border-radius: 10px; box-shadow: 4px 4px 0 #111111; margin: 28px 0 20px; padding: 14px 16px }
+#article h2 { font-size: 20px; color: #111111; font-weight: bold; line-height: 1.5; text-align: left; border-bottom: none; margin: 28px 0 16px; padding: 8px 0 8px 0 }
+#article h3 { font-size: 18px; color: #111111; font-weight: bold; line-height: 1.55; background-color: #ffffff; border: 2px solid #111111; border-radius: 8px; margin: 24px 0 14px; padding: 8px 12px }
+#article h4 { font-size: 17px; color: #111111; font-weight: bold; border-left: 5px solid #ff5d52; margin: 22px 0 12px; padding: 4px 0 4px 10px }
+#article h5 { font-size: 16px; color: #111111; font-weight: bold; margin: 18px 0 10px }
+#article h6 { font-size: 14px; color: #666666; font-weight: bold; margin: 16px 0 8px }
+#article blockquote { font-size: 15px; color: #333333; line-height: 1.75; background-color: #f3f0ff; border: 2px solid #111111; border-left: 6px solid #a68bff; border-radius: 10px; box-shadow: 3px 3px 0 #111111; margin: 18px 0; padding: 12px 14px }
+#article a { color: #2563eb; font-weight: bold; text-decoration: none; border-bottom: 1px solid #2563eb }
+#article strong { color: #ef4444; font-weight: bold }
+#article em { color: #7c3aed; font-style: italic }
+#article del { color: #999999; text-decoration: line-through }
+#article ul { font-size: 15px; color: #222222; line-height: 1.9; margin: 12px 0; padding-left: 22px }
+#article ol { font-size: 15px; color: #222222; line-height: 1.9; margin: 12px 0; padding-left: 24px }
+#article img { display: block; max-width: 100%; border: 2px solid #111111; border-radius: 10px; box-shadow: 4px 4px 0 #111111; margin: 16px auto }
+#article figcaption { font-size: 13px; color: #666666; text-align: center; margin: 8px 0 16px }
+#article table { font-size: 14px; line-height: 1.6; text-align: center; width: 100%; background-color: #ffffff; border: 2px solid #111111; border-collapse: collapse }
+#article th { color: #111111; font-weight: bold; background-color: #aed3e3; border: 1px solid #111111; padding: 8px 10px }
+#article td { color: #222222; font-weight: normal; border: 1px solid #111111; padding: 8px 10px }
+#article pre.custom { font-size: 13px; color: #e5e7eb; line-height: 1.6; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background-color: #1f2937; border: 2px solid #111111; border-radius: 10px; box-shadow: 4px 4px 0 #111111; margin: 18px 0; padding: 38px 14px 14px }
+#article p code { font-size: 0.9em; color: #ef4444; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background-color: #fff7ed; border: 1px solid #111111; border-radius: 4px; padding: 2px 5px }
+#article li code { font-size: 0.9em; color: #ef4444; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background-color: #fff7ed; border: 1px solid #111111; border-radius: 4px; padding: 2px 5px }
+#article td code { font-size: 0.9em; color: #ef4444; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background-color: #fff7ed; border: 1px solid #111111; border-radius: 4px; padding: 2px 5px }
+#article blockquote code { font-size: 0.9em; color: #ef4444; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background-color: #fff7ed; border: 1px solid #111111; border-radius: 4px; padding: 2px 5px }
+#article, #article * { box-sizing: border-box; }
+#article h1 .prefix { display: inline-block; width: 10px; height: 10px; margin-right: 8px; vertical-align: middle; background-color: #ff5d52; border: 2px solid #111111; border-radius: 50%; }
+#article h1 .suffix { display: inline-block; width: 10px; height: 10px; margin-left: 8px; vertical-align: middle; background-color: #61abff; border: 2px solid #111111; border-radius: 50%; }
+#article h2 .prefix { display: inline-block; margin-right: 6px; color: #ff5d52; font-weight: 800; }
+#article h2 .prefix::before { content: "#"; }
+#article h2 .content { border-bottom: 3px solid #ff5d52; padding-bottom: 2px; }
+#article h2 .suffix { display: none; }
+#article h3 .prefix { display: inline-block; width: 8px; height: 8px; margin-right: 8px; vertical-align: middle; background-color: #ff5d52; border-radius: 50%; }
+#article h3 .suffix, #article h4 .suffix, #article h5 .suffix, #article h6 .suffix { display: none; }
+#article h4 .prefix { display: none; }
+#article h5 .prefix { display: inline-block; width: 6px; height: 6px; margin-right: 6px; vertical-align: middle; background-color: #ff5d52; border-radius: 50%; }
+#article h6 .prefix { display: none; }
+#article blockquote p { margin: 0; color: #333333; }
+#article blockquote p + p { margin-top: 8px; }
+#article blockquote.multiquote-1 { border-left-color: #a68bff; background-color: #f3f0ff; }
+#article blockquote.multiquote-2 { border-left-color: #5fa7e4; background-color: #e4edf6; }
+#article blockquote.multiquote-3 { border-left-color: #f0ad4e; background-color: #fffacd; }
+#article blockquote.multiquote-4 { border-left-color: #db524f; background-color: #fdeaea; }
+#article blockquote.multiquote-5 { border-left-color: #5cb85c; background-color: #eef7f0; }
+#article li { margin: 6px 0; }
+#article li section { margin: 0; }
+#article ul li::marker { color: #db524f; }
+#article ol li::marker { color: #db524f; font-weight: bold; }
+#article figure { margin: 18px 0; text-align: center; }
+#article figure img { margin: 0 auto; }
+#article .table-container { margin: 18px 0; overflow-x: auto; }
+#article tbody tr:nth-child(odd) { background-color: #ededed; }
+#article tbody tr:nth-child(even) { background-color: #e2f2f9; }
+#article pre.custom { position: relative; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+#article pre.custom::before { content: ""; position: absolute; left: 12px; top: 12px; width: 12px; height: 12px; border-radius: 50%; background: #fc625d; box-shadow: 22px 0 #fdbc40, 44px 0 #35cd4b; }
+#article pre.custom code { display: block; color: #e5e7eb; background: transparent; border: none; padding: 0; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; }
+#article pre.custom .hljs-keyword, #article pre.custom .hljs-selector-tag { color: #c084fc; }
+#article pre.custom .hljs-string, #article pre.custom .hljs-regexp { color: #86efac; }
+#article pre.custom .hljs-comment, #article pre.custom .hljs-quote { color: #9ca3af; }
+#article pre.custom .hljs-number, #article pre.custom .hljs-literal { color: #fbbf24; }
+#article pre.custom .hljs-title, #article pre.custom .hljs-function { color: #93c5fd; }
+#article pre.custom .hljs-attr, #article pre.custom .hljs-attribute, #article pre.custom .hljs-variable { color: #fca5a5; }
+#article pre.custom .hljs-built_in, #article pre.custom .hljs-type { color: #fde68a; }

@@ -1,0 +1,65 @@
+#article { font-size: 16px; color: rgba(51, 51, 51, 1); line-height: 1.6em; font-family: "Open Sans", "Clear Sans", "Helvetica Neue", Helvetica, Arial, "Segoe UI Emoji", sans-serif; margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 10px; padding-right: 10px }
+#article p { font-size: 16px; color: rgba(51, 51, 51, 1); line-height: 1.6em; text-align: left; margin-top: 13px; margin-bottom: 13px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 0px; padding-right: 0px }
+#article h1 .content { font-size: 36px; color: rgba(51, 51, 51, 1); line-height: 1.2em; font-weight: bold }
+#article h1 { margin-top: 16px; margin-bottom: 16px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 4px; padding-left: 0px; padding-right: 0px }
+#article h2 .content { font-size: 28px; color: rgba(51, 51, 51, 1); line-height: 1.225em; font-weight: bold }
+#article h2 { margin-top: 16px; margin-bottom: 16px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 4px; padding-left: 0px; padding-right: 0px }
+#article h3 .content { font-size: 24px; color: rgba(51, 51, 51, 1); line-height: 1.43em; font-weight: bold }
+#article h3 { margin-top: 16px; margin-bottom: 16px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 0px; padding-right: 0px }
+#article h4 .content { font-size: 20px; color: rgba(51, 51, 51, 1); line-height: 1.4em; font-weight: bold }
+#article h4 { margin-top: 16px; margin-bottom: 16px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 0px; padding-right: 0px }
+#article h5 .content { font-size: 16px; color: rgba(51, 51, 51, 1); line-height: 1.4em; font-weight: bold }
+#article h5 { margin-top: 16px; margin-bottom: 16px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 0px; padding-right: 0px }
+#article h6 .content { font-size: 16px; color: rgba(119, 119, 119, 1); line-height: 1.4em; font-weight: bold }
+#article h6 { margin-top: 16px; margin-bottom: 16px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 0px; padding-right: 0px }
+#article ul li section { color: rgba(51, 51, 51, 1); line-height: 1.6em }
+#article ul { margin-top: 13px; margin-bottom: 13px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 30px; padding-right: 0px }
+#article ol li section { color: rgba(51, 51, 51, 1); line-height: 1.6em }
+#article ol { margin-top: 13px; margin-bottom: 13px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 30px; padding-right: 0px }
+#article blockquote p { color: rgba(119, 119, 119, 1); line-height: 1.6em }
+#article .custom-blockquote p { color: rgba(119, 119, 119, 1); line-height: 1.6em }
+#article blockquote { margin-top: 13px; margin-bottom: 13px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 15px; padding-right: 15px }
+#article a { color: rgba(65, 131, 196, 1) }
+#article strong { color: rgba(51, 51, 51, 1); font-weight: bold }
+#article em { color: rgba(51, 51, 51, 1) }
+#article del { color: rgba(51, 51, 51, 1) }
+#article s { color: rgba(51, 51, 51, 1) }
+#article p code { color: rgba(51, 51, 51, 1); font-size: 14px }
+#article li code { color: rgba(51, 51, 51, 1); font-size: 14px }
+#article figure figcaption { color: rgba(119, 119, 119, 1); font-size: 14px }
+#article .footnote-word { color: rgba(65, 131, 196, 1) }
+#article .footnote-ref { color: rgba(65, 131, 196, 1) }
+#article h1 { border-bottom: 1px solid rgba(238, 238, 238, 1); }
+#article h1 .content { display: block; }
+#article h1 .prefix { display: none; }
+#article h1 .suffix { display: none; }
+#article h2 { border-bottom: 1px solid rgba(238, 238, 238, 1); }
+#article h2 .content { display: block; }
+#article h2 .prefix { display: none; }
+#article h2 .suffix { display: none; }
+#article h3 .prefix { display: none; }
+#article h3 .suffix { display: none; }
+#article h4 .prefix { display: none; }
+#article h4 .suffix { display: none; }
+#article h5 .prefix { display: none; }
+#article h5 .suffix { display: none; }
+#article h6 .prefix { display: none; }
+#article h6 .suffix { display: none; }
+#article ul { list-style-type: disc; }
+#article ol { list-style-type: decimal; }
+#article blockquote { border-left: 4px solid rgba(223, 226, 229, 1); background: none; }
+#article blockquote::before { display: none; }
+#article .custom-blockquote::before { display: none; }
+#article a { font-weight: normal; text-decoration: none; border-bottom: none; }
+#article em { font-style: italic; }
+#article hr { height: 2px; margin: 16px 0; background-color: rgba(231, 231, 231, 1); border: 0; }
+#article p code, #article li code { background-color: rgba(243, 244, 244, 1); border: 1px solid rgba(231, 234, 237, 1); border-radius: 3px; padding: 2px 4px; font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace; }
+#article pre.custom { background-color: rgba(248, 248, 248, 1); border-radius: 3px; padding: 8px 12px; margin: 15px 0; }
+#article pre code { font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace; font-size: 14px; }
+#article figure { margin: 16px 0; display: flex; flex-direction: column; align-items: center; max-width: 100%; }
+#article figure img { display: block; margin: 0 auto; max-width: 100%; height: auto; box-sizing: border-box; }
+#article img { max-width: 100%; height: auto; }
+#article figure figcaption { text-align: center; margin-top: 5px; }
+#article table tr th, #article table tr td { border: 1px solid rgba(223, 226, 229, 1); padding: 6px 13px; text-align: left; font-size: 16px; color: rgba(51, 51, 51, 1); }
+#article table tr th { font-weight: bold; background-color: rgba(248, 248, 248, 1); }
+#article table tr:nth-child(2n) { background-color: rgba(248, 248, 248, 1); }

@@ -1,0 +1,70 @@
+#article { font-size: 17px; color: #222222; line-height: 1.75; font-family: Georgia, "Times New Roman", "Songti SC", SimSun, "Noto Serif CJK SC", serif; background-color: #ffffff; margin-top: 0; margin-bottom: 0; padding-top: 16px; padding-bottom: 24px; padding-left: 18px; padding-right: 18px }
+#article p { font-size: 17px; color: #222222; line-height: 1.85; text-align: left; letter-spacing: 0.01em; margin: 1em 0 }
+#article h1 { font-size: 30px; color: #fd7c5e; font-weight: bold; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; line-height: 1.35; text-align: center; letter-spacing: 0.08em; margin: 42px 0 30px }
+#article h2 { font-size: 26px; color: #ffffff; font-weight: bold; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; line-height: 1.35; margin: 36px 0 18px; padding: 0 0 10px }
+#article h3 { font-size: 23px; color: #81b29a; font-weight: bold; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; line-height: 1.35; margin: 26px 0 10px }
+#article h4 { font-size: 21px; color: #81b29a; font-weight: bold; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; margin: 22px 0 8px }
+#article h5 { font-size: 19px; color: rgba(129, 178, 154, 0.75); font-weight: bold; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; margin: 18px 0 6px }
+#article h6 { font-size: 17px; color: rgba(129, 178, 154, 0.55); font-weight: bold; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; margin: 16px 0 6px }
+#article blockquote { font-size: 16px; color: #777777; line-height: 1.75; font-family: "LXGW WenKai", "KaiTi", "STKaiti", serif; background-color: rgba(236, 244, 249, 0.75); border-left: 4px solid #8496b0; border-radius: 6px; margin: 18px 0; padding: 12px 14px }
+#article a { color: #81b29a; font-weight: normal; text-decoration: none; border-bottom: 1px dashed #81b29a }
+#article strong { color: #000000; font-weight: bold; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif }
+#article em { color: #111111; font-style: italic; padding: 0 5px 0 2px }
+#article del { color: #808080; text-decoration: line-through }
+#article ul { font-size: 17px; color: #222222; line-height: 1.8; margin: 1em 0; padding-left: 30px }
+#article ol { font-size: 17px; color: #222222; line-height: 1.8; margin: 1em 0; padding-left: 30px; list-style: decimal-leading-zero }
+#article img { display: block; max-width: 100%; border: none; border-radius: 6px; margin: 16px auto }
+#article figcaption { font-size: 14px; color: #777777; text-align: center; margin: 8px 0 16px }
+#article table { font-size: 16px; line-height: 1.6; width: 100%; border-spacing: 0; border-collapse: separate; margin: 1em 0 }
+#article th { color: #e2542e; font-weight: bold; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background-color: #fbfbfb; border: 1.5px solid #cccccc; border-bottom: 2.5px solid #888888; padding: 7px 10px }
+#article td { color: #222222; font-weight: normal; background-color: #ffffff; border: 1.5px solid #cccccc; padding: 7px 10px }
+#article pre.custom { font-size: 15px; color: #2c74c7; line-height: 1.65; font-family: "Fira Code", Menlo, Monaco, Consolas, "Courier New", monospace; background-color: #f5f9fd; border-radius: 8px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.15); margin: 18px 0; padding: 8px 14px 14px }
+#article p code { font-size: 0.95em; color: rgb(238, 130, 42); font-family: "Fira Code", Menlo, Monaco, Consolas, "Courier New", monospace; background-color: #f3f4f4; border-radius: 4px; padding: 1.5px 5px }
+#article li code { font-size: 0.95em; color: rgb(238, 130, 42); font-family: "Fira Code", Menlo, Monaco, Consolas, "Courier New", monospace; background-color: #f3f4f4; border-radius: 4px; padding: 1.5px 5px }
+#article td code { font-size: 0.95em; color: rgb(238, 130, 42); font-family: "Fira Code", Menlo, Monaco, Consolas, "Courier New", monospace; background-color: #f3f4f4; border-radius: 4px; padding: 1.5px 5px }
+#article blockquote code { font-size: 0.95em; color: rgb(238, 130, 42); font-family: "Fira Code", Menlo, Monaco, Consolas, "Courier New", monospace; background-color: #f3f4f4; border-radius: 4px; padding: 1.5px 5px }
+#article, #article * { box-sizing: border-box; }
+#article h1 .prefix::before { content: "「"; color: #3e89df; font-size: 0.9em; margin-right: 8px; }
+#article h1 .suffix::before { content: "」"; color: #3e89df; font-size: 0.9em; margin-left: 8px; }
+#article h2 { position: relative; }
+#article h2 .prefix::before { content: "#2"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 11px; vertical-align: top; }
+#article h2 .content { display: inline-block; padding: 0 7px; color: #ffffff; border-radius: 5px; background-image: linear-gradient(to bottom, #74c69d, #b7e4c7); }
+#article h2::after { content: ""; display: block; height: 4px; margin-top: 8px; border-radius: 4px; background-image: linear-gradient(to right, #c1dfc4 0%, #deecdd 100%); }
+#article h3 .prefix::before { content: "#3"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 10px; vertical-align: top; }
+#article h4 .prefix::before { content: "#4"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 10px; vertical-align: top; }
+#article h5 .prefix::before { content: "#5"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 10px; vertical-align: top; }
+#article h6 .prefix::before { content: "#6"; display: inline-block; margin-right: 6px; color: #e07a5f; font-size: 10px; vertical-align: top; }
+#article h3 .suffix, #article h4 .suffix, #article h5 .suffix, #article h6 .suffix { display: none; }
+#article blockquote p { margin: 0.6em 0; color: #777777; }
+#article blockquote h3:first-child, #article blockquote h4:first-child, #article blockquote h5:first-child, #article blockquote h6:first-child { margin: -4px 0 8px; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 18px; letter-spacing: 1px; }
+#article blockquote h3:first-child { color: #c00000; }
+#article blockquote h4:first-child { color: #428bca; }
+#article blockquote h5:first-child { color: #ffae00; }
+#article blockquote h6:first-child { color: #004d41; }
+#article li { margin: 4px 0; }
+#article li section { margin: 0; }
+#article li::marker { color: #8ebba6; font-size: 18px; }
+#article ul ul { border-left: 1.5px solid rgba(129, 178, 154, 0.3); margin-left: 2px; }
+#article figure { margin: 1em 0; text-align: center; border-radius: 6px; }
+#article .table-container { margin: 1em 0; overflow-x: auto; border-radius: 6px; box-shadow: 0 0 0 1.5px #cccccc; }
+#article table tr th:first-child, #article table tr td:first-child { border-left-width: 0; }
+#article table tr th:last-child, #article table tr td:last-child { border-right-width: 0; }
+#article table tr th { border-top: none; }
+#article table tbody td { border-bottom: none; }
+#article pre.custom { position: relative; overflow-x: auto; white-space: pre-wrap; word-break: break-word; border-top: 40px solid rgba(167, 187, 195, 0.6); }
+#article pre.custom::before { content: ""; position: absolute; left: 12px; top: -26px; width: 12px; height: 12px; border-radius: 50%; background: #fc625d; box-shadow: 25px 0 #fdbc40, 50px 0 #35cd4b; }
+#article pre.custom code { display: block; color: #2c74c7; background: transparent; border: none; padding: 0; font-family: "Fira Code", Menlo, Monaco, Consolas, "Courier New", monospace; }
+#article pre.custom .hljs-keyword, #article pre.custom .hljs-selector-tag { color: #8f08c4; }
+#article pre.custom .hljs-operator { color: #36374c; }
+#article pre.custom .hljs-string, #article pre.custom .hljs-regexp { color: #a31515; }
+#article pre.custom .hljs-comment, #article pre.custom .hljs-quote { color: #546e7a; }
+#article pre.custom .hljs-number, #article pre.custom .hljs-literal { color: #b4654d; }
+#article pre.custom .hljs-title, #article pre.custom .hljs-function { color: #74531f; }
+#article pre.custom .hljs-attr, #article pre.custom .hljs-attribute { color: #ffcb6b; }
+#article pre.custom .hljs-built_in, #article pre.custom .hljs-property { color: #80cbae; }
+#article u { text-decoration: none; border-bottom: 1.6px solid #f47c35; padding-bottom: 1px; }
+#article mark { margin: 0 2px; padding: 1px 3px 0; color: #ffffff; background-color: #7c9dca; border-radius: 3px; font-family: "Fira Code", "Songti SC", SimSun, serif; font-size: 1em; }
+#article del { padding: 1px 2px; color: #777777; }
+#article hr { height: 2px; padding: 0; margin: 2rem 0; background-color: #dddddd; border: none; }
+#article .footnotes, #article .footnotes p, #article .footnotes li { font-size: 14px; color: #777777; }
+#article sup.md-footnote { color: #e96900; font-size: 12px; }

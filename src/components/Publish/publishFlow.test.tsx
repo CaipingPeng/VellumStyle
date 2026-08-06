@@ -65,10 +65,18 @@ async function loadRuntimeModules() {
         setup(pluginBuild) {
           pluginBuild.onLoad({filter: /src[\\/]themes[\\/]index\.ts$/}, async (args) => ({
             contents: (await readFile(args.path, "utf8")).replace(
-              'import.meta.glob("./presets/*.json", {import: "default"})',
+              'import.meta.glob("./builtin/*.css", {query: "?raw", import: "default"})',
               "({})",
             ),
             loader: "ts",
+          }));
+          pluginBuild.onResolve({filter: /\.css\?raw$/}, (args) => ({
+            path: args.path,
+            namespace: "css-raw-stub",
+          }));
+          pluginBuild.onLoad({filter: /.*/, namespace: "css-raw-stub"}, () => ({
+            contents: "export default '';",
+            loader: "js",
           }));
           pluginBuild.onLoad({filter: /src[\\/]markdown[\\/]mathjax\.ts$/}, () => ({
             contents: "export function waitForMathJaxIdle() { return globalThis.__PUBLISH_TEST_MATHJAX_IDLE__ ?? Promise.resolve(); }",

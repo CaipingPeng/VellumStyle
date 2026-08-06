@@ -1,9 +1,8 @@
-// 用户自定义主题：扫描 app_data_dir/themes/*.json（model 主题）。
-// 用户安装软件后把 .json（主题模型数组）丢进该目录即新增一个主题，
-// 文件名（去扩展名）作主题 id/名。内置主题编译进包（见前端 themes/index.ts），与用户主题在前端合并。
+// 用户自定义主题：扫描 app_data_dir/themes/*.css。
+// 主题统一为纯 CSS（作者直接写样式，前端自动作用域到 #article）。
+// 文件名（去扩展名）作主题 id/名。内置主题随前端打包（见前端 themes/index.ts），与用户主题在前端合并。
 
 use serde::Serialize;
-use serde_json::Value;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
@@ -14,7 +13,7 @@ const LEGACY_ARTICLE_ROOT_SELECTORS: &[&str] = &["#nice", "#wechat-article"];
 pub struct UserTheme {
     pub id: String,
     pub name: String,
-    pub model: serde_json::Value, // 主题模型数组
+    pub css: String,
 }
 
 fn themes_dir(app: &AppHandle) -> Option<PathBuf> {
@@ -75,55 +74,17 @@ fn normalize_article_root_text(text: &str) -> String {
     out
 }
 
-fn normalize_article_root_value(value: &mut Value) {
-    match value {
-        Value::String(text) => {
-            let normalized = normalize_article_root_text(text);
-            if normalized != *text {
-                *text = normalized;
-            }
-        }
-        Value::Array(items) => {
-            for item in items {
-                normalize_article_root_value(item);
-            }
-        }
-        Value::Object(map) => {
-            for item in map.values_mut() {
-                normalize_article_root_value(item);
-            }
-        }
-        _ => {}
+// 解析 CSS 主题文件内容。空文件视为无效；选择器里的旧文章根（#nice/#wechat-article）
+// 统一归一化为 #article。返回 (name, css)。
+fn parse_css_theme(text: &str, file_stem: &str) -> Option<(String, String)> {
+    let css = normalize_article_root_text(text.trim());
+    if css.is_empty() {
+        return None;
     }
+    Some((file_stem.to_string(), css))
 }
 
-// 解析主题文件内容。兼容两种形态：
-//   1. 裸数组 [...]            —— styleModelList，name 取文件名
-//   2. {"name":..,"model":[..]} —— 带显示名（爬取/导出用），name 取字段
-// 返回 (name, model_array)。无法解析返回 None。
-fn parse_theme_content(text: &str, file_stem: &str) -> Option<(String, serde_json::Value)> {
-    let v: serde_json::Value = serde_json::from_str(text).ok()?;
-    if v.is_array() {
-        let mut model = v;
-        normalize_article_root_value(&mut model);
-        return Some((file_stem.to_string(), model));
-    }
-    if let Some(model) = v.get("model") {
-        if model.is_array() {
-            let name = v
-                .get("name")
-                .and_then(|n| n.as_str())
-                .unwrap_or(file_stem)
-                .to_string();
-            let mut model = model.clone();
-            normalize_article_root_value(&mut model);
-            return Some((name, model));
-        }
-    }
-    None
-}
-
-/// 扫描 app_data_dir/themes/*.json，返回用户主题列表。目录不存在/读不到时返回空 vec（不报错）。
+/// 扫描 app_data_dir/themes/*.css，返回用户主题列表。目录不存在/读不到时返回空 vec（不报错）。
 #[tauri::command]
 pub fn list_user_themes(app: AppHandle) -> Vec<UserTheme> {
     let Some(dir) = themes_dir(&app) else {
@@ -136,12 +97,12 @@ pub fn list_user_themes(app: AppHandle) -> Vec<UserTheme> {
     let mut themes = Vec::new();
     for entry in entries.flatten() {
         let path = entry.path();
-        let is_json = path
+        let ext = path
             .extension()
             .and_then(|e| e.to_str())
-            .map(|e| e.eq_ignore_ascii_case("json"))
-            .unwrap_or(false);
-        if !is_json {
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        if ext != "css" {
             continue;
         }
         let Some(id) = path
@@ -151,49 +112,26 @@ pub fn list_user_themes(app: AppHandle) -> Vec<UserTheme> {
         else {
             continue;
         };
-        if let Ok(text) = std::fs::read_to_string(&path) {
-            if let Some((name, model)) = parse_theme_content(&text, &id) {
-                themes.push(UserTheme { id, name, model });
-            }
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        if let Some((name, css)) = parse_css_theme(&text, &id) {
+            themes.push(UserTheme { id, name, css });
         }
     }
     themes.sort_by(|a, b| a.id.cmp(&b.id));
     themes
 }
 
-/// 保存用户主题：写 themes/{id}.json，内容为 styleModelList 数组的 JSON。
+/// 导入 CSS 主题：写入 themes/{id}.css。
 #[tauri::command]
-pub fn save_user_theme(app: AppHandle, id: String, model_json: String) -> Result<(), String> {
+pub fn import_css_theme(app: AppHandle, id: String, raw_css: String) -> Result<String, String> {
     let dir = themes_dir(&app).ok_or_else(|| "无法定位数据目录".to_string())?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("创建主题目录失败：{e}"))?;
-    // 校验是合法 JSON
-    let mut model_value = serde_json::from_str::<serde_json::Value>(&model_json)
-        .map_err(|e| format!("非法 JSON：{e}"))?;
-    normalize_article_root_value(&mut model_value);
-    let normalized_model_json = serde_json::to_string(&model_value).map_err(|e| e.to_string())?;
     let safe_id = sanitize_id(&id)?;
-    let path = dir.join(format!("{safe_id}.json"));
-    std::fs::write(&path, normalized_model_json).map_err(|e| format!("写入失败：{e}"))?;
-    Ok(())
-}
-
-/// 导入主题模型整包：取 data.styleModelList 存为 {id}.json（含显示名）。返回保存的 id。
-#[tauri::command]
-pub fn import_theme_model(app: AppHandle, id: String, raw_json: String) -> Result<String, String> {
-    let parsed: serde_json::Value =
-        serde_json::from_str(&raw_json).map_err(|e| format!("非法 JSON：{e}"))?;
-    let model = parsed
-        .get("data")
-        .and_then(|d| d.get("styleModelList"))
-        .ok_or_else(|| "JSON 中找不到 data.styleModelList".to_string())?;
-    if !model.is_array() {
-        return Err("styleModelList 不是数组".into());
-    }
-    // 存成 {name, model} 形态，保留原始（可含中文）显示名；文件名仍用 sanitize 后的 id。
-    let wrapped = serde_json::json!({"name": id, "model": model});
-    let model_json = serde_json::to_string(&wrapped).map_err(|e| e.to_string())?;
-    save_user_theme(app, id.clone(), model_json)?;
-    Ok(sanitize_id(&id)?)
+    let path = dir.join(format!("{safe_id}.css"));
+    std::fs::write(&path, raw_css).map_err(|e| format!("写入失败：{e}"))?;
+    Ok(safe_id)
 }
 
 /// 确保 app_data_dir/themes/ 存在，返回其绝对路径（供 UI「打开主题文件夹」用）。
@@ -264,25 +202,4 @@ mod tests {
         );
     }
 
-    #[test]
-    fn normalizes_theme_model_strings_recursively() {
-        let mut value = serde_json::json!({
-            "name": "theme",
-            "model": [{
-                "keys": [{"selector": "#nice p"}],
-                "value": "#nice p strong { color: red; }",
-                "selectors": ["#nice p", "#nice-card p"]
-            }]
-        });
-
-        normalize_article_root_value(&mut value);
-
-        assert_eq!(value["model"][0]["keys"][0]["selector"], "#article p");
-        assert_eq!(
-            value["model"][0]["value"],
-            "#article p strong { color: red; }"
-        );
-        assert_eq!(value["model"][0]["selectors"][0], "#article p");
-        assert_eq!(value["model"][0]["selectors"][1], "#nice-card p");
-    }
 }

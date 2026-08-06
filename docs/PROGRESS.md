@@ -817,3 +817,23 @@ npx tsc --noEmit         # 类型检查
 - ✅ `npm run build`：生产构建通过。
 - ✅ `cargo test`：55 passed / 1 ignored。
 - ⏳ 待双设备真实坚果云手测：A/B 两篇不同主题、重命名/移动后保持、另一台设备同步恢复。
+
+## 主题系统改造 — 纯 CSS 主题、移除可视化面板与 JSON 模型（✅ 代码与自动化验证完成，2026-08-06）
+
+> 结论（与用户确认）：主题设计交给我们技术人员，用户只选择设计好的主题。可视化样式面板不再保留。
+
+### 变更
+
+- 内置主题统一为 CSS：`src/themes/builtin/*.css`（12 个手写系 + 30 个 mdnice 系），`ThemeOption` 只剩 `{id, name, css}`。
+- 删除可视化面板：`src/components/StylePanel/`（StylePanel/controls/elementMap/styleLabels）及 store 的 `selectedModelId/setSelectedModel/updateStyleValue`、预览点击编辑高亮、导出管线里的 `preview-edit-*` 清理。
+- 删除 JSON 模型管线：`themeModel.ts` / `compileModel.ts` 不再被应用引用；mdnice 主题源 JSON 与转换工具已一并删除（可经 git 历史找回），内置主题统一为 `src/themes/builtin/*.css`。
+- Rust 只扫描用户主题目录 `*.css`，删除 `save_user_theme` / `import_theme_model` 命令；用户 JSON 主题不再读取。
+- 打包体积：30 个 mdnice 主题由 4.21MB JSON chunk 变为约 1.15MB CSS chunk（按需加载）。
+
+### 验证
+
+- ✅ `npx tsc -b`、`cargo check`、`cargo test themes::` 通过。
+- ✅ `npm test`：473/473 通过。
+- ✅ `npm run build`：生产构建通过（dist 10.09MB，无 mdnice JSON chunk）。
+
+> 本文件更早的 Phase 2a / 可视化面板 / model-only 等章节为历史记录，所述代码已按本次改造删除。

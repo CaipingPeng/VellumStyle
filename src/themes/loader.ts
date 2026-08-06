@@ -1,22 +1,23 @@
 import {invoke} from "@tauri-apps/api/core";
-import {loadBuiltinThemes, type ThemeOption, type StyleModel} from "./index.ts";
-import {compileModel} from "./compileModel.ts";
-import {validateModel} from "./themeModel.ts";
+import {loadBuiltinThemes, type ThemeOption} from "./index.ts";
+import {scopeCssTo} from "../components/Theme/scopeCss.ts";
+import {ARTICLE_ROOT_SELECTOR} from "../articleRoot.ts";
 
-// 启动：内置 model 主题 + 用户目录 *.json 扫描，编译出 css。
+// 启动：内置 CSS 主题 + 用户目录 *.css 扫描，统一作用域到 #article。
 // 无 Tauri 环境（Web 调试）时 invoke 抛错，回退为仅内置。
 export async function loadAllThemes(): Promise<ThemeOption[]> {
   const builtinThemes = await loadBuiltinThemes();
   const builtinIds = new Set(builtinThemes.map((t) => t.id));
   let user: ThemeOption[] = [];
   try {
-    const raw = await invoke<{id: string; name: string; model: unknown}[]>("list_user_themes");
-    user = raw
-      .filter((u) => validateModel(u.model))
-      .map((u) => {
-        const model = u.model as StyleModel[];
-        return {id: u.id, name: u.name || u.id, css: compileModel(model), model};
-      });
+    const raw = await invoke<{id: string; name: string; css?: string}[]>("list_user_themes");
+    user = raw.flatMap((u): ThemeOption[] => {
+      const css = u.css ?? "";
+      if (!css.trim()) return [];
+      // 统一作用域到 #article：作者写裸选择器也不会污染应用 UI，
+      // 预览/导出/缩略图共用同一份已作用域 CSS。
+      return [{id: u.id, name: u.name || u.id, css: scopeCssTo(css, ARTICLE_ROOT_SELECTOR)}];
+    });
   } catch {
     // 非 Tauri 环境，仅内置主题
   }
@@ -31,12 +32,7 @@ export async function openThemesDir(): Promise<void> {
   await invoke("open_themes_dir");
 }
 
-// 导入主题模型 JSON：raw 为整包字符串，id 为新主题名。
-export async function importThemeModel(id: string, raw: string): Promise<void> {
-  await invoke("import_theme_model", {id, rawJson: raw});
-}
-
-// 保存当前主题模型到用户主题目录；同 id 用户主题会在下次扫描时覆盖内置主题。
-export async function saveUserTheme(id: string, modelJson: string): Promise<void> {
-  await invoke("save_user_theme", {id, modelJson});
+// 导入 CSS 主题：raw 为 CSS 文本，id 为新主题名。
+export async function importCssTheme(id: string, rawCss: string): Promise<void> {
+  await invoke("import_css_theme", {id, rawCss});
 }

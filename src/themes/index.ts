@@ -1,52 +1,89 @@
-import {compileModel} from "./compileModel.ts";
-import type {StyleModel} from "./themeModel.ts";
-import {validateModel} from "./themeModel.ts";
-import defaultModel from "./default.json" with {type: "json"};
-
-export type {StyleModel} from "./themeModel.ts";
+import defaultCss from "./builtin/default.css?raw";
+import {scopeCssTo} from "../components/Theme/scopeCss.ts";
+import {ARTICLE_ROOT_SELECTOR} from "../articleRoot.ts";
 
 export interface ThemeOption {
   id: string;
   name: string;
-  css: string; // 由 model 编译产出（注入预览/复制）
-  model: StyleModel[]; // 真相源，可进面板编辑
+  css: string; // 主题 CSS（已作用域到 #article，注入预览/复制）
 }
 
-const DEFAULT_MODEL = defaultModel as StyleModel[];
+// 内置主题：builtin/*.css 文件，文件名（去扩展名）作 id；
+// 显示名在下方映射表中维护（文件系统文件名不一定适合直接展示）。
+const BUILTIN_NAMES: Record<string, string> = {
+  default: "默认",
+  "everforest-light": "Everforest Light",
+  "eyes-green": "Eyes Green",
+  happysimple: "Happy Simple",
+  "konayuki-light": "Konayuki Light",
+  "latex-typora": "LaTeX Typora",
+  "morandi-garden": "Morandi Garden",
+  "notion-style-light-enhanced": "Notion Style Enhanced",
+  "see-yue": "See Yue 望月",
+  "typora-mo": "Typora Mo",
+  "typora-spring": "Typora Spring",
+  "typora-yuan-shan": "Typora Yuan Shan 远山",
+  "mdnice-1": "橙心",
+  "mdnice-3": "姹紫",
+  "mdnice-4": "嫩青",
+  "mdnice-5": "绿意",
+  "mdnice-6": "红绯",
+  "mdnice-8": "蓝莹",
+  "mdnice-10": "兰青",
+  "mdnice-11": "山吹",
+  "mdnice-12": "前端之巅同款",
+  "mdnice-13": "极客黑",
+  "mdnice-15": "蔷薇紫",
+  "mdnice-16": "萌绿",
+  "mdnice-17": "全栈蓝",
+  "mdnice-18": "极简黑",
+  "mdnice-19": "橙蓝风",
+  "mdnice-33": "Pornhub黄",
+  "mdnice-35": "凝夜紫",
+  "mdnice-42": "萌粉",
+  "mdnice-44": "Obsidian",
+  "mdnice-45": "灵动蓝",
+  "mdnice-48": "草原绿",
+  "mdnice-51": "科技蓝",
+  "mdnice-62": "WeFormat",
+  "mdnice-63": "简",
+  "mdnice-1348": "雁栖湖",
+  "mdnice-1377": "奇点",
+  "mdnice-1653": "锤子便签主题第2版",
+  "mdnice-3050": "丘比特忙",
+  "mdnice-3060": "重影",
+  "mdnice-11773": "柠檬黄",
+};
 
 const defaultTheme: ThemeOption = {
   id: "default",
-  name: "默认",
-  css: compileModel(DEFAULT_MODEL),
-  model: DEFAULT_MODEL,
+  name: BUILTIN_NAMES.default,
+  css: scopeCssTo(defaultCss, ARTICLE_ROOT_SELECTOR),
 };
 
-// 预置主题：presets/*.json 形态为 {name, model}。
-// 文件名（去扩展名）作 id，name 字段作显示名。新增预置主题只需丢 .json 文件。
-type PresetFile = {name?: string; model?: unknown};
-const presetModules = import.meta.glob("./presets/*.json", {import: "default"}) as Record<
+const builtinModules = import.meta.glob("./builtin/*.css", {query: "?raw", import: "default"}) as Record<
   string,
-  () => Promise<PresetFile>
+  () => Promise<string>
 >;
 
 let builtinThemesPromise: Promise<ThemeOption[]> | undefined;
 
-function toPresetTheme(path: string, raw: PresetFile): ThemeOption | null {
-  const id = path.replace(/^\.\/presets\//, "").replace(/\.json$/, "");
-  const model = raw?.model;
-  if (!validateModel(model)) return null;
+function toBuiltinTheme(path: string, css: string): ThemeOption | null {
+  const id = path.replace(/^\.\/builtin\//, "").replace(/\.css$/, "");
+  // default.css 已在启动首帧由 defaultTheme 单独加载，避免列表重复。
+  if (id === "default") return null;
+  if (!css.trim()) return null;
   return {
     id,
-    name: raw.name || id,
-    css: compileModel(model),
-    model,
+    name: BUILTIN_NAMES[id] ?? id,
+    css: scopeCssTo(css, ARTICLE_ROOT_SELECTOR),
   };
 }
 
 export async function loadBuiltinThemes(): Promise<ThemeOption[]> {
   if (!builtinThemesPromise) {
     builtinThemesPromise = Promise.all(
-      Object.entries(presetModules).map(async ([path, load]) => toPresetTheme(path, await load())),
+      Object.entries(builtinModules).map(async ([path, load]) => toBuiltinTheme(path, await load())),
     ).then((themes) => [
       defaultTheme,
       ...themes.filter((t): t is ThemeOption => t !== null).sort((a, b) => a.name.localeCompare(b.name, "zh")),
@@ -55,7 +92,7 @@ export async function loadBuiltinThemes(): Promise<ThemeOption[]> {
   return builtinThemesPromise;
 }
 
-// 启动首帧只需要默认主题；完整预设由 loadBuiltinThemes() 异步加载。
+// 启动首帧只需要默认主题；完整内置主题由 loadBuiltinThemes() 异步加载。
 export const builtinThemes: ThemeOption[] = [defaultTheme];
 
 export const defaultMarkdownTheme: ThemeOption = defaultTheme;

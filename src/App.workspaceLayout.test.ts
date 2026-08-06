@@ -29,14 +29,13 @@ test("双抽屉可独立渲染且顺序稳定地位于核心分栏之前", async
   assert.doesNotMatch(source, /sidebarOpen\s*\?[^:]+:\s*<OutlineNav/s);
 });
 
-test("预览无标题栏且模式切换器和浮动样式面板保持原位", async () => {
+test("预览无标题栏且模式切换器保持原位", async () => {
   const source = await appSource;
   const footer = source.slice(source.indexOf("<footer"), source.indexOf("</footer>"));
   assert.match(footer, /<PreviewModeToggle variant="status"/);
   assert.match(source, /data-workspace-panel="preview"/);
   assert.doesNotMatch(source, /data-preview-toolbar/);
-  assert.ok(source.indexOf("<StylePanel />") > source.indexOf("<Preview"));
-  assert.match(source, /<StylePanel \/>[\s\S]*<\/div>/);
+  assert.doesNotMatch(source, /<StylePanel/);
 });
 
 test("状态栏保留完整信息并只用细竖线分隔相邻项目", async () => {
