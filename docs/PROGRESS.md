@@ -837,3 +837,28 @@ npx tsc --noEmit         # 类型检查
 - ✅ `npm run build`：生产构建通过（dist 10.09MB，无 mdnice JSON chunk）。
 
 > 本文件更早的 Phase 2a / 可视化面板 / model-only 等章节为历史记录，所述代码已按本次改造删除。
+
+## 素材库视频/音频：插入、本地预览与流式播放（✅ 代码与自动化验证完成，2026-08-06）
+
+> 素材库弹窗新增「视频」「音频」页签，视频/音频素材从公众号素材库选择后插入正文；本地预览以官方样式占位并可流式播放（音频/视频均不下载文件）。
+
+### 关键设计
+
+- 素材库三页签（图片/视频/音频）：视频与音频列表来自微信官方接口（`batchget_material type=video/voice`）；音频素材标识 `voice_encode_fileid` 官方 API 不提供，通过软件内嵌微信后台窗口（WebView2）静默调用后台 `filepage` 接口同步（token 从后台 URL 提取，fingerprint 实测不校验）。
+- 视频插入：`<iframe class="video_iframe rich_pages" data-vidtype data-mpvid data-cover data-src src>`；本地预览用封面占位 + 点击流式播放（`get_material` 拿播放页 → 提取 `mpvideo.qpic.cn` 最高清 mp4 直链，带签名时效，每次播放前实时获取）。
+- 音频插入：官方新版 `<mp-common-mpaudio>`（含 `cover` 封面、`duration` 等），本地预览官方样式卡片（#fafafa 底、左侧 64px 缩略图、中文时长）+ `getvoice` 直链流式播放（`https://res.wx.qq.com/voice/getvoice?mediaid=<voice_encode_fileid>`，无需 Referer）。
+- 本地预览占位与导出解耦：占位/播放器只存在于预览 DOM，`stripPreviewArtifacts` 导出时清理；自定义组件 shadow DOM 与占位元素均不进入发布内容。
+
+### 踩坑记录（重要）
+
+- **微信 draft/add 对 iframe 的 data 属性有白名单**：`data-tool`、`data-media-id` 等未知 data 属性会导致**整段剥离 iframe**（视频消失）。iframe 只能携带 `data-vidtype/data-mpvid/data-cover/data-src` 等微信已知字段；`media_id` 等本地数据改存 localStorage 映射（vid → media_id），不进发布内容。
+- **视频 iframe 必须保留 `src`**：纯 `data-src`（无 src）虽然 draft/get 时标签保留，但微信播放器渲染依赖 `src`，去掉后发布视频不显示。
+- **音频封面是素材自己的 `voice_cover_url`**（可能等于公众号头像，也可能不是），不要用头像兜底。
+- **核心教训——深克隆会复制"幽灵播放器"**：发布流程 `solveDraftHtml()` 会 `cloneNode(true)` 深克隆预览 DOM，若预览里有带 `src` + `autoplay` 的 `<video>`，克隆副本**脱离文档仍会播放音频**（类似 `new Audio().play()`），且其 play 事件不经过 document 监听（表现为"有声音但无 play 事件、源元素一直 paused"）。**发布前必须把媒体元素从预览 DOM 移除（占位恢复为封面），仅 pause 不够**。此问题通过"发布前恢复占位"根治，并已用对照实验确认根因。
+
+### 验证状态
+
+- ✅ `npx tsc -b`、`npm test`：499/499 通过。
+- ✅ `cargo test`：73 passed / 1 ignored。
+- ✅ `npm run build`：生产构建通过。
+- ✅ 发布链路实测：带 data-tool/data-media-id 的 iframe 被微信剥离、纯 data-src 发布后不显示、src+data-src 正常；mp-common-mpaudio 带 cover/fileid 完整保留；纯音频文章可发布。
