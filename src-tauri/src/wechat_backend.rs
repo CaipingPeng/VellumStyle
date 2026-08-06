@@ -493,6 +493,17 @@ pub async fn ai_image_get_example(app: AppHandle, session_id: String) -> Result<
     eval_backend_expr(app, ai_image_get_expr("get_example", &params), "AI配图").await
 }
 
+/// 获取 AI 配图历史会话：返回 get_biz_recent_img_list 原始 JSON
+/// （session_list.session_info[]，含 session_id 与已生成图片）。
+#[tauri::command]
+pub async fn ai_image_get_biz_recent_img_list(
+    app: AppHandle,
+    limit: u32,
+) -> Result<String, String> {
+    let params = format!("&limit={}", limit.clamp(1, 50));
+    eval_backend_expr(app, ai_image_get_expr("get_biz_recent_img_list", &params), "AI配图").await
+}
+
 /// 相关图搜索：返回 related_search 原始 JSON（list.image[] 带 search_url）。
 #[tauri::command]
 pub async fn ai_image_related_search(

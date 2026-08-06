@@ -287,6 +287,11 @@ export function aiImageGetExample(sessionId: string): Promise<string> {
   return invoke<string>("ai_image_get_example", {sessionId});
 }
 
+/// 获取 AI 配图历史会话，返回 get_biz_recent_img_list 原始 JSON 文本。
+export function aiImageGetBizRecentImgList(limit: number): Promise<string> {
+  return invoke<string>("ai_image_get_biz_recent_img_list", {limit});
+}
+
 /// 相关图搜索，返回 related_search 原始 JSON 文本。
 export function aiImageRelatedSearch(
   sessionId: string,

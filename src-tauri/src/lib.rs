@@ -100,6 +100,7 @@ pub fn run() {
             wechat_backend::ai_image_get_session,
             wechat_backend::ai_image_get_style,
             wechat_backend::ai_image_get_example,
+            wechat_backend::ai_image_get_biz_recent_img_list,
             wechat_backend::ai_image_related_search,
             wechat_backend::ai_image_append_related_search,
             wechat_backend::ai_image_start_creation,
