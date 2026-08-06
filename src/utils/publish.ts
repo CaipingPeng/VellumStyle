@@ -202,6 +202,16 @@ export function openWechatBackend(): Promise<void> {
   return invoke<void>("open_wechat_backend");
 }
 
+/// 隐藏创建微信后台窗口（静默搜索场景，避免已登录时窗口闪动）。
+export function openWechatBackendHidden(): Promise<void> {
+  return invoke<void>("open_wechat_backend_hidden");
+}
+
+/// 显示后台窗口（仅需要用户扫码登录时调用）。
+export function showWechatBackend(): Promise<void> {
+  return invoke<void>("show_wechat_backend");
+}
+
 /// 在后台窗口上下文里静默拉取音频素材列表接口，返回原始 JSON 响应文本。
 /// 窗口未打开时命令返回 "WECHAT_BACKEND_NOT_OPENED"。
 export function fetchBackendVoiceList(): Promise<string> {

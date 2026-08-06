@@ -1,8 +1,10 @@
 import {useCallback, useEffect, useRef, useState} from "react";
-import {Search, Smile, UploadCloud} from "lucide-react";
-import {closeWechatBackend, openWechatBackend, searchRemoticon} from "../../utils/publish.ts";
+import {Check, Search, Smile} from "lucide-react";
+import {closeWechatBackend, openWechatBackendHidden, searchRemoticon, showWechatBackend} from "../../utils/publish.ts";
+import {toProxyImageUrl} from "../../utils/imageProxy.ts";
 import {uploadRemoteImage} from "../../utils/upload.ts";
 import {toast} from "../Toast/toast.ts";
+import Button from "../ui/Button.tsx";
 import Dialog from "../ui/Dialog.tsx";
 
 interface Props {
@@ -19,18 +21,26 @@ interface EmojiItem {
   thumbUrl: string;
 }
 
+interface EmojiPage {
+  items: EmojiItem[];
+  genNextOffset: number;
+  genContinue: boolean;
+  normalNextOffset: number;
+  normalContinue: boolean;
+}
+
 const PAGE_SIZE = 40;
 
 function errorMessage(error: unknown): string {
   return typeof error === "string" ? error : (error as Error)?.message || "未知错误";
 }
 
-function parseEmojiSearchResponse(source: string): EmojiItem[] | null {
+function parseEmojiSearchResponse(source: string): EmojiPage | null {
   let data: {
     vs_error?: string;
     base_resp?: {ret?: number; err_msg?: string};
-    gen_emoji_result?: {items?: Array<Record<string, unknown>>};
-    normal_emoji_result?: {items?: Array<Record<string, unknown>>};
+    gen_emoji_result?: {items?: Array<Record<string, unknown>>; next_offset?: number; continue_flag?: boolean};
+    normal_emoji_result?: {items?: Array<Record<string, unknown>>; next_offset?: number; continue_flag?: boolean};
   };
   try {
     data = JSON.parse(source);
@@ -47,23 +57,40 @@ function parseEmojiSearchResponse(source: string): EmojiItem[] | null {
       emojiUrl: item.emoji_url as string,
       thumbUrl: (item.thumb_url as string) || (item.emoji_url as string),
     }));
-  return [
-    ...toItems(data?.gen_emoji_result?.items),
-    ...toItems(data?.normal_emoji_result?.items),
-  ];
+  return {
+    items: [...toItems(data?.gen_emoji_result?.items), ...toItems(data?.normal_emoji_result?.items)],
+    genNextOffset: Number(data?.gen_emoji_result?.next_offset ?? 0),
+    genContinue: Boolean(data?.gen_emoji_result?.continue_flag),
+    normalNextOffset: Number(data?.normal_emoji_result?.next_offset ?? 0),
+    normalContinue: Boolean(data?.normal_emoji_result?.continue_flag),
+  };
 }
 
 export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onNeedSettings}: Props) {
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<EmojiItem[]>([]);
+  const [genNextOffset, setGenNextOffset] = useState(0);
+  const [normalNextOffset, setNormalNextOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
-  const [inserting, setInserting] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [inserting, setInserting] = useState(false);
   const searchTimer = useRef<number | null>(null);
   const sessionRef = useRef(0);
+
+  const applyPage = useCallback((page: EmojiPage) => {
+    setItems(page.items);
+    setSelectedIds(new Set());
+    setGenNextOffset(page.genNextOffset);
+    setNormalNextOffset(page.normalNextOffset);
+    setHasMore(page.genContinue || page.normalContinue);
+  }, []);
 
   const runSearch = useCallback(async (keyword: string, session: number) => {
     if (!keyword.trim()) {
       setItems([]);
+      setSelectedIds(new Set());
       setLoading(false);
       return;
     }
@@ -71,41 +98,33 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
     try {
       const response = await searchRemoticon(keyword.trim(), PAGE_SIZE, 0);
       if (session !== sessionRef.current) return;
-      const parsed = parseEmojiSearchResponse(response);
-      if (parsed === null) {
-        let hint = "没有搜索到表情，请确认后台已登录";
-        try {
-          const data = JSON.parse(response) as {vs_error?: string; base_resp?: {ret?: number; err_msg?: string}};
-          if (data.vs_error) {
-            hint = "后台页面脚本未就绪，请稍后重试";
-          } else if (data.base_resp && data.base_resp.ret !== undefined && data.base_resp.ret !== 0) {
-            hint = `后台返回错误（${data.base_resp.ret}）：${data.base_resp.err_msg ?? "请确认已登录微信后台"}`;
-          }
-        } catch {
-          // 保留默认提示
-        }
+      const page = parseEmojiSearchResponse(response);
+      if (page === null) {
         setItems([]);
-        toast.show(hint, "error", 5000);
+        setSelectedIds(new Set());
+        toast.show("搜索未返回结果，请确认后台已登录", "error", 5000);
       } else {
-        setItems(parsed);
+        applyPage(page);
       }
     } catch (error) {
       if (session !== sessionRef.current) return;
       const message = errorMessage(error);
       if (message.includes("WECHAT_BACKEND_NOT_OPENED")) {
         setItems([]);
-        await openWechatBackend();
-        toast.show("正在等待微信后台登录…", "info", 3000);
+        setSelectedIds(new Set());
+        await openWechatBackendHidden();
+        toast.show("正在等待微信后台就绪…", "info", 3000);
         const startedAt = Date.now();
+        let shown = false;
         while (Date.now() - startedAt < 60_000) {
           await new Promise((resolve) => setTimeout(resolve, 2000));
           if (session !== sessionRef.current) return;
           try {
             const retryResponse = await searchRemoticon(keyword.trim(), PAGE_SIZE, 0);
             if (session !== sessionRef.current) return;
-            const retried = parseEmojiSearchResponse(retryResponse);
-            if (retried !== null) {
-              setItems(retried);
+            const page = parseEmojiSearchResponse(retryResponse);
+            if (page !== null) {
+              applyPage(page);
               setLoading(false);
               try {
                 await closeWechatBackend();
@@ -115,26 +134,32 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
               return;
             }
           } catch {
-            // 窗口页面未就绪或未登录，继续等待
+            // 页面未就绪，继续等待
+          }
+          if (!shown) {
+            shown = true;
+            await showWechatBackend();
           }
         }
         if (session === sessionRef.current) {
           setLoading(false);
-          toast.show("等待后台登录超时，请登录后重新搜索", "error");
+          toast.show("等待微信后台登录超时，请登录后重新搜索", "error");
         }
       } else {
         setItems([]);
+        setSelectedIds(new Set());
         toast.show(`表情搜索失败：${message}`, "error");
       }
     } finally {
       if (session === sessionRef.current) setLoading(false);
     }
-  }, []);
+  }, [applyPage]);
 
   useEffect(() => {
     const session = ++sessionRef.current;
     if (searchTimer.current) window.clearTimeout(searchTimer.current);
     setItems([]);
+    setSelectedIds(new Set());
     setLoading(false);
     if (!open) return;
     const keyword = query.trim();
@@ -145,13 +170,55 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
     };
   }, [open, query, runSearch]);
 
-  const insertEmoji = async (item: EmojiItem) => {
-    if (!canInsert || inserting) return;
-    setInserting(item.docId);
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    const keyword = query.trim();
+    if (!keyword) return;
+    setLoadingMore(true);
     try {
-      const mmbizUrl = await uploadRemoteImage(item.emojiUrl, "正文图片");
-      onPick(`![${item.docId}](${mmbizUrl})`);
-      toast.show("已插入表情", "info");
+      const offset = genNextOffset > 0 ? genNextOffset : normalNextOffset;
+      const response = await searchRemoticon(keyword, PAGE_SIZE, offset);
+      const page = parseEmojiSearchResponse(response);
+      if (page === null) {
+        toast.show("加载更多失败，请稍后重试", "error");
+        return;
+      }
+      setItems((prev) => {
+        const seen = new Set(prev.map((item) => item.docId));
+        return [...prev, ...page.items.filter((item) => !seen.has(item.docId))];
+      });
+      setGenNextOffset(page.genNextOffset);
+      setNormalNextOffset(page.normalNextOffset);
+      setHasMore(page.genContinue || page.normalContinue);
+    } catch (error) {
+      toast.show(`加载更多失败：${errorMessage(error)}`, "error");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const toggleSelect = (docId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(docId)) next.delete(docId);
+      else next.add(docId);
+      return next;
+    });
+  };
+
+  const selectedItems = items.filter((item) => selectedIds.has(item.docId));
+
+  const insertSelected = async () => {
+    if (!canInsert || selectedItems.length === 0 || inserting) return;
+    setInserting(true);
+    try {
+      const markdowns: string[] = [];
+      for (const item of selectedItems) {
+        const mmbizUrl = await uploadRemoteImage(item.emojiUrl, "正文图片");
+        markdowns.push(`![${item.docId}](${mmbizUrl})`);
+      }
+      onPick(markdowns.join(" "));
+      toast.show(`已插入 ${markdowns.length} 个表情`, "info");
       onClose();
     } catch (error) {
       const message = errorMessage(error);
@@ -161,7 +228,7 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
         toast.show(`表情插入失败：${message}`, "error");
       }
     } finally {
-      setInserting(null);
+      setInserting(false);
     }
   };
 
@@ -175,11 +242,43 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
         </span>
       }
       onClose={onClose}
-      closeDisabled={Boolean(inserting)}
+      closeDisabled={inserting}
       width="min(90vw,720px)"
       contentPadding={false}
+      footer={
+        <div className="flex w-full items-center justify-between gap-3">
+          <span className="text-xs font-normal text-text-muted">
+            {selectedItems.length > 0 ? `已选择 ${selectedItems.length} 个` : "点击表情可多选"}
+          </span>
+          <div className="flex items-center gap-2">
+            {hasMore && items.length > 0 && (
+              <Button
+                type="button"
+                variant="secondary"
+                state={loadingMore ? "loading" : "idle"}
+                loadingText="加载中…"
+                disabled={loading || loadingMore || inserting}
+                onClick={() => void loadMore()}
+              >
+                加载更多
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="primary"
+              state={inserting ? "loading" : "idle"}
+              loadingText="正在上传…"
+              disabled={!canInsert || selectedItems.length === 0 || inserting}
+              title={!canInsert ? "请先打开一篇文章" : "将所选表情上传为永久链接后插入"}
+              onClick={() => void insertSelected()}
+            >
+              插入所选
+            </Button>
+          </div>
+        </div>
+      }
     >
-      <div className="flex h-[clamp(360px,calc(86vh-100px),560px)] min-h-0 flex-col">
+      <div className="flex h-[clamp(360px,calc(86vh-120px),560px)] min-h-0 flex-col">
         <div className="flex h-[46px] flex-none items-center gap-2 border-b border-border bg-bg-secondary px-4">
           <Search size={14} className="flex-none text-text-muted" />
           <input
@@ -201,26 +300,29 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
           <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 [scrollbar-gutter:stable] [scrollbar-width:thin]">
             <div className="grid auto-rows-max grid-cols-4 content-start gap-3 sm:grid-cols-5 lg:grid-cols-6">
               {items.map((item, index) => {
-                const busy = inserting === item.docId;
+                const selected = selectedIds.has(item.docId);
                 return (
                   <button
                     key={item.docId || index}
                     type="button"
-                    disabled={Boolean(inserting) || !canInsert}
-                    title={canInsert ? "点击插入表情" : "请先打开一篇文章"}
-                    onClick={() => void insertEmoji(item)}
-                    className="group relative grid aspect-square cursor-pointer place-items-center overflow-hidden rounded-lg border border-[color:var(--card-border)] bg-bg-secondary p-0 outline-none transition-[border-color,background-color,transform] duration-slow ease-bounce hover:-translate-y-1 hover:bg-bg focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60"
+                    disabled={Boolean(inserting)}
+                    aria-pressed={selected}
+                    aria-label={`${selected ? "取消选择" : "选择"}第 ${index + 1} 个表情`}
+                    onClick={() => toggleSelect(item.docId)}
+                    className={`relative grid aspect-square cursor-pointer place-items-center overflow-hidden rounded-lg border bg-bg-secondary p-0 outline-none transition-[border-color,background-color,transform] duration-slow ease-bounce focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
+                      selected ? "border-accent/70" : "border-[color:var(--card-border)] hover:-translate-y-1 hover:bg-bg"
+                    }`}
                   >
                     <img
-                      src={item.thumbUrl}
+                      src={toProxyImageUrl(item.thumbUrl)}
                       alt=""
                       loading="lazy"
                       decoding="async"
                       className="block h-full w-full object-contain p-1"
                     />
-                    {busy && (
-                      <span className="absolute inset-0 grid place-items-center bg-bg/60">
-                        <UploadCloud size={20} className="animate-pulse text-accent" />
+                    {selected && (
+                      <span aria-hidden="true" className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full border-2 border-white bg-accent text-white">
+                        <Check size={12} strokeWidth={3} />
                       </span>
                     )}
                   </button>
