@@ -21,8 +21,11 @@ test("表情搜索弹窗接入后台搜索并以上传后的永久链接插入",
   assert.match(source, /thumbUrl/);
   assert.match(source, /微表情/);
   assert.match(source, /smileyKey/);
-  assert.match(source, /=20x20/);
+  assert.match(source, /smileyImgHtml/);
+  assert.match(source, /display:inline-block/);
+  assert.match(source, /rich_pages wxw-img/);
   assert.match(source, /grid-cols-2/);
+  assert.match(source, /border-0/);
   assert.match(source, /selectedCount === 0/);
   assert.match(source, /加载更多/);
   assert.match(source, /插入所选/);

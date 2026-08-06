@@ -41,6 +41,16 @@ function smileyKey(name: string): string {
   return `${SMILEY_KEY_PREFIX}${name}`;
 }
 
+// 与官方编辑器一致的内联微表情：透明 PNG 需用 inline style 覆盖主题里
+// `#article img` 的块级/边框/背景规则，避免出现白底方块。
+function smileyImgHtml(url: string, title: string): string {
+  return (
+    `<img src="${url}" data-src="${url}" class="rich_pages wxw-img" data-ratio="1" data-w="20" ` +
+    `style="display:inline-block;width:20px;height:20px;vertical-align:middle;background:transparent;` +
+    `border:0;border-radius:0;box-shadow:none;margin:0;" alt="${title}">`
+  );
+}
+
 function errorMessage(error: unknown): string {
   return typeof error === "string" ? error : (error as Error)?.message || "未知错误";
 }
@@ -295,8 +305,8 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
         markdowns.push(`![${item.docId}](${cdnUrl})`);
       }
       for (const smiley of selectedSmileys) {
-        // 与官方编辑器一致：直接引用微信官方表情资源地址，并按官方 20px 尺寸插入
-        markdowns.push(`![${smiley.title}](${smiley.url} =20x20)`);
+        // 与官方编辑器一致：直接引用微信官方表情资源地址，内联 20px 显示
+        markdowns.push(smileyImgHtml(smiley.url, smiley.title));
       }
       onPick(markdowns.join(" "));
       toast.show(`已插入 ${markdowns.length} 个表情`, "info");
@@ -369,7 +379,7 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
                 type="button"
                 onClick={() => switchTab(tab)}
                 aria-pressed={active}
-                className={`relative h-full text-sm transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)] ${
+                className={`relative h-full border-0 text-sm transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)] ${
                   active ? "bg-bg font-medium text-text" : "text-text-secondary hover:bg-bg-tertiary hover:text-text"
                 }`}
               >
