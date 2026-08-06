@@ -282,7 +282,7 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
   };
 
   const insertSelected = async () => {
-    if (!canInsert || selectedItems.length === 0 || inserting) return;
+    if (!canInsert || selectedCount === 0 || inserting) return;
     setInserting(true);
     try {
       const markdowns: string[] = [];
@@ -360,22 +360,24 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
       }
     >
       <div className="flex h-[clamp(360px,calc(86vh-120px),560px)] min-h-0 flex-col">
-        <div className="flex h-10 flex-none items-center gap-1 border-b border-border bg-bg-secondary px-4">
-          {(["search", "smiley"] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => switchTab(tab)}
-              aria-pressed={activeTab === tab}
-              className={`h-7 rounded-md px-3 text-xs font-medium transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
-                activeTab === tab
-                  ? "bg-accent text-white"
-                  : "text-text-secondary hover:bg-bg hover:text-text"
-              }`}
-            >
-              {tab === "search" ? "搜索" : "微表情"}
-            </button>
-          ))}
+        <div className="grid h-10 flex-none grid-cols-2 border-b border-border bg-bg-secondary">
+          {(["search", "smiley"] as const).map((tab) => {
+            const active = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => switchTab(tab)}
+                aria-pressed={active}
+                className={`relative h-full text-sm transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)] ${
+                  active ? "bg-bg font-medium text-text" : "text-text-secondary hover:bg-bg-tertiary hover:text-text"
+                }`}
+              >
+                {tab === "search" ? "搜索" : "微表情"}
+                {active && <span aria-hidden="true" className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-accent" />}
+              </button>
+            );
+          })}
         </div>
 
         {activeTab === "search" ? (
