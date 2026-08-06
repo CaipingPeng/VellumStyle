@@ -127,6 +127,33 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
     return ids;
   }, [voiceItems]);
 
+  // 已绑定音频缺封面（旧绑定数据）时，进入音频页自动静默补一次同步。
+  useEffect(() => {
+    if (tab !== "voice" || voiceItems.length === 0) return;
+    const missingCover = voiceItems.some((item) => {
+      const binding = loadVoiceBinding(item.mediaId);
+      return Boolean(binding && !binding.coverUrl);
+    });
+    if (!missingCover) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetchBackendVoiceList();
+        if (cancelled) return;
+        const candidates = parseVoiceBackendResponse(response);
+        if (candidates.length > 0) {
+          bindVoiceMaterials(voiceItems, candidates);
+          setVoiceItems((current) => [...current]);
+        }
+      } catch {
+        // 后台未登录等情况：静默失败，插入时再尝试或微信端自动补头像封面
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, voiceItems]);
+
   const loadMaterialLibrary = useCallback(async (offset = 0, session = librarySessionRef.current) => {
     if (materialLoadingRef.current) return;
     materialLoadingRef.current = true;
