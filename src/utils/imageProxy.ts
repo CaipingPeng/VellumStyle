@@ -42,7 +42,12 @@ const PROXY_SRC = new RegExp(
 
 export function fromProxyHtml(html: string): string {
   return html.replace(PROXY_SRC, (_m, pre, quote, encoded) => {
-    return `${pre}${quote}${decodeURIComponent(encoded)}${quote}`;
+    try {
+      return `${pre}${quote}${decodeURIComponent(encoded)}${quote}`;
+    } catch {
+      // 编码非法时保留原文，避免整篇文章复制失败
+      return `${pre}${quote}${encoded}${quote}`;
+    }
   });
 }
 

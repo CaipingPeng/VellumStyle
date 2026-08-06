@@ -23,6 +23,7 @@ use tauri::{AppHandle, Emitter};
 const MAX_SIZE: usize = 10 * 1024 * 1024; // add_material 图片限制 10MB
 const TARGET_SIZE: usize = MAX_SIZE; // 实测微信接受正好 10MiB，超出 1 字节返回 45001
 const MAX_SOURCE_SIZE: usize = 50 * 1024 * 1024;
+const MAX_PROXY_BYTES: usize = 15 * 1024 * 1024; // wximg 代理响应体上限，与预览图下载一致
 const MAX_DECODED_PIXELS: u64 = 50_000_000;
 const PNG_LOSSLESS_RETRY_RATIO: usize = 5;
 const ALLOWED_TYPES: [&str; 3] = ["image/jpeg", "image/png", "image/gif"];
@@ -1520,20 +1521,35 @@ pub async fn fetch_proxied_image(raw_url: &str) -> Result<(String, Vec<u8>), Str
     let mut target = url::Url::parse(raw_url).map_err(|_| "bad url".to_string())?;
     let host = target.host_str().unwrap_or("");
     if !ALLOWED_IMG_HOSTS.contains(&host) {
-        return Err("forbidden host".into());
+        eprintln!("[wximg] 拒绝代理非白名单域名: {host}");
+        return Err(format!("forbidden host: {host}"));
     }
     // 微信返回 http 链接，统一升级 https。
     if target.scheme() == "http" {
         let _ = target.set_scheme("https");
     }
-    let resp = reqwest::Client::new()
+    let client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(8))
+        .timeout(Duration::from_secs(20))
+        // 不自动跟随重定向：避免白名单域名被 302 到非白名单地址；
+        // 微信 CDN 图片正常不重定向，若未来遇到再按 is_allowed_redirect_target 逐跳校验。
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .map_err(|e| format!("proxy client error: {e}"))?;
+    let resp = client
         .get(target.as_str())
         .header("Referer", "https://mp.weixin.qq.com")
         .send()
         .await
         .map_err(|e| format!("proxy error: {e}"))?;
     if !resp.status().is_success() {
-        return Err("upstream error".into());
+        return Err(format!("upstream error: {}", resp.status()));
+    }
+    // 预检 Content-Length，避免下载超大响应体到内存。
+    if let Some(len) = resp.content_length() {
+        if len > MAX_PROXY_BYTES as u64 {
+            return Err("upstream image too large".into());
+        }
     }
     let content_type = resp
         .headers()
@@ -1546,6 +1562,9 @@ pub async fn fetch_proxied_image(raw_url: &str) -> Result<(String, Vec<u8>), Str
         .await
         .map_err(|e| format!("read error: {e}"))?
         .to_vec();
+    if bytes.len() > MAX_PROXY_BYTES {
+        return Err("upstream image too large".into());
+    }
     Ok((content_type, bytes))
 }
 
@@ -1813,7 +1832,7 @@ mod tests {
         extract_video_mp4_url, is_allowed_redirect_target, parse_delete_material_response,
         parse_material_page_response, parse_outbound_ip_response, parse_video_material_page_response,
         prepare_upload_for_limit, parse_voice_material_page_response, validate_remote_addresses,
-        OUTBOUND_IP_ENDPOINTS,
+        fetch_proxied_image, OUTBOUND_IP_ENDPOINTS,
     };
     use image::{DynamicImage, ImageFormat, Rgb, RgbImage, Rgba, RgbaImage};
     use std::io::Cursor;
@@ -1828,6 +1847,17 @@ mod tests {
                 value.rotate_left(17) as u8,
             ])
         }))
+    }
+
+    #[tokio::test]
+    async fn proxied_image_rejects_non_whitelisted_host() {
+        let err = fetch_proxied_image("https://evil.example.com/x.png")
+            .await
+            .unwrap_err();
+        assert!(
+            err.contains("forbidden host") && err.contains("evil.example.com"),
+            "报错应带被拒域名: {err}"
+        );
     }
 
     fn noisy_rgba(width: u32, height: u32) -> DynamicImage {
