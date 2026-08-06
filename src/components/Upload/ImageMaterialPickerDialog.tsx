@@ -4,8 +4,6 @@ import {
   CheckSquare2,
   Clapperboard,
   AudioLines,
-  CloudDownload,
-  ClipboardPaste,
   Film,
   ImageIcon,
   Images,
@@ -29,8 +27,6 @@ import {
   loadVoiceBinding,
   openWechatBackend,
   parseVoiceBackendResponse,
-  parseVoiceCode,
-  saveVoiceBinding,
   type MaterialImage,
   type MaterialVideo,
   type MaterialVoice,
@@ -41,8 +37,6 @@ import Button from "../ui/Button.tsx";
 import Dialog from "../ui/Dialog.tsx";
 import DeleteMaterialConfirmDialog from "./DeleteMaterialConfirmDialog.tsx";
 import {runMaterialOperations} from "./materialBatch.ts";
-import AudioCodeBindDialog from "./AudioCodeBindDialog.tsx";
-import VoiceBatchBindDialog from "./VoiceBatchBindDialog.tsx";
 
 interface Props {
   open: boolean;
@@ -99,11 +93,7 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
   const [voiceLoading, setVoiceLoading] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
-  const [voiceBindOpen, setVoiceBindOpen] = useState(false);
-  const [voiceBindError, setVoiceBindError] = useState<string | null>(null);
-  const [voiceBatchOpen, setVoiceBatchOpen] = useState(false);
-  const [voiceBatchError, setVoiceBatchError] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
+  const [voiceBindingBusy, setVoiceBindingBusy] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteCompleted, setDeleteCompleted] = useState(0);
@@ -246,10 +236,7 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
     setVoiceLoading(false);
     setVoiceError(null);
     setSelectedVoiceId(null);
-    setVoiceBindOpen(false);
-    setVoiceBindError(null);
-    setVoiceBatchOpen(false);
-    setVoiceBatchError(null);
+    setVoiceBindingBusy(false);
     setDeleteConfirmOpen(false);
     setDeleting(false);
     setDeleteCompleted(0);
@@ -327,161 +314,100 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
     setSelectedVoiceId((current) => (current === mediaId ? null : mediaId));
   };
 
-  const insertSelectedVoice = () => {
-    if (!canInsert || !selectedVoice) return;
+  const insertSelectedVoice = async () => {
+    if (!canInsert || !selectedVoice || voiceBindingBusy) return;
     const binding = loadVoiceBinding(selectedVoice.mediaId);
-    if (!binding) {
-      toast.show(
-        `「${selectedVoice.name}」尚未绑定，可先点「后台同步」一次绑定全部，或粘贴音频代码`,
-        "info",
-        4000,
-      );
-      setVoiceBindError(null);
-      setVoiceBindOpen(true);
+    if (binding) {
+      onPickVoices?.([formatVoiceMarkup(binding)]);
+      toast.show(`已插入「${selectedVoice.name}」`, "info");
+      onClose();
       return;
     }
-    onPickVoices?.([formatVoiceMarkup(binding)]);
-    toast.show(`已插入「${selectedVoice.name}」`, "info");
-    onClose();
+
+    // 未绑定：静默触发后台同步（未登录则打开后台窗口等待登录），成功后插入
+    setVoiceBindingBusy(true);
+    try {
+      const bound = await bindVoiceFromBackend();
+      if (!bound) return;
+      const latest = loadVoiceBinding(selectedVoice.mediaId);
+      if (!latest) {
+        toast.show("同步完成但未匹配到当前音频，请重新加载音频素材后重试", "error");
+        return;
+      }
+      onPickVoices?.([formatVoiceMarkup(latest)]);
+      toast.show(`已插入「${selectedVoice.name}」`, "info");
+      onClose();
+    } catch (error) {
+      toast.show(`音频同步失败：${errorMessage(error)}`, "error");
+    } finally {
+      setVoiceBindingBusy(false);
+    }
   };
 
-  const submitVoiceBinding = (source: string) => {
-    if (!selectedVoice) return;
-    const info = parseVoiceCode(source);
-    if (!info) {
-      setVoiceBindError(
-        "没有识别到音频代码，请确认复制的是源码模式下 <mpvoice> 或 <section class=\"js_editor_audio\"> 的完整标签。",
-      );
-      return;
-    }
-    saveVoiceBinding(selectedVoice.mediaId, info);
-    setVoiceBindOpen(false);
-    setVoiceBindError(null);
-    onPickVoices?.([formatVoiceMarkup(info)]);
-    toast.show(`已插入「${selectedVoice.name}」，下次可直接插入`, "info");
-    onClose();
-  };
-
-  const submitVoiceBatch = (source: string) => {
-    const candidates = parseVoiceBackendResponse(source);
-    if (candidates.length === 0) {
-      setVoiceBatchError("没有解析到音频数据，请确认复制的是音频列表接口的完整响应（JSON）。");
-      return;
-    }
-    if (voiceItems.length === 0) {
-      setVoiceBatchError("素材库音频列表尚未加载，请先加载音频素材再绑定。");
-      return;
-    }
-    const bound = bindVoiceMaterials(voiceItems, candidates);
-    if (bound === 0) {
-      setVoiceBatchError(
-        `响应里 ${candidates.length} 条音频均未与素材库列表匹配，请确认响应与素材库来自同一公众号。`,
-      );
-      return;
-    }
-    setVoiceBatchOpen(false);
-    setVoiceBatchError(null);
-    toast.show(
-      bound === candidates.length
-        ? `已批量绑定 ${bound} 个音频，之后可直接插入`
-        : `已绑定 ${bound} 个音频，${candidates.length - bound} 个名称未匹配`,
-      "info",
-    );
-  };
-
-  const attemptBackendSync = async (): Promise<"done" | "retry" | "error"> => {
+  // 静默拉取后台音频列表并绑定全部素材库音频；后台窗口未打开时先打开并等待登录。
+  const bindVoiceFromBackend = async (): Promise<boolean> => {
     let response: string;
     try {
       response = await fetchBackendVoiceList();
     } catch (error) {
-      if (errorMessage(error).includes("WECHAT_BACKEND_NOT_OPENED")) return "retry";
+      if (errorMessage(error).includes("WECHAT_BACKEND_NOT_OPENED")) {
+        await openWechatBackend();
+        toast.show("请在打开的微信后台窗口扫码登录，登录后会自动同步并插入音频", "info", 5000);
+        const startedAt = Date.now();
+        while (Date.now() - startedAt < 60_000) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          const url = await backendWindowUrl();
+          if (!url?.startsWith("https://mp.weixin.qq.com/") || !url.includes("token=")) continue;
+          return await bindVoiceFromBackendOnce();
+        }
+        toast.show("等待后台登录超时，请登录后重新点击「插入所选」", "error");
+        return false;
+      }
       throw error;
     }
-    console.log("[后台同步] 音频列表接口完整返回：", response);
+    return await bindVoiceFromBackendOnce(response);
+  };
 
-    const candidates = parseVoiceBackendResponse(response);
+  const bindVoiceFromBackendOnce = async (response?: string): Promise<boolean> => {
+    let raw = response;
+    if (raw === undefined) {
+      raw = await fetchBackendVoiceList();
+    }
+    const candidates = parseVoiceBackendResponse(raw);
     if (candidates.length === 0) {
-      let hint = `没有解析到音频数据，原始返回：${response.slice(0, 200)}`;
+      let hint = "没有解析到音频数据，请确认后台已登录";
       try {
-        const data = JSON.parse(response) as {
+        const data = JSON.parse(raw) as {
           vs_error?: unknown;
-          reason?: string;
-          url?: string;
-          token?: string;
-          status?: number;
-          body?: string;
-          message?: string;
           base_resp?: {ret?: number; err_msg?: string};
         };
         if (data.vs_error) {
-          const parts: string[] = [`后台脚本返回诊断：${data.reason ?? "unknown"}`];
-          if (data.message) parts.push(data.message);
-          if (data.url) parts.push(`页面：${data.url.slice(0, 120)}`);
-          if (data.token !== undefined) parts.push(`token：${data.token ? "有" : "无"}`);
-          if (data.status !== undefined) parts.push(`HTTP ${data.status}`);
-          if (data.body) parts.push(`返回：${data.body.slice(0, 150)}`);
-          hint = parts.join("；");
+          hint = "后台页面脚本未就绪，请稍后重试";
         } else if (data.base_resp && data.base_resp.ret !== undefined && data.base_resp.ret !== 0) {
           hint = `后台返回错误（${data.base_resp.ret}）：${data.base_resp.err_msg ?? "请确认已登录微信后台"}`;
         }
       } catch {
         // 保留默认提示
       }
-      toast.show(hint, "error", 6000);
-      return "error";
+      toast.show(hint, "error", 5000);
+      return false;
     }
-
     if (voiceItems.length === 0) {
-      toast.show("素材库音频列表尚未加载，请先加载音频素材再同步", "error");
-      return "error";
+      toast.show("素材库音频列表尚未加载，请先加载音频素材", "error");
+      return false;
     }
     const bound = bindVoiceMaterials(voiceItems, candidates);
     if (bound > 0) {
-      // 绑定写入 localStorage，刷新引用让卡片上的已绑定状态更新
       setVoiceItems((current) => [...current]);
-    }
-    if (bound > 0) {
       try {
         await closeWechatBackend();
       } catch {
-        // 窗口可能已被用户手动关闭，忽略
+        // 窗口可能已被手动关闭，忽略
       }
+    } else {
+      toast.show("后台音频与素材库名称未匹配，请确认后台与素材库是同一公众号", "error");
     }
-    toast.show(
-      bound > 0
-        ? bound === candidates.length
-          ? `已从后台同步并绑定 ${bound} 个音频`
-          : `已绑定 ${bound} 个音频，${candidates.length - bound} 个名称未匹配`
-        : "没有匹配到素材库音频，请确认后台与素材库是同一公众号",
-      bound > 0 ? "info" : "error",
-    );
-    return "done";
-  };
-
-  const syncVoicesFromBackend = async () => {
-    if (syncing) return;
-    setSyncing(true);
-    try {
-      const first = await attemptBackendSync();
-      if (first !== "retry") return;
-
-      await openWechatBackend();
-      toast.show("请在打开的微信后台窗口扫码登录，登录后将自动同步音频", "info", 5000);
-      const startedAt = Date.now();
-      while (Date.now() - startedAt < 60_000) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        const url = await backendWindowUrl();
-        const loggedIn = Boolean(url?.startsWith("https://mp.weixin.qq.com/") && url.includes("token="));
-        if (!loggedIn) continue;
-        const result = await attemptBackendSync();
-        if (result === "done" || result === "error") return;
-      }
-      toast.show("等待后台登录超时，请登录后再次点击「后台同步」", "error");
-    } catch (error) {
-      toast.show(`后台同步失败：${errorMessage(error)}`, "error");
-    } finally {
-      setSyncing(false);
-    }
+    return bound > 0;
   };
 
   const confirmDelete = async () => {
@@ -1001,35 +927,18 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
                 <div className="flex flex-none items-center gap-2">
                   <Button
                     type="button"
-                    variant="secondary"
-                    state={syncing ? "loading" : "idle"}
-                    loadingText="同步中…"
-                    disabled={busy}
-                    title="从已登录的微信后台窗口静默拉取音频列表并自动绑定"
-                    onClick={() => void syncVoicesFromBackend()}
-                  >
-                    <CloudDownload size={14} />
-                    <span className="hidden sm:inline">后台同步</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={busy}
-                    title="粘贴后台音频素材列表响应，一次绑定全部音频"
-                    onClick={() => {
-                      setVoiceBatchError(null);
-                      setVoiceBatchOpen(true);
-                    }}
-                  >
-                    <ClipboardPaste size={14} />
-                    <span className="hidden sm:inline">批量绑定</span>
-                  </Button>
-                  <Button
-                    type="button"
                     variant="primary"
-                    disabled={!canInsert || !selectedVoice || busy}
-                    title={!canInsert ? "请先打开一篇文章" : "将所选音频插入当前文章"}
-                    onClick={insertSelectedVoice}
+                    state={voiceBindingBusy ? "loading" : "idle"}
+                    loadingText="正在同步…"
+                    disabled={!canInsert || !selectedVoice || busy || voiceBindingBusy}
+                    title={
+                      !canInsert
+                        ? "请先打开一篇文章"
+                        : voiceBindingBusy
+                          ? "正在从微信后台同步音频"
+                          : "将所选音频插入当前文章（未绑定时自动同步）"
+                    }
+                    onClick={() => void insertSelectedVoice()}
                   >
                     <AudioLines size={14} />
                     <span className="hidden sm:inline">插入所选</span>
@@ -1122,19 +1031,6 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
           )}
         </div>
       </Dialog>
-      <AudioCodeBindDialog
-        open={open && voiceBindOpen}
-        audioName={selectedVoice?.name ?? "该音频"}
-        error={voiceBindError}
-        onCancel={() => setVoiceBindOpen(false)}
-        onSubmit={(source) => submitVoiceBinding(source)}
-      />
-      <VoiceBatchBindDialog
-        open={open && voiceBatchOpen}
-        error={voiceBatchError}
-        onCancel={() => setVoiceBatchOpen(false)}
-        onSubmit={(source) => submitVoiceBatch(source)}
-      />
       <DeleteMaterialConfirmDialog
         open={open && deleteConfirmOpen}
         count={deleteCount}
