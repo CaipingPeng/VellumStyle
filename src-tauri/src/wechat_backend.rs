@@ -255,6 +255,68 @@ fn remoticon_search_expr(query: &str, size: u32, offset: u32) -> String {
     )
 }
 
+/// 在后台窗口上下文里把微信表情 CDN 链接转换为 mmbiz 永久链接（官方插入流程：
+/// 点击表情后调用 operateremoticon?action=get_cdn_url，返回可直接使用的 cdn_url）。
+/// gen 表情 emoticonType=1 且 aesKey 为空；normal 表情 emoticonType=2 且带 aesKey。
+#[tauri::command]
+pub async fn get_emoji_cdn_url(
+    app: AppHandle,
+    url: String,
+    thumb_url: String,
+    aes_key: Option<String>,
+    emoticon_type: u32,
+) -> Result<String, String> {
+    let expression = remoticon_cdn_url_expr(
+        &url,
+        &thumb_url,
+        aes_key.as_deref(),
+        emoticon_type.clamp(1, 2),
+    );
+    #[cfg(windows)]
+    {
+        eval_in_backend_window(app, expression).await
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+        Err("表情转换目前仅支持 Windows".into())
+    }
+}
+
+fn remoticon_cdn_url_expr(
+    url: &str,
+    thumb_url: &str,
+    aes_key: Option<&str>,
+    emoticon_type: u32,
+) -> String {
+    let enc_url = urlencoding::encode(url);
+    let enc_thumb = urlencoding::encode(thumb_url);
+    let enc_aes = urlencoding::encode(aes_key.unwrap_or(""));
+    format!(
+        r#"(function () {{
+          try {{
+            var token = new URL(location.href).searchParams.get("token") || "";
+            var fp = "";
+            try {{ fp = window.fingerprint || ""; }} catch (e) {{}}
+            var body =
+              "action=get_cdn_url&url={url}&thumb_url={thumb}&emoticonType={etype}&aesKey={aes}&fingerprint=" +
+              encodeURIComponent(fp) + "&token=" + encodeURIComponent(token) + "&lang=zh_CN&f=json&ajax=1";
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/cgi-bin/operateremoticon?action=get_cdn_url", false);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+            xhr.send(body);
+            return xhr.responseText;
+          }} catch (e) {{
+            return JSON.stringify({{ vs_error: String(e) }});
+          }}
+        }})()"#,
+        url = enc_url,
+        thumb = enc_thumb,
+        etype = emoticon_type,
+        aes = enc_aes,
+    )
+}
+
 fn parse_evaluate_response(response_json: &str) -> Result<String, String> {
     let value: serde_json::Value = serde_json::from_str(response_json)
         .map_err(|err| format!("解析后台同步响应失败：{err}"))?;
@@ -279,7 +341,7 @@ fn parse_evaluate_response(response_json: &str) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_evaluate_response;
+    use super::{parse_evaluate_response, remoticon_cdn_url_expr};
 
     #[test]
     fn evaluate_response_extracts_string_value() {
@@ -304,5 +366,20 @@ mod tests {
         let error = parse_evaluate_response(response).unwrap_err();
         assert!(error.contains("后台同步未返回数据"));
         assert!(error.contains("undefined"));
+    }
+
+    #[test]
+    fn cdn_url_expr_encodes_emoji_params() {
+        let expr = remoticon_cdn_url_expr(
+            "http://search.c2c.weixin.qq.com/download?a=1&b=2",
+            "http://thumb.cdn/x",
+            Some("0cd0499ac22a9de26a653c89d019b24e"),
+            2,
+        );
+        assert!(expr.contains("action=get_cdn_url"));
+        assert!(expr.contains("url=http%3A%2F%2Fsearch.c2c.weixin.qq.com%2Fdownload%3Fa%3D1%26b%3D2"));
+        assert!(expr.contains("thumb_url=http%3A%2F%2Fthumb.cdn%2Fx"));
+        assert!(expr.contains("emoticonType=2"));
+        assert!(expr.contains("aesKey=0cd0499ac22a9de26a653c89d019b24e"));
     }
 }

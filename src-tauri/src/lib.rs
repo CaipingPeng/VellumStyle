@@ -13,8 +13,8 @@ mod wechat_backend;
 use tauri::http::{Response, StatusCode};
 use tauri::{UriSchemeContext, UriSchemeResponder};
 
-// wximg 自定义协议：预览里 mmbiz 图 src 改写成 wximg://localhost/?url=<编码后的 mmbiz 链>，
-// 这里解析出原链，带微信 Referer 拉图返回，绕过防盗链。
+// wximg 自定义协议：预览里图片 src 改写成 wximg://localhost/?url=<编码后的原链>[&aes=<表情解密密钥>]，
+// 这里解析出原链（及可选的 AES 密钥），带微信 Referer 拉图返回，绕过防盗链/解密表情缩略图。
 fn handle_wximg<R: tauri::Runtime>(
     _ctx: UriSchemeContext<'_, R>,
     request: tauri::http::Request<Vec<u8>>,
@@ -22,14 +22,15 @@ fn handle_wximg<R: tauri::Runtime>(
 ) {
     // request.uri() 形如 wximg://localhost/?url=https%3A%2F%2Fmmbiz...
     let uri = request.uri().to_string();
-    let raw_url = url::Url::parse(&uri)
-        .ok()
-        .and_then(|parsed| {
-            parsed
-                .query_pairs()
-                .find(|(key, _)| key == "url")
-                .map(|(_, value)| value.into_owned())
-        });
+    let parsed = url::Url::parse(&uri).ok();
+    let raw_url = parsed
+        .as_ref()
+        .and_then(|parsed| parsed.query_pairs().find(|(key, _)| key == "url"))
+        .map(|(_, value)| value.into_owned());
+    let aes_key = parsed
+        .as_ref()
+        .and_then(|parsed| parsed.query_pairs().find(|(key, _)| key == "aes"))
+        .map(|(_, value)| value.into_owned());
 
     let Some(raw_url) = raw_url else {
         responder.respond(
@@ -42,7 +43,7 @@ fn handle_wximg<R: tauri::Runtime>(
     };
 
     tauri::async_runtime::spawn(async move {
-        match wechat::fetch_proxied_image(&raw_url).await {
+        match wechat::fetch_proxied_image(&raw_url, aes_key.as_deref()).await {
             Ok((content_type, bytes)) => {
                 let resp = Response::builder()
                     .status(StatusCode::OK)
@@ -93,6 +94,7 @@ pub fn run() {
             wechat_backend::backend_window_url,
             wechat_backend::close_wechat_backend,
             wechat_backend::search_remoticon,
+            wechat_backend::get_emoji_cdn_url,
             wechat::upload_local_image,
             wechat::upload_remote_image,
             import::pick_markdown_file,

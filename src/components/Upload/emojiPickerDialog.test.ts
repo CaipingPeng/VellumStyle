@@ -9,15 +9,22 @@ test("表情搜索弹窗接入后台搜索并以上传后的永久链接插入",
   assert.match(source, /openWechatBackendHidden/);
   assert.match(source, /showWechatBackend/);
   assert.match(source, /backendWindowUrl/);
-  assert.match(source, /uploadRemoteImage/);
+  assert.match(source, /getEmojiCdnUrl/);
   assert.match(source, /toProxyImageUrl/);
   assert.match(source, /gen_emoji_result/);
   assert.match(source, /normal_emoji_result/);
+  assert.match(source, /aes_key/);
+  assert.match(source, /emoticonType/);
   assert.match(source, /thumbUrl/);
   assert.match(source, /加载更多/);
   assert.match(source, /插入所选/);
   assert.match(source, /点击表情可多选/);
-  assert.match(source, /搜索表情/);
-  assert.match(source, /插入时会自动上传为永久图片链接/);
+  assert.match(source, /按回车搜索/);
+  assert.match(source, /插入时自动转换为永久图片链接/);
+  // 完全搜索：只由用户按回车触发，不再有输入防抖自动搜索
+  assert.match(source, /onKeyDown/);
+  assert.match(source, /event\.key === "Enter"/);
+  assert.doesNotMatch(source, /searchTimer/);
+  assert.doesNotMatch(source, /window\.setTimeout/);
   assert.doesNotMatch(source, /overflow-x-auto|overflow-x: auto/);
 });

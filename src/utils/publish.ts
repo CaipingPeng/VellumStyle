@@ -239,6 +239,22 @@ export function searchRemoticon(query: string, size: number, offset: number): Pr
   return invoke<string>("search_remoticon", {query, size, offset});
 }
 
+/// 在后台窗口上下文里把微信表情 CDN 链接转换为 mmbiz 永久链接（官方插入流程）。
+/// gen 表情 emoticonType=1 且 aesKey 为空；normal 表情 emoticonType=2 且带 aesKey。
+export function getEmojiCdnUrl(
+  url: string,
+  thumbUrl: string,
+  aesKey: string | null | undefined,
+  emoticonType: number,
+): Promise<string> {
+  return invoke<string>("get_emoji_cdn_url", {
+    url,
+    thumbUrl,
+    aesKey: aesKey ?? null,
+    emoticonType,
+  });
+}
+
 const VIDEO_MEDIA_KEY = "vs-video-media-ids";
 
 // 本地保存 vid → media_id 映射，供预览播放取流使用（iframe 不能携带 media_id，
