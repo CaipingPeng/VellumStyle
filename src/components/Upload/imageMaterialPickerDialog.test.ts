@@ -275,6 +275,7 @@ test("音频页签列出素材库音频，已绑定标识的音频可直接插�
     name: "测试音频",
     playLength: "132000",
     src: "/cgi-bin/readtemplate?t=tmpl/audio_tmpl&name=%E6%B5%8B%E8%AF%95%E9%9F%B3%E9%A2%91&play_length=02:12",
+    coverUrl: "https://wx.qlogo.cn/mmopen/example/0",
   });
   const host = document.createElement("div");
   document.body.appendChild(host);

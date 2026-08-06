@@ -316,7 +316,20 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
 
   const insertSelectedVoice = async () => {
     if (!canInsert || !selectedVoice || voiceBindingBusy) return;
-    const binding = loadVoiceBinding(selectedVoice.mediaId);
+    let binding = loadVoiceBinding(selectedVoice.mediaId);
+    if (binding && !binding.coverUrl) {
+      // 旧绑定缺少封面：静默尝试一次后台同步补充，失败不打断插入
+      try {
+        const response = await fetchBackendVoiceList();
+        const candidates = parseVoiceBackendResponse(response);
+        if (candidates.length > 0 && voiceItems.length > 0) {
+          bindVoiceMaterials(voiceItems, candidates);
+          binding = loadVoiceBinding(selectedVoice.mediaId) ?? binding;
+        }
+      } catch {
+        // 忽略：继续用现有绑定插入，微信端仍会显示公众号头像封面
+      }
+    }
     if (binding) {
       onPickVoices?.([formatVoiceMarkup(binding)]);
       toast.show(`已插入「${selectedVoice.name}」`, "info");
