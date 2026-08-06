@@ -397,6 +397,7 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
       if (errorMessage(error).includes("WECHAT_BACKEND_NOT_OPENED")) return "retry";
       throw error;
     }
+    console.log("[后台同步] 音频列表接口完整返回：", response);
 
     const candidates = parseVoiceBackendResponse(response);
     if (candidates.length === 0) {

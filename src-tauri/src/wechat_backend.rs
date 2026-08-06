@@ -178,8 +178,16 @@ async fn fetch_backend_voice_list_windows(app: AppHandle) -> Result<String, Stri
         })
         .map_err(|err| format!("访问后台窗口 WebView 失败：{err}"))?;
 
-    rx.await
-        .unwrap_or_else(|_| Err("后台同步任务意外中断".to_string()))
+    let result = rx
+        .await
+        .unwrap_or_else(|_| Err("后台同步任务意外中断".to_string()));
+    if let Ok(response) = &result {
+        println!(
+            "[wechat-backend] 音频列表接口完整返回（{} 字符）：\n{response}",
+            response.chars().count()
+        );
+    }
+    result
 }
 
 fn parse_evaluate_response(response_json: &str) -> Result<String, String> {
