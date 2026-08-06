@@ -3,12 +3,14 @@ import {createPortal} from "react-dom";
 import {AnimatePresence, motion} from "framer-motion";
 import {ChevronDown, ImagePlus, X} from "lucide-react";
 import {
+  aiImageAppendRelatedSearch,
   aiImageGetBizRecentImgList,
   aiImageGetExample,
   aiImageGetPic,
   aiImageGetSession,
   aiImageGetStyle,
   aiImageInsertPic,
+  aiImageRelatedSearch,
   aiImageStartCreation,
 } from "../../utils/publish.ts";
 import {waitBackendCommand} from "../../utils/wechatBackend.ts";
@@ -43,6 +45,7 @@ interface AiImage {
   scale: string;
   status: number;
   sessionPrompt: string[];
+  isSuggestion?: boolean;
 }
 
 interface ChatTurn {
@@ -52,6 +55,9 @@ interface ChatTurn {
   images: AiImage[];
   sessionPrompt: string[];
   sessionId: string;
+  relatedImages: AiImage[];
+  relatedTaskId: string;
+  relatedExpanded: boolean;
 }
 
 interface HistorySession {
@@ -217,6 +223,42 @@ function parseGetPicResponse(source: string): AiImage[] | null {
       }
     }
     return images;
+  } catch {
+    return null;
+  }
+}
+
+function parseRelatedSearchResponse(source: string): {images: AiImage[]; taskId: string} | null {
+  if (!isOk(source)) return null;
+  try {
+    const data = JSON.parse(source) as {
+      list?: {image?: Array<Record<string, unknown>>};
+      task_id?: string;
+    };
+    const images = (data?.list?.image ?? [])
+      .filter((item) => typeof item.search_url === "string" && item.search_url)
+      .map((item) => ({
+        id: String(item.id ?? ""),
+        taskId: String(item.task_id ?? ""),
+        sessionId: String(item.session_id ?? ""),
+        prompt: String(item.prompt ?? ""),
+        tmpUrl: (item.tmp_url as string) || (item.search_url as string),
+        scale: String(item.scale ?? ""),
+        status: 3,
+        sessionPrompt: [],
+        isSuggestion: true,
+      }));
+    return {images, taskId: String(data?.task_id ?? "")};
+  } catch {
+    return null;
+  }
+}
+
+function parseAppendResponse(source: string): string | null {
+  if (!isOk(source)) return null;
+  try {
+    const data = JSON.parse(source) as {id?: string};
+    return data?.id || null;
   } catch {
     return null;
   }
@@ -431,6 +473,9 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
         images: item.images,
         sessionPrompt: item.images.find((image) => image.sessionPrompt.length)?.sessionPrompt ?? [],
         sessionId: item.sessionId,
+        relatedImages: [],
+        relatedTaskId: "",
+        relatedExpanded: false,
       },
     ]);
   }, []);
@@ -482,6 +527,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
       const referenceUrls = image?.tmpUrl ? [image.tmpUrl] : [];
       const scaleValue =
         selectedScaleValue || scales.find((scale) => scale.name === "16:9")?.value || "1024x576";
+      const ratioName = selectedScaleName || "1:1";
       setTurns((current) => [
         ...current,
         {
@@ -500,17 +546,48 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
           }],
           sessionPrompt: [],
           sessionId,
+          relatedImages: [],
+          relatedTaskId: "",
+          relatedExpanded: false,
         },
       ]);
-      const payload: Record<string, unknown> = {
-        session_id: sessionId,
-        prompt: tag,
-        scale: scaleValue,
-        gen_type: image?.id ? 6 : 5,
-      };
-      if (image?.id) payload.refer_pic_ids = [image.id];
+      // 与官方一致：发起生成的同时并行拉取相关图，挂到同一组上
+      void (async () => {
+        try {
+          const relatedSource = await aiImageRelatedSearch(sessionId, tag, ratioName, 10, 0);
+          if (session !== sessionRef.current) return;
+          const related = parseRelatedSearchResponse(relatedSource);
+          if (!related) return;
+          setTurns((current) =>
+            current.map((turn) =>
+              turn.id === turnId
+                ? {...turn, relatedImages: related.images, relatedTaskId: related.taskId}
+                : turn,
+            ),
+          );
+        } catch {
+          // 相关图失败不影响生成主流程
+        }
+      })();
       try {
-        const response = await aiImageStartCreation(JSON.stringify(payload));
+        const basePayload: Record<string, unknown> = {
+          session_id: sessionId,
+          prompt: tag,
+          scale: scaleValue,
+        };
+        const txt2img: Record<string, unknown> = {...basePayload, gen_type: 5};
+        let response: string;
+        if (image?.id) {
+          // 调整：优先图生图（gen_type 6 + 参考图 id），失败回退纯文本生成
+          response = await aiImageStartCreation(
+            JSON.stringify({...basePayload, gen_type: 6, refer_pic_ids: [image.id]}),
+          );
+          if (parseStartResponse(response) === null) {
+            response = await aiImageStartCreation(JSON.stringify(txt2img));
+          }
+        } else {
+          response = await aiImageStartCreation(JSON.stringify(txt2img));
+        }
         if (session !== sessionRef.current) return;
         const start = parseStartResponse(response);
         if (!start) throw new Error(parseErrorHint(response));
@@ -571,7 +648,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
         if (session === sessionRef.current) setGenerating(false);
       }
     },
-    [generating, onNeedSettings, scales, selectedScaleValue, sessionId],
+    [generating, onNeedSettings, scales, selectedScaleName, selectedScaleValue, sessionId],
   );
 
   const adjustWithTag = useCallback(
@@ -604,6 +681,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
     setGenerating(true);
     setGenProgress(0);
     const turnId = `grp_${Date.now()}`;
+    const ratioName = selectedScaleName || "1:1";
     setTurns((current) => [
       ...current,
       {
@@ -622,8 +700,29 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
         }],
         sessionPrompt: [],
         sessionId,
+        relatedImages: [],
+        relatedTaskId: "",
+        relatedExpanded: false,
       },
     ]);
+    // 与官方一致：发起生成的同时并行拉取相关图，挂到同一组上
+    void (async () => {
+      try {
+        const relatedSource = await aiImageRelatedSearch(sessionId, query, ratioName, 10, 0);
+        if (session !== sessionRef.current) return;
+        const related = parseRelatedSearchResponse(relatedSource);
+        if (!related) return;
+        setTurns((current) =>
+          current.map((turn) =>
+            turn.id === turnId
+              ? {...turn, relatedImages: related.images, relatedTaskId: related.taskId}
+              : turn,
+          ),
+        );
+      } catch {
+        // 相关图失败不影响生成主流程
+      }
+    })();
     try {
       const payload: Record<string, unknown> = {
         session_id: sessionId,
@@ -692,7 +791,17 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
     } finally {
       if (session === sessionRef.current) setGenerating(false);
     }
-  }, [generating, onNeedSettings, prompt, reference, selectedScaleValue, selectedStyle, sessionId, sendFromTag]);
+  }, [
+    generating,
+    onNeedSettings,
+    prompt,
+    reference,
+    selectedScaleName,
+    selectedScaleValue,
+    selectedStyle,
+    sessionId,
+    sendFromTag,
+  ]);
 
   const insertImage = useCallback(
     async (image: AiImage, turn: ChatTurn) => {
@@ -720,6 +829,60 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
           onNeedSettings?.();
         } else {
           toast.show(`应用失败：${message}`, "error");
+        }
+      } finally {
+        if (session === sessionRef.current) setInsertingId(null);
+      }
+    },
+    [canInsert, insertingId, onClose, onNeedSettings, onPick, sessionId],
+  );
+
+  const toggleRelated = useCallback((turnId: string) => {
+    setTurns((current) =>
+      current.map((turn) =>
+        turn.id === turnId ? {...turn, relatedExpanded: !turn.relatedExpanded} : turn,
+      ),
+    );
+  }, []);
+
+  // 相关图插入：先注册到会话（append_related_search）再转永久素材，与官方一致
+  const insertRelated = useCallback(
+    async (image: AiImage, turn: ChatTurn) => {
+      if (!canInsert || insertingId) return;
+      const session = sessionRef.current;
+      const key = `related-${image.tmpUrl}`;
+      setInsertingId(key);
+      try {
+        const appendResponse = await aiImageAppendRelatedSearch(
+          JSON.stringify({
+            session_id: image.sessionId || turn.sessionId || sessionId,
+            task_id: image.taskId || turn.relatedTaskId || "",
+            img_url: image.tmpUrl,
+          }),
+        );
+        if (session !== sessionRef.current) return;
+        const appendedId = parseAppendResponse(appendResponse);
+        if (!appendedId) throw new Error(parseErrorHint(appendResponse));
+        const insertResponse = await aiImageInsertPic(
+          JSON.stringify({
+            pic_id: appendedId,
+            task_id: image.taskId || turn.relatedTaskId || "",
+            session_id: image.sessionId || turn.sessionId || sessionId,
+          }),
+        );
+        if (session !== sessionRef.current) return;
+        const inserted = parseInsertResponse(insertResponse);
+        if (!inserted?.cdnUrl) throw new Error(parseErrorHint(insertResponse));
+        onPick(`![AI配图](${inserted.cdnUrl})`);
+        toast.show("已插入 AI 配图（永久素材链接）", "info");
+        onClose();
+      } catch (error) {
+        if (session !== sessionRef.current) return;
+        const message = errorMessage(error);
+        if (message.includes("NOT_CONFIGURED")) {
+          onNeedSettings?.();
+        } else {
+          toast.show(`插入失败：${message}`, "error");
         }
       } finally {
         if (session === sessionRef.current) setInsertingId(null);
@@ -851,6 +1014,50 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                 {tag}
               </button>
             ))}
+          </div>
+        )}
+        {turn.relatedImages.length > 0 && (
+          <div className="mt-4">
+            <button
+              type="button"
+              className="flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-sm text-text-secondary transition-colors duration-200 hover:text-text"
+              onClick={() => toggleRelated(turn.id)}
+            >
+              相关图
+              <ChevronDown
+                size={14}
+                className={`transition-transform duration-200 ${turn.relatedExpanded ? "rotate-180" : ""}`}
+              />
+            </button>
+            {turn.relatedExpanded && (
+              <div className="mt-2 grid grid-cols-4 gap-2">
+                {turn.relatedImages.map((image, index) => {
+                  const key = image.tmpUrl || `${turn.id}-related-${index}`;
+                  const inserting = insertingId === `related-${image.tmpUrl}`;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      disabled={!canInsert || Boolean(insertingId)}
+                      title={!canInsert ? "请先打开一篇文章" : "插入这张相关图"}
+                      className="group relative aspect-square cursor-pointer overflow-hidden rounded-md border-0 bg-bg-secondary p-0 disabled:cursor-default disabled:opacity-60"
+                      onClick={() => void insertRelated(image, turn)}
+                    >
+                      <img
+                        src={image.tmpUrl}
+                        alt={image.prompt || "相关图"}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-full w-full object-cover"
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-xs text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                        {inserting ? "插入中…" : "插入"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>

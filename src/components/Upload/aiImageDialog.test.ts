@@ -28,12 +28,24 @@ test("AI 配图对话框：仿官方聊天式布局，历史/生成/调整/应�
   // 生成：文生图 gen_type 5、调整 gen_type 6 + refer_pic_ids、轮询 get_ai_pic
   assert.match(source, /aiImageStartCreation/);
   assert.match(source, /gen_type: 5/);
-  assert.match(source, /gen_type: image\?\.id \? 6 : 5/);
+  assert.match(source, /gen_type: 6, refer_pic_ids/);
   assert.match(source, /refer_pic_ids/);
+  // 调整（图生图）失败时回退纯文本生成，保证二次提示始终可用
+  assert.match(source, /parseStartResponse\(response\) === null/);
   assert.match(source, /is_sensitive_prompt/);
   assert.match(source, /aiImageGetPic/);
   assert.match(source, /GEN_POLL_INTERVAL_MS = 5000/);
   assert.match(source, /GEN_TIMEOUT_MS = 3 \* 60 \* 1000/);
+
+  // 二次提示生成：并行拉取相关图（related_search），同一组展示"相关图"，可插入
+  assert.match(source, /aiImageRelatedSearch/);
+  assert.match(source, /aiImageAppendRelatedSearch/);
+  assert.match(source, /relatedImages/);
+  assert.match(source, /relatedTaskId/);
+  assert.match(source, /relatedExpanded/);
+  assert.match(source, /相关图/);
+  assert.match(source, /parseRelatedSearchResponse/);
+  assert.match(source, /parseAppendResponse/);
 
   // 图片瓦片：比例尺寸、调整/应用、AI 水印、失败态、进度环
   assert.match(source, /imageTileSize/);
