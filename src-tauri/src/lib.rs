@@ -9,6 +9,7 @@ mod preview_image;
 mod sync;
 mod themes;
 mod wechat;
+mod wechat_backend;
 use tauri::http::{Response, StatusCode};
 use tauri::{UriSchemeContext, UriSchemeResponder};
 
@@ -84,6 +85,8 @@ pub fn run() {
             wechat::list_video_materials,
             wechat::list_voice_materials,
             wechat::delete_image_material,
+            wechat_backend::open_wechat_backend,
+            wechat_backend::fetch_backend_voice_list,
             wechat::upload_local_image,
             wechat::upload_remote_image,
             import::pick_markdown_file,

@@ -31,6 +31,10 @@ test("图片素材库默认多选并通过独立命令插入或删除所选素�
   assert.match(source, /parseVoiceBackendResponse/);
   assert.match(source, /bindVoiceMaterials/);
   assert.match(source, /批量绑定/);
+  assert.match(source, /syncVoicesFromBackend/);
+  assert.match(source, /fetchBackendVoiceList/);
+  assert.match(source, /openWechatBackend/);
+  assert.match(source, /后台同步/);
   assert.match(audioBindSource, /box-border/);
   assert.doesNotMatch(audioBindSource, /overflow-x-auto|overflow-x: auto/);
   assert.match(voiceBatchSource, /box-border/);

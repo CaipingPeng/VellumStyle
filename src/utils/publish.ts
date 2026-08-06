@@ -195,6 +195,17 @@ export function deleteImageMaterial(mediaId: string): Promise<void> {
   return invoke<void>("delete_image_material", {mediaId});
 }
 
+/// 打开（或聚焦）软件内嵌的微信后台登录窗口。
+export function openWechatBackend(): Promise<void> {
+  return invoke<void>("open_wechat_backend");
+}
+
+/// 在后台窗口上下文里静默拉取音频素材列表接口，返回原始 JSON 响应文本。
+/// 窗口未打开时命令返回 "WECHAT_BACKEND_NOT_OPENED"。
+export function fetchBackendVoiceList(): Promise<string> {
+  return invoke<string>("fetch_backend_voice_list");
+}
+
 const VOICE_BINDING_KEY = "vs-audio-bindings";
 
 function readVoiceBindings(): Record<string, VoiceCodeInfo> {

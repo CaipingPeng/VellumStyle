@@ -5,6 +5,7 @@ import {
   bindVoiceMaterials,
   deleteImageMaterial,
   findUnuploadedImages,
+  fetchBackendVoiceList,
   formatVoiceMarkup,
   formatVideoMaterialIframe,
   getCoverCandidates,
@@ -12,6 +13,7 @@ import {
   listVideoMaterials,
   listVoiceMaterials,
   loadVoiceBinding,
+  openWechatBackend,
   parseVoiceBackendResponse,
   parseVoiceCode,
   saveVoiceBinding,
@@ -315,6 +317,32 @@ test("bindVoiceMaterials 按名称批量绑定素材库音频并生成可插入 
       delete (globalThis as unknown as {localStorage?: unknown}).localStorage;
     } else {
       Object.defineProperty(globalThis, "localStorage", previousStorage);
+    }
+  }
+});
+
+test("openWechatBackend 与 fetchBackendVoiceList 调用后台同步命令", async () => {
+  const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+  const calls: Array<{cmd: string; args: unknown}> = [];
+  (window as unknown as {__TAURI_INTERNALS__: {invoke: (cmd: string, args: unknown) => Promise<unknown>}}).__TAURI_INTERNALS__ = {
+    invoke: async (cmd, args) => {
+      calls.push({cmd, args});
+      if (cmd === "fetch_backend_voice_list") {
+        return '{"base_resp":{"ret":0},"file_item":[{"name":"测试音频","voice_encode_fileid":"Mzk0NTMyNzk3N18xMDAwMDI1MzA="}]}';
+      }
+    },
+  };
+
+  try {
+    await openWechatBackend();
+    const response = await fetchBackendVoiceList();
+    assert.deepEqual(calls.map((call) => call.cmd), ["open_wechat_backend", "fetch_backend_voice_list"]);
+    assert.match(response, /voice_encode_fileid/);
+  } finally {
+    if (previousInternals === undefined) {
+      delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+    } else {
+      (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
     }
   }
 });

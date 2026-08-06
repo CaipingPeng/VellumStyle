@@ -4,6 +4,7 @@ import {
   CheckSquare2,
   Clapperboard,
   AudioLines,
+  CloudDownload,
   ClipboardPaste,
   Film,
   ImageIcon,
@@ -18,11 +19,13 @@ import {toProxyImageUrl} from "../../utils/imageProxy.ts";
 import {
   bindVoiceMaterials,
   deleteImageMaterial,
+  fetchBackendVoiceList,
   formatVoiceMarkup,
   listImageMaterials,
   listVideoMaterials,
   listVoiceMaterials,
   loadVoiceBinding,
+  openWechatBackend,
   parseVoiceBackendResponse,
   parseVoiceCode,
   saveVoiceBinding,
@@ -98,6 +101,7 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
   const [voiceBindError, setVoiceBindError] = useState<string | null>(null);
   const [voiceBatchOpen, setVoiceBatchOpen] = useState(false);
   const [voiceBatchError, setVoiceBatchError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteCompleted, setDeleteCompleted] = useState(0);
@@ -370,6 +374,63 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
     );
   };
 
+  const syncVoicesFromBackend = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      let response: string;
+      try {
+        response = await fetchBackendVoiceList();
+      } catch (error) {
+        const message = errorMessage(error);
+        if (message.includes("WECHAT_BACKEND_NOT_OPENED")) {
+          await openWechatBackend();
+          toast.show("请在打开的微信后台窗口扫码登录，登录后再次点击「后台同步」", "info", 5000);
+          return;
+        }
+        throw error;
+      }
+
+      const candidates = parseVoiceBackendResponse(response);
+      if (candidates.length === 0) {
+        let hint = "没有解析到音频数据，请确认已在后台窗口登录微信公众平台";
+        try {
+          const data = JSON.parse(response) as {
+            vs_error?: string;
+            base_resp?: {ret?: number; err_msg?: string};
+          };
+          if (data.vs_error) {
+            hint = `后台脚本执行失败：${data.vs_error}`;
+          } else if (data.base_resp && data.base_resp.ret !== undefined && data.base_resp.ret !== 0) {
+            hint = `后台返回错误（${data.base_resp.ret}）：${data.base_resp.err_msg ?? "请确认已登录微信后台"}`;
+          }
+        } catch {
+          // 保留默认提示
+        }
+        toast.show(hint, "error", 5000);
+        return;
+      }
+
+      if (voiceItems.length === 0) {
+        toast.show("素材库音频列表尚未加载，请先加载音频素材再同步", "error");
+        return;
+      }
+      const bound = bindVoiceMaterials(voiceItems, candidates);
+      toast.show(
+        bound > 0
+          ? bound === candidates.length
+            ? `已从后台同步并绑定 ${bound} 个音频`
+            : `已绑定 ${bound} 个音频，${candidates.length - bound} 个名称未匹配`
+          : "没有匹配到素材库音频，请确认后台与素材库是同一公众号",
+        bound > 0 ? "info" : "error",
+      );
+    } catch (error) {
+      toast.show(`后台同步失败：${errorMessage(error)}`, "error");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const confirmDelete = async () => {
     if (deleting || selectedItems.length === 0) return;
     const itemsToDelete = [...selectedItems];
@@ -624,6 +685,18 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
                   </span>
                 </div>
                 <div className="flex flex-none items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    state={syncing ? "loading" : "idle"}
+                    loadingText="同步中…"
+                    disabled={busy}
+                    title="从已登录的微信后台窗口静默拉取音频列表并自动绑定"
+                    onClick={() => void syncVoicesFromBackend()}
+                  >
+                    <CloudDownload size={14} />
+                    <span className="hidden sm:inline">后台同步</span>
+                  </Button>
                   <Button
                     type="button"
                     variant="secondary"
