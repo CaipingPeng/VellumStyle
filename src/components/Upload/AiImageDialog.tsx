@@ -66,10 +66,6 @@ const GEN_POLL_INTERVAL_MS = 5000;
 const GEN_TIMEOUT_MS = 3 * 60 * 1000;
 const GEN_UPDATE_INTERVAL_MS = 500;
 
-const DESC = "#7E8081";
-const BG = "#F6F7F8";
-const GREEN = "#07C160";
-
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -748,12 +744,12 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
     if (image.status === 3 && image.tmpUrl) {
       return (
         <div
-          className="group relative flex items-center justify-center overflow-hidden rounded-lg bg-[#F6F7F8]"
+          className="group relative flex items-center justify-center overflow-hidden rounded-lg bg-bg-secondary"
           style={sizeStyle}
         >
           <button
             type="button"
-            className="h-full w-full cursor-pointer"
+            className="h-full w-full cursor-pointer border-0 p-0"
             title="查看大图"
             onClick={() => setLightbox(image)}
           >
@@ -768,7 +764,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
           <div className="absolute right-3 top-3 z-10 flex gap-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
             <button
               type="button"
-              className="relative flex h-9 cursor-pointer items-center justify-center whitespace-nowrap rounded-full bg-white px-4 text-sm leading-[1.4] text-[#1A1B1C] transition-opacity duration-200 hover:bg-black/5"
+              className="relative flex h-9 cursor-pointer items-center justify-center whitespace-nowrap rounded-full border-0 bg-bg px-4 text-sm leading-[1.4] text-text transition-opacity duration-200 hover:bg-bg-tertiary"
               onClick={() => startAdjust(image)}
             >
               调整
@@ -777,7 +773,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
               type="button"
               disabled={!canInsert || Boolean(insertingId)}
               title={!canInsert ? "请先打开一篇文章" : "插入到正文"}
-              className={`relative flex h-9 cursor-pointer items-center justify-center whitespace-nowrap rounded-full bg-white px-4 text-sm leading-[1.4] text-[#1A1B1C] transition-opacity duration-200 hover:bg-black/5 disabled:cursor-default disabled:opacity-60 ${
+              className={`relative flex h-9 cursor-pointer items-center justify-center whitespace-nowrap rounded-full border-0 bg-bg px-4 text-sm leading-[1.4] text-text transition-opacity duration-200 hover:bg-bg-tertiary disabled:cursor-default disabled:opacity-60 ${
                 inserting ? "pointer-events-none opacity-70" : ""
               }`}
               onClick={() => void insertImage(image, turn)}
@@ -795,7 +791,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
     if (image.status === 4) {
       return (
         <div
-          className="flex items-center justify-center rounded-lg bg-[#F6F7F8] text-sm text-[#7E8081]"
+          className="flex items-center justify-center rounded-lg bg-bg-secondary text-sm text-text-secondary"
           style={sizeStyle}
         >
           生成失败
@@ -804,16 +800,16 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
     }
     return (
       <div
-        className="flex flex-col items-center justify-center gap-1 rounded-lg bg-[#F6F7F8] text-[#7E8081]"
+        className="flex flex-col items-center justify-center gap-1 rounded-lg bg-bg-secondary text-text-secondary"
         style={sizeStyle}
       >
         <div
           className="relative h-7 w-7 rounded-full"
           style={{
-            background: `conic-gradient(${GREEN} 0%, ${GREEN} ${genProgress}%, ${BG} ${genProgress}%, ${BG} 100%)`,
+            background: `conic-gradient(var(--accent) 0%, var(--accent) ${genProgress}%, var(--bg-secondary) ${genProgress}%, var(--bg-secondary) 100%)`,
           }}
         >
-          <div className="absolute inset-[2px] rounded-full bg-[#F6F7F8]" />
+          <div className="absolute inset-[2px] rounded-full bg-bg-secondary" />
         </div>
         <span className="text-sm leading-[19.6px]">{genProgress}%</span>
       </div>
@@ -830,12 +826,12 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
             ))}
           </div>
         )}
-        <div className="whitespace-pre-wrap rounded-lg bg-[#F6F7F8] px-3 py-3 text-sm leading-[1.4] text-[#1A1B1C]">
+        <div className="whitespace-pre-wrap rounded-lg bg-bg-secondary px-3 py-3 text-sm leading-[1.4] text-text">
           {turn.userMessage}
         </div>
       </div>
       <div>
-        <p className="text-sm leading-[1.4] text-[#1A1B1C]">{turnTips(turn)}</p>
+        <p className="text-sm leading-[1.4] text-text">{turnTips(turn)}</p>
         <div className="flex flex-wrap gap-3 pt-1">
           {turn.images.map((image, index) => (
             <div key={image.id || `${turn.id}-${index}`} className="contents">
@@ -849,7 +845,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
               <button
                 key={tag}
                 type="button"
-                className="inline-block self-start rounded-lg border border-[#E3E4E5] bg-white px-3 py-1.5 text-sm leading-[1.4] text-[#353535] transition-colors duration-200 hover:border-transparent hover:bg-[#F6F7F8]"
+                className="inline-block self-start rounded-lg border border-border bg-bg px-3 py-1.5 text-sm leading-[1.4] text-text transition-colors duration-200 hover:border-transparent hover:bg-bg-tertiary"
                 onClick={() => adjustWithTag(tag, turn)}
               >
                 {tag}
@@ -876,7 +872,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
           onClick={onClose}
         >
           <motion.div
-            className="flex flex-col overflow-hidden rounded-lg bg-white shadow-md"
+            className="flex flex-col overflow-hidden rounded-lg bg-bg shadow-md"
             style={{
               width: 900,
               maxWidth: "94vw",
@@ -892,17 +888,17 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
             <div
               data-ai-selector
               className={`flex h-16 flex-none items-center justify-between border-b px-8 transition-colors duration-200 ${
-                headerScrolled ? "border-black/5" : "border-transparent"
+                headerScrolled ? "border-border" : "border-transparent"
               }`}
             >
               <div className="relative flex items-center">
-                <span className="pr-2 text-base font-medium leading-6 text-[#1A1B1C]">AI配图</span>
+                <span className="pr-2 text-base font-medium leading-6 text-text">AI配图</span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     title="历史对话"
-                    className={`flex h-6 w-6 cursor-pointer items-center justify-center rounded transition-colors duration-200 hover:bg-black/5 ${
-                      historyOpen ? "text-[#07C160]" : "text-[#1A1B1C]"
+                    className={`flex h-6 w-6 cursor-pointer items-center justify-center rounded border-0 p-0 transition-colors duration-200 hover:bg-bg-tertiary ${
+                      historyOpen ? "text-accent" : "text-text"
                     }`}
                     onClick={() => {
                       setHistoryOpen((value) => !value);
@@ -915,18 +911,18 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                   <button
                     type="button"
                     title="新建对话"
-                    className="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-[#1A1B1C] transition-colors duration-200 hover:bg-black/5"
+                    className="flex h-6 w-6 cursor-pointer items-center justify-center rounded border-0 p-0 text-text transition-colors duration-200 hover:bg-bg-tertiary"
                     onClick={() => void startNewConversation()}
                   >
                     <NewConversationIcon />
                   </button>
                 </div>
                 {historyOpen && (
-                  <div className="absolute left-0 top-[calc(100%+8px)] z-50 flex max-h-[400px] w-60 max-w-[360px] flex-col overflow-hidden rounded-lg bg-white py-2 shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
-                    <div className="px-4 py-2 text-xs leading-[1.4] text-[#9B9C9E]">历史对话</div>
+                  <div className="absolute left-0 top-[calc(100%+8px)] z-50 flex max-h-[400px] w-60 max-w-[360px] flex-col overflow-hidden rounded-lg bg-bg py-2 shadow-md">
+                    <div className="px-4 py-2 text-xs leading-[1.4] text-text-muted">历史对话</div>
                     <div className="max-h-[360px] flex-1 overflow-y-auto">
                       {history.length === 0 && (
-                        <div className="px-4 py-5 text-center text-[13px] text-[#9B9C9E]">暂无历史对话</div>
+                        <div className="px-4 py-5 text-center text-[13px] text-text-muted">暂无历史对话</div>
                       )}
                       {history.map((item) => {
                         const active = item.sessionId === sessionId;
@@ -934,10 +930,10 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                           <button
                             key={item.sessionId}
                             type="button"
-                            className={`flex w-full cursor-pointer items-center px-4 py-2.5 text-left text-sm leading-[1.4] transition-colors duration-200 ${
+                            className={`flex w-full cursor-pointer items-center border-0 px-4 py-2.5 text-left text-sm leading-[1.4] transition-colors duration-200 ${
                               active
-                                ? "bg-[rgba(7,193,96,0.05)] text-[#07C160] hover:bg-[rgba(7,193,96,0.05)]"
-                                : "text-[#1A1B1C] hover:bg-[#F6F7F8]"
+                                ? "bg-accent-subtle text-accent hover:bg-accent-subtle"
+                                : "text-text hover:bg-bg-tertiary"
                             }`}
                             onClick={() => switchToHistory(item)}
                           >
@@ -954,7 +950,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
               <button
                 type="button"
                 title="关闭"
-                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-sm text-[#7E8081] transition-colors duration-200 hover:bg-[#F6F7F8] hover:text-[#1A1B1C]"
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-sm border-0 p-0 text-text-secondary transition-colors duration-200 hover:bg-bg-tertiary hover:text-text"
                 onClick={onClose}
               >
                 <X size={16} />
@@ -971,16 +967,16 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
               >
                 {phase === "loading" && (
                   <div className="flex h-full w-full items-center justify-center">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#E3E4E5] border-t-[#07C160]" />
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent" />
                   </div>
                 )}
                 {phase === "error" && (
                   <div className="flex h-full w-full flex-col items-center justify-center gap-3">
-                    <ImagePlus size={32} color={DESC} />
-                    <div className="text-sm text-[#7E8081]">AI 配图初始化失败</div>
+                    <ImagePlus size={32} className="text-text-muted" />
+                    <div className="text-sm text-text-secondary">AI 配图初始化失败</div>
                     <button
                       type="button"
-                      className="h-8 cursor-pointer rounded-sm border border-[#E3E4E5] bg-[#F6F7F8] px-3 text-[13px] font-medium text-[#1A1B1C] transition-colors duration-200 hover:bg-[#E3E4E5]"
+                      className="h-8 cursor-pointer rounded-sm border border-border bg-bg-secondary px-3 text-[13px] font-medium text-text transition-colors duration-200 hover:bg-bg-tertiary"
                       onClick={() => setRetryToken((token) => token + 1)}
                     >
                       重试
@@ -989,7 +985,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                 )}
                 {phase === "ready" && turns.length === 0 && (
                   <div style={{margin: "24px 0 0"}}>
-                    <div className="mb-4 text-xl font-medium leading-7 text-[#1A1B1C]">
+                    <div className="mb-4 text-xl font-medium leading-7 text-text">
                       欢迎使用 AI配图，试试这样对我说
                     </div>
                     <div className="flex flex-col items-start gap-3">
@@ -997,7 +993,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                         <button
                           key={example}
                           type="button"
-                          className="inline-block cursor-pointer rounded-md bg-[#F6F7F8] px-3.5 py-2 text-sm leading-[1.4] text-[#1A1B1C] select-none transition-colors duration-200 hover:bg-[#E3E4E5]"
+                          className="inline-block cursor-pointer rounded-md border-0 bg-bg-secondary px-3.5 py-2 text-sm leading-[1.4] text-text select-none transition-colors duration-200 hover:bg-bg-tertiary"
                           onClick={() => {
                             setPrompt(example);
                             focusInput();
@@ -1014,21 +1010,21 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                 )}
               </div>
 
-              <div className="mt-4 flex flex-col gap-4 rounded-lg border border-[#E3E4E5] p-4">
-                <div className="relative">
+              <div className="mt-4 flex flex-col gap-4 rounded-lg border border-border p-4">
+                <div className="relative rounded-lg border border-border bg-bg-secondary px-3 py-2 transition-colors duration-200 focus-within:border-accent focus-within:ring-2 focus-within:ring-[color:var(--ring)]">
                   {reference && (
                     <div className="mb-3 flex items-start gap-2">
                       {reference.tmpUrl && (
                         <img
                           src={reference.tmpUrl}
                           alt=""
-                          className="block h-[100px] w-[100px] rounded bg-[#F7F8FA] object-cover"
+                          className="block h-[100px] w-[100px] rounded bg-bg-tertiary object-cover"
                         />
                       )}
                       <button
                         type="button"
                         title="取消参考图"
-                        className="mt-0.5 flex h-4 w-4 cursor-pointer items-center justify-center text-[#4C4D4E] transition-colors duration-150 hover:text-[#1A1B1C]"
+                        className="mt-0.5 flex h-4 w-4 cursor-pointer items-center justify-center border-0 p-0 text-text-secondary transition-colors duration-150 hover:text-text"
                         onClick={() => setReference(null)}
                       >
                         <X size={12} />
@@ -1042,8 +1038,8 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                     rows={3}
                     value={prompt}
                     placeholder={reference ? "告诉我你想怎么改" : "请描述你想要创作的内容"}
-                    className="w-full resize-none border-none bg-transparent text-sm leading-[1.4] text-[#1A1B1C] outline-none placeholder:text-[#9B9C9E]"
-                    style={{caretColor: GREEN}}
+                    className="w-full resize-none border-0 bg-transparent p-0 text-sm leading-[1.4] text-text outline-none placeholder:text-text-muted"
+                    style={{caretColor: "var(--accent)"}}
                     onChange={(event) => setPrompt(event.target.value)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" && !event.shiftKey) {
@@ -1058,10 +1054,10 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                     <div className="relative select-none">
                       <button
                         type="button"
-                        className={`inline-flex cursor-pointer items-center rounded-[18px] px-4 py-2 text-sm leading-[1.4] transition-colors duration-200 ${
+                        className={`inline-flex cursor-pointer items-center rounded-[18px] border-0 px-4 py-2 text-sm leading-[1.4] transition-colors duration-200 ${
                           ratioOpen
-                            ? "bg-[rgba(7,193,96,0.1)] font-medium text-[#07C160]"
-                            : "bg-black/[0.03] text-black/90 hover:bg-black/[0.06]"
+                            ? "bg-accent-subtle font-medium text-accent"
+                            : "bg-bg-secondary text-text hover:bg-bg-tertiary"
                         }`}
                         onClick={() => {
                           setRatioOpen((value) => !value);
@@ -1073,15 +1069,15 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                         <ChevronDown size={12} className="ml-1" />
                       </button>
                       {ratioOpen && (
-                        <div className="absolute bottom-[calc(100%+6px)] left-0 z-10 min-w-[100px] overflow-hidden rounded-md bg-white py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
+                        <div className="absolute bottom-[calc(100%+6px)] left-0 z-10 min-w-[100px] overflow-hidden rounded-md bg-bg py-1.5 shadow-md">
                           {scales.map((scale) => {
                             const active = scale.name === selectedScaleName;
                             return (
                               <button
                                 key={scale.name}
                                 type="button"
-                                className={`block w-full cursor-pointer whitespace-nowrap px-4 py-2 text-left text-sm transition-colors duration-200 hover:bg-[#F6F7F8] ${
-                                  active ? "text-[#07C160]" : "text-[#1A1B1C]"
+                                className={`block w-full cursor-pointer whitespace-nowrap border-0 px-4 py-2 text-left text-sm transition-colors duration-200 hover:bg-bg-tertiary ${
+                                  active ? "text-accent" : "text-text"
                                 }`}
                                 onClick={() => {
                                   setSelectedScaleName(scale.name);
@@ -1098,10 +1094,10 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                     <div className="relative select-none">
                       <button
                         type="button"
-                        className={`inline-flex cursor-pointer items-center rounded-[18px] px-4 py-2 text-sm leading-[1.4] transition-colors duration-200 ${
+                        className={`inline-flex cursor-pointer items-center rounded-[18px] border-0 px-4 py-2 text-sm leading-[1.4] transition-colors duration-200 ${
                           styleOpen
-                            ? "bg-[rgba(7,193,96,0.1)] font-medium text-[#07C160]"
-                            : "bg-black/[0.03] text-black/90 hover:bg-black/[0.06]"
+                            ? "bg-accent-subtle font-medium text-accent"
+                            : "bg-bg-secondary text-text hover:bg-bg-tertiary"
                         }`}
                         onClick={() => {
                           setStyleOpen((value) => !value);
@@ -1115,11 +1111,11 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                         <ChevronDown size={12} className="ml-1" />
                       </button>
                       {styleOpen && (
-                        <div className="absolute bottom-[calc(100%+6px)] left-0 z-10 flex h-[240px] w-32 flex-col overflow-hidden rounded-md bg-white py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.12)]">
+                        <div className="absolute bottom-[calc(100%+6px)] left-0 z-10 flex h-[240px] w-32 flex-col overflow-hidden rounded-md bg-bg py-1.5 shadow-md">
                           <button
                             type="button"
-                            className={`block w-full cursor-pointer px-4 py-2 text-left text-sm transition-colors duration-200 hover:bg-[#F6F7F8] ${
-                              !selectedStyle ? "text-[#07C160]" : "text-[#1A1B1C]"
+                            className={`block w-full cursor-pointer border-0 px-4 py-2 text-left text-sm transition-colors duration-200 hover:bg-bg-tertiary ${
+                              !selectedStyle ? "text-accent" : "text-text"
                             }`}
                             onClick={() => {
                               setSelectedStyle("");
@@ -1134,8 +1130,8 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                               <button
                                 key={style.value}
                                 type="button"
-                                className={`block w-full cursor-pointer px-4 py-2 text-left text-sm transition-colors duration-200 hover:bg-[#F6F7F8] ${
-                                  active ? "text-[#07C160]" : "text-[#1A1B1C]"
+                                className={`block w-full cursor-pointer border-0 px-4 py-2 text-left text-sm transition-colors duration-200 hover:bg-bg-tertiary ${
+                                  active ? "text-accent" : "text-text"
                                 }`}
                                 onClick={() => {
                                   setSelectedStyle(active ? "" : style.value);
@@ -1154,7 +1150,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                     type="button"
                     title="生成图片"
                     className={`flex h-9 w-9 cursor-pointer items-center justify-center border-none bg-transparent p-0 transition-opacity duration-200 hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-100 ${
-                      sendDisabled ? "text-black/15" : "text-[#07C160]"
+                      sendDisabled ? "text-text-muted" : "text-accent"
                     }`}
                     disabled={sendDisabled}
                     onClick={() => void send()}
@@ -1164,13 +1160,13 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                 </div>
               </div>
 
-              <div className="mx-auto mt-4 w-fit text-xs text-[#9B9C9E]">
+              <div className="mx-auto mt-4 w-fit text-xs text-text-muted">
                 已阅读并同意遵守
                 <a
                   href="https://mp.weixin.qq.com/cgi-bin/announce?action=getannouncement&key=11724642113HBz0R&version=1&lang=zh_CN&platform=2"
                   target="_blank"
                   rel="noreferrer"
-                  className="mx-0.5 text-[#576B95] hover:text-[#07C160]"
+                  className="mx-0.5 text-accent hover:text-accent"
                 >
                   《微信公众平台AI配图功能使用条款》
                 </a>
@@ -1179,7 +1175,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                   href="https://mp.weixin.qq.com/webapp/privacy_page"
                   target="_blank"
                   rel="noreferrer"
-                  className="mx-0.5 text-[#576B95] hover:text-[#07C160]"
+                  className="mx-0.5 text-accent hover:text-accent"
                 >
                   《微信公众平台个人信息保护指引》
                 </a>
@@ -1220,7 +1216,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
             <div className="mt-3 flex items-center justify-center gap-4">
               <button
                 type="button"
-                className="h-9 w-24 cursor-pointer rounded-full border-0 bg-white text-sm text-[#1A1B1C] transition-opacity duration-200 hover:bg-black/5"
+                className="h-9 w-24 cursor-pointer rounded-full border-0 bg-bg text-sm text-text transition-opacity duration-200 hover:bg-bg-tertiary"
                 onClick={() => {
                   startAdjust(lightbox);
                   setLightbox(null);
@@ -1232,7 +1228,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
                 type="button"
                 disabled={!canInsert}
                 title={!canInsert ? "请先打开一篇文章" : "插入到正文"}
-                className="h-9 w-24 cursor-pointer rounded-full border-0 bg-white text-sm text-[#1A1B1C] transition-opacity duration-200 hover:bg-black/5 disabled:cursor-default disabled:opacity-60"
+                className="h-9 w-24 cursor-pointer rounded-full border-0 bg-bg text-sm text-text transition-opacity duration-200 hover:bg-bg-tertiary disabled:cursor-default disabled:opacity-60"
                 onClick={() => {
                   const turn = turns.find((item) =>
                     item.images.some((image) => image.id === lightbox.id),

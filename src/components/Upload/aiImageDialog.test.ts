@@ -56,6 +56,14 @@ test("AI 配图对话框：仿官方聊天式布局，历史/生成/调整/应�
   assert.match(source, /fileid/);
   assert.match(source, /!\[AI配图\]\(\$\{inserted\.cdnUrl\}\)/);
 
+  // 主题化优化：按钮显式去边框（preflight 关闭时避免 UA 默认黑边），输入框有可见底框
+  assert.match(source, /border-0 p-0/);
+  assert.match(source, /focus-within:border-accent/);
+  assert.match(source, /bg-bg-secondary/);
+  assert.match(source, /text-accent/);
+  assert.doesNotMatch(source, /border-\[#E3E4E5\]/);
+  assert.doesNotMatch(source, /text-\[#1A1B1C\]/);
+
   // 后台窗口未打开时自动开窗等待并重试
   assert.match(source, /waitBackendCommand/);
   assert.doesNotMatch(source, /找相关图/);
