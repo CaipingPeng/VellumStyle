@@ -269,7 +269,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
         const coverEl = document.createElement("span");
         coverEl.className = "vs-audio-placeholder-cover";
         if (cover) {
-          coverEl.style.backgroundImage = `url("${cover}")`;
+          coverEl.style.backgroundImage = `url("${toProxyImageUrl(cover)}")`;
         }
         const main = document.createElement("span");
         main.className = "vs-audio-placeholder-main";
