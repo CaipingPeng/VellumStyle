@@ -7,6 +7,8 @@ import {scanMarkdownMedia} from "./markdownMediaScanner.ts";
 import {DEFAULT_PUBLISH_SETTINGS, type PublishSettings} from "./publishSettings.ts";
 
 const MMBIZ_HOSTS = ["mmbiz.qpic.cn", "mmbiz.qlogo.cn"];
+// 微信官方静态资源域名：官方编辑器直接引用的表情等图片无需上传素材库。
+const OFFICIAL_IMG_HOSTS = [...MMBIZ_HOSTS, "res.wx.qq.com"];
 
 export interface CoverCandidate {
   url: string;
@@ -529,7 +531,7 @@ function unuploadedImageReason(ref: MediaRef): UnuploadedImageReason | null {
     case "remote": {
       const parsed = parseRemoteImageUrl(ref.originalUrl);
       if (!parsed) return "unsupported";
-      return MMBIZ_HOSTS.includes(parsed.hostname.toLowerCase()) ? null : "external";
+      return OFFICIAL_IMG_HOSTS.includes(parsed.hostname.toLowerCase()) ? null : "external";
     }
     case "data":
     case "blob":

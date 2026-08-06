@@ -24,7 +24,10 @@ test("表情搜索弹窗接入后台搜索并以上传后的永久链接插入",
   assert.match(source, /smileyImgHtml/);
   assert.match(source, /display:inline-block/);
   assert.match(source, /rich_pages wxw-img/);
-  assert.match(source, /grid-cols-2/);
+  // 默认微表情占主区域，搜索/微表情通过右侧图标切换
+  assert.match(source, /useState<"search" \| "smiley">\("smiley"\)/);
+  assert.match(source, /switchTab\("search"\)/);
+  assert.match(source, /switchTab\("smiley"\)/);
   assert.match(source, /border-0/);
   assert.match(source, /selectedCount === 0/);
   assert.match(source, /加载更多/);

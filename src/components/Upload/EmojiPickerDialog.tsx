@@ -137,7 +137,7 @@ function parseCdnUrlResponse(source: string): string | null {
 
 export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onNeedSettings}: Props) {
   const [query, setQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"search" | "smiley">("search");
+  const [activeTab, setActiveTab] = useState<"search" | "smiley">("smiley");
   const [items, setItems] = useState<EmojiItem[]>([]);
   const [genNextOffset, setGenNextOffset] = useState(0);
   const [genContinue, setGenContinue] = useState(false);
@@ -370,29 +370,24 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
       }
     >
       <div className="flex h-[clamp(360px,calc(86vh-120px),560px)] min-h-0 flex-col">
-        <div className="grid h-10 flex-none grid-cols-2 border-b border-border bg-bg-secondary">
-          {(["search", "smiley"] as const).map((tab) => {
-            const active = activeTab === tab;
-            return (
+        <div className="flex h-[46px] flex-none items-center gap-2 border-b border-border bg-bg-secondary px-4">
+          {activeTab === "smiley" ? (
+            <>
+              <Smile size={14} className="flex-none text-text-muted" />
+              <span className="text-sm font-medium text-text">微表情</span>
+              <div className="min-w-0 flex-1" />
               <button
-                key={tab}
                 type="button"
-                onClick={() => switchTab(tab)}
-                aria-pressed={active}
-                className={`relative h-full border-0 text-sm transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)] ${
-                  active ? "bg-bg font-medium text-text" : "text-text-secondary hover:bg-bg-tertiary hover:text-text"
-                }`}
+                onClick={() => switchTab("search")}
+                title="搜索表情"
+                aria-label="搜索表情"
+                className="grid h-8 w-8 flex-none place-items-center rounded-md border-0 bg-transparent text-text-secondary transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
               >
-                {tab === "search" ? "搜索" : "微表情"}
-                {active && <span aria-hidden="true" className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-accent" />}
+                <Search size={17} />
               </button>
-            );
-          })}
-        </div>
-
-        {activeTab === "search" ? (
-          <>
-            <div className="flex h-[46px] flex-none items-center gap-2 border-b border-border bg-bg-secondary px-4">
+            </>
+          ) : (
+            <>
               <Search size={14} className="flex-none text-text-muted" />
               <input
                 value={query}
@@ -407,60 +402,71 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
                 spellCheck={false}
                 className="box-border h-8 min-w-0 flex-1 rounded-md border border-border bg-bg px-3 text-sm text-text outline-none transition-colors duration-fast placeholder:text-text-muted focus:border-[color:var(--ring)] focus:ring-2 focus:ring-[color:var(--ring)]"
               />
-            </div>
+              <button
+                type="button"
+                onClick={() => switchTab("smiley")}
+                title="微表情"
+                aria-label="微表情"
+                className="grid h-8 w-8 flex-none place-items-center rounded-md border-0 bg-transparent text-text-secondary transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+              >
+                <Smile size={17} />
+              </button>
+            </>
+          )}
+        </div>
 
-            {loading ? (
+        {activeTab === "search" ? (
+          loading ? (
           <div className="grid min-h-0 flex-1 auto-rows-max grid-cols-4 gap-3 overflow-hidden p-4 sm:grid-cols-5 lg:grid-cols-6">
             {Array.from({length: 18}).map((_, index) => (
               <div key={index} className="aspect-square animate-pulse rounded-lg bg-bg-tertiary" />
             ))}
           </div>
-            ) : items.length > 0 ? (
-              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 [scrollbar-gutter:stable] [scrollbar-width:thin]">
-                <div className="grid auto-rows-max grid-cols-4 content-start gap-3 sm:grid-cols-5 lg:grid-cols-6">
-                  {items.map((item, index) => {
-                    const selected = selectedIds.has(item.docId);
-                    return (
-                      <button
-                        key={item.docId || index}
-                        type="button"
-                        disabled={Boolean(inserting)}
-                        aria-pressed={selected}
-                        aria-label={`${selected ? "取消选择" : "选择"}第 ${index + 1} 个表情`}
-                        onClick={() => toggleSelect(item.docId)}
-                        className={`relative grid aspect-square cursor-pointer place-items-center overflow-hidden rounded-lg border bg-bg-secondary p-0 outline-none transition-[border-color,background-color,transform] duration-slow ease-bounce focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
-                          selected ? "border-accent/70" : "border-[color:var(--card-border)] hover:-translate-y-1 hover:bg-bg"
-                        }`}
-                      >
-                        <img
-                          src={toProxyImageUrl(item.thumbUrl)}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          className="block h-full w-full object-contain p-1"
-                        />
-                        {selected && (
-                          <span aria-hidden="true" className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full border-2 border-white bg-accent text-white">
-                            <Check size={12} strokeWidth={3} />
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+          ) : items.length > 0 ? (
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 [scrollbar-gutter:stable] [scrollbar-width:thin]">
+              <div className="grid auto-rows-max grid-cols-4 content-start gap-3 sm:grid-cols-5 lg:grid-cols-6">
+                {items.map((item, index) => {
+                  const selected = selectedIds.has(item.docId);
+                  return (
+                    <button
+                      key={item.docId || index}
+                      type="button"
+                      disabled={Boolean(inserting)}
+                      aria-pressed={selected}
+                      aria-label={`${selected ? "取消选择" : "选择"}第 ${index + 1} 个表情`}
+                      onClick={() => toggleSelect(item.docId)}
+                      className={`relative grid aspect-square cursor-pointer place-items-center overflow-hidden rounded-lg border bg-bg-secondary p-0 outline-none transition-[border-color,background-color,transform] duration-slow ease-bounce focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
+                        selected ? "border-accent/70" : "border-[color:var(--card-border)] hover:-translate-y-1 hover:bg-bg"
+                      }`}
+                    >
+                      <img
+                        src={toProxyImageUrl(item.thumbUrl)}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="block h-full w-full object-contain p-1"
+                      />
+                      {selected && (
+                        <span aria-hidden="true" className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full border-2 border-white bg-accent text-white">
+                          <Check size={12} strokeWidth={3} />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-            ) : (
-              <div className="m-4 flex min-h-0 flex-1 flex-col items-center justify-center rounded-md bg-bg-secondary px-6 text-center text-sm text-text-secondary">
-                <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent-subtle text-accent"><Smile size={22} /></span>
-                <div className="mt-3 font-medium text-text">
-                  {query.trim() ? "没有找到相关表情" : "输入关键词后按回车搜索表情"}
-                </div>
-                <div className="mt-1 max-w-xs text-xs leading-5">
-                  表情来自微信表情搜索，插入时自动转换为永久图片链接。
-                </div>
+            </div>
+          ) : (
+            <div className="m-4 flex min-h-0 flex-1 flex-col items-center justify-center rounded-md bg-bg-secondary px-6 text-center text-sm text-text-secondary">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent-subtle text-accent"><Smile size={22} /></span>
+              <div className="mt-3 font-medium text-text">
+                {query.trim() ? "没有找到相关表情" : "输入关键词后按回车搜索表情"}
               </div>
-            )}
-          </>
+              <div className="mt-1 max-w-xs text-xs leading-5">
+                表情来自微信表情搜索，插入时自动转换为永久图片链接。
+              </div>
+            </div>
+          )
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 [scrollbar-gutter:stable] [scrollbar-width:thin]">
             <div className="grid auto-rows-max grid-cols-5 content-start gap-2 sm:grid-cols-7 lg:grid-cols-9">

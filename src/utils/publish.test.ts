@@ -640,6 +640,14 @@ test("findUnuploadedImages returns exhaustive structured diagnostics at original
   ]);
 });
 
+test("findUnuploadedImages treats WeChat official asset hosts as uploaded", () => {
+  const markdown = [
+    "![微笑](https://res.wx.qq.com/t/wx_fed/we-emoji/res/assets/Expression/Expression_1@2x.png)",
+    '<img src="https://res.wx.qq.com/t/wx_fed/we-emoji/res/assets/Expression/Expression_2@2x.png" alt="">',
+  ].join("\n");
+  assert.deepEqual(findUnuploadedImages(markdown), []);
+});
+
 function findDiagnosticsWithoutRepeatedNewlineSearch(markdown: string) {
   const originalLastIndexOf = String.prototype.lastIndexOf;
   let newlineSearches = 0;
