@@ -1413,18 +1413,20 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
 
 .vs-audio-placeholder {
   box-sizing: border-box;
-  display: flex;
-  align-items: center;
   width: 100%;
   max-width: 350px;
   margin: 8px auto;
-  padding: 16px;
-  border: 1px solid #e3e4e5;
+  padding: 24px 16px;
   border-radius: 8px;
-  background: #fff;
+  background: #fafafa;
   color: #1a1b1c;
   font-family: -apple-system, system-ui, BlinkMacSystemFont, "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+.vs-audio-placeholder-info {
+  display: flex;
+  align-items: center;
 }
 
 .vs-audio-placeholder-cover {
@@ -1439,34 +1441,10 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
   background-repeat: no-repeat;
 }
 
-.vs-audio-placeholder-play {
-  position: relative;
-  flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
-  margin-left: 8px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.vs-audio-placeholder-play::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 56%;
-  width: 0;
-  height: 0;
-  transform: translate(-50%, -50%);
-  border-top: 7px solid transparent;
-  border-bottom: 7px solid transparent;
-  border-left: 11px solid #1a1b1c;
-}
-
-.vs-audio-placeholder-body {
-  display: flex;
+.vs-audio-placeholder-main {
+  display: block;
   min-width: 0;
   flex: 1;
-  flex-direction: column;
 }
 
 .vs-audio-placeholder-title {
@@ -1481,12 +1459,48 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
   word-break: break-all;
 }
 
-.vs-audio-placeholder-meta {
-  margin-top: 4px;
+.vs-audio-placeholder-author {
+  display: block;
+  margin-top: 2px;
   overflow: hidden;
   font-size: 14px;
   line-height: 1.4;
-  color: #7e8081;
+  color: #b1b2b3;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.vs-audio-placeholder-time {
+  display: flex;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.vs-audio-placeholder-duration {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #b1b2b3;
+}
+
+.vs-audio-placeholder-play {
+  position: relative;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  margin-left: 16px;
+}
+
+.vs-audio-placeholder-play::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 56%;
+  width: 0;
+  height: 0;
+  transform: translate(-50%, -50%);
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 11px solid #1a1b1c;
 }

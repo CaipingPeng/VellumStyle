@@ -264,24 +264,36 @@ const Preview = forwardRef<PreviewHandle, Props>(
         placeholder.className = "vs-audio-placeholder";
         placeholder.setAttribute("role", "img");
         placeholder.setAttribute("aria-label", `素材库音频：${name}`);
+        const info = document.createElement("span");
+        info.className = "vs-audio-placeholder-info";
         const coverEl = document.createElement("span");
         coverEl.className = "vs-audio-placeholder-cover";
         if (cover) {
           coverEl.style.backgroundImage = `url("${cover}")`;
         }
-        const play = document.createElement("span");
-        play.className = "vs-audio-placeholder-play";
-        play.setAttribute("aria-hidden", "true");
-        const body = document.createElement("span");
-        body.className = "vs-audio-placeholder-body";
+        const main = document.createElement("span");
+        main.className = "vs-audio-placeholder-main";
         const title = document.createElement("strong");
         title.className = "vs-audio-placeholder-title";
         title.textContent = name;
-        const meta = document.createElement("span");
-        meta.className = "vs-audio-placeholder-meta";
-        meta.textContent = [formatVoiceDuration(playLength), author].filter(Boolean).join(" · ");
-        body.append(title, meta);
-        placeholder.append(coverEl, body, play);
+        main.append(title);
+        if (author) {
+          const authorEl = document.createElement("span");
+          authorEl.className = "vs-audio-placeholder-author";
+          authorEl.textContent = author;
+          main.append(authorEl);
+        }
+        info.append(coverEl, main);
+        const timeRow = document.createElement("span");
+        timeRow.className = "vs-audio-placeholder-time";
+        const durationEl = document.createElement("span");
+        durationEl.className = "vs-audio-placeholder-duration";
+        durationEl.textContent = formatVoiceDurationLabel(playLength);
+        const play = document.createElement("span");
+        play.className = "vs-audio-placeholder-play";
+        play.setAttribute("aria-hidden", "true");
+        timeRow.append(durationEl, play);
+        placeholder.append(info, timeRow);
         voice.insertAdjacentElement("afterend", placeholder);
       }
     }, [html]);
@@ -658,7 +670,8 @@ function ImageResizeHandles({
   );
 }
 
-function formatVoiceDuration(playLength: string): string {
+// 官方静态显示中文时长："2分钟"、"5分09秒"。
+function formatVoiceDurationLabel(playLength: string): string {
   const value = playLength.trim();
   if (!value) return "";
   if (!/^\d+$/.test(value)) return value;
@@ -666,7 +679,7 @@ function formatVoiceDuration(playLength: string): string {
   if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return "";
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  return seconds === 0 ? `${minutes}分钟` : `${minutes}分${String(seconds).padStart(2, "0")}秒`;
 }
 
 // 首屏/切文档瞬间文章尚未渲染时的骨架占位
