@@ -179,11 +179,11 @@ test("图片缩放手柄使用低遮挡角标、透明热区和拖拽反馈", as
   assert.match(cssRule(css, ".vs-image-resize-handle"), /height:\s*32px/);
   assert.match(cssRule(css, ".vs-image-resize-handle"), /background:\s*transparent/);
   assert.match(css, /\.vs-image-resize-handle::before/);
-  assert.match(cssRule(css, ".vs-image-resize-handle::before"), /width:\s*14px/);
-  assert.match(cssRule(css, ".vs-image-resize-handle-nw::before"), /border-top-width:\s*2px/);
-  assert.match(cssRule(css, ".vs-image-resize-handle-nw::before"), /border-left-width:\s*2px/);
-  assert.match(cssRule(css, ".vs-image-resize-handle-se::before"), /border-right-width:\s*2px/);
-  assert.match(cssRule(css, ".vs-image-resize-handle-se::before"), /border-bottom-width:\s*2px/);
+  assert.match(cssRule(css, ".vs-image-resize-handle::before"), /width:\s*18px/);
+  assert.match(cssRule(css, ".vs-image-resize-handle-nw::before"), /border-top-width:\s*3px/);
+  assert.match(cssRule(css, ".vs-image-resize-handle-nw::before"), /border-left-width:\s*3px/);
+  assert.match(cssRule(css, ".vs-image-resize-handle-se::before"), /border-right-width:\s*3px/);
+  assert.match(cssRule(css, ".vs-image-resize-handle-se::before"), /border-bottom-width:\s*3px/);
 });
 
 test("MathJax 行间公式有静态居中样式兜底", async () => {

@@ -1027,14 +1027,17 @@ html.appearance-switching .vs-skel {
 .vs-image-resize-handle::before {
   content: "";
   position: absolute;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   border-color: var(--accent);
   border-style: solid;
   border-width: 0;
   border-radius: 3px;
   background: transparent;
   box-shadow: none;
+  /* 白色描边只勾勒角标笔画轮廓，不产生填充层，保证在任意图片颜色上都清晰 */
+  filter: drop-shadow(1px 0 0 rgba(255, 255, 255, 0.9)) drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.9))
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9)) drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.9));
   transition:
     background-color var(--duration-fast) var(--ease),
     border-color var(--duration-fast) var(--ease),
@@ -1066,8 +1069,8 @@ html.appearance-switching .vs-skel {
 .vs-image-resize-handle-nw::before {
   top: 15px;
   left: 15px;
-  border-top-width: 2px;
-  border-left-width: 2px;
+  border-top-width: 3px;
+  border-left-width: 3px;
 }
 
 .vs-image-resize-handle-ne {
@@ -1079,8 +1082,8 @@ html.appearance-switching .vs-skel {
 .vs-image-resize-handle-ne::before {
   top: 15px;
   right: 15px;
-  border-top-width: 2px;
-  border-right-width: 2px;
+  border-top-width: 3px;
+  border-right-width: 3px;
 }
 
 .vs-image-resize-handle-sw {
@@ -1092,8 +1095,8 @@ html.appearance-switching .vs-skel {
 .vs-image-resize-handle-sw::before {
   bottom: 15px;
   left: 15px;
-  border-bottom-width: 2px;
-  border-left-width: 2px;
+  border-bottom-width: 3px;
+  border-left-width: 3px;
 }
 
 .vs-image-resize-handle-se {
@@ -1105,8 +1108,8 @@ html.appearance-switching .vs-skel {
 .vs-image-resize-handle-se::before {
   right: 15px;
   bottom: 15px;
-  border-right-width: 2px;
-  border-bottom-width: 2px;
+  border-right-width: 3px;
+  border-bottom-width: 3px;
 }
 
 .update-release-notes {
