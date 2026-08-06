@@ -295,8 +295,8 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
         markdowns.push(`![${item.docId}](${cdnUrl})`);
       }
       for (const smiley of selectedSmileys) {
-        // 与官方编辑器一致：直接引用微信官方表情资源地址
-        markdowns.push(`![${smiley.title}](${smiley.url})`);
+        // 与官方编辑器一致：直接引用微信官方表情资源地址，并按官方 20px 尺寸插入
+        markdowns.push(`![${smiley.title}](${smiley.url} =20x20)`);
       }
       onPick(markdowns.join(" "));
       toast.show(`已插入 ${markdowns.length} 个表情`, "info");

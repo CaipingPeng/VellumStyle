@@ -21,6 +21,7 @@ test("表情搜索弹窗接入后台搜索并以上传后的永久链接插入",
   assert.match(source, /thumbUrl/);
   assert.match(source, /微表情/);
   assert.match(source, /smileyKey/);
+  assert.match(source, /=20x20/);
   assert.match(source, /加载更多/);
   assert.match(source, /插入所选/);
   assert.match(source, /点击表情可多选/);
