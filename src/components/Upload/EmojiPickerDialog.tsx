@@ -2,6 +2,8 @@ import {useCallback, useEffect, useRef, useState} from "react";
 import {Check, Search, Smile} from "lucide-react";
 import {backendWindowUrl, getEmojiCdnUrl, openWechatBackendHidden, searchRemoticon, showWechatBackend} from "../../utils/publish.ts";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
+import {uploadRemoteImage} from "../../utils/upload.ts";
+import {WECHAT_SMILEY_EMOJIS} from "../../data/wechatSmileyEmojis.ts";
 import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
 import Dialog from "../ui/Dialog.tsx";
@@ -33,6 +35,12 @@ interface EmojiPage {
 }
 
 const PAGE_SIZE = 40;
+
+const SMILEY_KEY_PREFIX = "smiley:";
+
+function smileyKey(name: string): string {
+  return `${SMILEY_KEY_PREFIX}${name}`;
+}
 
 function errorMessage(error: unknown): string {
   return typeof error === "string" ? error : (error as Error)?.message || "未知错误";
@@ -120,6 +128,7 @@ function parseCdnUrlResponse(source: string): string | null {
 
 export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onNeedSettings}: Props) {
   const [query, setQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"search" | "smiley">("search");
   const [items, setItems] = useState<EmojiItem[]>([]);
   const [genNextOffset, setGenNextOffset] = useState(0);
   const [genContinue, setGenContinue] = useState(false);
@@ -265,6 +274,13 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
   };
 
   const selectedItems = items.filter((item) => selectedIds.has(item.docId));
+  const selectedSmileys = WECHAT_SMILEY_EMOJIS.filter((emoji) => selectedIds.has(smileyKey(emoji.name)));
+  const selectedCount = selectedItems.length + selectedSmileys.length;
+
+  const switchTab = (tab: "search" | "smiley") => {
+    setActiveTab(tab);
+    setSelectedIds(new Set());
+  };
 
   const insertSelected = async () => {
     if (!canInsert || selectedItems.length === 0 || inserting) return;
@@ -278,6 +294,11 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
           throw new Error(`表情转换失败：${parseErrorHint(response)}`);
         }
         markdowns.push(`![${item.docId}](${cdnUrl})`);
+      }
+      for (const smiley of selectedSmileys) {
+        // 经典微表情是微信官方 CDN 图片，下载后上传为永久链接再插入
+        const mmbizUrl = await uploadRemoteImage(smiley.url, "正文图片");
+        markdowns.push(`![${smiley.title}](${mmbizUrl})`);
       }
       onPick(markdowns.join(" "));
       toast.show(`已插入 ${markdowns.length} 个表情`, "info");
@@ -310,10 +331,10 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
       footer={
         <div className="flex w-full items-center justify-between gap-3">
           <span className="text-xs font-normal text-text-muted">
-            {selectedItems.length > 0 ? `已选择 ${selectedItems.length} 个` : "点击表情可多选"}
+            {selectedCount > 0 ? `已选择 ${selectedCount} 个` : "点击表情可多选"}
           </span>
           <div className="flex items-center gap-2">
-            {hasMore && items.length > 0 && (
+            {activeTab === "search" && hasMore && items.length > 0 && (
               <Button
                 type="button"
                 variant="secondary"
@@ -330,7 +351,7 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
               variant="primary"
               state={inserting ? "loading" : "idle"}
               loadingText="正在上传…"
-              disabled={!canInsert || selectedItems.length === 0 || inserting}
+              disabled={!canInsert || selectedCount === 0 || inserting}
               title={!canInsert ? "请先打开一篇文章" : "将所选表情转换为永久链接后插入"}
               onClick={() => void insertSelected()}
             >
@@ -341,71 +362,129 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
       }
     >
       <div className="flex h-[clamp(360px,calc(86vh-120px),560px)] min-h-0 flex-col">
-        <div className="flex h-[46px] flex-none items-center gap-2 border-b border-border bg-bg-secondary px-4">
-          <Search size={14} className="flex-none text-text-muted" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                startSearch();
-              }
-            }}
-            placeholder="输入关键词后按回车搜索，如：不嘻嘻"
-            spellCheck={false}
-            className="box-border h-8 min-w-0 flex-1 rounded-md border border-border bg-bg px-3 text-sm text-text outline-none transition-colors duration-fast placeholder:text-text-muted focus:border-[color:var(--ring)] focus:ring-2 focus:ring-[color:var(--ring)]"
-          />
+        <div className="flex h-10 flex-none items-center gap-1 border-b border-border bg-bg-secondary px-4">
+          {(["search", "smiley"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => switchTab(tab)}
+              aria-pressed={activeTab === tab}
+              className={`h-7 rounded-md px-3 text-xs font-medium transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+                activeTab === tab
+                  ? "bg-accent text-white"
+                  : "text-text-secondary hover:bg-bg hover:text-text"
+              }`}
+            >
+              {tab === "search" ? "搜索" : "微表情"}
+            </button>
+          ))}
         </div>
 
-        {loading ? (
+        {activeTab === "search" ? (
+          <>
+            <div className="flex h-[46px] flex-none items-center gap-2 border-b border-border bg-bg-secondary px-4">
+              <Search size={14} className="flex-none text-text-muted" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    startSearch();
+                  }
+                }}
+                placeholder="输入关键词后按回车搜索，如：不嘻嘻"
+                spellCheck={false}
+                className="box-border h-8 min-w-0 flex-1 rounded-md border border-border bg-bg px-3 text-sm text-text outline-none transition-colors duration-fast placeholder:text-text-muted focus:border-[color:var(--ring)] focus:ring-2 focus:ring-[color:var(--ring)]"
+              />
+            </div>
+
+            {loading ? (
           <div className="grid min-h-0 flex-1 auto-rows-max grid-cols-4 gap-3 overflow-hidden p-4 sm:grid-cols-5 lg:grid-cols-6">
             {Array.from({length: 18}).map((_, index) => (
               <div key={index} className="aspect-square animate-pulse rounded-lg bg-bg-tertiary" />
             ))}
           </div>
-        ) : items.length > 0 ? (
+            ) : items.length > 0 ? (
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 [scrollbar-gutter:stable] [scrollbar-width:thin]">
+                <div className="grid auto-rows-max grid-cols-4 content-start gap-3 sm:grid-cols-5 lg:grid-cols-6">
+                  {items.map((item, index) => {
+                    const selected = selectedIds.has(item.docId);
+                    return (
+                      <button
+                        key={item.docId || index}
+                        type="button"
+                        disabled={Boolean(inserting)}
+                        aria-pressed={selected}
+                        aria-label={`${selected ? "取消选择" : "选择"}第 ${index + 1} 个表情`}
+                        onClick={() => toggleSelect(item.docId)}
+                        className={`relative grid aspect-square cursor-pointer place-items-center overflow-hidden rounded-lg border bg-bg-secondary p-0 outline-none transition-[border-color,background-color,transform] duration-slow ease-bounce focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
+                          selected ? "border-accent/70" : "border-[color:var(--card-border)] hover:-translate-y-1 hover:bg-bg"
+                        }`}
+                      >
+                        <img
+                          src={toProxyImageUrl(item.thumbUrl)}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="block h-full w-full object-contain p-1"
+                        />
+                        {selected && (
+                          <span aria-hidden="true" className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full border-2 border-white bg-accent text-white">
+                            <Check size={12} strokeWidth={3} />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="m-4 flex min-h-0 flex-1 flex-col items-center justify-center rounded-md bg-bg-secondary px-6 text-center text-sm text-text-secondary">
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent-subtle text-accent"><Smile size={22} /></span>
+                <div className="mt-3 font-medium text-text">
+                  {query.trim() ? "没有找到相关表情" : "输入关键词后按回车搜索表情"}
+                </div>
+                <div className="mt-1 max-w-xs text-xs leading-5">
+                  表情来自微信表情搜索，插入时自动转换为永久图片链接。
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
           <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 [scrollbar-gutter:stable] [scrollbar-width:thin]">
-            <div className="grid auto-rows-max grid-cols-4 content-start gap-3 sm:grid-cols-5 lg:grid-cols-6">
-              {items.map((item, index) => {
-                const selected = selectedIds.has(item.docId);
+            <div className="grid auto-rows-max grid-cols-5 content-start gap-2 sm:grid-cols-7 lg:grid-cols-9">
+              {WECHAT_SMILEY_EMOJIS.map((emoji) => {
+                const key = smileyKey(emoji.name);
+                const selected = selectedIds.has(key);
                 return (
                   <button
-                    key={item.docId || index}
+                    key={key}
                     type="button"
                     disabled={Boolean(inserting)}
                     aria-pressed={selected}
-                    aria-label={`${selected ? "取消选择" : "选择"}第 ${index + 1} 个表情`}
-                    onClick={() => toggleSelect(item.docId)}
-                    className={`relative grid aspect-square cursor-pointer place-items-center overflow-hidden rounded-lg border bg-bg-secondary p-0 outline-none transition-[border-color,background-color,transform] duration-slow ease-bounce focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
+                    title={emoji.title}
+                    aria-label={`${selected ? "取消选择" : "选择"}${emoji.title}`}
+                    onClick={() => toggleSelect(key)}
+                    className={`relative grid aspect-square cursor-pointer place-items-center overflow-hidden rounded-lg border bg-bg-secondary p-1 outline-none transition-[border-color,background-color,transform] duration-slow ease-bounce focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60 ${
                       selected ? "border-accent/70" : "border-[color:var(--card-border)] hover:-translate-y-1 hover:bg-bg"
                     }`}
                   >
                     <img
-                      src={toProxyImageUrl(item.thumbUrl)}
+                      src={emoji.url}
                       alt=""
                       loading="lazy"
                       decoding="async"
-                      className="block h-full w-full object-contain p-1"
+                      className="block h-full w-full object-contain"
                     />
                     {selected && (
-                      <span aria-hidden="true" className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full border-2 border-white bg-accent text-white">
-                        <Check size={12} strokeWidth={3} />
+                      <span aria-hidden="true" className="absolute right-1 top-1 grid h-4 w-4 place-items-center rounded-full border-2 border-white bg-accent text-white">
+                        <Check size={10} strokeWidth={3} />
                       </span>
                     )}
                   </button>
                 );
               })}
-            </div>
-          </div>
-        ) : (
-          <div className="m-4 flex min-h-0 flex-1 flex-col items-center justify-center rounded-md bg-bg-secondary px-6 text-center text-sm text-text-secondary">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent-subtle text-accent"><Smile size={22} /></span>
-            <div className="mt-3 font-medium text-text">
-              {query.trim() ? "没有找到相关表情" : "输入关键词后按回车搜索表情"}
-            </div>
-            <div className="mt-1 max-w-xs text-xs leading-5">
-              表情来自微信表情搜索，插入时自动转换为永久图片链接。
             </div>
           </div>
         )}
