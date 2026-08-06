@@ -1420,6 +1420,7 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
   border-radius: 8px;
   background: #fafafa;
   color: #1a1b1c;
+  line-height: 1.4;
   font-family: -apple-system, system-ui, BlinkMacSystemFont, "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
@@ -1464,8 +1465,7 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
   margin-top: 2px;
   overflow: hidden;
   font-size: 14px;
-  line-height: 1.4;
-  color: #b1b2b3;
+  color: rgba(0, 0, 0, 0.3);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1480,8 +1480,7 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
   flex: 1;
   min-width: 0;
   font-size: 14px;
-  line-height: 1.4;
-  color: #b1b2b3;
+  color: rgba(0, 0, 0, 0.3);
 }
 
 .vs-audio-placeholder-play {

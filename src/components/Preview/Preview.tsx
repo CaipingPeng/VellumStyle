@@ -670,7 +670,7 @@ function ImageResizeHandles({
   );
 }
 
-// 官方静态显示中文时长："2分钟"、"5分09秒"。
+// 官方静态显示中文时长，只到分钟："2分钟"、"5分钟"。
 function formatVoiceDurationLabel(playLength: string): string {
   const value = playLength.trim();
   if (!value) return "";
@@ -678,8 +678,7 @@ function formatVoiceDurationLabel(playLength: string): string {
   const totalSeconds = Math.round(Number(value) / 1000);
   if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return "";
   const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return seconds === 0 ? `${minutes}分钟` : `${minutes}分${String(seconds).padStart(2, "0")}秒`;
+  return `${minutes}分钟`;
 }
 
 // 首屏/切文档瞬间文章尚未渲染时的骨架占位
