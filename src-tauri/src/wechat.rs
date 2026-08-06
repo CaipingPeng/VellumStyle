@@ -989,6 +989,7 @@ async fn download_remote_image(raw_url: &str) -> Result<DownloadedImage, String>
 
     let mime = content_type
         .or_else(|| mime_from_url_path(target.path()).map(str::to_string))
+        .or_else(|| mime_from_bytes(&bytes).map(str::to_string))
         .ok_or_else(|| "远程资源不是支持的 jpg/png/gif 图片".to_string())?;
     if !looks_like_image_bytes(&bytes, &mime) {
         return Err("远程资源不是有效图片".into());
@@ -1404,6 +1405,20 @@ fn mime_from_ext(ext: &str) -> Option<&'static str> {
         "png" => Some("image/png"),
         "gif" => Some("image/gif"),
         _ => None,
+    }
+}
+
+// 部分微信表情 CDN 响应不带 Content-Type 且 URL 无扩展名，
+// 直接从文件头识别图片类型。
+fn mime_from_bytes(bytes: &[u8]) -> Option<&'static str> {
+    if bytes.starts_with(b"GIF87a") || bytes.starts_with(b"GIF89a") {
+        Some("image/gif")
+    } else if bytes.starts_with(&[0xff, 0xd8, 0xff]) {
+        Some("image/jpeg")
+    } else if bytes.starts_with(&[0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a]) {
+        Some("image/png")
+    } else {
+        None
     }
 }
 

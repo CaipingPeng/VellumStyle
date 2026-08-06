@@ -8,7 +8,7 @@ test("表情搜索弹窗接入后台搜索并以上传后的永久链接插入",
   assert.match(source, /searchRemoticon/);
   assert.match(source, /openWechatBackendHidden/);
   assert.match(source, /showWechatBackend/);
-  assert.match(source, /closeWechatBackend/);
+  assert.match(source, /backendWindowUrl/);
   assert.match(source, /uploadRemoteImage/);
   assert.match(source, /toProxyImageUrl/);
   assert.match(source, /gen_emoji_result/);

@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from "react";
 import {Check, Search, Smile} from "lucide-react";
-import {closeWechatBackend, openWechatBackendHidden, searchRemoticon, showWechatBackend} from "../../utils/publish.ts";
+import {backendWindowUrl, openWechatBackendHidden, searchRemoticon, showWechatBackend} from "../../utils/publish.ts";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
 import {uploadRemoteImage} from "../../utils/upload.ts";
 import {toast} from "../Toast/toast.ts";
@@ -117,8 +117,16 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
         const startedAt = Date.now();
         let shown = false;
         while (Date.now() - startedAt < 60_000) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+          await new Promise((resolve) => setTimeout(resolve, 1500));
           if (session !== sessionRef.current) return;
+          // 先等隐藏窗口导航到微信域（页面基本加载完成），避免未就绪时误判为未登录
+          let url: string | null = null;
+          try {
+            url = await backendWindowUrl();
+          } catch {
+            // 窗口暂不可读，继续等待
+          }
+          if (!url?.startsWith("https://mp.weixin.qq.com/")) continue;
           try {
             const retryResponse = await searchRemoticon(keyword.trim(), PAGE_SIZE, 0);
             if (session !== sessionRef.current) return;
@@ -126,11 +134,7 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
             if (page !== null) {
               applyPage(page);
               setLoading(false);
-              try {
-                await closeWechatBackend();
-              } catch {
-                // 窗口可能已被手动关闭，忽略
-              }
+              // 成功：窗口保留（隐藏），后续加载更多/再次搜索直接复用登录态
               return;
             }
           } catch {
