@@ -89,10 +89,8 @@ function escapeHtmlAttribute(value: string): string {
 }
 
 // 素材库视频插入正文的标准播放 iframe：
-// - src 用于本地预览实际渲染
-// - data-src 是微信后台/发布端识别视频的字段（经 draft/add 接口提交时 src 可能被剥离，
-//   data-src 保留后微信端仍能还原播放器）
-// - data-cover 传素材返回的封面链，data-mpvid 传 vid
+// - data-src 是微信后台/发布端识别视频的字段（实测经 draft/add 接口提交后原样保留）
+// - data-cover 传素材返回的封面链，data-mpvid 传 vid，data-media-id 供本地预览播放取流
 export function formatVideoMaterialIframe(video: MaterialVideo): string {
   const vid = video.vid.trim();
   const playerUrl = `https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&action=mpvideo&auto=0&vid=${encodeURIComponent(vid)}`;
@@ -103,7 +101,7 @@ export function formatVideoMaterialIframe(video: MaterialVideo): string {
   return (
     `<iframe class="video_iframe rich_pages" data-vidtype="2" data-mpvid="${escapeHtmlAttribute(vid)}" data-media-id="${escapeHtmlAttribute(video.mediaId)}"${cover}` +
     ` allowfullscreen frameborder="0" data-w="1920" data-ratio="1.7777777777777777" height="325" width="578"` +
-    ` data-src="${src}" src="${src}"></iframe>`
+    ` data-src="${src}"></iframe>`
   );
 }
 

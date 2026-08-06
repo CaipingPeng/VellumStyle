@@ -137,7 +137,7 @@ test("formatVideoMaterialIframe 用 vid 和封面拼出可发布的播放 iframe
   assert.match(html, /<iframe /);
   assert.match(html, /data-mpvid="wxv_2628424322221359104"/);
   assert.match(html, /data-src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate\?t=pages\/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104"/);
-  assert.match(html, /src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate/);
+  assert.doesNotMatch(html, / src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate/);
   assert.match(html, /data-media-id="VIDEO_MEDIA_ID_1"/);
   assert.match(html, /data-cover="http:\/\/mmbiz\.qpic\.cn\/mmbiz_jpg\/example\/0\?wx_fmt=jpeg"/);
   assert.match(html, /allowfullscreen/);

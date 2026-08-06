@@ -297,7 +297,7 @@ test("solveHtml 导出视频 iframe 时保留 src/data-src/mpvid/cover", () => {
   box.innerHTML = [
     "<section>",
     '<p>测试</p>',
-    '<iframe class="video_iframe rich_pages" data-vidtype="2" data-mpvid="wxv_2628424322221359104" data-cover="http://mmbiz.qpic.cn/mmbiz_jpg/example/0?wx_fmt=jpeg" allowfullscreen frameborder="0" data-w="1920" data-ratio="1.7777777777777777" height="325" width="578" data-src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104" src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104"></iframe>',
+    '<iframe class="video_iframe rich_pages" data-vidtype="2" data-mpvid="wxv_2628424322221359104" data-cover="http://mmbiz.qpic.cn/mmbiz_jpg/example/0?wx_fmt=jpeg" allowfullscreen frameborder="0" data-w="1920" data-ratio="1.7777777777777777" height="325" width="578" data-src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104"></iframe>',
     "</section>",
   ].join("");
   document.body.appendChild(box);
@@ -308,7 +308,7 @@ test("solveHtml 导出视频 iframe 时保留 src/data-src/mpvid/cover", () => {
     assert.match(html, /data-mpvid="wxv_2628424322221359104"/);
     assert.match(html, /data-cover="http:\/\/mmbiz\.qpic\.cn\/mmbiz_jpg\/example\/0\?wx_fmt=jpeg"/);
     assert.match(html, /data-src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate/);
-    assert.match(html, /src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate/);
+    assert.doesNotMatch(html, / src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate/);
     assert.doesNotMatch(html, /<iframe[^>]*data-tool/);
   } finally {
     box.remove();

@@ -323,10 +323,11 @@ const Preview = forwardRef<PreviewHandle, Props>(
           iframe.removeAttribute("src");
         }
         const cover = iframe.getAttribute("data-cover") ?? "";
+        const mediaId = iframe.getAttribute("data-media-id") ?? "";
         const placeholder = document.createElement("div");
         placeholder.className = "vs-video-placeholder";
         placeholder.setAttribute("role", "img");
-        placeholder.setAttribute("aria-label", "素材库视频：本地预览不播放，发布后显示播放器");
+        placeholder.setAttribute("aria-label", "素材库视频：点击播放本地预览");
         if (cover) {
           placeholder.style.backgroundImage = `url("${toProxyImageUrl(cover)}")`;
         }
@@ -335,9 +336,10 @@ const Preview = forwardRef<PreviewHandle, Props>(
         play.setAttribute("aria-hidden", "true");
         const hint = document.createElement("span");
         hint.className = "vs-video-placeholder-hint";
-        hint.textContent = "本地预览不播放 · 发布后显示播放器";
+        hint.textContent = mediaId
+          ? "点击播放本地预览 · 发布后显示官方播放器"
+          : "本地预览不播放 · 发布后显示播放器";
         placeholder.append(play, hint);
-        const mediaId = iframe.getAttribute("data-media-id") ?? "";
         if (mediaId) {
           play.setAttribute("role", "button");
           play.setAttribute("aria-label", "播放素材库视频");
