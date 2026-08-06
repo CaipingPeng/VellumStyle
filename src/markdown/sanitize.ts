@@ -110,6 +110,7 @@ const SANITIZE_CONFIG: Config = {
   "cover",
   "data-cover",
   "data-is-selected",
+  "data-media-id",
   "data-mpvid",
   "data-ratio",
   "data-src",

@@ -85,6 +85,7 @@ pub fn run() {
             wechat::list_video_materials,
             wechat::list_voice_materials,
             wechat::delete_image_material,
+            wechat::get_video_play_url,
             wechat_backend::open_wechat_backend,
             wechat_backend::fetch_backend_voice_list,
             wechat_backend::backend_window_url,

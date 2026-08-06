@@ -1405,6 +1405,16 @@ iframe.video_iframe[data-vs-video-hidden="true"] {
   white-space: nowrap;
 }
 
+.vs-video-placeholder-player {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 578px;
+  aspect-ratio: 16 / 9;
+  margin: 8px auto;
+  background: #000;
+}
+
 /* 素材库音频本地预览占位：mpvoice 在 WebView 里不渲染，显示卡片占位。
    导出时由 stripPreviewArtifacts 移除占位并还原 mpvoice。 */
 mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {

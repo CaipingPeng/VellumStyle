@@ -8,6 +8,7 @@ import {
   fetchBackendVoiceList,
   formatVoiceMarkup,
   formatVideoMaterialIframe,
+  getVideoPlayUrl,
   getCoverCandidates,
   listImageMaterials,
   listVideoMaterials,
@@ -137,6 +138,7 @@ test("formatVideoMaterialIframe 用 vid 和封面拼出可发布的播放 iframe
   assert.match(html, /data-mpvid="wxv_2628424322221359104"/);
   assert.match(html, /data-src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate\?t=pages\/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104"/);
   assert.match(html, /src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate/);
+  assert.match(html, /data-media-id="VIDEO_MEDIA_ID_1"/);
   assert.match(html, /data-cover="http:\/\/mmbiz\.qpic\.cn\/mmbiz_jpg\/example\/0\?wx_fmt=jpeg"/);
   assert.match(html, /allowfullscreen/);
   assert.ok(html.endsWith("></iframe>"));
@@ -375,6 +377,29 @@ test("openWechatBackend 与 fetchBackendVoiceList 调用后台同步命令", asy
     const response = await fetchBackendVoiceList();
     assert.deepEqual(calls.map((call) => call.cmd), ["open_wechat_backend", "fetch_backend_voice_list"]);
     assert.match(response, /voice_encode_fileid/);
+  } finally {
+    if (previousInternals === undefined) {
+      delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+    } else {
+      (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
+    }
+  }
+});
+
+test("getVideoPlayUrl 调用视频直链命令并保留 media_id", async () => {
+  const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+  let calledWith: {cmd: string; args: unknown} | null = null;
+  (window as unknown as {__TAURI_INTERNALS__: {invoke: (cmd: string, args: unknown) => Promise<unknown>}}).__TAURI_INTERNALS__ = {
+    invoke: async (cmd, args) => {
+      calledWith = {cmd, args};
+      return "https://mpvideo.qpic.cn/example.f10004.mp4?dis_k=1";
+    },
+  };
+
+  try {
+    const url = await getVideoPlayUrl("VIDEO_1");
+    assert.deepEqual(calledWith, {cmd: "get_video_play_url", args: {mediaId: "VIDEO_1"}});
+    assert.match(url, /^https:\/\/mpvideo\.qpic\.cn\//);
   } finally {
     if (previousInternals === undefined) {
       delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;

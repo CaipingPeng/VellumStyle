@@ -653,6 +653,73 @@ pub async fn list_voice_materials(
     }
 }
 
+/// 获取视频素材的可流式播放直链（mp4）。
+/// 流程：get_material 拿 down_url（播放页）→ 抓取页面 → 提取最高清晰度 mp4 地址。
+/// mp4 地址带签名时效，每次播放前应重新获取。
+#[tauri::command]
+pub async fn get_video_play_url(app: AppHandle, media_id: String) -> Result<String, String> {
+    let cfg = load_wechat_config(&app);
+    if !cfg.is_configured() {
+        return Err("NOT_CONFIGURED".into());
+    }
+
+    let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
+    let body = serde_json::json!({ "media_id": media_id });
+    let url = format!(
+        "https://api.weixin.qq.com/cgi-bin/material/get_material?access_token={token}"
+    );
+    let resp = reqwest::Client::new()
+        .post(&url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("获取视频素材详情失败：{}", e.without_url()))?;
+    let data: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| format!("解析视频素材详情失败：{}", e.without_url()))?;
+    let down_url = data
+        .get("down_url")
+        .and_then(|value| value.as_str())
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| "视频播放页地址获取失败".to_string())?;
+
+    let page = reqwest::get(&down_url)
+        .await
+        .map_err(|e| format!("打开视频播放页失败：{}", e.without_url()))?
+        .text()
+        .await
+        .map_err(|e| format!("读取视频播放页失败：{}", e.without_url()))?;
+
+    extract_video_mp4_url(&page).ok_or_else(|| "视频播放页未找到可播放地址".to_string())
+}
+
+// 从播放页 HTML 提取最高清晰度 mp4 地址（url: '...mp4?...'，按 .f1000X 清晰度取最大）。
+fn extract_video_mp4_url(html: &str) -> Option<String> {
+    let mut best: Option<(u32, String)> = None;
+    for capture in html.match_indices("url: '") {
+        let start = capture.0 + "url: '".len();
+        let rest = &html[start..];
+        let end = rest.find('\'')?;
+        let candidate = &rest[..end];
+        if !candidate.contains(".mp4") {
+            continue;
+        }
+        let decoded = candidate.replace("\\x26amp;", "&");
+        let quality = decoded
+            .split(".f")
+            .nth(1)
+            .and_then(|part| part.split('.').next())
+            .and_then(|num| num.parse::<u32>().ok())
+            .unwrap_or(0);
+        if best.as_ref().map(|(q, _)| quality > *q).unwrap_or(true) {
+            best = Some((quality, decoded));
+        }
+    }
+    best.map(|(_, url)| url)
+}
+
 fn parse_delete_material_response(body: &str) -> Result<(), (Option<i64>, String)> {
     let data: MaterialActionResp =
         serde_json::from_str(body).map_err(|e| (None, format!("解析素材删除响应失败：{e}")))?;
@@ -1719,9 +1786,10 @@ pub async fn add_draft(
 mod tests {
     use super::{
         build_add_draft_body, decode_for_reencoding, format_wechat_error, get_outbound_ip,
-        is_allowed_redirect_target, parse_delete_material_response, parse_material_page_response,
-        parse_outbound_ip_response, parse_video_material_page_response, prepare_upload_for_limit,
-        parse_voice_material_page_response, validate_remote_addresses, OUTBOUND_IP_ENDPOINTS,
+        extract_video_mp4_url, is_allowed_redirect_target, parse_delete_material_response,
+        parse_material_page_response, parse_outbound_ip_response, parse_video_material_page_response,
+        prepare_upload_for_limit, parse_voice_material_page_response, validate_remote_addresses,
+        OUTBOUND_IP_ENDPOINTS,
     };
     use image::{DynamicImage, ImageFormat, Rgb, RgbImage, Rgba, RgbaImage};
     use std::io::Cursor;
@@ -1990,6 +2058,22 @@ mod tests {
                 "https://checkip.amazonaws.com",
             ]
         );
+    }
+
+    #[test]
+    fn video_play_page_extracts_highest_quality_mp4() {
+        let html = r#"<script>
+          url: 'http://mpvideo.qpic.cn/abc.f10002.mp4?dis_k=1\x26amp;dis_t=2',
+          url: 'http://mpvideo.qpic.cn/abc.f10004.mp4?dis_k=3\x26amp;dis_t=4',
+          url: 'http://mpvideo.qpic.cn/abc.f10001.mp4?dis_k=5\x26amp;dis_t=6',
+        </script>"#;
+        let url = extract_video_mp4_url(html).expect("should extract");
+        assert!(url.starts_with("http://mpvideo.qpic.cn/abc.f10004.mp4?dis_k=3&dis_t=4"));
+    }
+
+    #[test]
+    fn video_play_page_without_mp4_returns_none() {
+        assert_eq!(extract_video_mp4_url("<p>没有视频</p>"), None);
     }
 
     #[test]

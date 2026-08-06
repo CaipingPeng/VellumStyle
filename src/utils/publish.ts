@@ -101,7 +101,7 @@ export function formatVideoMaterialIframe(video: MaterialVideo): string {
     ? ` data-cover="${escapeHtmlAttribute(video.coverUrl.trim())}"`
     : "";
   return (
-    `<iframe class="video_iframe rich_pages" data-vidtype="2" data-mpvid="${escapeHtmlAttribute(vid)}"${cover}` +
+    `<iframe class="video_iframe rich_pages" data-vidtype="2" data-mpvid="${escapeHtmlAttribute(vid)}" data-media-id="${escapeHtmlAttribute(video.mediaId)}"${cover}` +
     ` allowfullscreen frameborder="0" data-w="1920" data-ratio="1.7777777777777777" height="325" width="578"` +
     ` data-src="${src}" src="${src}"></iframe>`
   );
@@ -215,6 +215,11 @@ export function backendWindowUrl(): Promise<string | null> {
 /// 关闭后台窗口（同步完成后调用）。
 export function closeWechatBackend(): Promise<void> {
   return invoke<void>("close_wechat_backend");
+}
+
+/// 获取视频素材的可流式播放 mp4 直链（每次播放前实时获取，地址带签名时效）。
+export function getVideoPlayUrl(mediaId: string): Promise<string> {
+  return invoke<string>("get_video_play_url", {mediaId});
 }
 
 const VOICE_BINDING_KEY = "vs-audio-bindings";

@@ -14,6 +14,7 @@ import PreviewImageContextMenu from "./PreviewImageContextMenu.tsx";
 import {resolvePreviewImage, type PreviewImageMenuTarget} from "./previewImageContextMenu.ts";
 import {copyPreviewImage, savePreviewImageAs} from "../../utils/previewImageActions.ts";
 import {toast} from "../Toast/toast.ts";
+import {getVideoPlayUrl} from "../../utils/publish.ts";
 
 // 全局音频播放状态：同一时间只播一个素材库音频，切换卡片时自动停止上一个。
 let playingVoiceAudio: HTMLAudioElement | null = null;
@@ -88,6 +89,24 @@ function toggleVoicePlayback(
     }
     toast.show("音频播放失败，请稍后重试", "error");
   });
+}
+
+// 视频占位播放：实时获取带签名的 mp4 直链后，把占位替换为内嵌播放器。
+async function playPreviewVideo(placeholder: HTMLElement, mediaId: string) {
+  let src: string;
+  try {
+    src = await getVideoPlayUrl(mediaId);
+  } catch (error) {
+    toast.show(`视频加载失败：${errorMessage(error)}`, "error");
+    return;
+  }
+  const video = document.createElement("video");
+  video.src = src;
+  video.controls = true;
+  video.autoplay = true;
+  video.className = "vs-video-placeholder-player";
+  video.setAttribute("playsinline", "");
+  placeholder.replaceChildren(video);
 }
 
 interface Props {
@@ -318,6 +337,16 @@ const Preview = forwardRef<PreviewHandle, Props>(
         hint.className = "vs-video-placeholder-hint";
         hint.textContent = "本地预览不播放 · 发布后显示播放器";
         placeholder.append(play, hint);
+        const mediaId = iframe.getAttribute("data-media-id") ?? "";
+        if (mediaId) {
+          play.setAttribute("role", "button");
+          play.setAttribute("aria-label", "播放素材库视频");
+          play.style.cursor = "pointer";
+          play.addEventListener("click", (event) => {
+            event.stopPropagation();
+            void playPreviewVideo(placeholder, mediaId);
+          });
+        }
         iframe.insertAdjacentElement("afterend", placeholder);
       }
     }, [html]);

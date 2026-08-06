@@ -57,11 +57,12 @@ test("带 title 的 Markdown 链接也使用同一套取整符号脚注样式", 
 
 test("素材库视频 iframe 保留 src/data-src/mpvid/cover 供预览与发布", () => {
   const html = render(
-    '<iframe class="video_iframe rich_pages" data-vidtype="2" data-mpvid="wxv_2628424322221359104" data-cover="http://mmbiz.qpic.cn/mmbiz_jpg/example/0?wx_fmt=jpeg" allowfullscreen frameborder="0" data-w="1920" data-ratio="1.7777777777777777" height="325" width="578" data-src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104" src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104"></iframe>',
+    '<iframe class="video_iframe rich_pages" data-vidtype="2" data-mpvid="wxv_2628424322221359104" data-media-id="VIDEO_MEDIA_ID_1" data-cover="http://mmbiz.qpic.cn/mmbiz_jpg/example/0?wx_fmt=jpeg" allowfullscreen frameborder="0" data-w="1920" data-ratio="1.7777777777777777" height="325" width="578" data-src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104" src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104"></iframe>',
   );
 
   assert.match(html, /<iframe /);
   assert.match(html, /data-mpvid="wxv_2628424322221359104"/);
+  assert.match(html, /data-media-id="VIDEO_MEDIA_ID_1"/);
   assert.match(html, /data-cover="http:\/\/mmbiz\.qpic\.cn\/mmbiz_jpg\/example\/0\?wx_fmt=jpeg"/);
   assert.match(html, /data-src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate\?t=pages\/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104"/);
   assert.match(html, /src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate/);
