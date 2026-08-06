@@ -90,6 +90,7 @@ export async function playPreviewVideo(placeholder: HTMLElement, mediaId: string
     toast.show(`视频加载失败：${errorMessage(error)}`, "error");
     return;
   }
+  placeholder.dataset.vsMediaId = mediaId;
   const video = document.createElement("video");
   video.src = src;
   video.controls = true;
@@ -99,13 +100,45 @@ export async function playPreviewVideo(placeholder: HTMLElement, mediaId: string
   placeholder.replaceChildren(video);
 }
 
+// 把播放中的占位恢复为封面形态（发布后回到可点击的封面预览）。
+function restoreVideoPlaceholder(placeholder: HTMLElement) {
+  const mediaId = placeholder.dataset.vsMediaId ?? "";
+  const play = document.createElement("span");
+  play.className = "vs-video-placeholder-play";
+  play.setAttribute("aria-hidden", "true");
+  const hint = document.createElement("span");
+  hint.className = "vs-video-placeholder-hint";
+  hint.textContent = mediaId
+    ? "点击播放本地预览 · 发布后显示官方播放器"
+    : "本地预览不播放 · 发布后显示播放器";
+  placeholder.replaceChildren(play, hint);
+  if (mediaId) {
+    play.setAttribute("role", "button");
+    play.setAttribute("aria-label", "播放素材库视频");
+    play.style.cursor = "pointer";
+    play.addEventListener("click", (event) => {
+      event.stopPropagation();
+      void playPreviewVideo(placeholder, mediaId);
+    });
+  }
+}
+
 // 发布前停止所有本地媒体播放（预览里的视频播放器与全局音频），
-// 避免发布流程中后台继续出声。
+// 避免发布流程中后台继续出声。除了暂停，还移除 src 并 load()，
+// 防止 Chromium 在深克隆/重建 DOM 时让带 autoplay 的媒体重新播放；
+// 视频占位同时恢复为封面，避免发布后留一个无源黑屏播放器。
 export function stopLocalMediaPlayback() {
   playingVoiceAudio?.pause();
+  playingVoiceAudio?.removeAttribute("src");
   playingVoiceAudio = null;
   playingVoicePlaceholder = null;
   for (const video of Array.from(document.querySelectorAll<HTMLVideoElement>(".vs-video-placeholder-player"))) {
+    const placeholder = video.parentElement;
     video.pause();
+    video.removeAttribute("src");
+    video.load();
+    if (placeholder && placeholder.classList.contains("vs-video-placeholder")) {
+      restoreVideoPlaceholder(placeholder);
+    }
   }
 }
