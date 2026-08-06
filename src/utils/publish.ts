@@ -89,7 +89,8 @@ function escapeHtmlAttribute(value: string): string {
 }
 
 // 素材库视频插入正文的标准播放 iframe：
-// - data-src 是微信后台/发布端识别视频的字段（实测经 draft/add 接口提交后原样保留）
+// - src 是微信后台/发布端渲染播放器必需的字段（实测去掉后视频不显示，必须保留）
+// - data-src 与 src 同值，兼容微信后台对视频字段的识别
 // - data-cover 传素材返回的封面链，data-mpvid 传 vid，data-media-id 供本地预览播放取流
 export function formatVideoMaterialIframe(video: MaterialVideo): string {
   const vid = video.vid.trim();
@@ -101,7 +102,7 @@ export function formatVideoMaterialIframe(video: MaterialVideo): string {
   return (
     `<iframe class="video_iframe rich_pages" data-vidtype="2" data-mpvid="${escapeHtmlAttribute(vid)}" data-media-id="${escapeHtmlAttribute(video.mediaId)}"${cover}` +
     ` allowfullscreen frameborder="0" data-w="1920" data-ratio="1.7777777777777777" height="325" width="578"` +
-    ` data-src="${src}"></iframe>`
+    ` data-src="${src}" src="${src}"></iframe>`
   );
 }
 
