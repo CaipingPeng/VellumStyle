@@ -12,9 +12,12 @@ test("图片素材库默认多选并通过独立命令插入或删除所选素�
   const confirmSource = await readFile(new URL("./DeleteMaterialConfirmDialog.tsx", import.meta.url), "utf8");
 
   assert.match(source, /listImageMaterials/);
+  assert.match(source, /listVideoMaterials/);
   assert.match(source, /deleteImageMaterial/);
+  assert.match(source, /onPickVideos/);
   assert.match(source, /pickImageFiles/);
   assert.match(source, /uploadLocalImage/);
+  assert.match(source, /视频请在公众号后台/);
   assert.match(source, /aria-pressed=\{selected\}/);
   assert.match(source, /onPick\(selectedItems\.map\(\(item\) => item\.url\)\)/);
   assert.match(source, /onPickFlow\(selectedItems\.map\(\(item\) => item\.url\)\)/);
@@ -139,6 +142,82 @@ test("素材库多选后可通过「插入横滑」按列表顺序拼成横滑�
     act(() => insertFlow.click());
 
     assert.deepEqual(flowPicked, [["https://mmbiz.qpic.cn/first", "https://mmbiz.qpic.cn/second"]]);
+    assert.equal(closed, 1);
+  } finally {
+    act(() => root.unmount());
+    host.remove();
+    if (previousInternals === undefined) {
+      delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+    } else {
+      (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
+    }
+  }
+});
+
+test("视频页签列出素材库视频并可把所选视频交给插入回调", async () => {
+  const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+  (window as unknown as {__TAURI_INTERNALS__: {invoke: (cmd: string) => Promise<unknown>}}).__TAURI_INTERNALS__ = {
+    invoke: async (cmd) => {
+      if (cmd === "list_image_materials") {
+        return {totalCount: 0, itemCount: 0, items: []};
+      }
+      assert.equal(cmd, "list_video_materials");
+      return {
+        totalCount: 2,
+        itemCount: 2,
+        items: [
+          {mediaId: "V1", name: "first.mp4", updateTime: 1, coverUrl: "https://mmbiz.qpic.cn/cover1", vid: "wxv_1"},
+          {mediaId: "V2", name: "second.mp4", updateTime: 2, coverUrl: "https://mmbiz.qpic.cn/cover2", vid: "wxv_2"},
+        ],
+      };
+    },
+  };
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const videoPicked: Array<Array<{mediaId: string; vid: string}>> = [];
+  let closed = 0;
+
+  try {
+    await act(async () => {
+      root.render(createElement(ImageMaterialPickerDialog, {
+        open: true,
+        canInsert: true,
+        onClose: () => { closed += 1; },
+        onPick: () => {},
+        onPickFlow: () => {},
+        onPickVideos: (videos) => videoPicked.push(videos),
+        onNeedSettings: () => {},
+      }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const videoTab = Array.from(document.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => button.textContent?.trim() === "视频");
+    assert.ok(videoTab);
+    await act(async () => {
+      videoTab.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const cards = Array.from(document.querySelectorAll<HTMLButtonElement>('button[aria-label^="选择素材库第"]'));
+    assert.equal(cards.length, 2);
+    assert.match(cards[0].getAttribute("aria-label") ?? "", /第 1 个视频：first\.mp4/);
+    act(() => {
+      cards[1].click();
+      cards[0].click();
+    });
+    const insert = Array.from(document.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => button.textContent?.includes("插入所选"));
+    assert.ok(insert);
+    act(() => insert.click());
+
+    assert.equal(videoPicked.length, 1);
+    assert.deepEqual(videoPicked[0].map(({mediaId, vid}) => ({mediaId, vid})), [
+      {mediaId: "V1", vid: "wxv_1"},
+      {mediaId: "V2", vid: "wxv_2"},
+    ]);
     assert.equal(closed, 1);
   } finally {
     act(() => root.unmount());

@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {addDraft, deleteImageMaterial, findUnuploadedImages, getCoverCandidates, listImageMaterials} from "./publish.ts";
+import {
+  addDraft,
+  deleteImageMaterial,
+  findUnuploadedImages,
+  formatVideoMaterialIframe,
+  getCoverCandidates,
+  listImageMaterials,
+  listVideoMaterials,
+} from "./publish.ts";
 
 test("listImageMaterials 调用永久图片素材库命令并保留分页参数", async () => {
   const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
@@ -64,6 +72,65 @@ test("deleteImageMaterial 调用永久素材删除命令", async () => {
       (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
     }
   }
+});
+
+test("listVideoMaterials 调用永久视频素材库命令并保留分页参数", async () => {
+  const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+  let calledWith: {cmd: string; args: unknown} | null = null;
+  (window as unknown as {__TAURI_INTERNALS__: {invoke: (cmd: string, args: unknown) => Promise<unknown>}}).__TAURI_INTERNALS__ = {
+    invoke: async (cmd, args) => {
+      calledWith = {cmd, args};
+      return {
+        totalCount: 1,
+        itemCount: 1,
+        items: [
+          {
+            mediaId: "VIDEO_MEDIA_ID_1",
+            name: "和自己赛跑",
+            updateTime: 1666258618,
+            coverUrl: "http://mmbiz.qpic.cn/mmbiz_jpg/example/0?wx_fmt=jpeg",
+            vid: "wxv_2628424322221359104",
+          },
+        ],
+      };
+    },
+  };
+
+  try {
+    const page = await listVideoMaterials(0, 20);
+
+    assert.deepEqual(calledWith, {
+      cmd: "list_video_materials",
+      args: {offset: 0, count: 20},
+    });
+    assert.equal(page.totalCount, 1);
+    assert.equal(page.items[0].vid, "wxv_2628424322221359104");
+    assert.equal(page.items[0].coverUrl, "http://mmbiz.qpic.cn/mmbiz_jpg/example/0?wx_fmt=jpeg");
+  } finally {
+    if (previousInternals === undefined) {
+      delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+    } else {
+      (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
+    }
+  }
+});
+
+test("formatVideoMaterialIframe 用 vid 和封面拼出可发布的播放 iframe", () => {
+  const html = formatVideoMaterialIframe({
+    mediaId: "VIDEO_MEDIA_ID_1",
+    name: "和自己赛跑",
+    updateTime: 1666258618,
+    coverUrl: "http://mmbiz.qpic.cn/mmbiz_jpg/example/0?wx_fmt=jpeg",
+    vid: "wxv_2628424322221359104",
+  });
+
+  assert.match(html, /<iframe /);
+  assert.match(html, /data-mpvid="wxv_2628424322221359104"/);
+  assert.match(html, /data-src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate\?t=pages\/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104"/);
+  assert.match(html, /src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate/);
+  assert.match(html, /data-cover="http:\/\/mmbiz\.qpic\.cn\/mmbiz_jpg\/example\/0\?wx_fmt=jpeg"/);
+  assert.match(html, /allowfullscreen/);
+  assert.ok(html.endsWith("></iframe>"));
 });
 
 test("addDraft 只把正文 HTML 传给草稿接口，不把正文链接写到阅读原文", async () => {

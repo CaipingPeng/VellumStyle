@@ -20,6 +20,7 @@ import {toast} from "./components/Toast/toast.ts";
 import {useStore, getThemeById, flushDocumentThemeWrite, flushSave} from "./store/index.ts";
 import {getCodeThemeById, loadAllCodeThemes, subscribeCodeThemes} from "./markdown/codeThemes.ts";
 import {formatMarkdownImage, replaceMarkdownImageSizeByIndex} from "./markdown/imageMarkdown.ts";
+import {formatVideoMaterialIframe, type MaterialVideo} from "./utils/publish.ts";
 import {getActiveOutlineLine, parseMarkdownOutline} from "./utils/outline.ts";
 import {loadAllThemes} from "./themes/loader.ts";
 import {uploadImage, uploadLocalImage, type UploadError} from "./utils/upload.ts";
@@ -377,6 +378,12 @@ export default function App() {
     editorRef.current?.insertBlockAtCursor(markdown);
   }, []);
 
+  const handlePickMaterialVideos = useCallback((videos: MaterialVideo[]) => {
+    if (videos.length === 0) return;
+    const markdown = videos.map((video) => formatVideoMaterialIframe(video)).join("\n\n");
+    editorRef.current?.insertAtCursor(`\n${markdown}\n`);
+  }, []);
+
   const handleResizePreviewImage = useCallback((imageIndex: number, size: {width: string}) => {
     const result = replaceMarkdownImageSizeByIndex(useStore.getState().content, imageIndex, size);
     if (result.changed) {
@@ -711,7 +718,7 @@ export default function App() {
           <IconButton
             variant="surface"
             active={imageMaterialPickerOpen}
-            title="图片素材库"
+            title="素材库"
             aria-pressed={imageMaterialPickerOpen}
             onClick={() => setImageMaterialPickerOpen(true)}
           >
@@ -901,6 +908,7 @@ export default function App() {
         onClose={() => setImageMaterialPickerOpen(false)}
         onPick={handlePickMaterialImages}
         onPickFlow={handlePickMaterialImageFlow}
+        onPickVideos={handlePickMaterialVideos}
         onNeedSettings={handleNeedSettings}
       />
       <Toaster />

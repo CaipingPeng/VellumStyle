@@ -55,6 +55,25 @@ test("带 title 的 Markdown 链接也使用同一套取整符号脚注样式", 
   assert.match(html, /<span id="fn1" class="footnote-item" style="display:block;"><span class="footnote-num" style="display:inline;width:auto;">\[1\] <\/span>术语: <em>这里是脚注的解释内容<\/em><\/span>/);
 });
 
+test("素材库视频 iframe 保留 src/data-src/mpvid/cover 供预览与发布", () => {
+  const html = render(
+    '<iframe class="video_iframe rich_pages" data-vidtype="2" data-mpvid="wxv_2628424322221359104" data-cover="http://mmbiz.qpic.cn/mmbiz_jpg/example/0?wx_fmt=jpeg" allowfullscreen frameborder="0" data-w="1920" data-ratio="1.7777777777777777" height="325" width="578" data-src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104" src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104"></iframe>',
+  );
+
+  assert.match(html, /<iframe /);
+  assert.match(html, /data-mpvid="wxv_2628424322221359104"/);
+  assert.match(html, /data-cover="http:\/\/mmbiz\.qpic\.cn\/mmbiz_jpg\/example\/0\?wx_fmt=jpeg"/);
+  assert.match(html, /data-src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate\?t=pages\/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104"/);
+  assert.match(html, /src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate/);
+});
+
+test("iframe 放行后 script 仍然被剥离", () => {
+  const html = render('<iframe src="https://mp.weixin.qq.com/"></iframe><script>window.x=1</script>');
+
+  assert.match(html, /<iframe src="https:\/\/mp\.weixin\.qq\.com\/"><\/iframe>/);
+  assert.doesNotMatch(html, /<script/);
+});
+
 test("浏览器复制的编码中文 URL 在脚注中解码为可读中文", () => {
   const html = render("[喜羊羊案](https://example.com/%E2%80%9C%E5%96%9C%E7%BE%8A%E7%BE%8A%E6%9A%B4%E5%8A%9B%E2%80%9D%E6%A1%88)");
 

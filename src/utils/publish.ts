@@ -38,6 +38,47 @@ export interface MaterialImagePage {
   items: MaterialImage[];
 }
 
+export interface MaterialVideo {
+  mediaId: string;
+  name: string;
+  updateTime: number;
+  coverUrl: string;
+  vid: string;
+}
+
+export interface MaterialVideoPage {
+  totalCount: number;
+  itemCount: number;
+  items: MaterialVideo[];
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// 素材库视频插入正文的标准播放 iframe：
+// - src 用于本地预览实际渲染
+// - data-src 是微信后台/发布端识别视频的字段（经 draft/add 接口提交时 src 可能被剥离，
+//   data-src 保留后微信端仍能还原播放器）
+// - data-cover 传素材返回的封面链，data-mpvid 传 vid
+export function formatVideoMaterialIframe(video: MaterialVideo): string {
+  const vid = video.vid.trim();
+  const playerUrl = `https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&action=mpvideo&auto=0&vid=${encodeURIComponent(vid)}`;
+  const src = escapeHtmlAttribute(playerUrl);
+  const cover = video.coverUrl.trim()
+    ? ` data-cover="${escapeHtmlAttribute(video.coverUrl.trim())}"`
+    : "";
+  return (
+    `<iframe class="video_iframe rich_pages" data-vidtype="2" data-mpvid="${escapeHtmlAttribute(vid)}"${cover}` +
+    ` allowfullscreen frameborder="0" data-w="1920" data-ratio="1.7777777777777777" height="325" width="578"` +
+    ` data-src="${src}" src="${src}"></iframe>`
+  );
+}
+
 // 返回正文里仍未上传到微信素材域名的图片诊断（发布前需先处理或确认风险）。
 export function findUnuploadedImages(markdown: string): UnuploadedImage[] {
   const diagnostics: UnuploadedImage[] = [];
@@ -113,6 +154,10 @@ export async function uploadRemoteThumb(
 
 export function listImageMaterials(offset: number, count: number): Promise<MaterialImagePage> {
   return invoke<MaterialImagePage>("list_image_materials", {offset, count});
+}
+
+export function listVideoMaterials(offset: number, count: number): Promise<MaterialVideoPage> {
+  return invoke<MaterialVideoPage>("list_video_materials", {offset, count});
 }
 
 export function deleteImageMaterial(mediaId: string): Promise<void> {
