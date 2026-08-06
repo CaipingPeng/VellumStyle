@@ -57,12 +57,14 @@ function parseEmojiSearchResponse(source: string): EmojiPage | null {
       emojiUrl: item.emoji_url as string,
       thumbUrl: (item.thumb_url as string) || (item.emoji_url as string),
     }));
+  // 只使用 gen 表情：normal 表情（wxapp.tc.qq.com）是 AES 加密内容，无法直接上传，
+  // 且解密算法未公开，先过滤避免插入报错。
   return {
-    items: [...toItems(data?.gen_emoji_result?.items), ...toItems(data?.normal_emoji_result?.items)],
+    items: toItems(data?.gen_emoji_result?.items),
     genNextOffset: Number(data?.gen_emoji_result?.next_offset ?? 0),
     genContinue: Boolean(data?.gen_emoji_result?.continue_flag),
-    normalNextOffset: Number(data?.normal_emoji_result?.next_offset ?? 0),
-    normalContinue: Boolean(data?.normal_emoji_result?.continue_flag),
+    normalNextOffset: 0,
+    normalContinue: false,
   };
 }
 
