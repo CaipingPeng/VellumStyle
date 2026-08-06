@@ -281,9 +281,12 @@ export function parseVoiceBackendResponse(source: string): VoiceBackendCandidate
   } catch {
     return [];
   }
+  const record = data as {file_item?: unknown; page_info?: {file_item?: unknown}};
   const fileItems = Array.isArray(data)
     ? data
-    : (data as {file_item?: unknown})?.file_item;
+    : Array.isArray(record.file_item)
+      ? record.file_item
+      : record.page_info?.file_item;
   if (!Array.isArray(fileItems)) return [];
 
   const candidates: VoiceBackendCandidate[] = [];

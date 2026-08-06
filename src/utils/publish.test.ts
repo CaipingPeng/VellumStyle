@@ -279,6 +279,33 @@ test("parseVoiceBackendResponse 解析后台音频素材列表响应", () => {
   assert.deepEqual(parseVoiceBackendResponse('[{"name":"直接数组但无标识"}]'), []);
 });
 
+test("parseVoiceBackendResponse 兼容 page_info 内嵌 file_item 的接口结构", () => {
+  const source = JSON.stringify({
+    base_resp: {ret: 0},
+    page_info: {
+      file_item: [
+        {
+          file_id: 100002530,
+          name: "测试音频",
+          title: "测试音频",
+          play_length: 132000,
+          size: "258.0\tK",
+          voice_encode_fileid: "Mzk0NTMyNzk3N18xMDAwMDI1MzA=",
+          voice_low_media_size: 264152,
+          voice_high_media_size: 1063848,
+        },
+      ],
+    },
+  });
+
+  const candidates = parseVoiceBackendResponse(source);
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0].name, "测试音频");
+  assert.equal(candidates[0].voiceEncodeFileid, "Mzk0NTMyNzk3N18xMDAwMDI1MzA=");
+  assert.equal(candidates[0].playLength, "02:12");
+  assert.equal(candidates[0].lowSize, "257.96");
+});
+
 test("bindVoiceMaterials 按名称批量绑定素材库音频并生成可插入 mpvoice", () => {
   const previousStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   const storage = new Map<string, string>();
