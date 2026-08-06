@@ -173,7 +173,6 @@ fn parse_evaluate_response(response_json: &str) -> Result<String, String> {
     }
     match value
         .get("result")
-        .and_then(|result| result.get("result"))
         .and_then(|result| result.get("value"))
     {
         Some(serde_json::Value::String(text)) => Ok(text.clone()),
@@ -191,7 +190,7 @@ mod tests {
 
     #[test]
     fn evaluate_response_extracts_string_value() {
-        let response = r#"{"id":1,"result":{"result":{"type":"string","value":"{\"file_item\":[]}"}}}"#;
+        let response = r#"{"id":1,"result":{"type":"string","value":"{\"file_item\":[]}"}}"#;
         assert_eq!(
             parse_evaluate_response(response).unwrap(),
             r#"{"file_item":[]}"#
