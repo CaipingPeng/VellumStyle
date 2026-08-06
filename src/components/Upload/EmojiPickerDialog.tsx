@@ -373,7 +373,6 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
         <div className="flex h-[46px] flex-none items-center gap-2 border-b border-border bg-bg-secondary px-4">
           {activeTab === "smiley" ? (
             <>
-              <Smile size={14} className="flex-none text-text-muted" />
               <span className="text-sm font-medium text-text">微表情</span>
               <div className="min-w-0 flex-1" />
               <button
@@ -381,14 +380,13 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
                 onClick={() => switchTab("search")}
                 title="搜索表情"
                 aria-label="搜索表情"
-                className="grid h-8 w-8 flex-none place-items-center rounded-md border-0 bg-transparent text-text-secondary transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+                className="grid h-8 w-8 flex-none place-items-center rounded-md border border-border bg-bg text-text-secondary transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
               >
                 <Search size={17} />
               </button>
             </>
           ) : (
             <>
-              <Search size={14} className="flex-none text-text-muted" />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -407,7 +405,7 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
                 onClick={() => switchTab("smiley")}
                 title="微表情"
                 aria-label="微表情"
-                className="grid h-8 w-8 flex-none place-items-center rounded-md border-0 bg-transparent text-text-secondary transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+                className="grid h-8 w-8 flex-none place-items-center rounded-md border border-border bg-bg text-text-secondary transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
               >
                 <Smile size={17} />
               </button>

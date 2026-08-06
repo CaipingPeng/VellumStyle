@@ -28,7 +28,7 @@ test("表情搜索弹窗接入后台搜索并以上传后的永久链接插入",
   assert.match(source, /useState<"search" \| "smiley">\("smiley"\)/);
   assert.match(source, /switchTab\("search"\)/);
   assert.match(source, /switchTab\("smiley"\)/);
-  assert.match(source, /border-0/);
+  assert.match(source, /border border-border bg-bg/);
   assert.match(source, /selectedCount === 0/);
   assert.match(source, /加载更多/);
   assert.match(source, /插入所选/);
