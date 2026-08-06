@@ -17,7 +17,9 @@ import {
 } from "lucide-react";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
 import {
+  backendWindowUrl,
   bindVoiceMaterials,
+  closeWechatBackend,
   deleteImageMaterial,
   fetchBackendVoiceList,
   formatVoiceMarkup,
@@ -387,72 +389,93 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
     );
   };
 
-  const syncVoicesFromBackend = async () => {
-    if (syncing) return;
-    setSyncing(true);
+  const attemptBackendSync = async (): Promise<"done" | "retry" | "error"> => {
+    let response: string;
     try {
-      let response: string;
+      response = await fetchBackendVoiceList();
+    } catch (error) {
+      if (errorMessage(error).includes("WECHAT_BACKEND_NOT_OPENED")) return "retry";
+      throw error;
+    }
+
+    const candidates = parseVoiceBackendResponse(response);
+    if (candidates.length === 0) {
+      let hint = `没有解析到音频数据，原始返回：${response.slice(0, 200)}`;
       try {
-        response = await fetchBackendVoiceList();
-      } catch (error) {
-        const message = errorMessage(error);
-        if (message.includes("WECHAT_BACKEND_NOT_OPENED")) {
-          await openWechatBackend();
-          toast.show("请在打开的微信后台窗口扫码登录，登录后再次点击「后台同步」", "info", 5000);
-          return;
+        const data = JSON.parse(response) as {
+          vs_error?: unknown;
+          reason?: string;
+          url?: string;
+          token?: string;
+          status?: number;
+          body?: string;
+          message?: string;
+          base_resp?: {ret?: number; err_msg?: string};
+        };
+        if (data.vs_error) {
+          const parts: string[] = [`后台脚本返回诊断：${data.reason ?? "unknown"}`];
+          if (data.message) parts.push(data.message);
+          if (data.url) parts.push(`页面：${data.url.slice(0, 120)}`);
+          if (data.token !== undefined) parts.push(`token：${data.token ? "有" : "无"}`);
+          if (data.status !== undefined) parts.push(`HTTP ${data.status}`);
+          if (data.body) parts.push(`返回：${data.body.slice(0, 150)}`);
+          hint = parts.join("；");
+        } else if (data.base_resp && data.base_resp.ret !== undefined && data.base_resp.ret !== 0) {
+          hint = `后台返回错误（${data.base_resp.ret}）：${data.base_resp.err_msg ?? "请确认已登录微信后台"}`;
         }
-        throw error;
+      } catch {
+        // 保留默认提示
       }
+      toast.show(hint, "error", 6000);
+      return "error";
+    }
 
-      const candidates = parseVoiceBackendResponse(response);
-      if (candidates.length === 0) {
-        let hint = "没有解析到音频数据，请确认已在后台窗口登录微信公众平台";
-        try {
-          const data = JSON.parse(response) as {
-            vs_error?: unknown;
-            reason?: string;
-            url?: string;
-            token?: string;
-            status?: number;
-            body?: string;
-            message?: string;
-            base_resp?: {ret?: number; err_msg?: string};
-          };
-          if (data.vs_error) {
-            const parts: string[] = [`后台脚本返回诊断：${data.reason ?? "unknown"}`];
-            if (data.message) parts.push(data.message);
-            if (data.url) parts.push(`页面：${data.url.slice(0, 120)}`);
-            if (data.token !== undefined) parts.push(`token：${data.token ? "有" : "无"}`);
-            if (data.status !== undefined) parts.push(`HTTP ${data.status}`);
-            if (data.body) parts.push(`返回：${data.body.slice(0, 150)}`);
-            hint = parts.join("；");
-          } else if (data.base_resp && data.base_resp.ret !== undefined && data.base_resp.ret !== 0) {
-            hint = `后台返回错误（${data.base_resp.ret}）：${data.base_resp.err_msg ?? "请确认已登录微信后台"}`;
-          }
-        } catch {
-          // 保留默认提示
-        }
-        toast.show(hint, "error", 5000);
-        return;
-      }
-
-      if (voiceItems.length === 0) {
-        toast.show("素材库音频列表尚未加载，请先加载音频素材再同步", "error");
-        return;
-      }
+    if (voiceItems.length === 0) {
+      toast.show("素材库音频列表尚未加载，请先加载音频素材再同步", "error");
+      return "error";
+    }
     const bound = bindVoiceMaterials(voiceItems, candidates);
     if (bound > 0) {
       // 绑定写入 localStorage，刷新引用让卡片上的已绑定状态更新
       setVoiceItems((current) => [...current]);
     }
+    if (bound > 0) {
+      try {
+        await closeWechatBackend();
+      } catch {
+        // 窗口可能已被用户手动关闭，忽略
+      }
+    }
     toast.show(
-        bound > 0
-          ? bound === candidates.length
-            ? `已从后台同步并绑定 ${bound} 个音频`
-            : `已绑定 ${bound} 个音频，${candidates.length - bound} 个名称未匹配`
-          : "没有匹配到素材库音频，请确认后台与素材库是同一公众号",
-        bound > 0 ? "info" : "error",
-      );
+      bound > 0
+        ? bound === candidates.length
+          ? `已从后台同步并绑定 ${bound} 个音频`
+          : `已绑定 ${bound} 个音频，${candidates.length - bound} 个名称未匹配`
+        : "没有匹配到素材库音频，请确认后台与素材库是同一公众号",
+      bound > 0 ? "info" : "error",
+    );
+    return "done";
+  };
+
+  const syncVoicesFromBackend = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      const first = await attemptBackendSync();
+      if (first !== "retry") return;
+
+      await openWechatBackend();
+      toast.show("请在打开的微信后台窗口扫码登录，登录后将自动同步音频", "info", 5000);
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < 60_000) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const url = await backendWindowUrl();
+        const loggedIn = Boolean(url?.startsWith("https://mp.weixin.qq.com/") && url.includes("token="));
+        if (!loggedIn) continue;
+        const result = await attemptBackendSync();
+        if (result === "done" || result === "error") return;
+      }
+      toast.show("等待后台登录超时，请登录后再次点击「后台同步」", "error");
     } catch (error) {
       toast.show(`后台同步失败：${errorMessage(error)}`, "error");
     } finally {

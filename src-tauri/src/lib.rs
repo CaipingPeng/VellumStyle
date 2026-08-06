@@ -87,6 +87,8 @@ pub fn run() {
             wechat::delete_image_material,
             wechat_backend::open_wechat_backend,
             wechat_backend::fetch_backend_voice_list,
+            wechat_backend::backend_window_url,
+            wechat_backend::close_wechat_backend,
             wechat::upload_local_image,
             wechat::upload_remote_image,
             import::pick_markdown_file,

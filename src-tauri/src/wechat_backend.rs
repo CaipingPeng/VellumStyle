@@ -69,6 +69,26 @@ pub async fn open_wechat_backend(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// 返回后台窗口当前 URL（未打开时返回 null），用于前端判断登录状态。
+#[tauri::command]
+pub async fn backend_window_url(app: AppHandle) -> Result<Option<String>, String> {
+    Ok(app
+        .get_webview_window(BACKEND_WINDOW_LABEL)
+        .and_then(|window| window.url().ok())
+        .map(|url| url.to_string()))
+}
+
+/// 关闭后台窗口（同步完成后调用）。
+#[tauri::command]
+pub async fn close_wechat_backend(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window(BACKEND_WINDOW_LABEL) {
+        window
+            .close()
+            .map_err(|err| format!("关闭后台窗口失败：{err}"))?;
+    }
+    Ok(())
+}
+
 /// 在后台窗口页面上下文里静默拉取音频素材列表接口，返回原始 JSON 响应文本。
 /// 窗口未打开时返回 "WECHAT_BACKEND_NOT_OPENED"；未登录时返回接口的错误 JSON。
 #[tauri::command]

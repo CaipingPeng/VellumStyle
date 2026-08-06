@@ -206,6 +206,16 @@ export function fetchBackendVoiceList(): Promise<string> {
   return invoke<string>("fetch_backend_voice_list");
 }
 
+/// 返回后台窗口当前 URL（未打开时返回 null），用于判断登录状态。
+export function backendWindowUrl(): Promise<string | null> {
+  return invoke<string | null>("backend_window_url");
+}
+
+/// 关闭后台窗口（同步完成后调用）。
+export function closeWechatBackend(): Promise<void> {
+  return invoke<void>("close_wechat_backend");
+}
+
 const VOICE_BINDING_KEY = "vs-audio-bindings";
 
 function readVoiceBindings(): Record<string, VoiceCodeInfo> {
