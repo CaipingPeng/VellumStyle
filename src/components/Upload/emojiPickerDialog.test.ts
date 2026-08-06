@@ -15,6 +15,8 @@ test("表情搜索弹窗接入后台搜索并以上传后的永久链接插入",
   assert.match(source, /normal_emoji_result/);
   assert.match(source, /aes_key/);
   assert.match(source, /emoticonType/);
+  assert.match(source, /gen_emoji_result\?\.items, 1\)/);
+  assert.match(source, /normal_emoji_result\?\.items, 0\)/);
   assert.match(source, /thumbUrl/);
   assert.match(source, /加载更多/);
   assert.match(source, /插入所选/);

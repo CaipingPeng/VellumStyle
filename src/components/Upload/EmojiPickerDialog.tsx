@@ -20,7 +20,7 @@ interface EmojiItem {
   thumbUrl: string;
   // normal 表情转换永久链接时，官方 get_cdn_url 需要响应的 aes_key；gen 表情无此项。
   aesKey?: string;
-  // 官方 get_cdn_url 接口参数：gen=1，normal=2。
+  // 官方 get_cdn_url 接口参数：gen=1，normal=0。
   emoticonType: number;
 }
 
@@ -64,7 +64,7 @@ function parseEmojiSearchResponse(source: string): EmojiPage | null {
     }));
   // gen 与 normal 可能有重复表情（同一 docId），保留先出现的 gen 明文版本。
   const seen = new Set<string>();
-  const items = [...toItems(data?.gen_emoji_result?.items, 1), ...toItems(data?.normal_emoji_result?.items, 2)].filter(
+  const items = [...toItems(data?.gen_emoji_result?.items, 1), ...toItems(data?.normal_emoji_result?.items, 0)].filter(
     (item) => {
       if (!item.docId || seen.has(item.docId)) return false;
       seen.add(item.docId);

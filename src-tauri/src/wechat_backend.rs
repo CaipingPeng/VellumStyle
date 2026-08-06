@@ -257,7 +257,7 @@ fn remoticon_search_expr(query: &str, size: u32, offset: u32) -> String {
 
 /// 在后台窗口上下文里把微信表情 CDN 链接转换为 mmbiz 永久链接（官方插入流程：
 /// 点击表情后调用 operateremoticon?action=get_cdn_url，返回可直接使用的 cdn_url）。
-/// gen 表情 emoticonType=1 且 aesKey 为空；normal 表情 emoticonType=2 且带 aesKey。
+/// gen 表情 emoticonType=1 且 aesKey 为空；normal 表情 emoticonType=0 且带 aesKey。
 #[tauri::command]
 pub async fn get_emoji_cdn_url(
     app: AppHandle,
@@ -270,7 +270,7 @@ pub async fn get_emoji_cdn_url(
         &url,
         &thumb_url,
         aes_key.as_deref(),
-        emoticon_type.clamp(1, 2),
+        emoticon_type.clamp(0, 1),
     );
     #[cfg(windows)]
     {
@@ -370,16 +370,27 @@ mod tests {
 
     #[test]
     fn cdn_url_expr_encodes_emoji_params() {
+        // normal 表情：emoticonType=0 + aesKey
         let expr = remoticon_cdn_url_expr(
             "http://search.c2c.weixin.qq.com/download?a=1&b=2",
             "http://thumb.cdn/x",
             Some("0cd0499ac22a9de26a653c89d019b24e"),
-            2,
+            0,
         );
         assert!(expr.contains("action=get_cdn_url"));
         assert!(expr.contains("url=http%3A%2F%2Fsearch.c2c.weixin.qq.com%2Fdownload%3Fa%3D1%26b%3D2"));
         assert!(expr.contains("thumb_url=http%3A%2F%2Fthumb.cdn%2Fx"));
-        assert!(expr.contains("emoticonType=2"));
+        assert!(expr.contains("emoticonType=0"));
         assert!(expr.contains("aesKey=0cd0499ac22a9de26a653c89d019b24e"));
+
+        // gen 表情：emoticonType=1 + aesKey 为空
+        let gen_expr = remoticon_cdn_url_expr(
+            "http://search.c2c.weixin.qq.com/download?a=1&b=2",
+            "http://thumb.cdn/x",
+            None,
+            1,
+        );
+        assert!(gen_expr.contains("emoticonType=1"));
+        assert!(gen_expr.contains("aesKey="));
     }
 }

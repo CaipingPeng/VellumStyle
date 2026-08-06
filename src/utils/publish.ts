@@ -240,7 +240,7 @@ export function searchRemoticon(query: string, size: number, offset: number): Pr
 }
 
 /// 在后台窗口上下文里把微信表情 CDN 链接转换为 mmbiz 永久链接（官方插入流程）。
-/// gen 表情 emoticonType=1 且 aesKey 为空；normal 表情 emoticonType=2 且带 aesKey。
+/// gen 表情 emoticonType=1 且 aesKey 为空；normal 表情 emoticonType=0 且带 aesKey。
 export function getEmojiCdnUrl(
   url: string,
   thumbUrl: string,
