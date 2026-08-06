@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from "react";
 import {Search, Smile, UploadCloud} from "lucide-react";
-import {openWechatBackend, searchRemoticon} from "../../utils/publish.ts";
+import {backendWindowUrl, openWechatBackend, searchRemoticon} from "../../utils/publish.ts";
 import {uploadRemoteImage} from "../../utils/upload.ts";
 import {toast} from "../Toast/toast.ts";
 import Dialog from "../ui/Dialog.tsx";
@@ -95,7 +95,19 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
       if (message.includes("WECHAT_BACKEND_NOT_OPENED")) {
         setItems([]);
         await openWechatBackend();
-        toast.show("请在打开的微信后台窗口登录后重新搜索", "info", 5000);
+        toast.show("请在打开的微信后台窗口登录，登录后会自动继续搜索", "info", 5000);
+        const startedAt = Date.now();
+        while (Date.now() - startedAt < 60_000) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          if (session !== sessionRef.current) return;
+          const url = await backendWindowUrl();
+          if (!url?.startsWith("https://mp.weixin.qq.com/") || !url.includes("token=")) continue;
+          await runSearch(keyword, session);
+          return;
+        }
+        if (session === sessionRef.current) {
+          toast.show("等待后台登录超时，请登录后重新搜索", "error");
+        }
       } else {
         setItems([]);
         toast.show(`表情搜索失败：${message}`, "error");

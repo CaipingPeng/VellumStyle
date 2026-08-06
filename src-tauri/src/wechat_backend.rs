@@ -178,8 +178,10 @@ async fn eval_in_backend_window(app: AppHandle, expression: String) -> Result<St
         })
         .map_err(|err| format!("访问后台窗口 WebView 失败：{err}"))?;
 
-    rx.await
-        .unwrap_or_else(|_| Err("后台同步任务意外中断".to_string()))
+    match tokio::time::timeout(std::time::Duration::from_secs(8), rx).await {
+        Ok(result) => result.unwrap_or_else(|_| Err("后台同步任务意外中断".to_string())),
+        Err(_) => Err("后台窗口无响应，请确认页面已加载后重试".into()),
+    }
 }
 
 /// 在后台窗口上下文里搜索微信表情（operateremoticon?action=search_all）。
