@@ -97,6 +97,12 @@ export async function playPreviewVideo(placeholder: HTMLElement, mediaId: string
   video.autoplay = true;
   video.className = "vs-video-placeholder-player";
   video.setAttribute("playsinline", "");
+  // 加载失败时恢复封面占位并提示，避免黑屏/灰屏无反馈。
+  video.addEventListener("error", () => {
+    placeholder.replaceChildren();
+    restoreVideoPlaceholder(placeholder);
+    toast.show("视频加载失败，请稍后重试", "error");
+  });
   placeholder.replaceChildren(video);
 }
 

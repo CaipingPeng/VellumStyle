@@ -46,7 +46,9 @@ function smileyKey(name: string): string {
 function smileyImgHtml(url: string, title: string): string {
   return (
     `<img src="${url}" data-src="${url}" class="rich_pages wxw-img" data-ratio="1" data-w="20" ` +
-    `style="display:inline-block;width:20px;height:20px;vertical-align:middle;background:transparent;` +
+    // 与官方编辑器一致：width/height 用 !important，防止主题或微信编辑器
+    // 的 rich_pages 自适应样式（max-width:100%/height:auto）覆盖为原图尺寸。
+    `style="display:inline-block;width:20px !important;height:20px !important;vertical-align:middle;background:transparent;` +
     `border:0;border-radius:0;box-shadow:none;margin:0;" alt="${title}">`
   );
 }

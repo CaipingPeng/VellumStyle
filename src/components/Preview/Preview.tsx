@@ -211,6 +211,22 @@ const Preview = forwardRef<PreviewHandle, Props>(
         if (!hasAccessibleName) {
           image.setAttribute("aria-label", "预览图片");
         }
+        // 微表情固定 20×20 官方尺寸：微信表情是内联小图，个别主题
+        // （尤其用户自定义主题）可能用 !important 干扰行内声明，
+        // 这里用 JS 设置最高优先级的 inline important 强制兜底，
+        // 保证软件内预览与微信草稿箱一致。
+        if (
+          image.classList.contains("rich_pages") &&
+          image.classList.contains("wxw-img") &&
+          image.getAttribute("data-w") === "20"
+        ) {
+          // 行内嵌入：主题/自定义样式的 `#article img { display: block }`
+          // 会把表情挤到独立一行，必须一并强制回行内。
+          image.style.setProperty("display", "inline-block", "important");
+          image.style.setProperty("vertical-align", "middle", "important");
+          image.style.setProperty("width", "20px", "important");
+          image.style.setProperty("height", "20px", "important");
+        }
       });
     }, [html]);
 
