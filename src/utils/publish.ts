@@ -91,7 +91,9 @@ function escapeHtmlAttribute(value: string): string {
 // 素材库视频插入正文的标准播放 iframe：
 // - src 是微信后台/发布端渲染播放器必需的字段（实测去掉后视频不显示，必须保留）
 // - data-src 与 src 同值，兼容微信后台对视频字段的识别
-// - data-cover 传素材返回的封面链，data-mpvid 传 vid，data-media-id 供本地预览播放取流
+// - data-cover 传素材返回的封面链，data-mpvid 传 vid
+// - 注意：iframe 只能带微信白名单内的 data 属性（data-mpvid/data-vidtype/data-cover
+//   等），新增未知 data 属性会导致微信整段剥离 iframe（data-media-id 曾因此被删）
 export function formatVideoMaterialIframe(video: MaterialVideo): string {
   const vid = video.vid.trim();
   const playerUrl = `https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&action=mpvideo&auto=0&vid=${encodeURIComponent(vid)}`;
@@ -100,7 +102,7 @@ export function formatVideoMaterialIframe(video: MaterialVideo): string {
     ? ` data-cover="${escapeHtmlAttribute(video.coverUrl.trim())}"`
     : "";
   return (
-    `<iframe class="video_iframe rich_pages" data-vidtype="2" data-mpvid="${escapeHtmlAttribute(vid)}" data-media-id="${escapeHtmlAttribute(video.mediaId)}"${cover}` +
+    `<iframe class="video_iframe rich_pages" data-vidtype="2" data-mpvid="${escapeHtmlAttribute(vid)}"${cover}` +
     ` allowfullscreen frameborder="0" data-w="1920" data-ratio="1.7777777777777777" height="325" width="578"` +
     ` data-src="${src}" src="${src}"></iframe>`
   );
@@ -219,6 +221,32 @@ export function closeWechatBackend(): Promise<void> {
 /// 获取视频素材的可流式播放 mp4 直链（每次播放前实时获取，地址带签名时效）。
 export function getVideoPlayUrl(mediaId: string): Promise<string> {
   return invoke<string>("get_video_play_url", {mediaId});
+}
+
+const VIDEO_MEDIA_KEY = "vs-video-media-ids";
+
+// 本地保存 vid → media_id 映射，供预览播放取流使用（iframe 不能携带 media_id，
+// 微信会剥离未知 data 属性导致视频被删）。
+export function saveVideoMediaId(vid: string, mediaId: string): void {
+  try {
+    const raw = localStorage.getItem(VIDEO_MEDIA_KEY);
+    const map: Record<string, string> = raw ? JSON.parse(raw) : {};
+    map[vid] = mediaId;
+    localStorage.setItem(VIDEO_MEDIA_KEY, JSON.stringify(map));
+  } catch {
+    // 存储失败不阻断插入
+  }
+}
+
+export function loadVideoMediaId(vid: string): string | null {
+  try {
+    const raw = localStorage.getItem(VIDEO_MEDIA_KEY);
+    if (!raw) return null;
+    const map: Record<string, string> = JSON.parse(raw);
+    return map[vid] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 const VOICE_BINDING_KEY = "vs-audio-bindings";

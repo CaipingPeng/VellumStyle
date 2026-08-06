@@ -13,11 +13,13 @@ import {
   listImageMaterials,
   listVideoMaterials,
   listVoiceMaterials,
+  loadVideoMediaId,
   loadVoiceBinding,
   openWechatBackend,
   parseVoiceBackendResponse,
   parseVoiceCode,
   saveVoiceBinding,
+  saveVideoMediaId,
 } from "./publish.ts";
 
 test("listImageMaterials 调用永久图片素材库命令并保留分页参数", async () => {
@@ -138,7 +140,7 @@ test("formatVideoMaterialIframe 用 vid 和封面拼出可发布的播放 iframe
   assert.match(html, /data-mpvid="wxv_2628424322221359104"/);
   assert.match(html, /data-src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate\?t=pages\/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104"/);
   assert.match(html, /src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate/);
-  assert.match(html, /data-media-id="VIDEO_MEDIA_ID_1"/);
+  assert.doesNotMatch(html, /data-media-id/);
   assert.match(html, /data-cover="http:\/\/mmbiz\.qpic\.cn\/mmbiz_jpg\/example\/0\?wx_fmt=jpeg"/);
   assert.match(html, /allowfullscreen/);
   assert.ok(html.endsWith("></iframe>"));
@@ -405,6 +407,33 @@ test("getVideoPlayUrl 调用视频直链命令并保留 media_id", async () => {
       delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
     } else {
       (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
+    }
+  }
+});
+
+test("视频 vid 到 media_id 的本地映射可存取", () => {
+  const previousStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const storage = new Map<string, string>();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+      removeItem: (key: string) => storage.delete(key),
+      clear: () => storage.clear(),
+    },
+  });
+
+  try {
+    assert.equal(loadVideoMediaId("wxv_1"), null);
+    saveVideoMediaId("wxv_1", "VIDEO_1");
+    assert.equal(loadVideoMediaId("wxv_1"), "VIDEO_1");
+    assert.equal(loadVideoMediaId("wxv_2"), null);
+  } finally {
+    if (previousStorage === undefined) {
+      delete (globalThis as unknown as {localStorage?: unknown}).localStorage;
+    } else {
+      Object.defineProperty(globalThis, "localStorage", previousStorage);
     }
   }
 });

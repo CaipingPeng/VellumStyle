@@ -3,6 +3,7 @@ import {readFile} from "node:fs/promises";
 import {test} from "node:test";
 
 const previewSource = readFile(new URL("./Preview.tsx", import.meta.url), "utf8");
+const playbackSource = readFile(new URL("./previewPlayback.ts", import.meta.url), "utf8");
 const thumbnailSource = readFile(new URL("../Theme/ThemeThumbnail.tsx", import.meta.url), "utf8");
 const exportSource = readFile(new URL("../../utils/exportArticle.ts", import.meta.url), "utf8");
 
@@ -43,11 +44,13 @@ test("预览为素材库视频注入本地占位并在导出时还原", async ()
   assert.match(source, /vsAudioHidden/);
   assert.match(source, /vs-audio-placeholder/);
   assert.match(source, /res\.wx\.qq\.com\/voice\/getvoice/);
-  assert.match(source, /toggleVoicePlayback/);
-  assert.match(source, /is-playing/);
-  assert.match(source, /getVideoPlayUrl/);
-  assert.match(source, /playPreviewVideo/);
-  assert.match(source, /vs-video-placeholder-player/);
+  assert.match(source, /loadVideoMediaId/);
+  assert.match(await playbackSource, /toggleVoicePlayback/);
+  assert.match(await playbackSource, /is-playing/);
+  assert.match(await playbackSource, /getVideoPlayUrl/);
+  assert.match(await playbackSource, /playPreviewVideo/);
+  assert.match(await playbackSource, /stopLocalMediaPlayback/);
+  assert.match(await playbackSource, /vs-video-placeholder-player/);
   assert.match(source, /本地预览不播放/);
   assert.match(css, /iframe\.video_iframe\[data-vs-video-hidden="true"\]/);
   assert.match(css, /\.vs-video-placeholder \{/);

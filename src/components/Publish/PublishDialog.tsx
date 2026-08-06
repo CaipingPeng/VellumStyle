@@ -3,6 +3,7 @@ import {useStore} from "../../store/index.ts";
 import {hasNonVideoContent, solveDraftHtml} from "../../markdown/converter.ts";
 import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
+import {stopLocalMediaPlayback} from "../Preview/previewPlayback.ts";
 import {
   addDraft,
   findUnuploadedImages,
@@ -323,6 +324,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
     try {
       await waitForMathJaxIdle();
       if (!isCurrentSession()) return;
+      stopLocalMediaPlayback();
 
       const html = solveDraftHtml();
       if (!html.trim()) {

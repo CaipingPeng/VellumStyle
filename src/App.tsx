@@ -20,7 +20,7 @@ import {toast} from "./components/Toast/toast.ts";
 import {useStore, getThemeById, flushDocumentThemeWrite, flushSave} from "./store/index.ts";
 import {getCodeThemeById, loadAllCodeThemes, subscribeCodeThemes} from "./markdown/codeThemes.ts";
 import {formatMarkdownImage, replaceMarkdownImageSizeByIndex} from "./markdown/imageMarkdown.ts";
-import {formatVideoMaterialIframe, type MaterialVideo} from "./utils/publish.ts";
+import {formatVideoMaterialIframe, saveVideoMediaId, type MaterialVideo} from "./utils/publish.ts";
 import {getActiveOutlineLine, parseMarkdownOutline} from "./utils/outline.ts";
 import {loadAllThemes} from "./themes/loader.ts";
 import {uploadImage, uploadLocalImage, type UploadError} from "./utils/upload.ts";
@@ -380,6 +380,9 @@ export default function App() {
 
   const handlePickMaterialVideos = useCallback((videos: MaterialVideo[]) => {
     if (videos.length === 0) return;
+    for (const video of videos) {
+      saveVideoMediaId(video.vid, video.mediaId);
+    }
     const markdown = videos.map((video) => formatVideoMaterialIframe(video)).join("\n\n");
     editorRef.current?.insertAtCursor(`\n${markdown}\n`);
   }, []);

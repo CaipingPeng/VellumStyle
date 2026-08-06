@@ -14,100 +14,8 @@ import PreviewImageContextMenu from "./PreviewImageContextMenu.tsx";
 import {resolvePreviewImage, type PreviewImageMenuTarget} from "./previewImageContextMenu.ts";
 import {copyPreviewImage, savePreviewImageAs} from "../../utils/previewImageActions.ts";
 import {toast} from "../Toast/toast.ts";
-import {getVideoPlayUrl} from "../../utils/publish.ts";
-
-// 全局音频播放状态：同一时间只播一个素材库音频，切换卡片时自动停止上一个。
-let playingVoiceAudio: HTMLAudioElement | null = null;
-let playingVoicePlaceholder: HTMLElement | null = null;
-
-function setVoicePlayState(playEl: HTMLElement, playing: boolean) {
-  playEl.classList.toggle("is-playing", playing);
-}
-
-function formatVoiceProgress(current: number, total?: number): string {
-  const format = (seconds: number) =>
-    `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
-  return total && Number.isFinite(total) ? `${format(current)} / ${format(total)}` : format(current);
-}
-
-function toggleVoicePlayback(
-  placeholder: HTMLElement,
-  playEl: HTMLElement,
-  durationEl: HTMLElement,
-  playerUrl: string,
-  idleLabel: string,
-) {
-  const current = playingVoiceAudio;
-  if (current && playingVoicePlaceholder === placeholder) {
-    if (!current.paused) {
-      current.pause();
-      setVoicePlayState(playEl, false);
-    } else {
-      void current.play();
-      setVoicePlayState(playEl, true);
-    }
-    return;
-  }
-
-  current?.pause();
-  if (playingVoicePlaceholder && playingVoicePlaceholder !== placeholder) {
-    const previousPlay = playingVoicePlaceholder.querySelector<HTMLElement>(".vs-audio-placeholder-play");
-    previousPlay && setVoicePlayState(previousPlay, false);
-  }
-
-  const audio = new Audio(playerUrl);
-  playingVoiceAudio = audio;
-  playingVoicePlaceholder = placeholder;
-  setVoicePlayState(playEl, true);
-
-  audio.addEventListener("timeupdate", () => {
-    durationEl.textContent = formatVoiceProgress(audio.currentTime, audio.duration);
-  });
-  audio.addEventListener("ended", () => {
-    durationEl.textContent = idleLabel;
-    setVoicePlayState(playEl, false);
-    if (playingVoiceAudio === audio) {
-      playingVoiceAudio = null;
-      playingVoicePlaceholder = null;
-    }
-  });
-  audio.addEventListener("error", () => {
-    durationEl.textContent = idleLabel;
-    setVoicePlayState(playEl, false);
-    if (playingVoiceAudio === audio) {
-      playingVoiceAudio = null;
-      playingVoicePlaceholder = null;
-    }
-    toast.show("音频播放失败，请稍后重试", "error");
-  });
-  void audio.play().catch(() => {
-    durationEl.textContent = idleLabel;
-    setVoicePlayState(playEl, false);
-    if (playingVoiceAudio === audio) {
-      playingVoiceAudio = null;
-      playingVoicePlaceholder = null;
-    }
-    toast.show("音频播放失败，请稍后重试", "error");
-  });
-}
-
-// 视频占位播放：实时获取带签名的 mp4 直链后，把占位替换为内嵌播放器。
-async function playPreviewVideo(placeholder: HTMLElement, mediaId: string) {
-  let src: string;
-  try {
-    src = await getVideoPlayUrl(mediaId);
-  } catch (error) {
-    toast.show(`视频加载失败：${errorMessage(error)}`, "error");
-    return;
-  }
-  const video = document.createElement("video");
-  video.src = src;
-  video.controls = true;
-  video.autoplay = true;
-  video.className = "vs-video-placeholder-player";
-  video.setAttribute("playsinline", "");
-  placeholder.replaceChildren(video);
-}
+import {loadVideoMediaId} from "../../utils/publish.ts";
+import {playPreviewVideo, toggleVoicePlayback} from "./previewPlayback.ts";
 
 interface Props {
   content: string;
@@ -323,7 +231,8 @@ const Preview = forwardRef<PreviewHandle, Props>(
           iframe.removeAttribute("src");
         }
         const cover = iframe.getAttribute("data-cover") ?? "";
-        const mediaId = iframe.getAttribute("data-media-id") ?? "";
+        const vid = iframe.getAttribute("data-mpvid") ?? "";
+        const mediaId = vid ? loadVideoMediaId(vid) ?? "" : "";
         const placeholder = document.createElement("div");
         placeholder.className = "vs-video-placeholder";
         placeholder.setAttribute("role", "img");
