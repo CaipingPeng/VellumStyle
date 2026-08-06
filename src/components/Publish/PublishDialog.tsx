@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from "react";
 import {useStore} from "../../store/index.ts";
-import {solveDraftHtml} from "../../markdown/converter.ts";
+import {hasNonVideoContent, solveDraftHtml} from "../../markdown/converter.ts";
 import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
 import {
@@ -325,6 +325,18 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       if (!isCurrentSession()) return;
 
       const html = solveDraftHtml();
+      if (!html.trim()) {
+        toast.show("正文为空，无法发布", "error");
+        return;
+      }
+      if (!hasNonVideoContent(html)) {
+        toast.show(
+          "微信草稿接口不支持仅含视频的文章，视频会被微信丢弃。请先在文中添加文字或图片，再发布。",
+          "error",
+          5000,
+        );
+        return;
+      }
       const publishSettings = {
         author: author.trim(),
         needOpenComment,

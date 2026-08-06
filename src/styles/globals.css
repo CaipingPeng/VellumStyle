@@ -1343,3 +1343,64 @@ html.appearance-switching .vs-skel {
 .vs-preview-image-menu-item svg {
   flex: 0 0 auto;
 }
+
+/* 素材库视频本地预览占位：隐藏真实 iframe，显示封面 + 播放按钮 + 提示。
+   导出时由 stripPreviewArtifacts 移除占位并还原 iframe。 */
+iframe.video_iframe[data-vs-video-hidden="true"] {
+  display: none !important;
+}
+
+.vs-video-placeholder {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 578px;
+  aspect-ratio: 16 / 9;
+  margin: 8px auto;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: var(--bg-tertiary);
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  color: var(--text-secondary);
+}
+
+.vs-video-placeholder-play {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.vs-video-placeholder-play::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 55%;
+  width: 0;
+  height: 0;
+  transform: translate(-50%, -50%);
+  border-top: 11px solid transparent;
+  border-bottom: 11px solid transparent;
+  border-left: 18px solid #fff;
+}
+
+.vs-video-placeholder-hint {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: nowrap;
+}

@@ -29,3 +29,18 @@ test("文章导出链路不读取应用外观状态", async () => {
   const source = await exportSource;
   assert.doesNotMatch(source, /appearanceMode|data-appearance|useStore/);
 });
+
+test("预览为素材库视频注入本地占位并在导出时还原", async () => {
+  const source = await previewSource;
+  const css = await readFile(new URL("../../styles/globals.css", import.meta.url), "utf8");
+  const converterSource = await readFile(new URL("../../markdown/converter.ts", import.meta.url), "utf8");
+
+  assert.match(source, /vs-video-placeholder/);
+  assert.match(source, /iframe\.video_iframe/);
+  assert.match(source, /vsVideoHidden/);
+  assert.match(source, /本地预览不播放/);
+  assert.match(css, /iframe\.video_iframe\[data-vs-video-hidden="true"\]/);
+  assert.match(css, /\.vs-video-placeholder \{/);
+  assert.match(converterSource, /\.vs-video-placeholder/);
+  assert.match(converterSource, /data-vs-video-src/);
+});

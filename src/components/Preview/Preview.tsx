@@ -3,7 +3,7 @@ import {FileText} from "lucide-react";
 import {render} from "../../markdown/parser.ts";
 import {useStore, getThemeById} from "../../store/index.ts";
 import {replaceStyle, STYLE_IDS} from "../../utils/style.ts";
-import {toProxyHtml} from "../../utils/imageProxy.ts";
+import {toProxyHtml, toProxyImageUrl} from "../../utils/imageProxy.ts";
 import {typesetMath} from "../../markdown/mathjax.ts";
 import {renderMermaidCharts, reuseRenderedMermaidCharts} from "../../markdown/mermaid.ts";
 import {getPreviewMode} from "./previewModes.ts";
@@ -210,6 +210,41 @@ const Preview = forwardRef<PreviewHandle, Props>(
           image.setAttribute("aria-label", "预览图片");
         }
       });
+    }, [html]);
+
+    // 素材库视频在本地预览不播放：隐藏真实 iframe（readtemplate 播放页在 WebView 里
+    // 渲染为黑块），改用封面 + 播放按钮占位；iframe 节点保留在 DOM，导出时由
+    // stripPreviewArtifacts 还原为完整播放标签。
+    useEffect(() => {
+      const root = document.getElementById(ARTICLE_ROOT_ID);
+      if (!root) return;
+      for (const iframe of Array.from(root.querySelectorAll<HTMLIFrameElement>("iframe.video_iframe"))) {
+        if (iframe.dataset.vsVideoHidden === "true") continue;
+        iframe.dataset.vsVideoHidden = "true";
+        const playerSrc = iframe.getAttribute("src") ?? "";
+        if (playerSrc) {
+          // 本地预览不加载微信播放页（WebView 渲染为黑块），导出时由
+          // stripPreviewArtifacts 从 data-vs-video-src 恢复 src。
+          iframe.dataset.vsVideoSrc = playerSrc;
+          iframe.removeAttribute("src");
+        }
+        const cover = iframe.getAttribute("data-cover") ?? "";
+        const placeholder = document.createElement("div");
+        placeholder.className = "vs-video-placeholder";
+        placeholder.setAttribute("role", "img");
+        placeholder.setAttribute("aria-label", "素材库视频：本地预览不播放，发布后显示播放器");
+        if (cover) {
+          placeholder.style.backgroundImage = `url("${toProxyImageUrl(cover)}")`;
+        }
+        const play = document.createElement("span");
+        play.className = "vs-video-placeholder-play";
+        play.setAttribute("aria-hidden", "true");
+        const hint = document.createElement("span");
+        hint.className = "vs-video-placeholder-hint";
+        hint.textContent = "本地预览不播放 · 发布后显示播放器";
+        placeholder.append(play, hint);
+        iframe.insertAdjacentElement("afterend", placeholder);
+      }
     }, [html]);
 
     useEffect(() => {

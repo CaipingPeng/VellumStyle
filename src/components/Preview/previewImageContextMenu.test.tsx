@@ -315,7 +315,7 @@ async function loadPreview(): Promise<PreviewComponent> {
           "export function getThemeById() { return {css: ''}; }",
         ].join("\n")],
         [/src[\\/]utils[\\/]style\.ts$/, "export const STYLE_IDS = {markdown: 'test-markdown'}; export function replaceStyle() {}"],
-        [/src[\\/]utils[\\/]imageProxy\.ts$/, "export function toProxyHtml(html) { return html; }"],
+        [/src[\\/]utils[\\/]imageProxy\.ts$/, "export function toProxyHtml(html) { return html; } export function toProxyImageUrl(url) { return url; }"],
         [/src[\\/]markdown[\\/]mathjax\.ts$/, "export async function typesetMath() {}"],
         [/src[\\/]markdown[\\/]mermaid\.ts$/, "export async function renderMermaidCharts() {} export function reuseRenderedMermaidCharts(html) { return html; }"],
         [/src[\\/]components[\\/]Preview[\\/]previewModes\.ts$/, "export function getPreviewMode() { return {width: null}; }"],

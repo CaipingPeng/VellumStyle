@@ -149,10 +149,35 @@ export function stripPreviewArtifacts(html: string): string {
   for (const overlay of Array.from(doc.querySelectorAll(".vs-image-resize-overlay"))) {
     overlay.remove();
   }
+  for (const placeholder of Array.from(doc.querySelectorAll(".vs-video-placeholder"))) {
+    placeholder.remove();
+  }
+  for (const iframe of Array.from(doc.querySelectorAll("iframe[data-vs-video-hidden]"))) {
+    iframe.removeAttribute("data-vs-video-hidden");
+    const savedSrc = iframe.getAttribute("data-vs-video-src");
+    if (savedSrc && !iframe.hasAttribute("src")) {
+      iframe.setAttribute("src", savedSrc);
+    }
+    iframe.removeAttribute("data-vs-video-src");
+  }
   for (const element of Array.from(doc.querySelectorAll("[data-vs-image-index]"))) {
     element.removeAttribute("data-vs-image-index");
   }
   return doc.body.innerHTML;
+}
+
+// 微信草稿接口会把"仅含视频 iframe、没有真实文字/图片"的正文整段丢弃，
+// 发布前据此拦截，避免用户发布出空白草稿。
+export function hasNonVideoContent(html: string): boolean {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  for (const iframe of Array.from(doc.querySelectorAll("iframe.video_iframe"))) {
+    iframe.remove();
+  }
+  if (doc.body.querySelector("img")) {
+    return true;
+  }
+  const visibleText = (doc.body.textContent ?? "").replace(/\s/g, "");
+  return visibleText.length > 0;
 }
 
 function cloneBoxWithWechatSafeMermaid(box: HTMLElement): HTMLElement {
@@ -217,6 +242,9 @@ export function solveHtml(): string {
   const articleRoot = box.children[0];
   if (articleRoot) {
     for (const item of Array.from(articleRoot.children)) {
+      // iframe 不能带 data-tool 水印：微信 draft/add 会把带该属性的视频 iframe
+      // 整段丢弃，导致发布后视频位置空白。
+      if (item.tagName.toLowerCase() === "iframe") continue;
       item.setAttribute("data-tool", "vellumstyle");
     }
   }
