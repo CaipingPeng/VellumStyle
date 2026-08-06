@@ -3,6 +3,7 @@ import {
   Check,
   CheckSquare2,
   Clapperboard,
+  AudioLines,
   Film,
   ImageIcon,
   Images,
@@ -15,10 +16,16 @@ import {
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
 import {
   deleteImageMaterial,
+  formatVoiceMarkup,
   listImageMaterials,
   listVideoMaterials,
+  listVoiceMaterials,
+  loadVoiceBinding,
+  parseVoiceCode,
+  saveVoiceBinding,
   type MaterialImage,
   type MaterialVideo,
+  type MaterialVoice,
 } from "../../utils/publish.ts";
 import {pickImageFiles, uploadLocalImage} from "../../utils/upload.ts";
 import {toast} from "../Toast/toast.ts";
@@ -26,6 +33,7 @@ import Button from "../ui/Button.tsx";
 import Dialog from "../ui/Dialog.tsx";
 import DeleteMaterialConfirmDialog from "./DeleteMaterialConfirmDialog.tsx";
 import {runMaterialOperations} from "./materialBatch.ts";
+import AudioCodeBindDialog from "./AudioCodeBindDialog.tsx";
 
 interface Props {
   open: boolean;
@@ -34,10 +42,11 @@ interface Props {
   onPick: (urls: string[]) => void;
   onPickFlow: (urls: string[]) => void;
   onPickVideos?: (videos: MaterialVideo[]) => void;
+  onPickVoices?: (markups: string[]) => void;
   onNeedSettings: () => void;
 }
 
-type MaterialTab = "image" | "video";
+type MaterialTab = "image" | "video" | "voice";
 
 const MATERIAL_PAGE_SIZE = 20;
 const DELETE_CONCURRENCY = 4;
@@ -64,7 +73,7 @@ function errorMessage(error: unknown): string {
   return typeof error === "string" ? error : (error as Error)?.message || "未知错误";
 }
 
-export default function ImageMaterialPickerDialog({open, canInsert, onClose, onPick, onPickFlow, onPickVideos, onNeedSettings}: Props) {
+export default function ImageMaterialPickerDialog({open, canInsert, onClose, onPick, onPickFlow, onPickVideos, onPickVoices, onNeedSettings}: Props) {
   const [tab, setTab] = useState<MaterialTab>("image");
   const [materialItems, setMaterialItems] = useState<MaterialImage[]>([]);
   const [materialTotal, setMaterialTotal] = useState(0);
@@ -76,6 +85,13 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [videoSelectedIds, setVideoSelectedIds] = useState<Set<string>>(new Set());
+  const [voiceItems, setVoiceItems] = useState<MaterialVoice[]>([]);
+  const [voiceTotal, setVoiceTotal] = useState(0);
+  const [voiceLoading, setVoiceLoading] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
+  const [voiceBindOpen, setVoiceBindOpen] = useState(false);
+  const [voiceBindError, setVoiceBindError] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteCompleted, setDeleteCompleted] = useState(0);
@@ -83,6 +99,7 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
   const [uploadProgress, setUploadProgress] = useState({completed: 0, total: 0});
   const materialLoadingRef = useRef(false);
   const videoLoadingRef = useRef(false);
+  const voiceLoadingRef = useRef(false);
   const librarySessionRef = useRef(0);
 
   const selectedItems = useMemo(
@@ -93,6 +110,11 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
   const selectedVideos = useMemo(
     () => videoItems.filter((item) => videoSelectedIds.has(item.mediaId)),
     [videoItems, videoSelectedIds],
+  );
+
+  const selectedVoice = useMemo(
+    () => voiceItems.find((item) => item.mediaId === selectedVoiceId) ?? null,
+    [voiceItems, selectedVoiceId],
   );
 
   const loadMaterialLibrary = useCallback(async (offset = 0, session = librarySessionRef.current) => {
@@ -153,10 +175,40 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
     }
   }, [onNeedSettings]);
 
+  const loadVoiceLibrary = useCallback(async (offset = 0, session = librarySessionRef.current) => {
+    if (voiceLoadingRef.current) return;
+    voiceLoadingRef.current = true;
+    setVoiceLoading(true);
+    setVoiceError(null);
+    try {
+      const page = await listVoiceMaterials(offset, MATERIAL_PAGE_SIZE);
+      if (session !== librarySessionRef.current) return;
+      setVoiceTotal(page.totalCount);
+      setVoiceItems((prev) => (offset === 0 ? page.items : mergeMaterialItems(prev, page.items)));
+      if (offset === 0) setSelectedVoiceId(null);
+    } catch (error) {
+      if (session !== librarySessionRef.current) return;
+      const message = errorMessage(error);
+      setVoiceError(message);
+      if (message.includes("NOT_CONFIGURED")) {
+        toast.show("尚未配置微信素材凭证，请先在设置中填写", "error");
+        onNeedSettings();
+      } else {
+        toast.show(`素材库读取失败：${message}`, "error");
+      }
+    } finally {
+      if (session === librarySessionRef.current) {
+        voiceLoadingRef.current = false;
+        setVoiceLoading(false);
+      }
+    }
+  }, [onNeedSettings]);
+
   useEffect(() => {
     const session = ++librarySessionRef.current;
     materialLoadingRef.current = false;
     videoLoadingRef.current = false;
+    voiceLoadingRef.current = false;
     if (!open) return;
     setTab("image");
     setMaterialItems([]);
@@ -169,6 +221,13 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
     setVideoLoading(false);
     setVideoError(null);
     setVideoSelectedIds(new Set());
+    setVoiceItems([]);
+    setVoiceTotal(0);
+    setVoiceLoading(false);
+    setVoiceError(null);
+    setSelectedVoiceId(null);
+    setVoiceBindOpen(false);
+    setVoiceBindError(null);
     setDeleteConfirmOpen(false);
     setDeleting(false);
     setDeleteCompleted(0);
@@ -181,6 +240,9 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
     setTab(next);
     if (next === "video" && videoItems.length === 0 && !videoLoadingRef.current) {
       void loadVideoLibrary(0);
+    }
+    if (next === "voice" && voiceItems.length === 0 && !voiceLoadingRef.current) {
+      void loadVoiceLibrary(0);
     }
   };
 
@@ -236,6 +298,40 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
     if (!canInsert || selectedVideos.length === 0) return;
     onPickVideos?.(selectedVideos);
     toast.show(`已插入 ${selectedVideos.length} 个素材库视频`, "info");
+    onClose();
+  };
+
+  const toggleVoiceSelection = (mediaId: string) => {
+    setSelectedVoiceId((current) => (current === mediaId ? null : mediaId));
+  };
+
+  const insertSelectedVoice = () => {
+    if (!canInsert || !selectedVoice) return;
+    const binding = loadVoiceBinding(selectedVoice.mediaId);
+    if (!binding) {
+      setVoiceBindError(null);
+      setVoiceBindOpen(true);
+      return;
+    }
+    onPickVoices?.([formatVoiceMarkup(binding)]);
+    toast.show(`已插入「${selectedVoice.name}」`, "info");
+    onClose();
+  };
+
+  const submitVoiceBinding = (source: string) => {
+    if (!selectedVoice) return;
+    const info = parseVoiceCode(source);
+    if (!info) {
+      setVoiceBindError(
+        "没有识别到音频代码，请确认复制的是源码模式下 <mpvoice> 或 <section class=\"js_editor_audio\"> 的完整标签。",
+      );
+      return;
+    }
+    saveVoiceBinding(selectedVoice.mediaId, info);
+    setVoiceBindOpen(false);
+    setVoiceBindError(null);
+    onPickVoices?.([formatVoiceMarkup(info)]);
+    toast.show(`已插入「${selectedVoice.name}」，下次可直接插入`, "info");
     onClose();
   };
 
@@ -409,7 +505,7 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
                 )}
               </div>
             </div>
-          ) : (
+          ) : tab === "video" ? (
             <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
               <div className="justify-self-start">
                 <span className="text-xs font-normal text-text-muted">
@@ -432,6 +528,29 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
                 )}
               </div>
             </div>
+          ) : (
+            <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+              <div className="justify-self-start">
+                <span className="text-xs font-normal text-text-muted">
+                  音频请在公众号后台「素材库 → 音频」上传
+                </span>
+              </div>
+              <span className="whitespace-nowrap text-xs font-normal text-text-muted">
+                已加载 {voiceItems.length}/{voiceTotal || voiceItems.length} 个
+              </span>
+              <div className="justify-self-end">
+                {voiceItems.length < voiceTotal && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={voiceLoading || busy}
+                    onClick={() => void loadVoiceLibrary(voiceItems.length)}
+                  >
+                    {voiceLoading ? "加载中…" : "加载更多"}
+                  </Button>
+                )}
+              </div>
+            </div>
           )
         }
       >
@@ -444,6 +563,10 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
             <button type="button" onClick={() => switchTab("video")} aria-pressed={tab === "video"} className={tabButtonClass(tab === "video")}>
               <Clapperboard size={14} />
               视频
+            </button>
+            <button type="button" onClick={() => switchTab("voice")} aria-pressed={tab === "voice"} className={tabButtonClass(tab === "voice")}>
+              <AudioLines size={14} />
+              音频
             </button>
           </div>
 
@@ -587,7 +710,7 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
                 </div>
               )}
             </>
-          ) : (
+          ) : tab === "video" ? (
             <>
               <div className="flex h-[42px] flex-none items-center justify-between gap-3 border-b border-border bg-bg-secondary px-4">
                 <div className="flex min-w-0 items-center gap-3">
@@ -718,9 +841,115 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
                 </div>
               )}
             </>
+          ) : (
+            <>
+              <div className="flex h-[42px] flex-none items-center justify-between gap-3 border-b border-border bg-bg-secondary px-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="hidden truncate text-xs text-text-muted sm:inline">
+                    {selectedVoice ? `已选择：${selectedVoice.name}` : "未选择音频"}
+                  </span>
+                </div>
+                <div className="flex flex-none items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    disabled={!canInsert || !selectedVoice || busy}
+                    title={!canInsert ? "请先打开一篇文章" : "将所选音频插入当前文章"}
+                    onClick={insertSelectedVoice}
+                  >
+                    <AudioLines size={14} />
+                    <span className="hidden sm:inline">插入所选</span>
+                  </Button>
+                  <button
+                    type="button"
+                    title={voiceLoading ? "正在刷新素材库" : "刷新素材库"}
+                    aria-label={voiceLoading ? "正在刷新素材库" : "刷新素材库"}
+                    disabled={voiceLoading || busy}
+                    onClick={() => void loadVoiceLibrary(0)}
+                    className="inline-grid h-8 w-8 flex-none place-items-center rounded-sm border-0 bg-transparent p-0 text-text-secondary outline-none transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-50"
+                  >
+                    <RefreshCw size={15} className={voiceLoading ? "animate-spin" : ""} />
+                  </button>
+                </div>
+              </div>
+
+              {voiceLoading && voiceItems.length === 0 ? (
+                <div className="grid min-h-0 flex-1 auto-rows-max grid-cols-2 gap-3 overflow-hidden p-4 sm:grid-cols-3 lg:grid-cols-4">
+                  {Array.from({length: 8}).map((_, index) => (
+                    <div key={index} className="box-border overflow-hidden rounded-lg border border-[color:var(--card-border)] bg-bg-secondary">
+                      <div className="h-[76px] animate-pulse bg-bg-tertiary" />
+                      <div className="border-t border-border bg-bg-secondary px-2 py-2">
+                        <div className="h-2.5 w-3/4 animate-pulse rounded bg-bg-tertiary" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : voiceError && voiceItems.length === 0 ? (
+                <div className="m-4 rounded-md bg-bg-secondary px-3 py-3 text-xs leading-5 text-text-secondary">
+                  <div className="font-medium text-text">素材库读取失败</div>
+                  <div className="mt-1 break-words">
+                    {voiceError.includes("NOT_CONFIGURED") ? "请先在设置中填写微信素材凭证。" : voiceError}
+                  </div>
+                  <Button type="button" variant="secondary" className="mt-3" disabled={voiceLoading} onClick={() => void loadVoiceLibrary(0)}>
+                    重试
+                  </Button>
+                </div>
+              ) : voiceItems.length > 0 ? (
+                <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 [scrollbar-gutter:stable] [scrollbar-width:thin]">
+                  <div className="grid auto-rows-max grid-cols-2 content-start gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    {voiceItems.map((item, index) => {
+                      const selected = selectedVoiceId === item.mediaId;
+                      return (
+                        <button
+                          key={item.mediaId}
+                          type="button"
+                          onClick={() => toggleVoiceSelection(item.mediaId)}
+                          aria-pressed={selected}
+                          aria-label={`${selected ? "取消选择" : "选择"}素材库第 ${index + 1} 个音频：${item.name}`}
+                          title={item.name}
+                          className={`relative box-border block w-full cursor-pointer appearance-none overflow-hidden rounded-lg border border-[color:var(--card-border)] bg-bg-secondary p-0 text-left outline-none transition-[border-color,background-color,transform] duration-slow ease-bounce focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+                            selected
+                              ? "border-accent/70"
+                              : "hover:-translate-y-1 hover:bg-bg"
+                          }`}
+                        >
+                          <span className="flex h-[76px] items-center gap-3 px-3">
+                            <span className="grid h-11 w-11 flex-none place-items-center rounded-full bg-accent-subtle text-accent">
+                              <AudioLines size={20} />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[13px] font-medium leading-5 text-text-secondary">{item.name}</span>
+                              <span className="mt-0.5 block text-[11px] leading-4 text-text-muted">{formatMaterialTime(item.updateTime)}</span>
+                            </span>
+                            {selected && (
+                              <span aria-hidden="true" className="grid h-6 w-6 flex-none place-items-center rounded-full border-2 border-white bg-accent text-white">
+                                <Check size={14} strokeWidth={3} />
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="m-4 flex min-h-0 flex-1 flex-col items-center justify-center rounded-md bg-bg-secondary px-6 text-center text-sm text-text-secondary">
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent-subtle text-accent"><AudioLines size={22} /></span>
+                  <div className="mt-3 font-medium text-text">素材库暂无音频</div>
+                  <div className="mt-1 max-w-xs text-xs leading-5">音频请在公众号后台「素材库 → 音频」上传后，再回到这里选择插入。</div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </Dialog>
+      <AudioCodeBindDialog
+        open={open && voiceBindOpen}
+        audioName={selectedVoice?.name ?? "该音频"}
+        error={voiceBindError}
+        onCancel={() => setVoiceBindOpen(false)}
+        onSubmit={(source) => submitVoiceBinding(source)}
+      />
       <DeleteMaterialConfirmDialog
         open={open && deleteConfirmOpen}
         count={deleteCount}

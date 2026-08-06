@@ -38,9 +38,16 @@ test("预览为素材库视频注入本地占位并在导出时还原", async ()
   assert.match(source, /vs-video-placeholder/);
   assert.match(source, /iframe\.video_iframe/);
   assert.match(source, /vsVideoHidden/);
+  assert.match(source, /mpvoice\.js_editor_audio/);
+  assert.match(source, /vsAudioHidden/);
+  assert.match(source, /vs-audio-placeholder/);
   assert.match(source, /本地预览不播放/);
   assert.match(css, /iframe\.video_iframe\[data-vs-video-hidden="true"\]/);
   assert.match(css, /\.vs-video-placeholder \{/);
+  assert.match(css, /mpvoice\.js_editor_audio\[data-vs-audio-hidden="true"\]/);
+  assert.match(css, /\.vs-audio-placeholder \{/);
   assert.match(converterSource, /\.vs-video-placeholder/);
   assert.match(converterSource, /data-vs-video-src/);
+  assert.match(converterSource, /\.vs-audio-placeholder/);
+  assert.match(converterSource, /data-vs-audio-hidden/);
 });

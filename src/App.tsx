@@ -384,6 +384,11 @@ export default function App() {
     editorRef.current?.insertAtCursor(`\n${markdown}\n`);
   }, []);
 
+  const handlePickMaterialVoices = useCallback((markups: string[]) => {
+    if (markups.length === 0) return;
+    editorRef.current?.insertAtCursor(`\n${markups.join("\n\n")}\n`);
+  }, []);
+
   const handleResizePreviewImage = useCallback((imageIndex: number, size: {width: string}) => {
     const result = replaceMarkdownImageSizeByIndex(useStore.getState().content, imageIndex, size);
     if (result.changed) {
@@ -909,6 +914,7 @@ export default function App() {
         onPick={handlePickMaterialImages}
         onPickFlow={handlePickMaterialImageFlow}
         onPickVideos={handlePickMaterialVideos}
+        onPickVoices={handlePickMaterialVoices}
         onNeedSettings={handleNeedSettings}
       />
       <Toaster />

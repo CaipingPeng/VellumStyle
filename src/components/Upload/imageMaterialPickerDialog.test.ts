@@ -4,6 +4,7 @@ import test from "node:test";
 import {act, createElement} from "react";
 import {createRoot} from "react-dom/client";
 import ImageMaterialPickerDialog from "./ImageMaterialPickerDialog.tsx";
+import {saveVoiceBinding} from "../../utils/publish.ts";
 
 (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -13,11 +14,17 @@ test("图片素材库默认多选并通过独立命令插入或删除所选素�
 
   assert.match(source, /listImageMaterials/);
   assert.match(source, /listVideoMaterials/);
+  assert.match(source, /listVoiceMaterials/);
   assert.match(source, /deleteImageMaterial/);
   assert.match(source, /onPickVideos/);
+  assert.match(source, /onPickVoices/);
+  assert.match(source, /parseVoiceCode/);
+  assert.match(source, /saveVoiceBinding/);
   assert.match(source, /pickImageFiles/);
   assert.match(source, /uploadLocalImage/);
   assert.match(source, /视频请在公众号后台/);
+  assert.match(source, /音频请在公众号后台/);
+  assert.match(source, /AudioCodeBindDialog/);
   assert.match(source, /aria-pressed=\{selected\}/);
   assert.match(source, /onPick\(selectedItems\.map\(\(item\) => item\.url\)\)/);
   assert.match(source, /onPickFlow\(selectedItems\.map\(\(item\) => item\.url\)\)/);
@@ -226,6 +233,100 @@ test("视频页签列出素材库视频并可把所选视频交给插入回调",
       delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
     } else {
       (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
+    }
+  }
+});
+
+test("音频页签列出素材库音频，已绑定标识的音频可直接插入 mpvoice", async () => {
+  const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+  const previousStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const storage = new Map<string, string>();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+      removeItem: (key: string) => storage.delete(key),
+      clear: () => storage.clear(),
+    },
+  });
+  (window as unknown as {__TAURI_INTERNALS__: {invoke: (cmd: string) => Promise<unknown>}}).__TAURI_INTERNALS__ = {
+    invoke: async (cmd) => {
+      if (cmd === "list_image_materials") {
+        return {totalCount: 0, itemCount: 0, items: []};
+      }
+      assert.equal(cmd, "list_voice_materials");
+      return {
+        totalCount: 1,
+        itemCount: 1,
+        items: [
+          {mediaId: "VOICE_1", name: "测试音频", updateTime: 1785982723},
+        ],
+      };
+    },
+  };
+  saveVoiceBinding("VOICE_1", {
+    voiceEncodeFileid: "Mzk0NTMyNzk3N18xMDAwMDI1MzA=",
+    name: "测试音频",
+    playLength: "132000",
+    src: "/cgi-bin/readtemplate?t=tmpl/audio_tmpl&name=%E6%B5%8B%E8%AF%95%E9%9F%B3%E9%A2%91&play_length=02:12",
+  });
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const voicePicked: string[][] = [];
+  let closed = 0;
+
+  try {
+    await act(async () => {
+      root.render(createElement(ImageMaterialPickerDialog, {
+        open: true,
+        canInsert: true,
+        onClose: () => { closed += 1; },
+        onPick: () => {},
+        onPickFlow: () => {},
+        onPickVoices: (markups) => voicePicked.push(markups),
+        onNeedSettings: () => {},
+      }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const audioTab = Array.from(document.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => button.textContent?.trim() === "音频");
+    assert.ok(audioTab);
+    await act(async () => {
+      audioTab.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const cards = Array.from(document.querySelectorAll<HTMLButtonElement>('button[aria-label^="选择素材库第"]'));
+    assert.equal(cards.length, 1);
+    assert.match(cards[0].getAttribute("aria-label") ?? "", /第 1 个音频：测试音频/);
+    act(() => {
+      cards[0].click();
+    });
+    const insert = Array.from(document.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => button.textContent?.includes("插入所选"));
+    assert.ok(insert);
+    act(() => insert.click());
+
+    assert.equal(voicePicked.length, 1);
+    assert.match(voicePicked[0][0], /^<mpvoice /);
+    assert.match(voicePicked[0][0], /voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA="/);
+    assert.equal(closed, 1);
+  } finally {
+    act(() => root.unmount());
+    host.remove();
+    if (previousInternals === undefined) {
+      delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+    } else {
+      (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
+    }
+    if (previousStorage === undefined) {
+      delete (globalThis as unknown as {localStorage?: unknown}).localStorage;
+    } else {
+      Object.defineProperty(globalThis, "localStorage", previousStorage);
     }
   }
 });

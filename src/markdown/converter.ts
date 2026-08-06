@@ -152,6 +152,12 @@ export function stripPreviewArtifacts(html: string): string {
   for (const placeholder of Array.from(doc.querySelectorAll(".vs-video-placeholder"))) {
     placeholder.remove();
   }
+  for (const placeholder of Array.from(doc.querySelectorAll(".vs-audio-placeholder"))) {
+    placeholder.remove();
+  }
+  for (const voice of Array.from(doc.querySelectorAll("mpvoice[data-vs-audio-hidden]"))) {
+    voice.removeAttribute("data-vs-audio-hidden");
+  }
   for (const iframe of Array.from(doc.querySelectorAll("iframe[data-vs-video-hidden]"))) {
     iframe.removeAttribute("data-vs-video-hidden");
     const savedSrc = iframe.getAttribute("data-vs-video-src");
@@ -173,7 +179,7 @@ export function hasNonVideoContent(html: string): boolean {
   for (const iframe of Array.from(doc.querySelectorAll("iframe.video_iframe"))) {
     iframe.remove();
   }
-  if (doc.body.querySelector("img")) {
+  if (doc.body.querySelector("img, mpvoice")) {
     return true;
   }
   const visibleText = (doc.body.textContent ?? "").replace(/\s/g, "");

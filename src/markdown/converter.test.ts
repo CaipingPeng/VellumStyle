@@ -73,6 +73,16 @@ test("导出前移除视频占位并从保存的 src 恢复播放 iframe", () =>
   assert.doesNotMatch(html, /data-vs-video-hidden|data-vs-video-src|vs-video-placeholder/);
 });
 
+test("导出前移除音频占位并还原 mpvoice", () => {
+  const html = stripPreviewArtifacts(
+    '<mpvoice class="js_editor_audio audio_iframe js_uneditable" name="测试音频" play_length="132000" voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA=" data-vs-audio-hidden="true"></mpvoice><div class="vs-audio-placeholder"></div>',
+  );
+
+  assert.match(html, /<mpvoice /);
+  assert.match(html, /voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA="/);
+  assert.doesNotMatch(html, /data-vs-audio-hidden|vs-audio-placeholder/);
+});
+
 test("hasNonVideoContent 识别纯视频正文避免微信丢弃", () => {
   const video = '<iframe class="video_iframe rich_pages" data-src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;vid=wxv_1"></iframe>';
 
@@ -82,6 +92,12 @@ test("hasNonVideoContent 识别纯视频正文避免微信丢弃", () => {
   assert.equal(hasNonVideoContent(""), false);
   assert.equal(hasNonVideoContent(`<section><p>标题</p>${video}</section>`), true);
   assert.equal(hasNonVideoContent(`<section>${video}<img src="https://mmbiz.qpic.cn/a.png"></section>`), true);
+});
+
+test("hasNonVideoContent 将音频 mpvoice 视为有效内容", () => {
+  const mpvoice = '<mpvoice class="js_editor_audio audio_iframe js_uneditable" name="测试音频" play_length="132000" voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA="></mpvoice>';
+
+  assert.equal(hasNonVideoContent(`<section>${mpvoice}</section>`), true);
 });
 
 test("导出链接 leaf 外壳继承链接文字样式，避免转换后原位置格式漂移", () => {

@@ -5,7 +5,7 @@ import Dialog from "../ui/Dialog.tsx";
 interface Props {
   open: boolean;
   count: number;
-  kind?: "image" | "video";
+  kind?: "image" | "video" | "voice";
   deleting: boolean;
   completed: number;
   onCancel: () => void;
@@ -13,7 +13,7 @@ interface Props {
 }
 
 function kindLabel(kind: NonNullable<Props["kind"]>): string {
-  return kind === "video" ? "视频" : "图片";
+  return kind === "video" ? "视频" : kind === "voice" ? "音频" : "图片";
 }
 
 export default function DeleteMaterialConfirmDialog({
@@ -50,13 +50,13 @@ export default function DeleteMaterialConfirmDialog({
             onClick={onConfirm}
           >
             <Trash2 size={14} />
-            永久删除 {count} {kind === "video" ? "个视频" : "张图片"}
+            永久删除 {count} {kind === "video" ? "个视频" : kind === "voice" ? "个音频" : "张图片"}
           </Button>
         </>
       }
     >
       <div className="space-y-3 text-sm leading-6 text-text-secondary">
-        <p>此操作将从微信公众号永久素材库中删除所选的 {count} {kind === "video" ? "个视频" : "张图片"}，删除后无法撤销。</p>
+        <p>此操作将从微信公众号永久素材库中删除所选的 {count} {kind === "video" ? "个视频" : kind === "voice" ? "个音频" : "张图片"}，删除后无法撤销。</p>
         <p className="rounded-md border border-danger/25 bg-danger/5 px-3 py-2 text-danger">
           此操作可能使引用了待删除图片、但尚未发表且仅停留在草稿箱中的文章图片失效。
         </p>

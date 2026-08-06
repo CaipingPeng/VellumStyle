@@ -4,10 +4,15 @@ import {
   addDraft,
   deleteImageMaterial,
   findUnuploadedImages,
+  formatVoiceMarkup,
   formatVideoMaterialIframe,
   getCoverCandidates,
   listImageMaterials,
   listVideoMaterials,
+  listVoiceMaterials,
+  loadVoiceBinding,
+  parseVoiceCode,
+  saveVoiceBinding,
 } from "./publish.ts";
 
 test("listImageMaterials 调用永久图片素材库命令并保留分页参数", async () => {
@@ -131,6 +136,113 @@ test("formatVideoMaterialIframe 用 vid 和封面拼出可发布的播放 iframe
   assert.match(html, /data-cover="http:\/\/mmbiz\.qpic\.cn\/mmbiz_jpg\/example\/0\?wx_fmt=jpeg"/);
   assert.match(html, /allowfullscreen/);
   assert.ok(html.endsWith("></iframe>"));
+});
+
+test("listVoiceMaterials 调用永久音频素材库命令并保留分页参数", async () => {
+  const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+  let calledWith: {cmd: string; args: unknown} | null = null;
+  (window as unknown as {__TAURI_INTERNALS__: {invoke: (cmd: string, args: unknown) => Promise<unknown>}}).__TAURI_INTERNALS__ = {
+    invoke: async (cmd, args) => {
+      calledWith = {cmd, args};
+      return {
+        totalCount: 1,
+        itemCount: 1,
+        items: [
+          {mediaId: "VOICE_MEDIA_ID_1", name: "测试音频", updateTime: 1785982723},
+        ],
+      };
+    },
+  };
+
+  try {
+    const page = await listVoiceMaterials(0, 20);
+    assert.deepEqual(calledWith, {
+      cmd: "list_voice_materials",
+      args: {offset: 0, count: 20},
+    });
+    assert.equal(page.items[0].name, "测试音频");
+  } finally {
+    if (previousInternals === undefined) {
+      delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+    } else {
+      (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
+    }
+  }
+});
+
+test("parseVoiceCode 兼容老版 mpvoice 与新版 js_editor_audio 源码", () => {
+  const mpvoice = parseVoiceCode(
+    '<mpvoice class="js_editor_audio audio_iframe js_uneditable" src="/cgi-bin/readtemplate?t=tmpl/audio_tmpl&amp;name=%E6%B5%8B%E8%AF%95%E9%9F%B3%E9%A2%91&amp;play_length=02:12" isaac2="1" low_size="257.96" source_size="258" high_size="1038.91" name="测试音频" play_length="132000" voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA=" data-pluginname="insertaudio"></mpvoice>',
+  );
+  assert.ok(mpvoice);
+  assert.equal(mpvoice.voiceEncodeFileid, "Mzk0NTMyNzk3N18xMDAwMDI1MzA=");
+  assert.equal(mpvoice.name, "测试音频");
+  assert.equal(mpvoice.playLength, "132000");
+  assert.equal(mpvoice.src, "/cgi-bin/readtemplate?t=tmpl/audio_tmpl&name=%E6%B5%8B%E8%AF%95%E9%9F%B3%E9%A2%91&play_length=02:12");
+  assert.equal(mpvoice.lowSize, "257.96");
+
+  const sectionForm = parseVoiceCode(
+    '<section src="/cgi-bin/readtemplate?t=tmpl/audio_tmpl&amp;play_length=2分钟" isaac2="1" low_size="257.96" source_size="258" high_size="1038.91" name="测试音频" play_length="132000" author="时代编译日志" voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA=" class="js_editor_audio audio_iframe res_iframe js_uneditable"></section>',
+  );
+  assert.ok(sectionForm);
+  assert.equal(sectionForm.voiceEncodeFileid, "Mzk0NTMyNzk3N18xMDAwMDI1MzA=");
+  assert.equal(sectionForm.author, "时代编译日志");
+
+  assert.equal(parseVoiceCode("<p>没有音频代码</p>"), null);
+});
+
+test("formatVoiceMarkup 生成微信可发布的 mpvoice 标签", () => {
+  const html = formatVoiceMarkup({
+    voiceEncodeFileid: "Mzk0NTMyNzk3N18xMDAwMDI1MzA=",
+    name: "测试音频",
+    playLength: "132000",
+    src: "/cgi-bin/readtemplate?t=tmpl/audio_tmpl&name=%E6%B5%8B%E8%AF%95%E9%9F%B3%E9%A2%91&play_length=02:12",
+    isaac2: "1",
+    lowSize: "257.96",
+    sourceSize: "258",
+    highSize: "1038.91",
+  });
+
+  assert.match(html, /^<mpvoice class="js_editor_audio audio_iframe js_uneditable"/);
+  assert.match(html, /voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA="/);
+  assert.match(html, /name="测试音频"/);
+  assert.match(html, /play_length="132000"/);
+  assert.match(html, /&amp;play_length=02:12/);
+  assert.ok(html.endsWith(' data-pluginname="insertaudio"></mpvoice>'));
+});
+
+test("音频素材标识绑定在本地持久化并可取回", () => {
+  const previousStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const storage = new Map<string, string>();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+      removeItem: (key: string) => storage.delete(key),
+      clear: () => storage.clear(),
+    },
+  });
+
+  try {
+    assert.equal(loadVoiceBinding("VOICE_1"), null);
+    saveVoiceBinding("VOICE_1", {
+      voiceEncodeFileid: "Mzk0NTMyNzk3N18xMDAwMDI1MzA=",
+      name: "测试音频",
+      playLength: "132000",
+      src: "/cgi-bin/readtemplate?t=tmpl/audio_tmpl&play_length=02:12",
+    });
+    const binding = loadVoiceBinding("VOICE_1");
+    assert.ok(binding);
+    assert.equal(binding.voiceEncodeFileid, "Mzk0NTMyNzk3N18xMDAwMDI1MzA=");
+    assert.equal(loadVoiceBinding("VOICE_2"), null);
+  } finally {
+    if (previousStorage === undefined) {
+      delete (globalThis as unknown as {localStorage?: unknown}).localStorage;
+    } else {
+      Object.defineProperty(globalThis, "localStorage", previousStorage);
+    }
+  }
 });
 
 test("addDraft 只把正文 HTML 传给草稿接口，不把正文链接写到阅读原文", async () => {

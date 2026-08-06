@@ -82,6 +82,7 @@ pub fn run() {
             wechat::get_outbound_ip,
             wechat::list_image_materials,
             wechat::list_video_materials,
+            wechat::list_voice_materials,
             wechat::delete_image_material,
             wechat::upload_local_image,
             wechat::upload_remote_image,

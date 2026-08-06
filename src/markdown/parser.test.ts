@@ -74,6 +74,17 @@ test("iframe 放行后 script 仍然被剥离", () => {
   assert.doesNotMatch(html, /<script/);
 });
 
+test("素材库音频 mpvoice 标签与标识属性在渲染后保留", () => {
+  const html = render(
+    '<mpvoice class="js_editor_audio audio_iframe js_uneditable" src="/cgi-bin/readtemplate?t=tmpl/audio_tmpl&amp;name=%E6%B5%8B%E8%AF%95%E9%9F%B3%E9%A2%91&amp;play_length=02:12" isaac2="1" low_size="257.96" source_size="258" high_size="1038.91" name="测试音频" play_length="132000" voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA=" data-pluginname="insertaudio"></mpvoice>',
+  );
+
+  assert.match(html, /<mpvoice /);
+  assert.match(html, /voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA="/);
+  assert.match(html, /name="测试音频"/);
+  assert.match(html, /play_length="132000"/);
+});
+
 test("浏览器复制的编码中文 URL 在脚注中解码为可读中文", () => {
   const html = render("[喜羊羊案](https://example.com/%E2%80%9C%E5%96%9C%E7%BE%8A%E7%BE%8A%E6%9A%B4%E5%8A%9B%E2%80%9D%E6%A1%88)");
 

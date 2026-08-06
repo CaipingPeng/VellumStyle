@@ -52,6 +52,33 @@ export interface MaterialVideoPage {
   items: MaterialVideo[];
 }
 
+export interface MaterialVoice {
+  mediaId: string;
+  name: string;
+  updateTime: number;
+}
+
+export interface MaterialVoicePage {
+  totalCount: number;
+  itemCount: number;
+  items: MaterialVoice[];
+}
+
+// 微信后台源码模式里音频标签携带的字段（老版 <mpvoice> 或新版
+// <section class="js_editor_audio">）。voice_encode_fileid 官方 API 拿不到，
+// 只能由用户在微信后台编辑器插入音频后，从源码模式复制一次。
+export interface VoiceCodeInfo {
+  voiceEncodeFileid: string;
+  name: string;
+  playLength: string;
+  src: string;
+  isaac2?: string;
+  lowSize?: string;
+  sourceSize?: string;
+  highSize?: string;
+  author?: string;
+}
+
 function escapeHtmlAttribute(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -160,8 +187,86 @@ export function listVideoMaterials(offset: number, count: number): Promise<Mater
   return invoke<MaterialVideoPage>("list_video_materials", {offset, count});
 }
 
+export function listVoiceMaterials(offset: number, count: number): Promise<MaterialVoicePage> {
+  return invoke<MaterialVoicePage>("list_voice_materials", {offset, count});
+}
+
 export function deleteImageMaterial(mediaId: string): Promise<void> {
   return invoke<void>("delete_image_material", {mediaId});
+}
+
+const VOICE_BINDING_KEY = "vs-audio-bindings";
+
+function readVoiceBindings(): Record<string, VoiceCodeInfo> {
+  try {
+    const raw = localStorage.getItem(VOICE_BINDING_KEY);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return parsed as Record<string, VoiceCodeInfo>;
+  } catch {
+    return {};
+  }
+}
+
+export function loadVoiceBinding(mediaId: string): VoiceCodeInfo | null {
+  return readVoiceBindings()[mediaId] ?? null;
+}
+
+export function saveVoiceBinding(mediaId: string, info: VoiceCodeInfo): void {
+  const bindings = readVoiceBindings();
+  bindings[mediaId] = info;
+  try {
+    localStorage.setItem(VOICE_BINDING_KEY, JSON.stringify(bindings));
+  } catch {
+    // 存储失败不阻断插入，本次仍可用粘贴代码插入。
+  }
+}
+
+// 从微信后台复制来的音频代码里提取 voice_encode_fileid 及展示字段。
+// 兼容 <mpvoice> 与新版 <section class="js_editor_audio"> 两种形态。
+export function parseVoiceCode(source: string): VoiceCodeInfo | null {
+  const doc = new DOMParser().parseFromString(source, "text/html");
+  const node = Array.from(doc.querySelectorAll<HTMLElement>("[voice_encode_fileid]")).find((el) => {
+    const tag = el.tagName.toLowerCase();
+    return tag === "mpvoice" || el.classList.contains("js_editor_audio");
+  });
+  if (!node) return null;
+  const voiceEncodeFileid = node.getAttribute("voice_encode_fileid")?.trim() ?? "";
+  if (!voiceEncodeFileid) return null;
+  const name = node.getAttribute("name")?.trim() ?? "音频";
+  const playLength = node.getAttribute("play_length")?.trim() ?? "";
+  const src = node.getAttribute("src")?.trim() ?? "";
+  return {
+    voiceEncodeFileid,
+    name,
+    playLength,
+    src,
+    isaac2: node.getAttribute("isaac2")?.trim() || undefined,
+    lowSize: node.getAttribute("low_size")?.trim() || undefined,
+    sourceSize: node.getAttribute("source_size")?.trim() || undefined,
+    highSize: node.getAttribute("high_size")?.trim() || undefined,
+    author: node.getAttribute("author")?.trim() || undefined,
+  };
+}
+
+// 生成微信图文可发布的 mpvoice 标签（实测 draft/add 原样保留并可播放）。
+export function formatVoiceMarkup(info: VoiceCodeInfo): string {
+  const attr = (name: string, value: string | undefined) =>
+    value ? ` ${name}="${escapeHtmlAttribute(value)}"` : "";
+  return (
+    `<mpvoice class="js_editor_audio audio_iframe js_uneditable"` +
+    attr("src", info.src) +
+    attr("isaac2", info.isaac2) +
+    attr("low_size", info.lowSize) +
+    attr("source_size", info.sourceSize) +
+    attr("high_size", info.highSize) +
+    attr("name", info.name) +
+    attr("play_length", info.playLength) +
+    attr("author", info.author) +
+    attr("voice_encode_fileid", info.voiceEncodeFileid) +
+    ' data-pluginname="insertaudio"></mpvoice>'
+  );
 }
 
 export function addDraft(

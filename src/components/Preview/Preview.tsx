@@ -247,6 +247,42 @@ const Preview = forwardRef<PreviewHandle, Props>(
       }
     }, [html]);
 
+    // 素材库音频在本地预览不播放：mpvoice 自定义元素在 WebView 里渲染为空，
+    // 改为标题 + 时长 + 播放按钮样式的占位卡片；节点保留在 DOM，导出时由
+    // stripPreviewArtifacts 清理占位并还原。
+    useEffect(() => {
+      const root = document.getElementById(ARTICLE_ROOT_ID);
+      if (!root) return;
+      for (const voice of Array.from(root.querySelectorAll<HTMLElement>("mpvoice.js_editor_audio"))) {
+        if (voice.dataset.vsAudioHidden === "true") continue;
+        voice.dataset.vsAudioHidden = "true";
+        const name = voice.getAttribute("name") ?? "音频";
+        const playLength = voice.getAttribute("play_length") ?? "";
+        const author = voice.getAttribute("author") ?? "";
+        const placeholder = document.createElement("div");
+        placeholder.className = "vs-audio-placeholder";
+        placeholder.setAttribute("role", "img");
+        placeholder.setAttribute("aria-label", `素材库音频：${name}`);
+        const play = document.createElement("span");
+        play.className = "vs-audio-placeholder-play";
+        play.setAttribute("aria-hidden", "true");
+        const body = document.createElement("span");
+        body.className = "vs-audio-placeholder-body";
+        const title = document.createElement("strong");
+        title.className = "vs-audio-placeholder-title";
+        title.textContent = name;
+        const meta = document.createElement("span");
+        meta.className = "vs-audio-placeholder-meta";
+        meta.textContent = [formatVoiceDuration(playLength), author].filter(Boolean).join(" · ");
+        body.append(title, meta);
+        const hint = document.createElement("span");
+        hint.className = "vs-video-placeholder-hint";
+        hint.textContent = "本地预览不播放 · 发布后显示音频卡片";
+        placeholder.append(play, body, hint);
+        voice.insertAdjacentElement("afterend", placeholder);
+      }
+    }, [html]);
+
     useEffect(() => {
       const root = document.getElementById(ARTICLE_ROOT_ID);
       if (!root || !html.includes("$")) {
@@ -617,6 +653,17 @@ function ImageResizeHandles({
       ))}
     </div>
   );
+}
+
+function formatVoiceDuration(playLength: string): string {
+  const value = playLength.trim();
+  if (!value) return "";
+  if (!/^\d+$/.test(value)) return value;
+  const totalSeconds = Math.round(Number(value) / 1000);
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return "";
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 // 首屏/切文档瞬间文章尚未渲染时的骨架占位

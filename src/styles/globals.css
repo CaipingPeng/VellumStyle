@@ -1404,3 +1404,69 @@ iframe.video_iframe[data-vs-video-hidden="true"] {
   line-height: 1.6;
   white-space: nowrap;
 }
+
+/* 素材库音频本地预览占位：mpvoice 在 WebView 里不渲染，显示卡片占位。
+   导出时由 stripPreviewArtifacts 移除占位并还原 mpvoice。 */
+mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
+  display: none !important;
+}
+
+.vs-audio-placeholder {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 578px;
+  margin: 8px auto;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text);
+}
+
+.vs-audio-placeholder-play {
+  position: relative;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.vs-audio-placeholder-play::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 55%;
+  width: 0;
+  height: 0;
+  transform: translate(-50%, -50%);
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  border-left: 15px solid #fff;
+}
+
+.vs-audio-placeholder-body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vs-audio-placeholder-title {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vs-audio-placeholder-meta {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}

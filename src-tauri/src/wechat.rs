@@ -180,6 +180,22 @@ pub struct MaterialVideoPage {
     items: Vec<MaterialVideoItem>,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MaterialVoiceItem {
+    media_id: String,
+    name: String,
+    update_time: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MaterialVoicePage {
+    total_count: u32,
+    item_count: u32,
+    items: Vec<MaterialVoiceItem>,
+}
+
 fn credential_key(app_id: &str, app_secret: &str) -> u64 {
     let mut hasher = DefaultHasher::new();
     app_id.hash(&mut hasher);
@@ -443,6 +459,56 @@ fn parse_video_material_page_response(
     })
 }
 
+fn parse_voice_material_page_response(
+    body: &str,
+) -> Result<MaterialVoicePage, (Option<i64>, String)> {
+    let data: MaterialListResp =
+        serde_json::from_str(body).map_err(|e| (None, format!("解析素材库响应失败：{e}")))?;
+
+    if let Some(code) = data.errcode {
+        if code != 0 {
+            return Err((
+                Some(code),
+                format_wechat_error(
+                    Some(code),
+                    &data.errmsg.unwrap_or_else(|| "微信素材库获取失败".into()),
+                    "微信素材库获取失败",
+                ),
+            ));
+        }
+    }
+
+    let raw_items = data.item.unwrap_or_default();
+    let items: Vec<MaterialVoiceItem> = raw_items
+        .into_iter()
+        .filter_map(|item| {
+            let media_id = item.media_id?.trim().to_string();
+            if media_id.is_empty() {
+                return None;
+            }
+
+            let name = item
+                .name
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+                .unwrap_or_else(|| "未命名音频".to_string());
+
+            Some(MaterialVoiceItem {
+                media_id,
+                name,
+                update_time: item.update_time.unwrap_or(0),
+            })
+        })
+        .collect();
+    let item_count = data.item_count.unwrap_or(items.len() as u32);
+
+    Ok(MaterialVoicePage {
+        total_count: data.total_count.unwrap_or(0),
+        item_count,
+        items,
+    })
+}
+
 async fn fetch_material_page_text(
     token: &str,
     material_type: &str,
@@ -489,6 +555,15 @@ async fn list_video_materials_inner(
 ) -> Result<MaterialVideoPage, (Option<i64>, String)> {
     let body = fetch_material_page_text(token, "video", offset, count).await?;
     parse_video_material_page_response(&body)
+}
+
+async fn list_voice_materials_inner(
+    token: &str,
+    offset: u32,
+    count: u32,
+) -> Result<MaterialVoicePage, (Option<i64>, String)> {
+    let body = fetch_material_page_text(token, "voice", offset, count).await?;
+    parse_voice_material_page_response(&body)
 }
 
 /// 获取公众号永久图片素材列表。未配置返回 "NOT_CONFIGURED"。
@@ -540,6 +615,35 @@ pub async fn list_video_materials(
                 invalidate_access_token(&token);
                 let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
                 list_video_materials_inner(&token, offset, count)
+                    .await
+                    .map_err(|(_, m)| m)
+            } else {
+                Err(msg)
+            }
+        }
+    }
+}
+
+/// 获取公众号永久音频素材列表。未配置返回 "NOT_CONFIGURED"。
+#[tauri::command]
+pub async fn list_voice_materials(
+    app: AppHandle,
+    offset: u32,
+    count: u32,
+) -> Result<MaterialVoicePage, String> {
+    let cfg = load_wechat_config(&app);
+    if !cfg.is_configured() {
+        return Err("NOT_CONFIGURED".into());
+    }
+
+    let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
+    match list_voice_materials_inner(&token, offset, count).await {
+        Ok(page) => Ok(page),
+        Err((errcode, msg)) => {
+            if matches!(errcode, Some(40001) | Some(42001) | Some(40014)) {
+                invalidate_access_token(&token);
+                let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
+                list_voice_materials_inner(&token, offset, count)
                     .await
                     .map_err(|(_, m)| m)
             } else {
@@ -1617,7 +1721,7 @@ mod tests {
         build_add_draft_body, decode_for_reencoding, format_wechat_error, get_outbound_ip,
         is_allowed_redirect_target, parse_delete_material_response, parse_material_page_response,
         parse_outbound_ip_response, parse_video_material_page_response, prepare_upload_for_limit,
-        validate_remote_addresses, OUTBOUND_IP_ENDPOINTS,
+        parse_voice_material_page_response, validate_remote_addresses, OUTBOUND_IP_ENDPOINTS,
     };
     use image::{DynamicImage, ImageFormat, Rgb, RgbImage, Rgba, RgbaImage};
     use std::io::Cursor;
@@ -1955,6 +2059,33 @@ mod tests {
         assert_eq!(json["items"][0]["vid"], "wxv_2628424322221359104");
         assert_eq!(json["items"][0]["coverUrl"], page.items[0].cover_url);
         assert!(json["items"][0]["cover_url"].is_null());
+    }
+
+    #[test]
+    fn voice_material_page_response_maps_name_and_time_for_frontend() {
+        let body = r#"{
+            "total_count": 1,
+            "item_count": 1,
+            "item": [
+                {
+                    "media_id": "VOICE_MEDIA_ID_1",
+                    "name": "测试音频",
+                    "update_time": 1785982723,
+                    "tags": []
+                }
+            ]
+        }"#;
+
+        let page = parse_voice_material_page_response(body).expect("voice list should parse");
+        assert_eq!(page.total_count, 1);
+        assert_eq!(page.item_count, 1);
+        assert_eq!(page.items[0].media_id, "VOICE_MEDIA_ID_1");
+        assert_eq!(page.items[0].name, "测试音频");
+        assert_eq!(page.items[0].update_time, 1785982723);
+
+        let json = serde_json::to_value(&page).expect("page should serialize");
+        assert_eq!(json["items"][0]["mediaId"], "VOICE_MEDIA_ID_1");
+        assert_eq!(json["items"][0]["updateTime"], 1785982723);
     }
 
     #[test]
