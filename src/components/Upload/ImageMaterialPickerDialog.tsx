@@ -28,6 +28,7 @@ import {
   loadVoiceBinding,
   openMaterialUploadPage,
   openWechatBackend,
+  openWechatBackendHidden,
   parseVoiceBackendResponse,
   type MaterialImage,
   type MaterialVideo,
@@ -277,6 +278,10 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
 
   const switchTab = (next: MaterialTab) => {
     setTab(next);
+    if (next === "video" || next === "voice") {
+      // 预热内嵌后台窗口：让主页/登录页先加载好，点上传时省去冷启动等待。
+      void openWechatBackendHidden().catch(() => {});
+    }
     if (next === "video" && videoItems.length === 0 && !videoLoadingRef.current) {
       void loadVideoLibrary(0);
     }
@@ -558,6 +563,7 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
   const openUploadPage = async (mediaType: "video" | "voice") => {
     if (uploadPageBusy) return;
     setUploadPageBusy(mediaType);
+    toast.show("正在打开微信后台上传页…", "info", 2500);
     try {
       const response = await openMaterialUploadPage(mediaType);
       let ok = false;
