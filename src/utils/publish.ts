@@ -257,6 +257,31 @@ export function getEmojiCdnUrl(
   });
 }
 
+/// 在后台窗口上下文里搜索 QQ 音乐（finder_music?action=search），返回原始 JSON 文本。
+export function searchMusic(key: string): Promise<string> {
+  return invoke<string>("search_music", {key});
+}
+
+/// 获取单曲最终信息（finder_music?action=get_music_info），插入前调用，返回原始 JSON 文本。
+export function getMusicInfo(id: string, musicType: number, source: number): Promise<string> {
+  return invoke<string>("get_music_info", {id, musicType, source});
+}
+
+/// 在后台窗口上下文里搜索视频号账号（videosnap?action=search），返回原始 JSON 文本。
+export function searchVideoAccount(key: string, buffer: string): Promise<string> {
+  return invoke<string>("search_video_account", {key, buffer});
+}
+
+/// 获取视频号账号的视频列表（videosnap?action=get_feed_list），返回原始 JSON 文本。
+export function getVideoFeedList(username: string, buffer: string): Promise<string> {
+  return invoke<string>("get_video_feed_list", {username, buffer});
+}
+
+/// 获取选中视频的媒体信息（videosnap?action=get_media_list），插入前调用。
+export function getVideoMediaList(exportId: string): Promise<string> {
+  return invoke<string>("get_video_media_list", {exportId});
+}
+
 /// 获取手机传图二维码（后台窗口同步执行），返回原始 JSON 文本。
 export function getPhoneUploadQrcode(): Promise<string> {
   return invoke<string>("get_phone_upload_qrcode");

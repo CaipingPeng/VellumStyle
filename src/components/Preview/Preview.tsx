@@ -340,6 +340,133 @@ const Preview = forwardRef<PreviewHandle, Props>(
       }
     }, [html]);
 
+    // QQ 音乐卡片在本地预览不渲染（mp-common-clmusic 为微信自定义组件），
+    // 改为官方卡片样式的占位（封面带 QQ 音乐 logo + 歌名/歌手 + 播放按钮 + 时长）；
+    // 节点保留在 DOM，导出时由 stripPreviewArtifacts 清理占位并还原官方组件。
+    useEffect(() => {
+      const root = document.getElementById(ARTICLE_ROOT_ID);
+      if (!root) return;
+      for (const node of Array.from(root.querySelectorAll<HTMLElement>("mp-common-clmusic"))) {
+        if (node.dataset.vsMusicHidden === "true") continue;
+        node.dataset.vsMusicHidden = "true";
+        const title = node.getAttribute("music_name") ?? "音乐";
+        const author = node.getAttribute("singer") ?? "";
+        const cover = node.getAttribute("albumurl") ?? "";
+        const playUrl = node.getAttribute("data-vs-music-url") ?? "";
+        const vip = node.getAttribute("is_vip") === "1";
+        const duration = Number(node.getAttribute("duration") ?? 0);
+        const placeholder = document.createElement("div");
+        placeholder.className = "vs-audio-placeholder vs-music-placeholder";
+        placeholder.setAttribute("role", "img");
+        placeholder.setAttribute("aria-label", `QQ 音乐：${title}`);
+        const row = document.createElement("span");
+        row.className = "vs-music-row";
+        const coverEl = document.createElement("span");
+        coverEl.className = "vs-audio-placeholder-cover";
+        if (cover) {
+          coverEl.style.backgroundImage = `url("${toProxyImageUrl(cover)}")`;
+        }
+        const qqLogo = document.createElement("i");
+        qqLogo.className = "vs-music-qq-logo";
+        qqLogo.setAttribute("aria-hidden", "true");
+        coverEl.append(qqLogo);
+        const main = document.createElement("span");
+        main.className = "vs-audio-placeholder-main";
+        const titleEl = document.createElement("strong");
+        titleEl.className = "vs-audio-placeholder-title";
+        titleEl.textContent = title;
+        if (vip) {
+          const vipEl = document.createElement("b");
+          vipEl.className = "vs-music-vip";
+          vipEl.textContent = "VIP";
+          titleEl.append(" ", vipEl);
+        }
+        main.append(titleEl);
+        if (author) {
+          const authorEl = document.createElement("span");
+          authorEl.className = "vs-audio-placeholder-author";
+          authorEl.textContent = author;
+          main.append(authorEl);
+        }
+        row.append(coverEl, main);
+        const idleLabel = formatVoiceDurationLabel(String(duration));
+        const durationEl = document.createElement("span");
+        durationEl.className = "vs-audio-placeholder-duration";
+        durationEl.textContent = idleLabel;
+        // 官方卡片不显示时长文字；元素仅用于播放时的进度回写，保持隐藏。
+        durationEl.style.display = "none";
+        const play = document.createElement("span");
+        play.className = "vs-music-play";
+        play.setAttribute("aria-hidden", "true");
+        if (playUrl) {
+          play.setAttribute("role", "button");
+          play.setAttribute("aria-label", `播放音乐：${title}`);
+          play.style.cursor = "pointer";
+          play.addEventListener("click", (event) => {
+            event.stopPropagation();
+            toggleVoicePlayback(placeholder, play, durationEl, playUrl, idleLabel);
+          });
+          row.append(play);
+        }
+        placeholder.append(row);
+        node.insertAdjacentElement("afterend", placeholder);
+      }
+    }, [html]);
+
+    // 视频号视频卡片在本地预览不渲染（mp-common-videosnap 为微信自定义组件），
+    // 改为封面 + 播放按钮 + 账号名的占位卡片；节点保留在 DOM，导出时由
+    // stripPreviewArtifacts 清理占位并还原官方组件。
+    useEffect(() => {
+      const root = document.getElementById(ARTICLE_ROOT_ID);
+      if (!root) return;
+      for (const node of Array.from(root.querySelectorAll<HTMLElement>("mp-common-videosnap"))) {
+        if (node.dataset.vsVideosnapHidden === "true") continue;
+        node.dataset.vsVideosnapHidden = "true";
+        const cover = node.getAttribute("data-url") ?? "";
+        const nickname = node.getAttribute("data-nickname") ?? "视频号";
+        const authIcon = node.getAttribute("data-authiconurl") ?? "";
+        const width = Number(node.getAttribute("data-width") ?? 0);
+        const height = Number(node.getAttribute("data-height") ?? 0);
+        // 封面按官方卡片显示比例裁剪（竖版 3:4、横版 16:9），与草稿箱卡片一致——
+        // 若按视频原生比例（如 9:16）显示，预览裁剪范围会和草稿箱对不上。
+        const isVertical = height > width;
+        const coverRatio = isVertical ? 133.33 : 56.25;
+        const placeholder = document.createElement("div");
+        placeholder.className = "vs-videosnap-placeholder";
+        placeholder.style.maxWidth = isVertical ? "254px" : "575px";
+        placeholder.setAttribute("role", "img");
+        placeholder.setAttribute("aria-label", `视频号视频：${nickname}`);
+        const coverEl = document.createElement("span");
+        coverEl.className = "vs-videosnap-cover";
+        coverEl.style.paddingBottom = `${coverRatio}%`;
+        if (cover) {
+          coverEl.style.backgroundImage = `url("${toProxyImageUrl(cover)}")`;
+        }
+        const play = document.createElement("span");
+        play.className = "vs-videosnap-play";
+        play.setAttribute("aria-hidden", "true");
+        coverEl.append(play);
+        const foot = document.createElement("span");
+        foot.className = "vs-videosnap-foot";
+        const logo = document.createElement("span");
+        logo.className = "vs-videosnap-logo";
+        logo.setAttribute("aria-hidden", "true");
+        foot.append(logo);
+        const nameEl = document.createElement("span");
+        nameEl.className = "vs-videosnap-nickname";
+        nameEl.textContent = nickname;
+        foot.append(nameEl);
+        if (authIcon) {
+          const authEl = document.createElement("span");
+          authEl.className = "vs-videosnap-auth";
+          authEl.style.backgroundImage = `url("${toProxyImageUrl(authIcon)}")`;
+          foot.append(authEl);
+        }
+        placeholder.append(coverEl, foot);
+        node.insertAdjacentElement("afterend", placeholder);
+      }
+    }, [html]);
+
     useEffect(() => {
       const root = document.getElementById(ARTICLE_ROOT_ID);
       if (!root || !html.includes("$")) {

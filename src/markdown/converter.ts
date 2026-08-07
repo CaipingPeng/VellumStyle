@@ -155,6 +155,16 @@ export function stripPreviewArtifacts(html: string): string {
   for (const placeholder of Array.from(doc.querySelectorAll(".vs-audio-placeholder"))) {
     placeholder.remove();
   }
+  for (const node of Array.from(doc.querySelectorAll("mp-common-clmusic[data-vs-music-hidden]"))) {
+    node.removeAttribute("data-vs-music-hidden");
+    node.removeAttribute("data-vs-music-url");
+  }
+  for (const node of Array.from(doc.querySelectorAll("mp-common-videosnap[data-vs-videosnap-hidden]"))) {
+    node.removeAttribute("data-vs-videosnap-hidden");
+  }
+  for (const placeholder of Array.from(doc.querySelectorAll(".vs-videosnap-placeholder"))) {
+    placeholder.remove();
+  }
   for (const voice of Array.from(
     doc.querySelectorAll("mpvoice[data-vs-audio-hidden], mp-common-mpaudio[data-vs-audio-hidden]"),
   )) {
@@ -174,6 +184,71 @@ export function stripPreviewArtifacts(html: string): string {
   return doc.body.innerHTML;
 }
 
+// 视频号卡片导出归一化：统一为官方草稿结构——
+// <section class="channels_iframe_wrp custom_select_card_wrp[ wxw_wechannel_card_not_horizontal]" nodeleaf="">
+//   <mp-common-videosnap ...> <br class="ProseMirror-trailingBreak">
+// </section>
+// 不带内联 style 与 data-tool（否则微信识别不到官方卡片节点会再包一层 section）；
+// data-height 按卡片显示比例（竖版 3:4，横版 16:9）输出，保证草稿箱封面与预览一致。
+// 早期版本固化的旧结构（带 style 的 section / 裸组件被 <p> 包裹）在此统一清洗。
+export function normalizeVideosnapCardForWechat(html: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  for (const widget of Array.from(doc.querySelectorAll<HTMLElement>("mp-common-videosnap"))) {
+    widget.removeAttribute("data-tool");
+    widget.removeAttribute("style");
+    widget.removeAttribute("data-vs-videosnap-hidden");
+
+    const width = Number(widget.getAttribute("data-width") ?? 0);
+    const height = Number(widget.getAttribute("data-height") ?? 0);
+    const isVertical = height > width;
+    const displayHeight = isVertical
+      ? Math.round((width * 4) / 3)
+      : Math.round((width * 9) / 16);
+    widget.setAttribute("data-height", String(displayHeight));
+
+    const existing = widget.closest("section.channels_iframe_wrp, section.custom_select_card_wrp");
+    if (existing) {
+      existing.removeAttribute("style");
+      existing.removeAttribute("data-tool");
+      const classes = new Set(
+        (existing.getAttribute("class") ?? "")
+          .split(/\s+/)
+          .filter(Boolean),
+      );
+      classes.add("channels_iframe_wrp");
+      classes.add("custom_select_card_wrp");
+      if (isVertical) {
+        classes.add("wxw_wechannel_card_not_horizontal");
+      } else {
+        classes.delete("wxw_wechannel_card_not_horizontal");
+      }
+      existing.setAttribute("class", Array.from(classes).join(" "));
+      existing.setAttribute("nodeleaf", "");
+      continue;
+    }
+
+    // 裸组件（可能被 markdown 渲染器包进 <p>）：补上官方 section 包裹。
+    const section = doc.createElement("section");
+    section.setAttribute(
+      "class",
+      `channels_iframe_wrp custom_select_card_wrp${
+        isVertical ? " wxw_wechannel_card_not_horizontal" : ""
+      }`,
+    );
+    section.setAttribute("nodeleaf", "");
+    const br = doc.createElement("br");
+    br.setAttribute("class", "ProseMirror-trailingBreak");
+    const parent = widget.parentElement;
+    if (parent && parent.tagName.toLowerCase() === "p") {
+      parent.replaceWith(section);
+    } else {
+      widget.replaceWith(section);
+    }
+    section.append(widget, br);
+  }
+  return doc.body.innerHTML;
+}
+
 // 微信草稿接口会把"仅含视频 iframe、没有真实文字/图片"的正文整段丢弃，
 // 发布前据此拦截，避免用户发布出空白草稿。
 export function hasNonVideoContent(html: string): boolean {
@@ -181,7 +256,7 @@ export function hasNonVideoContent(html: string): boolean {
   for (const iframe of Array.from(doc.querySelectorAll("iframe.video_iframe"))) {
     iframe.remove();
   }
-  if (doc.body.querySelector("img, mpvoice, mp-common-mpaudio")) {
+  if (doc.body.querySelector("img, mpvoice, mp-common-mpaudio, mp-common-clmusic, mp-common-videosnap")) {
     return true;
   }
   const visibleText = (doc.body.textContent ?? "").replace(/\s/g, "");
@@ -253,6 +328,10 @@ export function solveHtml(): string {
       // iframe 不能带 data-tool 水印：微信 draft/add 会把带该属性的视频 iframe
       // 整段丢弃，导致发布后视频位置空白。
       if (item.tagName.toLowerCase() === "iframe") continue;
+      // 视频号卡片同样不能带 data-tool：微信草稿箱识别不到官方卡片结构时，
+      // 会为 widget 重建官方节点，导致选中态边框/淡绿膜与卡片尺寸不匹配。
+      if (item.tagName.toLowerCase() === "mp-common-videosnap") continue;
+      if (item.querySelector("mp-common-videosnap")) continue;
       item.setAttribute("data-tool", "vellumstyle");
     }
   }
@@ -264,6 +343,7 @@ export function solveHtml(): string {
   // 剥离同步滚动用的 data-line，避免污染粘贴到微信的 HTML
   html = html.replace(/\s*data-line="\d+"/g, "");
   html = stripPreviewArtifacts(html);
+  html = normalizeVideosnapCardForWechat(html);
   html = normalizeMathJaxForWechat(html);
 
   // 复制使用预览同一份样式：文章主题 + 当前代码主题已在预览层合并注入。

@@ -94,6 +94,38 @@ test("导出前移除 mp-common-mpaudio 占位并还原组件", () => {
   assert.doesNotMatch(html, /data-vs-audio-hidden|vs-audio-placeholder/);
 });
 
+test("导出前移除 QQ 音乐占位并还原 mp-common-clmusic", () => {
+  const html = stripPreviewArtifacts(
+    '<mp-common-clmusic class="res_iframe clmusic_iframe" music_name="壁上观" albumurl="https://wx.y.gtimg.cn/music/photo_new/example.jpg" singer="鞠婧祎" is_vip="1" duration="221000" music_source="1" listenid="78332210375265471" data-vs-music-url="https://mp.weixin.qq.com/mm3rd/redirect?context=x" data-vs-music-hidden="true"></mp-common-clmusic><div class="vs-audio-placeholder vs-music-placeholder"></div>',
+  );
+
+  assert.match(html, /<mp-common-clmusic /);
+  assert.match(html, /music_name="壁上观"/);
+  assert.match(html, /listenid="78332210375265471"/);
+  assert.doesNotMatch(html, /data-vs-music-hidden|data-vs-music-url|vs-music-placeholder/);
+});
+
+test("导出前移除视频号占位并还原 mp-common-videosnap", () => {
+  const html = stripPreviewArtifacts(
+    '<mp-common-videosnap class="channels_iframe" data-url="https://findermp.video.qq.com/example" data-username="v2_xxx@finder" data-nickname="中国军号" data-nonceid="123" data-id="export/abc" data-vs-videosnap-hidden="true"></mp-common-videosnap><div class="vs-videosnap-placeholder"></div>',
+  );
+
+  assert.match(html, /<mp-common-videosnap /);
+  assert.match(html, /data-nickname="中国军号"/);
+  assert.match(html, /data-id="export\/abc"/);
+  assert.doesNotMatch(html, /data-vs-videosnap-hidden|vs-videosnap-placeholder/);
+});
+
+test("hasNonVideoContent 把视频号卡片视为有效内容", () => {
+  const snap = '<mp-common-videosnap class="channels_iframe" data-id="export/abc"></mp-common-videosnap>';
+  assert.equal(hasNonVideoContent(`<section>${snap}</section>`), true);
+});
+
+test("hasNonVideoContent 把 QQ 音乐卡片视为有效内容", () => {
+  const music = '<mp-common-clmusic class="res_iframe clmusic_iframe" listenid="78332210375265471"></mp-common-clmusic>';
+  assert.equal(hasNonVideoContent(`<section>${music}</section>`), true);
+});
+
 test("hasNonVideoContent 识别纯视频正文避免微信丢弃", () => {
   const video = '<iframe class="video_iframe rich_pages" data-src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;vid=wxv_1"></iframe>';
 
@@ -310,6 +342,115 @@ test("solveHtml 导出视频 iframe 时保留 src/data-src/mpvid/cover", () => {
     assert.match(html, /data-src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate/);
     assert.match(html, /src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate/);
     assert.doesNotMatch(html, /<iframe[^>]*data-tool/);
+  } finally {
+    box.remove();
+    style.remove();
+  }
+});
+
+test("solveHtml 不给视频号卡片容器加 data-tool 水印", () => {
+  const style = document.createElement("style");
+  style.id = STYLE_IDS.markdown;
+  style.innerText = "";
+  document.body.appendChild(style);
+
+  const box = document.createElement("div");
+  box.id = ARTICLE_BOX_ID;
+  box.innerHTML = [
+    "<section>",
+    "<p>普通段落</p>",
+    '<section class="channels_iframe_wrp custom_select_card_wrp wxw_wechannel_card_not_horizontal" nodeleaf="">',
+    '<mp-common-videosnap class="js_uneditable custom_select_card channels_iframe videosnap_video_iframe" data-pluginname="mpvideosnap" data-url="https://example.com/cover"></mp-common-videosnap>',
+    '<br class="ProseMirror-trailingBreak">',
+    "</section>",
+    "</section>",
+  ].join("");
+  document.body.appendChild(box);
+
+  try {
+    const html = solveHtml();
+    // 普通顶层元素仍带水印，视频号卡片不带，避免微信草稿箱重建节点时出问题。
+    assert.match(html, /<p[^>]*data-tool="vellumstyle"/);
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const card = doc.querySelector("section.channels_iframe_wrp");
+    assert.ok(card, "应保留视频号卡片容器 section");
+    assert.equal(card.getAttribute("data-tool"), null);
+    const widget = doc.querySelector("mp-common-videosnap");
+    assert.ok(widget, "应保留视频号卡片组件");
+    assert.equal(widget.getAttribute("data-tool"), null);
+  } finally {
+    box.remove();
+    style.remove();
+  }
+});
+
+test("solveHtml 清洗历史视频号卡片容器的内联样式与 data-tool", () => {
+  const style = document.createElement("style");
+  style.id = STYLE_IDS.markdown;
+  style.innerText = "";
+  document.body.appendChild(style);
+
+  const box = document.createElement("div");
+  box.id = ARTICLE_BOX_ID;
+  box.innerHTML = [
+    "<section>",
+    '<section class="channels_iframe_wrp custom_select_card_wrp wxw_wechannel_card_not_horizontal" nodeleaf="" style="text-align:center;width:65%;margin:0 auto;max-width:100%;display:block;box-sizing:border-box;" data-tool="vellumstyle">',
+    '<mp-common-videosnap class="js_uneditable custom_select_card channels_iframe videosnap_video_iframe" data-pluginname="mpvideosnap" data-width="720" data-height="1280" data-url="https://example.com/cover"></mp-common-videosnap>',
+    '<br class="ProseMirror-trailingBreak">',
+    "</section>",
+    "</section>",
+  ].join("");
+  document.body.appendChild(box);
+
+  try {
+    const html = solveHtml();
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const card = doc.querySelector("section.channels_iframe_wrp");
+    assert.ok(card, "应保留官方结构 section");
+    assert.equal(card.getAttribute("style"), null);
+    assert.equal(card.getAttribute("data-tool"), null);
+    assert.equal(card.getAttribute("nodeleaf"), "");
+    assert.match(card.getAttribute("class") ?? "", /custom_select_card_wrp/);
+    assert.match(card.getAttribute("class") ?? "", /wxw_wechannel_card_not_horizontal/);
+    const widget = doc.querySelector("mp-common-videosnap");
+    assert.ok(widget, "应保留视频号卡片组件");
+    assert.equal(widget.getAttribute("style"), null);
+    assert.equal(widget.getAttribute("data-tool"), null);
+    assert.equal(widget.getAttribute("data-height"), "960", "data-height 应按 3:4 显示比例归一");
+  } finally {
+    box.remove();
+    style.remove();
+  }
+});
+
+test("solveHtml 把裸视频号组件（含 <p> 包裹）还原为官方 section 结构", () => {
+  const style = document.createElement("style");
+  style.id = STYLE_IDS.markdown;
+  style.innerText = "";
+  document.body.appendChild(style);
+
+  const box = document.createElement("div");
+  box.id = ARTICLE_BOX_ID;
+  box.innerHTML = [
+    "<section>",
+    '<p>前文</p>',
+    '<p style="color: red;"><mp-common-videosnap class="js_uneditable custom_select_card channels_iframe videosnap_video_iframe" data-pluginname="mpvideosnap" data-width="720" data-height="1280" data-url="https://example.com/cover"></mp-common-videosnap></p>',
+    "</section>",
+  ].join("");
+  document.body.appendChild(box);
+
+  try {
+    const html = solveHtml();
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const card = doc.querySelector("section.channels_iframe_wrp");
+    assert.ok(card, "应为裸组件补上官方 section 包裹");
+    assert.notEqual(card.parentElement?.tagName.toLowerCase(), "p", "section 不应再被 <p> 包裹");
+    assert.equal(card.getAttribute("nodeleaf"), "");
+    assert.match(card.getAttribute("class") ?? "", /wxw_wechannel_card_not_horizontal/);
+    const widget = card.querySelector("mp-common-videosnap");
+    assert.ok(widget);
+    assert.equal(widget.getAttribute("data-height"), "960");
+    assert.ok(card.querySelector("br.ProseMirror-trailingBreak"));
   } finally {
     box.remove();
     style.remove();
