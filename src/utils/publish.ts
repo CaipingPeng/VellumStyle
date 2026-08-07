@@ -5,6 +5,7 @@ import {imageUploadTasks, type ImageUploadTaskContext} from "./imageUploadTasks.
 import type {MediaRef, MediaSourceType, MediaSyntax} from "./markdownMediaScanner.ts";
 import {scanMarkdownMedia} from "./markdownMediaScanner.ts";
 import {DEFAULT_PUBLISH_SETTINGS, type PublishSettings} from "./publishSettings.ts";
+import {toProxyImageUrl} from "./imageProxy.ts";
 
 const MMBIZ_HOSTS = ["mmbiz.qpic.cn", "mmbiz.qlogo.cn"];
 // 微信官方静态资源域名：官方编辑器直接引用的表情等图片无需上传素材库。
@@ -46,6 +47,9 @@ export interface MaterialVideo {
   updateTime: number;
   coverUrl: string;
   vid: string;
+  /** 封面原图宽高（插入前实测封面得到，用于还原官方 data-w/data-ratio） */
+  coverWidth?: number;
+  coverHeight?: number;
 }
 
 export interface MaterialVideoPage {
@@ -91,6 +95,10 @@ function escapeHtmlAttribute(value: string): string {
 }
 
 // 素材库视频插入正文的标准播放 iframe：
+// - 尺寸规格与官方编辑器一致：width/height 固定 4:3（官方实测 578×434），
+//   data-w/data-ratio 取封面原图尺寸（官方实测封面 1512×1048 → 1.4427）。
+//   此前写死视频文件 16:9（1920/1.7777）会导致手机端全屏退出后视频下移、
+//   底部控制条被裁掉，官方插入的 4:3 框则无此问题。
 // - src 是微信后台/发布端渲染播放器必需的字段（实测去掉后视频不显示，必须保留）
 // - data-src 与 src 同值，兼容微信后台对视频字段的识别
 // - data-cover 传素材返回的封面链，data-mpvid 传 vid
@@ -103,11 +111,41 @@ export function formatVideoMaterialIframe(video: MaterialVideo): string {
   const cover = video.coverUrl.trim()
     ? ` data-cover="${escapeHtmlAttribute(video.coverUrl.trim())}"`
     : "";
+  const hasCoverSize =
+    typeof video.coverWidth === "number" &&
+    video.coverWidth > 0 &&
+    typeof video.coverHeight === "number" &&
+    video.coverHeight > 0;
+  // data-w/data-ratio 按官方规格取封面原图尺寸；没有封面尺寸时回退视频文件 16:9。
+  const dataW = hasCoverSize ? video.coverWidth! : 1920;
+  const dataRatio = hasCoverSize ? video.coverWidth! / video.coverHeight! : 1920 / 1080;
   return (
     `<iframe class="video_iframe rich_pages" data-vidtype="2" data-mpvid="${escapeHtmlAttribute(vid)}"${cover}` +
-    ` allowfullscreen frameborder="0" data-w="1920" data-ratio="1.7777777777777777" height="325" width="578"` +
+    ` data-w="${dataW}" data-ratio="${dataRatio}" height="434" width="578"` +
     ` data-src="${src}" src="${src}"></iframe>`
   );
+}
+
+// 实测封面原图尺寸（官方编辑器 data-w/data-ratio 的来源）。
+// 通过现有 wximg 代理加载，避免 mmbiz 防盗链；Web 模式无代理时回退 null。
+export async function readCoverImageSize(
+  url: string,
+): Promise<{width: number; height: number} | null> {
+  if (!url.trim()) return null;
+  try {
+    const image = new Image();
+    image.src = toProxyImageUrl(url.trim());
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("封面加载失败"));
+    });
+    if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+      return {width: image.naturalWidth, height: image.naturalHeight};
+    }
+  } catch {
+    // 加载失败或 Web 模式下代理不可用，回退调用方默认规格。
+  }
+  return null;
 }
 
 // 返回正文里仍未上传到微信素材域名的图片诊断（发布前需先处理或确认风险）。
@@ -281,6 +319,30 @@ export function searchVideoAccount(key: string, buffer: string): Promise<string>
 /// 获取视频号账号的视频列表（videosnap?action=get_feed_list），返回原始 JSON 文本。
 export function getVideoFeedList(username: string, buffer: string): Promise<string> {
   return invoke<string>("get_video_feed_list", {username, buffer});
+}
+
+/// 按 vid 获取官方视频信息（官方编辑器插入视频时同款 get_mp_video_info 接口），
+/// 返回原始 JSON 文本；窗口未打开时返回 "WECHAT_BACKEND_NOT_OPENED"。
+export function getMpVideoInfo(vid: string): Promise<string> {
+  return invoke<string>("get_mp_video_info", {vid});
+}
+
+/// 从 get_mp_video_info 原始响应中解析封面/视频原图宽高（官方 data-w/data-ratio 来源）。
+export function parseMpVideoInfoSize(
+  raw: string,
+): {width: number; height: number} | null {
+  try {
+    const data = JSON.parse(raw);
+    if (data?.base_resp?.ret !== 0) return null;
+    const width = Number(data?.info?.base_info?.width);
+    const height = Number(data?.info?.base_info?.height);
+    if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+      return {width, height};
+    }
+  } catch {
+    // 非 JSON 或结构异常，交由调用方回退。
+  }
+  return null;
 }
 
 /// 获取选中视频的媒体信息（videosnap?action=get_media_list），插入前调用。

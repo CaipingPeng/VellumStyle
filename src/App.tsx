@@ -25,7 +25,14 @@ import {toast} from "./components/Toast/toast.ts";
 import {useStore, getThemeById, flushDocumentThemeWrite, flushSave} from "./store/index.ts";
 import {getCodeThemeById, loadAllCodeThemes, subscribeCodeThemes} from "./markdown/codeThemes.ts";
 import {formatMarkdownImage, replaceMarkdownImageSizeByIndex} from "./markdown/imageMarkdown.ts";
-import {formatVideoMaterialIframe, saveVideoMediaId, type MaterialVideo} from "./utils/publish.ts";
+import {
+  formatVideoMaterialIframe,
+  getMpVideoInfo,
+  parseMpVideoInfoSize,
+  readCoverImageSize,
+  saveVideoMediaId,
+  type MaterialVideo,
+} from "./utils/publish.ts";
 import {getActiveOutlineLine, parseMarkdownOutline} from "./utils/outline.ts";
 import {loadAllThemes} from "./themes/loader.ts";
 import {uploadImage, uploadLocalImage, type UploadError} from "./utils/upload.ts";
@@ -388,12 +395,29 @@ export default function App() {
     editorRef.current?.insertBlockAtCursor(markdown);
   }, []);
 
-  const handlePickMaterialVideos = useCallback((videos: MaterialVideo[]) => {
+  const handlePickMaterialVideos = useCallback(async (videos: MaterialVideo[]) => {
     if (videos.length === 0) return;
     for (const video of videos) {
       saveVideoMediaId(video.vid, video.mediaId);
     }
-    const markdown = videos.map((video) => formatVideoMaterialIframe(video)).join("\n\n");
+    const enriched = await Promise.all(
+      videos.map(async (video) => {
+        // 优先走官方网页接口（后台窗口已打开时），与官方编辑器 data-w/data-ratio 完全一致；
+        // 窗口未打开/未登录时静默回退到量封面原图。
+        let size: {width: number; height: number} | null = null;
+        try {
+          const sizeFromInfo = parseMpVideoInfoSize(await getMpVideoInfo(video.vid));
+          if (sizeFromInfo) size = sizeFromInfo;
+        } catch {
+          // 后台窗口不可用，走封面测量。
+        }
+        if (!size) {
+          size = await readCoverImageSize(video.coverUrl);
+        }
+        return size ? {...video, coverWidth: size.width, coverHeight: size.height} : video;
+      }),
+    );
+    const markdown = enriched.map((video) => formatVideoMaterialIframe(video)).join("\n\n");
     editorRef.current?.insertAtCursor(`\n${markdown}\n`);
   }, []);
 

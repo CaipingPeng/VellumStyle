@@ -253,6 +253,12 @@ const Preview = forwardRef<PreviewHandle, Props>(
         placeholder.className = "vs-video-placeholder";
         placeholder.setAttribute("role", "img");
         placeholder.setAttribute("aria-label", "素材库视频：点击播放本地预览");
+        // 占位框跟随封面比例（data-ratio 由插入时的封面原图尺寸算出），
+        // 与发布后视频框（官方按封面比例推导的规格）保持一致；缺失时回退 CSS 的 16:9。
+        const coverRatio = Number.parseFloat(iframe.getAttribute("data-ratio") ?? "");
+        if (Number.isFinite(coverRatio) && coverRatio > 0) {
+          placeholder.style.aspectRatio = `${coverRatio} / 1`;
+        }
         if (cover) {
           placeholder.style.backgroundImage = `url("${toProxyImageUrl(cover)}")`;
         }

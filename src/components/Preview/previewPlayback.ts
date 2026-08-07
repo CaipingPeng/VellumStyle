@@ -97,6 +97,12 @@ export async function playPreviewVideo(placeholder: HTMLElement, mediaId: string
   video.autoplay = true;
   video.className = "vs-video-placeholder-player";
   video.setAttribute("playsinline", "");
+  // 播放器跟随封面占位的比例（发布后视频框按封面比例推导），
+  // 避免 CSS 写死的 16:9 与封面比例不一致导致黑边/溢出；无内联比例时回退 CSS。
+  const coverAspectRatio = placeholder.style.aspectRatio;
+  if (coverAspectRatio) {
+    video.style.aspectRatio = coverAspectRatio;
+  }
   // 加载失败时恢复封面占位并提示，避免黑屏/灰屏无反馈。
   video.addEventListener("error", () => {
     placeholder.replaceChildren();

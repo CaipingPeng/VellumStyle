@@ -8,6 +8,8 @@ import {
   fetchBackendVoiceList,
   formatVoiceMarkup,
   formatVideoMaterialIframe,
+  getMpVideoInfo,
+  parseMpVideoInfoSize,
   getVideoPlayUrl,
   getCoverCandidates,
   listImageMaterials,
@@ -144,8 +146,62 @@ test("formatVideoMaterialIframe 用 vid 和封面拼出可发布的播放 iframe
   assert.match(html, /src="https:\/\/mp\.weixin\.qq\.com\/mp\/readtemplate/);
   assert.doesNotMatch(html, /data-media-id/);
   assert.match(html, /data-cover="http:\/\/mmbiz\.qpic\.cn\/mmbiz_jpg\/example\/0\?wx_fmt=jpeg"/);
-  assert.match(html, /allowfullscreen/);
+  // 官方编辑器规格：4:3 框（578×434），无 allowfullscreen/frameborder。
+  // 无封面尺寸时 data-w/data-ratio 回退视频文件 16:9。
+  assert.doesNotMatch(html, /allowfullscreen|frameborder/);
+  assert.match(html, /height="434" width="578"/);
+  assert.match(html, /data-w="1920" data-ratio="1\.7777777777777777"/);
   assert.ok(html.endsWith("></iframe>"));
+});
+
+test("formatVideoMaterialIframe 有封面尺寸时按官方规格使用封面宽高比", () => {
+  const html = formatVideoMaterialIframe({
+    mediaId: "VIDEO_MEDIA_ID_1",
+    name: "和自己赛跑",
+    updateTime: 1666258618,
+    coverUrl: "http://mmbiz.qpic.cn/mmbiz_jpg/example/0?wx_fmt=jpeg",
+    vid: "wxv_2628424322221359104",
+    coverWidth: 1512,
+    coverHeight: 1048,
+  });
+
+  assert.match(html, /data-w="1512" data-ratio="1\.4427480916030535"/);
+  assert.match(html, /height="434" width="578"/);
+  assert.doesNotMatch(html, /allowfullscreen|frameborder/);
+});
+
+test("parseMpVideoInfoSize 从官方 get_mp_video_info 响应中解析宽高", () => {
+  const size = parseMpVideoInfoSize(
+    '{"base_resp":{"err_msg":"ok","ret":0},"info":{"base_info":{"width":1512,"height":1048}}}',
+  );
+  assert.deepEqual(size, {width: 1512, height: 1048});
+});
+
+test("parseMpVideoInfoSize 对错误或异常响应返回 null", () => {
+  assert.equal(parseMpVideoInfoSize('{"base_resp":{"ret":-1}}'), null);
+  assert.equal(parseMpVideoInfoSize("not-json"), null);
+  assert.equal(parseMpVideoInfoSize('{"base_resp":{"ret":0},"info":{"base_info":{}}}'), null);
+});
+
+test("getMpVideoInfo 调用官方视频信息命令并透传 vid", async () => {
+  const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+  let calledWith: {cmd: string; args: unknown} | null = null;
+  (window as unknown as {__TAURI_INTERNALS__: {invoke: (cmd: string, args: unknown) => Promise<unknown>}}).__TAURI_INTERNALS__ = {
+    invoke: async (cmd, args) => {
+      calledWith = {cmd, args};
+      return '{"base_resp":{"ret":0}}';
+    },
+  };
+  try {
+    const raw = await getMpVideoInfo("wxv_4639287566263746561");
+    assert.equal(raw, '{"base_resp":{"ret":0}}');
+    assert.deepEqual(calledWith, {
+      cmd: "get_mp_video_info",
+      args: {vid: "wxv_4639287566263746561"},
+    });
+  } finally {
+    (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
+  }
 });
 
 test("listVoiceMaterials 调用永久音频素材库命令并保留分页参数", async () => {

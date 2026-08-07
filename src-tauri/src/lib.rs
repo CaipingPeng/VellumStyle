@@ -100,6 +100,7 @@ pub fn run() {
             wechat_backend::search_video_account,
             wechat_backend::get_video_feed_list,
             wechat_backend::get_video_media_list,
+            wechat_backend::get_mp_video_info,
             wechat_backend::get_phone_upload_qrcode,
             wechat_backend::get_phone_upload_pic_list,
             wechat_backend::confirm_phone_upload_pic,

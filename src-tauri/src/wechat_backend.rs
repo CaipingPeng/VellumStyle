@@ -660,6 +660,33 @@ fn video_media_list_expr(export_id: &str) -> String {
     )
 }
 
+/// 按 vid 获取官方视频信息（官方编辑器插入视频时同款 get_mp_video_info 接口），
+/// 返回原始 JSON；窗口未打开时返回 "WECHAT_BACKEND_NOT_OPENED"。
+#[tauri::command]
+pub async fn get_mp_video_info(app: AppHandle, vid: String) -> Result<String, String> {
+    eval_backend_expr(app, mp_video_info_expr(&vid), "视频信息").await
+}
+
+fn mp_video_info_expr(vid: &str) -> String {
+    format!(
+        r#"(function () {{
+          try {{
+            var token = new URL(location.href).searchParams.get("token") || "";
+            var url = "/cgi-bin/video?action=get_mp_video_info&vid={vid}&get_option=1" +
+              "&token=" + encodeURIComponent(token) + "&lang=zh_CN&f=json&ajax=1";
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, false);
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            xhr.send();
+            return xhr.responseText;
+          }} catch (e) {{
+            return JSON.stringify({{ vs_error: String(e) }});
+          }}
+        }})()"#,
+        vid = vid,
+    )
+}
+
 /// 在后台窗口上下文执行注入脚本（Windows），非 Windows 返回平台不支持提示。
 async fn eval_backend_expr(app: AppHandle, expression: String, unsupported_hint: &str) -> Result<String, String> {
     #[cfg(windows)]
@@ -938,6 +965,7 @@ mod tests {
         phone_upload_pic_list_expr, phone_upload_qrcode_expr, remoticon_cdn_url_expr,
         music_search_expr, music_info_expr, material_upload_page_expr,
         video_account_search_expr, video_feed_list_expr, video_media_list_expr,
+        mp_video_info_expr,
     };
 
     #[test]
@@ -1007,6 +1035,16 @@ mod tests {
         assert!(expr.contains("action=get_media_list"));
         assert!(expr.contains("video_snap_num=1"));
         assert!(expr.contains("exportid_0=export%2FUzFfBgAAxP-gPEl3UXWTjMzT4DCLVAxPvGbNv0GI5lK9vJLNgA"));
+    }
+
+    #[test]
+    fn mp_video_info_expr_uses_official_action_and_vid() {
+        let expr = mp_video_info_expr("wxv_4639287566263746561");
+        assert!(expr.contains("action=get_mp_video_info"));
+        assert!(expr.contains("vid=wxv_4639287566263746561"));
+        assert!(expr.contains("get_option=1"));
+        assert!(expr.contains("token"));
+        assert!(expr.contains("f=json&ajax=1"));
     }
 
     #[test]
