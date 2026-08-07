@@ -126,7 +126,51 @@ pub async fn open_material_upload_page(
 ) -> Result<String, String> {
     let expression = material_upload_page_expr(&media_type)?;
     open_wechat_backend_impl(&app, true).await?;
-    eval_backend_expr(app, expression, "素材上传页").await
+    // 新建窗口首次加载需要时间：在 about:blank / 导航中间态执行脚本会读不到 cookie
+    // （SecurityError），先等窗口 URL 落到微信域再注入。
+    for _ in 0..30 {
+        if backend_window_is_on_wechat(&app) {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    }
+    // 页面就绪判定存在短暂竞态，脚本异常或明确返回"页面未就绪"时重试。
+    for attempt in 0..4 {
+        match eval_backend_expr(app.clone(), expression.clone(), "素材上传页").await {
+            Ok(text) => {
+                let retryable = serde_json::from_str::<serde_json::Value>(&text)
+                    .map(|value| {
+                        value
+                            .get("source")
+                            .and_then(|source| source.as_str())
+                            .unwrap_or_default()
+                            == "error"
+                    })
+                    .unwrap_or(false);
+                if retryable {
+                    tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+                    continue;
+                }
+                return Ok(text);
+            }
+            Err(err) => {
+                if attempt < 3 && err.contains("后台页面脚本异常") {
+                    tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+                    continue;
+                }
+                return Err(err);
+            }
+        }
+    }
+    Err("打开素材上传页失败：后台页面长时间未就绪".into())
+}
+
+/// 后台窗口是否已导航到微信公众平台域名（此时文档才可读 cookie）。
+fn backend_window_is_on_wechat(app: &AppHandle) -> bool {
+    app.get_webview_window(BACKEND_WINDOW_LABEL)
+        .and_then(|window| window.url().ok())
+        .map(|url| url.to_string())
+        .is_some_and(|url| url.starts_with("https://mp.weixin.qq.com/"))
 }
 
 /// 素材上传页跳转脚本：token 优先从后台窗口当前 URL 提取，取不到时回退到 cookie
@@ -143,36 +187,43 @@ fn material_upload_page_expr(media_type: &str) -> Result<String, String> {
     Ok(format!(
         r#"(function () {{
           function pickToken() {{
-            var value = "";
-            try {{ value = new URL(location.href).searchParams.get("token") || ""; }} catch (e) {{}}
-            if (value) return {{ value: value, source: "url" }};
-            var parts = document.cookie.split(";");
-            var numeric = "";
-            for (var i = 0; i < parts.length; i++) {{
-              var eq = parts[i].indexOf("=");
-              if (eq < 0) continue;
-              var key = parts[i].slice(0, eq).trim().toLowerCase();
-              var raw = parts[i].slice(eq + 1).trim();
-              var val = raw;
-              try {{ val = decodeURIComponent(raw); }} catch (e) {{}}
-              if (key === "token" && val) return {{ value: val, source: "cookie:token" }};
-              if (!numeric && /^\d{{6,12}}$/.test(val)) numeric = val;
+            try {{
+              var value = "";
+              try {{ value = new URL(location.href).searchParams.get("token") || ""; }} catch (e) {{}}
+              if (value) return {{ value: value, source: "url" }};
+              var parts = document.cookie.split(";");
+              var numeric = "";
+              for (var i = 0; i < parts.length; i++) {{
+                var eq = parts[i].indexOf("=");
+                if (eq < 0) continue;
+                var key = parts[i].slice(0, eq).trim().toLowerCase();
+                var raw = parts[i].slice(eq + 1).trim();
+                var val = raw;
+                try {{ val = decodeURIComponent(raw); }} catch (e) {{}}
+                if (key === "token" && val) return {{ value: val, source: "cookie:token" }};
+                if (!numeric && /^\d{{6,12}}$/.test(val)) numeric = val;
+              }}
+              if (numeric) return {{ value: numeric, source: "cookie:numeric" }};
+              for (var i = 0; i < parts.length; i++) {{
+                var eq = parts[i].indexOf("=");
+                if (eq < 0) continue;
+                var key = parts[i].slice(0, eq).trim().toLowerCase();
+                var raw = parts[i].slice(eq + 1).trim();
+                var val = raw;
+                try {{ val = decodeURIComponent(raw); }} catch (e) {{}}
+                if (key.indexOf("token") >= 0 && val) return {{ value: val, source: "cookie:" + key }};
+              }}
+              return {{ value: "", source: "none" }};
+            }} catch (e) {{
+              return {{ value: "", source: "error" }};
             }}
-            if (numeric) return {{ value: numeric, source: "cookie:numeric" }};
-            for (var i = 0; i < parts.length; i++) {{
-              var eq = parts[i].indexOf("=");
-              if (eq < 0) continue;
-              var key = parts[i].slice(0, eq).trim().toLowerCase();
-              var raw = parts[i].slice(eq + 1).trim();
-              var val = raw;
-              try {{ val = decodeURIComponent(raw); }} catch (e) {{}}
-              if (key.indexOf("token") >= 0 && val) return {{ value: val, source: "cookie:" + key }};
-            }}
-            return {{ value: "", source: "none" }};
           }}
           var token = pickToken();
           var target = "{path}&token=" + encodeURIComponent(token.value);
           if (!token.value) {{
+            if (token.source === "error") {{
+              return JSON.stringify({{ vs_error: "后台页面尚未就绪，请稍后重试", target: target, source: token.source }});
+            }}
             location.href = "/";
             return JSON.stringify({{ vs_error: "未获取到登录 token（URL 与 cookie 均无），请在内嵌后台窗口登录后重试", target: target, source: token.source }});
           }}
