@@ -6,9 +6,6 @@
 
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
-#[cfg(windows)]
-use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2CookieList;
-
 const BACKEND_WINDOW_LABEL: &str = "wechat-backend";
 const BACKEND_HOME: &str = "https://mp.weixin.qq.com/";
 
@@ -127,46 +124,12 @@ pub async fn open_material_upload_page(
     app: AppHandle,
     media_type: String,
 ) -> Result<String, String> {
-    let path = material_upload_path(&media_type)?;
     // 先隐藏创建/复用窗口并完成跳转，再显示：用户不会先看到主页闪一下。
     open_wechat_backend_impl(&app, false).await?;
-
-    // 路径一：直接从 WebView2 cookie 仓库读 token（cookie 持久化落盘，不依赖页面加载）。
-    // token 无效（跳转后没到上传页）时自动回退到路径二。
-    #[cfg(windows)]
-    if let Ok(Some(token)) = read_backend_cookie_token(&app, &media_type).await {
-        if let Ok(text) = navigate_with_token(&app, path, &media_type, &token).await {
-            return Ok(text);
-        }
-    }
-
-    // 路径二：等页面就绪后用页面上下文读 URL/cookie token，未登录时引导扫码。
+    // 有效 token 只可靠地存在于页面 URL（当前会话签发的那串）；cookie 仓库里同名值
+    // 微信会判无效（实测直读跳转必弹登录）。因此统一走页面注入：窗口已隐藏预热，
+    // 页面流程用户无感，未登录时再显示窗口引导扫码。
     page_based_upload_flow(app, &media_type).await
-}
-
-/// 用已知 token 直接跳转上传页；跳转后目标页未出现（token 失效被微信重定向）时返回 Err，
-/// 由上层回退到页面注入流程。
-#[cfg(windows)]
-async fn navigate_with_token(
-    app: &AppHandle,
-    path: &str,
-    media_type: &str,
-    token: &str,
-) -> Result<String, String> {
-    // 窗口可能仍在 about:blank（刚创建还没加载页面），相对路径 URL 会被 Chromium
-    // 判为非法，所以必须用完整绝对地址；navigate 不依赖页面上下文。
-    let target = material_upload_target(path, token)?;
-    let url = url::Url::parse(&target).map_err(|err| format!("上传页地址无效：{err}"))?;
-    app.get_webview_window(BACKEND_WINDOW_LABEL)
-        .ok_or_else(|| "WECHAT_BACKEND_NOT_OPENED".to_string())?
-        .navigate(url)
-        .map_err(|err| format!("跳转上传页失败：{err}"))?;
-    let reached = wait_backend_url_contains(app, material_url_marker(media_type)).await;
-    if !reached {
-        return Err("跳转后未到达上传页，token 可能已失效".into());
-    }
-    show_wechat_backend(app.clone()).await?;
-    Ok(serde_json::json!({"vs_ok": true, "target": target}).to_string())
 }
 
 /// 页面注入流程：窗口加载到微信域后，用页面上下文提取 token（URL → 页面 cookie），
@@ -306,17 +269,6 @@ fn material_upload_path(media_type: &str) -> Result<&'static str, String> {
     }
 }
 
-/// 拼出上传页完整地址（绝对 URL，避免在 about:blank 上设置相对 href 被 Chromium 拒绝）。
-fn material_upload_target(path: &str, token: &str) -> Result<String, String> {
-    let target = format!(
-        "https://mp.weixin.qq.com{path}&token={}",
-        urlencoding::encode(token)
-    );
-    url::Url::parse(&target)
-        .map(|_| target)
-        .map_err(|err| format!("上传页地址无效：{err}"))
-}
-
 /// 目标页 URL 标记，用于判断上传页是否已开始加载。
 fn material_url_marker(media_type: &str) -> &'static str {
     if media_type == "video" {
@@ -339,157 +291,6 @@ async fn wait_backend_url_contains(app: &AppHandle, marker: &str) -> bool {
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
     }
     false
-}
-
-/// 从 WebView2 cookie 仓库读取后台登录 token（cookie 持久化落盘，无需等页面加载）。
-/// 按目标页路径查询 cookie（与页面上 document.cookie 可见集合一致），
-/// 优先取名为 token 且非 HttpOnly 的 cookie（实测有效），其次取纯数字串兜底。
-/// 未登录时返回 None。
-#[cfg(windows)]
-async fn read_backend_cookie_token(
-    app: &AppHandle,
-    media_type: &str,
-) -> Result<Option<String>, String> {
-    use tokio::sync::oneshot;
-    use webview2_com::{
-        Microsoft::Web::WebView2::Win32::{ICoreWebView2, ICoreWebView2_2},
-        CoTaskMemPWSTR, GetCookiesCompletedHandler,
-    };
-    use windows::core::Interface;
-
-    let window = app
-        .get_webview_window(BACKEND_WINDOW_LABEL)
-        .ok_or_else(|| "WECHAT_BACKEND_NOT_OPENED".to_string())?;
-
-    let (tx, rx) = oneshot::channel::<Result<Option<String>, String>>();
-    let tx = std::sync::Arc::new(std::sync::Mutex::new(Some(tx)));
-    let tx_for_closure = tx.clone();
-    let query_uri = format!(
-        "https://mp.weixin.qq.com{}",
-        material_upload_path(media_type)?
-    );
-
-    window
-        .with_webview(move |platform_webview| {
-            let result = (|| -> Result<(), String> {
-                let webview: ICoreWebView2 = unsafe {
-                    platform_webview
-                        .controller()
-                        .CoreWebView2()
-                        .map_err(|err| format!("获取 WebView2 页面失败：{err}"))?
-                };
-                let cookie_manager = unsafe {
-                    webview
-                        .cast::<ICoreWebView2_2>()
-                        .map_err(|err| format!("获取 WebView2 环境失败：{err}"))?
-                        .CookieManager()
-                        .map_err(|err| format!("获取 WebView2 CookieManager 失败：{err}"))?
-                };
-                let tx = tx_for_closure.clone();
-                let handler = GetCookiesCompletedHandler::create(Box::new(
-                    move |result, cookie_list| {
-                        let outcome = match result {
-                            Ok(()) => collect_cookie_token(cookie_list),
-                            Err(err) => Err(format!("读取微信 cookie 失败：{err}")),
-                        };
-                        if let Ok(mut tx_guard) = tx.lock() {
-                            if let Some(tx) = tx_guard.take() {
-                                let _ = tx.send(outcome);
-                            }
-                        }
-                        Ok(())
-                    },
-                ));
-                let uri = CoTaskMemPWSTR::from(query_uri.as_str());
-                unsafe {
-                    cookie_manager
-                        .GetCookies(*uri.as_ref().as_pcwstr(), &handler)
-                        .map_err(|err| format!("启动 cookie 读取失败：{err}"))?;
-                }
-                Ok(())
-            })();
-
-            if let Err(err) = result {
-                if let Ok(mut tx_guard) = tx.lock() {
-                    if let Some(tx) = tx_guard.take() {
-                        let _ = tx.send(Err(err));
-                    }
-                }
-            }
-        })
-        .map_err(|err| format!("访问后台窗口 WebView 失败：{err}"))?;
-
-    match tokio::time::timeout(std::time::Duration::from_secs(8), rx).await {
-        Ok(result) => result.unwrap_or_else(|_| Err("后台 cookie 读取任务意外中断".to_string())),
-        Err(_) => Err("后台窗口无响应，请确认页面已加载后重试".into()),
-    }
-}
-
-#[cfg(windows)]
-fn collect_cookie_token(
-    cookie_list: Option<ICoreWebView2CookieList>,
-) -> Result<Option<String>, String> {
-    let Some(list) = cookie_list else {
-        return Ok(None);
-    };
-    let mut count = 0u32;
-    unsafe {
-        list.Count(&mut count)
-            .map_err(|err| format!("读取 cookie 数量失败：{err}"))?;
-    }
-    let mut token_candidates: Vec<(String, bool, f64)> = Vec::new();
-    let mut numeric: Option<String> = None;
-    for index in 0..count {
-        let cookie = unsafe {
-            list.GetValueAtIndex(index)
-                .map_err(|err| format!("读取第 {index} 个 cookie 失败：{err}"))?
-        };
-        let mut name_ptr = windows::core::PWSTR::null();
-        unsafe {
-            cookie
-                .Name(&mut name_ptr)
-                .map_err(|err| format!("读取 cookie 名称失败：{err}"))?;
-        }
-        let name = webview2_com::take_pwstr(name_ptr);
-        let mut value_ptr = windows::core::PWSTR::null();
-        unsafe {
-            cookie
-                .Value(&mut value_ptr)
-                .map_err(|err| format!("读取 cookie 值失败：{err}"))?;
-        }
-        let value = webview2_com::take_pwstr(value_ptr);
-        let mut http_only = windows::core::BOOL(0);
-        unsafe {
-            cookie
-                .IsHttpOnly(&mut http_only)
-                .map_err(|err| format!("读取 cookie HttpOnly 标记失败：{err}"))?;
-        }
-        let mut expires = 0.0f64;
-        unsafe {
-            cookie
-                .Expires(&mut expires)
-                .map_err(|err| format!("读取 cookie 有效期失败：{err}"))?;
-        }
-        let is_numeric_token = value.len() >= 6
-            && value.len() <= 12
-            && value.chars().all(|char| char.is_ascii_digit());
-        if name.eq_ignore_ascii_case("token") && !value.is_empty() {
-            token_candidates.push((value, http_only.as_bool(), expires));
-        } else if numeric.is_none() && is_numeric_token {
-            numeric = Some(value);
-        }
-    }
-    // 非 HttpOnly 优先（与页面可见一致，实测有效），同类里有效期更晚的优先。
-    token_candidates.sort_by(|left, right| {
-        left.1
-            .cmp(&right.1)
-            .then_with(|| right.2.partial_cmp(&left.2).unwrap_or(std::cmp::Ordering::Equal))
-    });
-    Ok(token_candidates
-        .into_iter()
-        .map(|(value, _, _)| value)
-        .next()
-        .or(numeric))
 }
 
 /// 在后台窗口页面上下文里静默拉取音频素材列表接口，返回原始 JSON 响应文本。
@@ -1135,7 +936,7 @@ mod tests {
     use super::{
         ai_image_get_expr, ai_image_post_expr, parse_evaluate_response, phone_upload_confirm_expr,
         phone_upload_pic_list_expr, phone_upload_qrcode_expr, remoticon_cdn_url_expr,
-        music_search_expr, music_info_expr, material_upload_page_expr, material_upload_target,
+        music_search_expr, music_info_expr, material_upload_page_expr,
         video_account_search_expr, video_feed_list_expr, video_media_list_expr,
     };
 
@@ -1276,18 +1077,6 @@ mod tests {
     #[test]
     fn material_upload_page_expr_rejects_unknown_type() {
         assert!(material_upload_page_expr("image").is_err());
-    }
-
-    #[test]
-    fn material_upload_target_builds_absolute_url_with_token() {
-        let target = material_upload_target(
-            "/cgi-bin/appmsg?t=media/videomsg_edit&action=video_edit&type=15&isNew=1&lang=zh_CN",
-            "523196125",
-        )
-        .unwrap();
-        assert!(target.starts_with("https://mp.weixin.qq.com/cgi-bin/appmsg"));
-        assert!(target.contains("action=video_edit"));
-        assert!(target.contains("&token=523196125"));
     }
 
     #[test]
