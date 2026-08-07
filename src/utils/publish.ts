@@ -220,6 +220,12 @@ export function fetchBackendVoiceList(): Promise<string> {
   return invoke<string>("fetch_backend_voice_list");
 }
 
+/// 打开素材上传页（视频/音频）：复用内嵌微信后台窗口并跳转到官方上传页，
+/// 大文件由微信官方页面上传；返回目标地址 JSON 文本便于前端校验。
+export function openMaterialUploadPage(mediaType: "video" | "voice"): Promise<string> {
+  return invoke<string>("open_material_upload_page", {mediaType});
+}
+
 /// 返回后台窗口当前 URL（未打开时返回 null），用于判断登录状态。
 export function backendWindowUrl(): Promise<string | null> {
   return invoke<string | null>("backend_window_url");

@@ -116,6 +116,45 @@ pub async fn close_wechat_backend(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// 打开素材上传页：复用后台窗口并跳转到官方上传页（大文件由微信官方页面上传），
+/// 上传完成后前端回到素材库弹窗刷新列表即可取到新素材。
+/// media_type 支持 "video"（视频）与 "voice"（音频）。
+#[tauri::command]
+pub async fn open_material_upload_page(
+    app: AppHandle,
+    media_type: String,
+) -> Result<String, String> {
+    let expression = material_upload_page_expr(&media_type)?;
+    open_wechat_backend_impl(&app, true).await?;
+    eval_backend_expr(app, expression, "素材上传页").await
+}
+
+/// 素材上传页跳转脚本：token 从后台窗口当前 URL 提取，返回目标地址 JSON 便于前端校验。
+/// video → 视频上传编辑页；voice → 音频素材库页（官方在该页提供上传入口）。
+fn material_upload_page_expr(media_type: &str) -> Result<String, String> {
+    let path = match media_type {
+        "video" => {
+            "/cgi-bin/appmsg?t=media/videomsg_edit&action=video_edit&type=15&isNew=1&lang=zh_CN"
+        }
+        "voice" => "/cgi-bin/filepage?type=3&begin=0&count=20&lang=zh_CN",
+        other => return Err(format!("不支持的素材类型：{other}")),
+    };
+    Ok(format!(
+        r#"(function () {{
+          var token = "";
+          try {{ token = new URL(location.href).searchParams.get("token") || ""; }} catch (e) {{}}
+          var target = "{path}&token=" + encodeURIComponent(token);
+          try {{
+            location.href = target;
+            return JSON.stringify({{ vs_ok: true, target: target }});
+          }} catch (e) {{
+            return JSON.stringify({{ vs_error: String(e), target: target }});
+          }}
+        }})()"#,
+        path = path,
+    ))
+}
+
 /// 在后台窗口页面上下文里静默拉取音频素材列表接口，返回原始 JSON 响应文本。
 /// 窗口未打开时返回 "WECHAT_BACKEND_NOT_OPENED"；未登录时返回接口的错误 JSON。
 #[tauri::command]
@@ -759,8 +798,8 @@ mod tests {
     use super::{
         ai_image_get_expr, ai_image_post_expr, parse_evaluate_response, phone_upload_confirm_expr,
         phone_upload_pic_list_expr, phone_upload_qrcode_expr, remoticon_cdn_url_expr,
-        music_search_expr, music_info_expr, video_account_search_expr, video_feed_list_expr,
-        video_media_list_expr,
+        music_search_expr, music_info_expr, material_upload_page_expr, video_account_search_expr,
+        video_feed_list_expr, video_media_list_expr,
     };
 
     #[test]
@@ -879,6 +918,26 @@ mod tests {
         let expr = phone_upload_confirm_expr(data);
         assert!(expr.contains("action=confirm_save"));
         assert!(expr.contains("data=%7B%22qrcode_uuid%22%3A%22u1%22"));
+    }
+
+    #[test]
+    fn material_upload_page_expr_targets_video_edit_page() {
+        let expr = material_upload_page_expr("video").unwrap();
+        assert!(expr.contains("action=video_edit"));
+        assert!(expr.contains("type=15&isNew=1"));
+        assert!(expr.contains("location.href"));
+        assert!(expr.contains("token"));
+    }
+
+    #[test]
+    fn material_upload_page_expr_targets_voice_library_page() {
+        let expr = material_upload_page_expr("voice").unwrap();
+        assert!(expr.contains("/cgi-bin/filepage?type=3&begin=0&count=20&lang=zh_CN"));
+    }
+
+    #[test]
+    fn material_upload_page_expr_rejects_unknown_type() {
+        assert!(material_upload_page_expr("image").is_err());
     }
 
     #[test]

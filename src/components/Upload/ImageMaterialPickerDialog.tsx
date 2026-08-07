@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Square,
   Trash2,
+  Upload,
 } from "lucide-react";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
 import {
@@ -25,6 +26,7 @@ import {
   listVideoMaterials,
   listVoiceMaterials,
   loadVoiceBinding,
+  openMaterialUploadPage,
   openWechatBackend,
   parseVoiceBackendResponse,
   type MaterialImage,
@@ -94,6 +96,7 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
   const [voiceBindingBusy, setVoiceBindingBusy] = useState(false);
+  const [uploadPageBusy, setUploadPageBusy] = useState<"video" | "voice" | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteCompleted, setDeleteCompleted] = useState(0);
@@ -552,6 +555,32 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
   const busy = deleting || uploading;
   const deleteCount = tab === "image" ? selectedItems.length : selectedVideos.length;
 
+  const openUploadPage = async (mediaType: "video" | "voice") => {
+    if (uploadPageBusy) return;
+    setUploadPageBusy(mediaType);
+    try {
+      const response = await openMaterialUploadPage(mediaType);
+      let ok = false;
+      let reason = "返回异常";
+      try {
+        const parsed = JSON.parse(response) as {vs_ok?: boolean; vs_error?: string};
+        ok = Boolean(parsed.vs_ok);
+        if (parsed.vs_error) reason = parsed.vs_error;
+      } catch {
+        // 非 JSON 响应按失败处理
+      }
+      if (ok) {
+        toast.show("已打开微信后台上传页，上传完成后回到这里点右上角刷新", "info");
+      } else {
+        toast.show(`打开上传页失败：${reason}`, "error");
+      }
+    } catch (error) {
+      toast.show(`打开上传页失败：${errorMessage(error)}`, "error");
+    } finally {
+      setUploadPageBusy(null);
+    }
+  };
+
   const tabButtonClass = (active: boolean) =>
     `inline-flex h-7 flex-none cursor-pointer items-center gap-1.5 rounded-md border-0 px-3 text-xs font-medium outline-none transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
       active
@@ -608,9 +637,17 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
           ) : tab === "video" ? (
             <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
               <div className="justify-self-start">
-                <span className="text-xs font-normal text-text-muted">
-                  视频请在公众号后台「素材库 → 视频」上传
-                </span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  state={uploadPageBusy === "video" ? "loading" : "idle"}
+                  loadingText="正在打开…"
+                  disabled={busy || uploadPageBusy !== null}
+                  onClick={() => void openUploadPage("video")}
+                >
+                  <Upload size={14} />
+                  上传新视频
+                </Button>
               </div>
               <span className="whitespace-nowrap text-xs font-normal text-text-muted">
                 已加载 {videoItems.length}/{videoTotal || videoItems.length} 个
@@ -631,9 +668,17 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
           ) : (
             <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
               <div className="justify-self-start">
-                <span className="text-xs font-normal text-text-muted">
-                  音频请在公众号后台「素材库 → 音频」上传
-                </span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  state={uploadPageBusy === "voice" ? "loading" : "idle"}
+                  loadingText="正在打开…"
+                  disabled={busy || uploadPageBusy !== null}
+                  onClick={() => void openUploadPage("voice")}
+                >
+                  <Upload size={14} />
+                  上传新音频
+                </Button>
               </div>
               <span className="whitespace-nowrap text-xs font-normal text-text-muted">
                 已加载 {voiceItems.length}/{voiceTotal || voiceItems.length} 个
@@ -937,7 +982,7 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
                 <div className="m-4 flex min-h-0 flex-1 flex-col items-center justify-center rounded-md bg-bg-secondary px-6 text-center text-sm text-text-secondary">
                   <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent-subtle text-accent"><Film size={22} /></span>
                   <div className="mt-3 font-medium text-text">素材库暂无视频</div>
-                  <div className="mt-1 max-w-xs text-xs leading-5">视频请在公众号后台「素材库 → 视频」上传后，再回到这里选择插入。</div>
+                  <div className="mt-1 max-w-xs text-xs leading-5">点击下方「上传新视频」打开微信后台上传，完成后点右上角刷新。</div>
                 </div>
               )}
             </>
@@ -1049,7 +1094,7 @@ export default function ImageMaterialPickerDialog({open, canInsert, onClose, onP
                 <div className="m-4 flex min-h-0 flex-1 flex-col items-center justify-center rounded-md bg-bg-secondary px-6 text-center text-sm text-text-secondary">
                   <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent-subtle text-accent"><AudioLines size={22} /></span>
                   <div className="mt-3 font-medium text-text">素材库暂无音频</div>
-                  <div className="mt-1 max-w-xs text-xs leading-5">音频请在公众号后台「素材库 → 音频」上传后，再回到这里选择插入。</div>
+                  <div className="mt-1 max-w-xs text-xs leading-5">点击下方「上传新音频」打开微信后台上传，完成后点右上角刷新。</div>
                 </div>
               )}
             </>

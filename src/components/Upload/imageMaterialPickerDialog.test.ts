@@ -20,8 +20,10 @@ test("图片素材库默认多选并通过独立命令插入或删除所选素�
   assert.match(source, /onPickVoices/);
   assert.match(source, /pickImageFiles/);
   assert.match(source, /uploadLocalImage/);
-  assert.match(source, /视频请在公众号后台/);
-  assert.match(source, /音频请在公众号后台/);
+  assert.match(source, /上传新视频/);
+  assert.match(source, /上传新音频/);
+  assert.match(source, /openMaterialUploadPage/);
+  assert.match(source, /uploadPageBusy/);
   assert.match(source, /parseVoiceBackendResponse/);
   assert.match(source, /bindVoiceMaterials/);
   assert.match(source, /fetchBackendVoiceList/);

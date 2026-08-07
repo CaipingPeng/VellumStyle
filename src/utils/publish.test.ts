@@ -15,6 +15,7 @@ import {
   listVoiceMaterials,
   loadVideoMediaId,
   loadVoiceBinding,
+  openMaterialUploadPage,
   openWechatBackend,
   parseVoiceBackendResponse,
   parseVoiceCode,
@@ -372,6 +373,9 @@ test("openWechatBackend 与 fetchBackendVoiceList 调用后台同步命令", asy
       if (cmd === "fetch_backend_voice_list") {
         return '{"base_resp":{"ret":0},"file_item":[{"name":"测试音频","voice_encode_fileid":"Mzk0NTMyNzk3N18xMDAwMDI1MzA="}]}';
       }
+      if (cmd === "open_material_upload_page") {
+        return '{"vs_ok":true,"target":"/cgi-bin/appmsg?action=video_edit"}';
+      }
     },
   };
 
@@ -380,6 +384,10 @@ test("openWechatBackend 与 fetchBackendVoiceList 调用后台同步命令", asy
     const response = await fetchBackendVoiceList();
     assert.deepEqual(calls.map((call) => call.cmd), ["open_wechat_backend", "fetch_backend_voice_list"]);
     assert.match(response, /voice_encode_fileid/);
+
+    const uploadResponse = await openMaterialUploadPage("video");
+    assert.deepEqual(calls[calls.length - 1], {cmd: "open_material_upload_page", args: {mediaType: "video"}});
+    assert.match(uploadResponse, /vs_ok/);
   } finally {
     if (previousInternals === undefined) {
       delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
