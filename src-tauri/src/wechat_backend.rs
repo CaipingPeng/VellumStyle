@@ -129,7 +129,8 @@ pub async fn open_material_upload_page(
     eval_backend_expr(app, expression, "素材上传页").await
 }
 
-/// 素材上传页跳转脚本：token 从后台窗口当前 URL 提取，返回目标地址 JSON 便于前端校验。
+/// 素材上传页跳转脚本：token 优先从后台窗口当前 URL 提取，取不到时回退到 cookie
+/// （精确 token 键 → 纯数字值兜底），返回目标地址 JSON 便于前端校验。
 /// video → 视频上传编辑页；voice → 音频素材库页（官方在该页提供上传入口）。
 fn material_upload_page_expr(media_type: &str) -> Result<String, String> {
     let path = match media_type {
@@ -141,14 +142,45 @@ fn material_upload_page_expr(media_type: &str) -> Result<String, String> {
     };
     Ok(format!(
         r#"(function () {{
-          var token = "";
-          try {{ token = new URL(location.href).searchParams.get("token") || ""; }} catch (e) {{}}
-          var target = "{path}&token=" + encodeURIComponent(token);
+          function pickToken() {{
+            var value = "";
+            try {{ value = new URL(location.href).searchParams.get("token") || ""; }} catch (e) {{}}
+            if (value) return {{ value: value, source: "url" }};
+            var parts = document.cookie.split(";");
+            var numeric = "";
+            for (var i = 0; i < parts.length; i++) {{
+              var eq = parts[i].indexOf("=");
+              if (eq < 0) continue;
+              var key = parts[i].slice(0, eq).trim().toLowerCase();
+              var raw = parts[i].slice(eq + 1).trim();
+              var val = raw;
+              try {{ val = decodeURIComponent(raw); }} catch (e) {{}}
+              if (key === "token" && val) return {{ value: val, source: "cookie:token" }};
+              if (!numeric && /^\d{{6,12}}$/.test(val)) numeric = val;
+            }}
+            if (numeric) return {{ value: numeric, source: "cookie:numeric" }};
+            for (var i = 0; i < parts.length; i++) {{
+              var eq = parts[i].indexOf("=");
+              if (eq < 0) continue;
+              var key = parts[i].slice(0, eq).trim().toLowerCase();
+              var raw = parts[i].slice(eq + 1).trim();
+              var val = raw;
+              try {{ val = decodeURIComponent(raw); }} catch (e) {{}}
+              if (key.indexOf("token") >= 0 && val) return {{ value: val, source: "cookie:" + key }};
+            }}
+            return {{ value: "", source: "none" }};
+          }}
+          var token = pickToken();
+          var target = "{path}&token=" + encodeURIComponent(token.value);
+          if (!token.value) {{
+            location.href = "/";
+            return JSON.stringify({{ vs_error: "未获取到登录 token（URL 与 cookie 均无），请在内嵌后台窗口登录后重试", target: target, source: token.source }});
+          }}
           try {{
             location.href = target;
-            return JSON.stringify({{ vs_ok: true, target: target }});
+            return JSON.stringify({{ vs_ok: true, target: target, source: token.source }});
           }} catch (e) {{
-            return JSON.stringify({{ vs_error: String(e), target: target }});
+            return JSON.stringify({{ vs_error: String(e), target: target, source: token.source }});
           }}
         }})()"#,
         path = path,
@@ -927,6 +959,7 @@ mod tests {
         assert!(expr.contains("type=15&isNew=1"));
         assert!(expr.contains("location.href"));
         assert!(expr.contains("token"));
+        assert!(expr.contains("document.cookie"));
     }
 
     #[test]
