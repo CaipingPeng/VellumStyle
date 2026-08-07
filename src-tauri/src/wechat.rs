@@ -1828,7 +1828,7 @@ pub async fn add_draft(
 #[cfg(test)]
 mod tests {
     use super::{
-        build_add_draft_body, decode_for_reencoding, format_wechat_error, get_outbound_ip,
+        build_add_draft_body, decode_for_reencoding, format_wechat_error,
         extract_video_mp4_url, is_allowed_redirect_target, parse_delete_material_response,
         parse_material_page_response, parse_outbound_ip_response, parse_video_material_page_response,
         prepare_upload_for_limit, parse_voice_material_page_response, validate_remote_addresses,
@@ -2280,7 +2280,7 @@ mod tests {
             .expect("curl output should be utf-8")
             .trim()
             .to_string();
-        let actual = tauri::async_runtime::block_on(get_outbound_ip()).unwrap();
+        let actual = tauri::async_runtime::block_on(super::get_outbound_ip()).unwrap();
 
         assert_eq!(actual, expected);
     }

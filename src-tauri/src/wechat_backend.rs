@@ -11,6 +11,7 @@ const BACKEND_HOME: &str = "https://mp.weixin.qq.com/";
 
 /// 音频素材列表拉取脚本（同步 XHR，返回接口响应文本）。
 /// fingerprint 参数实测不校验，可以省略；token 从后台首页 URL 提取。
+#[cfg(windows)]
 const VOICE_LIST_EXPR: &str = r#"(function () {
   function diag(info) {
     return JSON.stringify(Object.assign({ vs_error: true }, info));
@@ -219,9 +220,9 @@ pub async fn search_remoticon(
     size: u32,
     offset: u32,
 ) -> Result<String, String> {
-    let expression = remoticon_search_expr(&query, size.clamp(1, 60), offset);
     #[cfg(windows)]
     {
+        let expression = remoticon_search_expr(&query, size.clamp(1, 60), offset);
         eval_in_backend_window(app, expression).await
     }
     #[cfg(not(windows))]
@@ -231,6 +232,7 @@ pub async fn search_remoticon(
     }
 }
 
+#[cfg(windows)]
 fn remoticon_search_expr(query: &str, size: u32, offset: u32) -> String {
     let encoded_query = urlencoding::encode(query);
     format!(
@@ -266,14 +268,14 @@ pub async fn get_emoji_cdn_url(
     aes_key: Option<String>,
     emoticon_type: u32,
 ) -> Result<String, String> {
-    let expression = remoticon_cdn_url_expr(
-        &url,
-        &thumb_url,
-        aes_key.as_deref(),
-        emoticon_type.clamp(0, 1),
-    );
     #[cfg(windows)]
     {
+        let expression = remoticon_cdn_url_expr(
+            &url,
+            &thumb_url,
+            aes_key.as_deref(),
+            emoticon_type.clamp(0, 1),
+        );
         eval_in_backend_window(app, expression).await
     }
     #[cfg(not(windows))]
@@ -283,6 +285,8 @@ pub async fn get_emoji_cdn_url(
     }
 }
 
+// Linux 下仅测试引用，避免 dead_code 警告。
+#[cfg_attr(not(windows), allow(dead_code))]
 fn remoticon_cdn_url_expr(
     url: &str,
     thumb_url: &str,
@@ -564,6 +568,8 @@ pub async fn ai_image_insert_pic(app: AppHandle, data: String) -> Result<String,
     eval_backend_expr(app, ai_image_post_expr("insert_ai_pic", &data), "AI配图").await
 }
 
+// 后台脚本执行结果的统一解析；Linux 下仅测试引用，避免 dead_code 警告。
+#[cfg_attr(not(windows), allow(dead_code))]
 fn parse_evaluate_response(response_json: &str) -> Result<String, String> {
     let value: serde_json::Value = serde_json::from_str(response_json)
         .map_err(|err| format!("解析后台同步响应失败：{err}"))?;

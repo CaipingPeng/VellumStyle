@@ -1,7 +1,8 @@
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+#[cfg(windows)]
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::ipc_util::request_header;
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::AppHandle;
 
 /// 与 upload_image 一致，使用原始二进制 IPC 请求体；目标路径经 header 传递。
 #[tauri::command]
@@ -26,6 +27,8 @@ pub async fn export_pdf_file(app: AppHandle, html: String, path: String) -> Resu
 
 #[cfg(windows)]
 async fn export_pdf_file_impl(app: AppHandle, html: String, path: String) -> Result<(), String> {
+    use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+    use std::time::Duration;
     use tokio::sync::oneshot;
     use webview2_com::{
         Microsoft::Web::WebView2::Win32::ICoreWebView2,
@@ -202,6 +205,7 @@ async fn export_pdf_file_impl(_app: AppHandle, _html: String, _path: String) -> 
     Err("PDF 直接导出目前仅支持 Windows WebView2".to_string())
 }
 
+#[cfg(windows)]
 fn unique_export_id() -> u128 {
     // 进程内计数器兜底：极端情况下同一毫秒连续导出时，窗口 label 也不会冲突。
     static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
