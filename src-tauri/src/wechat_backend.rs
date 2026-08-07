@@ -125,7 +125,8 @@ pub async fn open_material_upload_page(
     media_type: String,
 ) -> Result<String, String> {
     let expression = material_upload_page_expr(&media_type)?;
-    open_wechat_backend_impl(&app, true).await?;
+    // 先隐藏创建/复用窗口并完成跳转，再显示：用户不会先看到主页闪一下。
+    open_wechat_backend_impl(&app, false).await?;
     // 新建窗口首次加载需要时间：在 about:blank / 导航中间态执行脚本会读不到 cookie
     // （SecurityError），先等窗口 URL 落到微信域再注入。
     for _ in 0..30 {
@@ -135,6 +136,8 @@ pub async fn open_material_upload_page(
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
     }
     // 页面就绪判定存在短暂竞态，脚本异常或明确返回"页面未就绪"时重试。
+    let mut output: Result<String, String> =
+        Err("打开素材上传页失败：后台页面长时间未就绪".into());
     for attempt in 0..4 {
         match eval_backend_expr(app.clone(), expression.clone(), "素材上传页").await {
             Ok(text) => {
@@ -151,18 +154,46 @@ pub async fn open_material_upload_page(
                     tokio::time::sleep(std::time::Duration::from_millis(400)).await;
                     continue;
                 }
-                return Ok(text);
+                output = Ok(text);
+                break;
             }
             Err(err) => {
                 if attempt < 3 && err.contains("后台页面脚本异常") {
                     tokio::time::sleep(std::time::Duration::from_millis(400)).await;
                     continue;
                 }
-                return Err(err);
+                output = Err(err);
+                break;
             }
         }
     }
-    Err("打开素材上传页失败：后台页面长时间未就绪".into())
+    // 跳转成功后等目标页开始加载再显示，避免闪主页；
+    // 失败（如未登录无 token）则立即显示窗口让用户登录。
+    let navigated = output
+        .as_ref()
+        .ok()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(text).ok())
+        .and_then(|value| value.get("vs_ok").and_then(|ok| ok.as_bool()))
+        .unwrap_or(false);
+    if navigated {
+        let marker = if media_type == "video" {
+            "action=video_edit"
+        } else {
+            "filepage"
+        };
+        for _ in 0..20 {
+            let url = app
+                .get_webview_window(BACKEND_WINDOW_LABEL)
+                .and_then(|window| window.url().ok())
+                .map(|url| url.to_string());
+            if url.as_deref().is_some_and(|url| url.contains(marker)) {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        }
+    }
+    show_wechat_backend(app.clone()).await?;
+    output
 }
 
 /// 后台窗口是否已导航到微信公众平台域名（此时文档才可读 cookie）。
