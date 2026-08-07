@@ -137,13 +137,21 @@ pub async fn open_material_upload_page(
         for _ in 0..15 {
             match read_backend_cookie_token(&app).await {
                 Ok(Some(token)) => {
-                    // 已登录：用拿到的 token 拼好目标地址直接跳转。
-                    let expression = material_navigate_expr(path, &token);
-                    let text =
-                        eval_backend_expr(app.clone(), expression, "素材上传页").await?;
+                    // 已登录：用拿到的 token 拼好绝对地址直接跳转。
+                    // 窗口可能仍在 about:blank（刚创建还没加载页面），相对路径 URL 会被
+                    // Chromium 判为非法，所以必须用完整地址；navigate 不依赖页面上下文。
+                    let target = material_upload_target(path, &token)?;
+                    let url = url::Url::parse(&target)
+                        .map_err(|err| format!("上传页地址无效：{err}"))?;
+                    app.get_webview_window(BACKEND_WINDOW_LABEL)
+                        .ok_or_else(|| "WECHAT_BACKEND_NOT_OPENED".to_string())?
+                        .navigate(url)
+                        .map_err(|err| format!("跳转上传页失败：{err}"))?;
                     wait_backend_url_contains(&app, material_url_marker(&media_type)).await;
                     show_wechat_backend(app.clone()).await?;
-                    return Ok(text);
+                    return Ok(
+                        serde_json::json!({"vs_ok": true, "target": target}).to_string()
+                    );
                 }
                 Ok(None) => break, // webview 已就绪但没有 token：未登录，走页面流程引导登录。
                 Err(err) if err.contains("访问后台窗口 WebView 失败") => {
@@ -290,21 +298,15 @@ fn material_upload_path(media_type: &str) -> Result<&'static str, String> {
     }
 }
 
-/// 用已知 token 直接拼目标地址并跳转（token 来自 WebView2 cookie 仓库，无需页面加载）。
-fn material_navigate_expr(path: &str, token: &str) -> String {
-    format!(
-        r#"(function () {{
-          var target = "{path}&token=" + encodeURIComponent("{token}");
-          try {{
-            location.href = target;
-            return JSON.stringify({{ vs_ok: true, target: target }});
-          }} catch (e) {{
-            return JSON.stringify({{ vs_error: String(e), target: target }});
-          }}
-        }})()"#,
-        path = path,
-        token = token,
-    )
+/// 拼出上传页完整地址（绝对 URL，避免在 about:blank 上设置相对 href 被 Chromium 拒绝）。
+fn material_upload_target(path: &str, token: &str) -> Result<String, String> {
+    let target = format!(
+        "https://mp.weixin.qq.com{path}&token={}",
+        urlencoding::encode(token)
+    );
+    url::Url::parse(&target)
+        .map(|_| target)
+        .map_err(|err| format!("上传页地址无效：{err}"))
 }
 
 /// 目标页 URL 标记，用于判断上传页是否已开始加载。
@@ -1093,7 +1095,7 @@ mod tests {
     use super::{
         ai_image_get_expr, ai_image_post_expr, parse_evaluate_response, phone_upload_confirm_expr,
         phone_upload_pic_list_expr, phone_upload_qrcode_expr, remoticon_cdn_url_expr,
-        music_search_expr, music_info_expr, material_navigate_expr, material_upload_page_expr,
+        music_search_expr, music_info_expr, material_upload_page_expr, material_upload_target,
         video_account_search_expr, video_feed_list_expr, video_media_list_expr,
     };
 
@@ -1237,15 +1239,15 @@ mod tests {
     }
 
     #[test]
-    fn material_navigate_expr_embeds_token_and_target() {
-        let expr = material_navigate_expr(
+    fn material_upload_target_builds_absolute_url_with_token() {
+        let target = material_upload_target(
             "/cgi-bin/appmsg?t=media/videomsg_edit&action=video_edit&type=15&isNew=1&lang=zh_CN",
             "523196125",
-        );
-        assert!(expr.contains("action=video_edit"));
-        assert!(expr.contains("523196125"));
-        assert!(expr.contains("location.href"));
-        assert!(expr.contains("vs_ok"));
+        )
+        .unwrap();
+        assert!(target.starts_with("https://mp.weixin.qq.com/cgi-bin/appmsg"));
+        assert!(target.contains("action=video_edit"));
+        assert!(target.contains("&token=523196125"));
     }
 
     #[test]
