@@ -9,6 +9,8 @@ interface EditorWorkspacePanelProps {
   onOpenEmoji?: () => void;
   onOpenPhoneUpload?: () => void;
   onOpenAiImage?: () => void;
+  onOpenMusic?: () => void;
+  onOpenVideoChannel?: () => void;
   toolbarActions?: ReactNode;
   children: ReactNode;
 }
@@ -20,6 +22,8 @@ export default function EditorWorkspacePanel({
   onOpenEmoji,
   onOpenPhoneUpload,
   onOpenAiImage,
+  onOpenMusic,
+  onOpenVideoChannel,
   toolbarActions,
   children,
 }: EditorWorkspacePanelProps) {
@@ -43,6 +47,8 @@ export default function EditorWorkspacePanel({
             onOpenEmoji={onOpenEmoji}
             onOpenPhoneUpload={onOpenPhoneUpload}
             onOpenAiImage={onOpenAiImage}
+            onOpenMusic={onOpenMusic}
+            onOpenVideoChannel={onOpenVideoChannel}
           />
         </div>
         {toolbarActions && (

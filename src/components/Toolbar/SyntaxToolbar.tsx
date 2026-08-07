@@ -1,7 +1,7 @@
 import {useRef, useState} from "react";
 import {
   Bold, Italic, Strikethrough, Code, Link, Heading,
-  List, ListOrdered, Quote, SquareCode, Minus, Undo2, Redo2, ImageUp, Smile, Sparkles,
+  List, ListOrdered, Quote, SquareCode, Minus, Undo2, Redo2, ImageUp, Smile, Sparkles, Music, Clapperboard,
 } from "lucide-react";
 import type {RefObject} from "react";
 import type {MarkdownEditorHandle} from "../Editor/MarkdownEditor.tsx";
@@ -21,6 +21,8 @@ interface Props {
   onOpenEmoji?: () => void;
   onOpenPhoneUpload?: () => void;
   onOpenAiImage?: () => void;
+  onOpenMusic?: () => void;
+  onOpenVideoChannel?: () => void;
 }
 
 const ICON = 16;
@@ -37,6 +39,8 @@ export default function SyntaxToolbar({
   onOpenEmoji,
   onOpenPhoneUpload,
   onOpenAiImage,
+  onOpenMusic,
+  onOpenVideoChannel,
 }: Props) {
   const [headingOpen, setHeadingOpen] = useState(false);
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
@@ -107,6 +111,12 @@ export default function SyntaxToolbar({
       </Menu>
       <IconButton title="表情" onClick={onOpenEmoji}>
         <Smile size={ICON} />
+      </IconButton>
+      <IconButton title="插入音乐" onClick={onOpenMusic}>
+        <Music size={ICON} />
+      </IconButton>
+      <IconButton title="插入视频号" onClick={onOpenVideoChannel}>
+        <Clapperboard size={ICON} />
       </IconButton>
       <UploadButton ref={uploadRef} showTrigger={false} onPickFile={onPickFile} onPickLocal={onPickLocal} />
       <Separator />

@@ -16,6 +16,8 @@ import ImageMaterialPickerDialog from "./components/Upload/ImageMaterialPickerDi
 import EmojiPickerDialog from "./components/Upload/EmojiPickerDialog.tsx";
 import PhoneUploadDialog from "./components/Upload/PhoneUploadDialog.tsx";
 import AiImageDialog from "./components/Upload/AiImageDialog.tsx";
+import MusicPickerDialog from "./components/Upload/MusicPickerDialog.tsx";
+import VideoChannelDialog from "./components/Upload/VideoChannelDialog.tsx";
 import ArticleTaskLog from "./components/Tasks/ArticleTaskLog.tsx";
 import IconButton from "./components/ui/IconButton.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
@@ -227,6 +229,8 @@ export default function App() {
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [phoneUploadOpen, setPhoneUploadOpen] = useState(false);
   const [aiImageOpen, setAiImageOpen] = useState(false);
+  const [musicPickerOpen, setMusicPickerOpen] = useState(false);
+  const [videoChannelOpen, setVideoChannelOpen] = useState(false);
   const [, setCodeThemesVersion] = useState(0);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
@@ -811,6 +815,8 @@ export default function App() {
               onOpenEmoji={() => setEmojiPickerOpen(true)}
               onOpenPhoneUpload={() => setPhoneUploadOpen(true)}
               onOpenAiImage={() => setAiImageOpen(true)}
+              onOpenMusic={() => setMusicPickerOpen(true)}
+              onOpenVideoChannel={() => setVideoChannelOpen(true)}
               toolbarActions={<ArticleTaskLog currentDocumentPath={currentDocPath} />}
             >
               <MarkdownEditor
@@ -951,6 +957,18 @@ export default function App() {
         open={aiImageOpen}
         canInsert={Boolean(currentDocPath)}
         onClose={() => setAiImageOpen(false)}
+        onPick={handlePickEmoji}
+        onNeedSettings={handleNeedSettings}
+      />
+      <MusicPickerDialog
+        open={musicPickerOpen}
+        onClose={() => setMusicPickerOpen(false)}
+        onPick={handlePickEmoji}
+        onNeedSettings={handleNeedSettings}
+      />
+      <VideoChannelDialog
+        open={videoChannelOpen}
+        onClose={() => setVideoChannelOpen(false)}
         onPick={handlePickEmoji}
         onNeedSettings={handleNeedSettings}
       />
