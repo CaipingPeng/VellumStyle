@@ -29,12 +29,17 @@ const PNG_LOSSLESS_RETRY_RATIO: usize = 5;
 const ALLOWED_TYPES: [&str; 3] = ["image/jpeg", "image/png", "image/gif"];
 
 // 防盗链图片域名白名单，防 SSRF。
-pub const ALLOWED_IMG_HOSTS: [&str; 5] = [
+pub const ALLOWED_IMG_HOSTS: [&str; 10] = [
     "mmbiz.qpic.cn",
     "mmbiz.qlogo.cn",
     "wx.qlogo.cn",
     "search.c2c.weixin.qq.com",
     "wxapp.tc.qq.com",
+    "y.gtimg.cn",
+    "wx.y.gtimg.cn",
+    "findermp.video.qq.com",
+    "dldir1v6.qq.com",
+    "dldir1.qq.com",
 ];
 
 // access_token 缓存：微信限频，必须复用（有效期 7200s）。

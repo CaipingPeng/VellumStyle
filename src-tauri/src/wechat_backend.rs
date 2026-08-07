@@ -321,6 +321,168 @@ fn remoticon_cdn_url_expr(
     )
 }
 
+/// 在后台窗口上下文里搜索 QQ 音乐（finder_music?action=search，单曲 type=1）。
+/// 返回原始 JSON 响应文本；窗口未打开时返回 "WECHAT_BACKEND_NOT_OPENED"。
+#[tauri::command]
+pub async fn search_music(app: AppHandle, key: String) -> Result<String, String> {
+    eval_backend_expr(app, music_search_expr(&key), "音乐搜索").await
+}
+
+/// 获取单曲最终信息（finder_music?action=get_music_info），插入前调用。
+/// 与官方流程一致：搜索结果只用于展示，插入前再拉一次确定信息。
+#[tauri::command]
+pub async fn get_music_info(
+    app: AppHandle,
+    id: String,
+    music_type: u32,
+    source: u32,
+) -> Result<String, String> {
+    eval_backend_expr(app, music_info_expr(&id, music_type, source), "音乐插入").await
+}
+
+fn music_search_expr(key: &str) -> String {
+    let encoded_key = urlencoding::encode(key);
+    format!(
+        r#"(function () {{
+          try {{
+            var token = new URL(location.href).searchParams.get("token") || "";
+            var url = "/cgi-bin/finder_music?action=search&key={key}&type=1&count=20&context_buf=" +
+              "&token=" + encodeURIComponent(token) + "&lang=zh_CN&f=json&ajax=1";
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, false);
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            xhr.send();
+            return xhr.responseText;
+          }} catch (e) {{
+            return JSON.stringify({{ vs_error: String(e) }});
+          }}
+        }})()"#,
+        key = encoded_key
+    )
+}
+
+fn music_info_expr(id: &str, music_type: u32, source: u32) -> String {
+    let encoded_id = urlencoding::encode(id);
+    format!(
+        r#"(function () {{
+          try {{
+            var token = new URL(location.href).searchParams.get("token") || "";
+            var body = "token=" + encodeURIComponent(token) +
+              "&lang=zh_CN&f=json&ajax=1&fingerprint=&random=" + Math.random() +
+              "&count=1&type0={music_type}&source0={source}&id0={id}";
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/cgi-bin/finder_music?action=get_music_info", false);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            xhr.send(body);
+            return xhr.responseText;
+          }} catch (e) {{
+            return JSON.stringify({{ vs_error: String(e) }});
+          }}
+        }})()"#,
+        music_type = music_type,
+        source = source,
+        id = encoded_id,
+    )
+}
+
+/// 在后台窗口上下文里搜索视频号账号（videosnap?action=search）。
+/// 返回原始 JSON 响应文本；窗口未打开时返回 "WECHAT_BACKEND_NOT_OPENED"。
+#[tauri::command]
+pub async fn search_video_account(
+    app: AppHandle,
+    key: String,
+    buffer: String,
+) -> Result<String, String> {
+    eval_backend_expr(app, video_account_search_expr(&key, &buffer), "视频号搜索").await
+}
+
+/// 获取视频号账号的视频列表（videosnap?action=get_feed_list），插入前展示用。
+#[tauri::command]
+pub async fn get_video_feed_list(
+    app: AppHandle,
+    username: String,
+    buffer: String,
+) -> Result<String, String> {
+    eval_backend_expr(app, video_feed_list_expr(&username, &buffer), "视频号内容").await
+}
+
+/// 获取选中视频的媒体信息（videosnap?action=get_media_list），插入前调用。
+#[tauri::command]
+pub async fn get_video_media_list(
+    app: AppHandle,
+    export_id: String,
+) -> Result<String, String> {
+    eval_backend_expr(app, video_media_list_expr(&export_id), "视频号插入").await
+}
+
+fn video_account_search_expr(key: &str, buffer: &str) -> String {
+    let encoded_key = urlencoding::encode(key);
+    let encoded_buffer = urlencoding::encode(buffer);
+    format!(
+        r#"(function () {{
+          try {{
+            var token = new URL(location.href).searchParams.get("token") || "";
+            var url = "/cgi-bin/videosnap?action=search&scene=1&buffer={buffer}&query={key}&count=21" +
+              "&token=" + encodeURIComponent(token) + "&lang=zh_CN&f=json&ajax=1";
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, false);
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            xhr.send();
+            return xhr.responseText;
+          }} catch (e) {{
+            return JSON.stringify({{ vs_error: String(e) }});
+          }}
+        }})()"#,
+        key = encoded_key,
+        buffer = encoded_buffer,
+    )
+}
+
+fn video_feed_list_expr(username: &str, buffer: &str) -> String {
+    let encoded_username = urlencoding::encode(username);
+    let encoded_buffer = urlencoding::encode(buffer);
+    format!(
+        r#"(function () {{
+          try {{
+            var token = new URL(location.href).searchParams.get("token") || "";
+            var url = "/cgi-bin/videosnap?action=get_feed_list&username={username}&buffer={buffer}&count=15&scene=0" +
+              "&token=" + encodeURIComponent(token) + "&lang=zh_CN&f=json&ajax=1";
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, false);
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            xhr.send();
+            return xhr.responseText;
+          }} catch (e) {{
+            return JSON.stringify({{ vs_error: String(e) }});
+          }}
+        }})()"#,
+        username = encoded_username,
+        buffer = encoded_buffer,
+    )
+}
+
+fn video_media_list_expr(export_id: &str) -> String {
+    let encoded_export = urlencoding::encode(export_id);
+    format!(
+        r#"(function () {{
+          try {{
+            var token = new URL(location.href).searchParams.get("token") || "";
+            var url = "/cgi-bin/videosnap?action=get_media_list&video_snap_num=1&exportid_0={export}" +
+              "&token=" + encodeURIComponent(token) + "&lang=zh_CN&f=json&ajax=1";
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, false);
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            xhr.send();
+            return xhr.responseText;
+          }} catch (e) {{
+            return JSON.stringify({{ vs_error: String(e) }});
+          }}
+        }})()"#,
+        export = encoded_export,
+    )
+}
+
 /// 在后台窗口上下文执行注入脚本（Windows），非 Windows 返回平台不支持提示。
 async fn eval_backend_expr(app: AppHandle, expression: String, unsupported_hint: &str) -> Result<String, String> {
     #[cfg(windows)]
@@ -597,6 +759,8 @@ mod tests {
     use super::{
         ai_image_get_expr, ai_image_post_expr, parse_evaluate_response, phone_upload_confirm_expr,
         phone_upload_pic_list_expr, phone_upload_qrcode_expr, remoticon_cdn_url_expr,
+        music_search_expr, music_info_expr, video_account_search_expr, video_feed_list_expr,
+        video_media_list_expr,
     };
 
     #[test]
@@ -622,6 +786,50 @@ mod tests {
         let error = parse_evaluate_response(response).unwrap_err();
         assert!(error.contains("后台同步未返回数据"));
         assert!(error.contains("undefined"));
+    }
+
+    #[test]
+    fn music_search_expr_encodes_key_and_targets_search_action() {
+        let expr = music_search_expr("壁上观");
+        assert!(expr.contains("action=search"));
+        assert!(expr.contains("type=1"));
+        assert!(expr.contains("key=%E5%A3%81%E4%B8%8A%E8%A7%82"));
+        assert!(expr.contains("lang=zh_CN&f=json&ajax=1"));
+    }
+
+    #[test]
+    fn music_info_expr_encodes_id_and_source_fields() {
+        let expr = music_info_expr("78332210375265471", 1, 1);
+        assert!(expr.contains("action=get_music_info"));
+        assert!(expr.contains("count=1&type0=1&source0=1"));
+        assert!(expr.contains("id0=78332210375265471"));
+        assert!(expr.contains("random="));
+    }
+
+    #[test]
+    fn video_account_search_expr_encodes_key_and_buffer() {
+        let expr = video_account_search_expr("中国军号", "CBU=");
+        assert!(expr.contains("action=search"));
+        assert!(expr.contains("scene=1"));
+        assert!(expr.contains("query=%E4%B8%AD%E5%9B%BD%E5%86%9B%E5%8F%B7"));
+        assert!(expr.contains("buffer=CBU%3D"));
+        assert!(expr.contains("count=21"));
+    }
+
+    #[test]
+    fn video_feed_list_expr_encodes_username() {
+        let expr = video_feed_list_expr("v2_xxx@finder", "");
+        assert!(expr.contains("action=get_feed_list"));
+        assert!(expr.contains("username=v2_xxx%40finder"));
+        assert!(expr.contains("count=15&scene=0"));
+    }
+
+    #[test]
+    fn video_media_list_expr_encodes_export_id() {
+        let expr = video_media_list_expr("export/UzFfBgAAxP-gPEl3UXWTjMzT4DCLVAxPvGbNv0GI5lK9vJLNgA");
+        assert!(expr.contains("action=get_media_list"));
+        assert!(expr.contains("video_snap_num=1"));
+        assert!(expr.contains("exportid_0=export%2FUzFfBgAAxP-gPEl3UXWTjMzT4DCLVAxPvGbNv0GI5lK9vJLNgA"));
     }
 
     #[test]
