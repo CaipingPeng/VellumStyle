@@ -3,6 +3,7 @@ import {Check, Search, Smile} from "lucide-react";
 import {backendWindowUrl, getEmojiCdnUrl, openWechatBackendHidden, searchRemoticon, showWechatBackend} from "../../utils/publish.ts";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
 import {WECHAT_SMILEY_EMOJIS} from "../../data/wechatSmileyEmojis.ts";
+import {formatHtmlImage} from "../../markdown/imageMarkdown.ts";
 import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
 import Dialog from "../ui/Dialog.tsx";
@@ -304,7 +305,7 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
         if (!cdnUrl) {
           throw new Error(`表情转换失败：${parseErrorHint(response)}`);
         }
-        markdowns.push(`![${item.docId}](${cdnUrl})`);
+        markdowns.push(formatHtmlImage({src: cdnUrl, alt: item.docId}));
       }
       for (const smiley of selectedSmileys) {
         // 与官方编辑器一致：直接引用微信官方表情资源地址，内联 20px 显示

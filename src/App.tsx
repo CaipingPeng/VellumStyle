@@ -24,7 +24,7 @@ import Toaster from "./components/Toast/Toaster.tsx";
 import {toast} from "./components/Toast/toast.ts";
 import {useStore, getThemeById, flushDocumentThemeWrite, flushSave} from "./store/index.ts";
 import {getCodeThemeById, loadAllCodeThemes, subscribeCodeThemes} from "./markdown/codeThemes.ts";
-import {formatMarkdownImage, replaceMarkdownImageSizeByIndex} from "./markdown/imageMarkdown.ts";
+import {formatHtmlImage, replaceMarkdownImageSizeByIndex} from "./markdown/imageMarkdown.ts";
 import {
   formatVideoMaterialIframe,
   getMpVideoInfo,
@@ -329,7 +329,7 @@ export default function App() {
   };
 
   const finishInlineUpload = (taskId: string, url: string) => {
-    replaceInlineUpload(taskId, `\n${formatMarkdownImage({alt: "", url})}\n`, true);
+    replaceInlineUpload(taskId, `\n${formatHtmlImage({src: url, alt: ""})}\n`, true);
   };
 
   const handleUploadError = (e: unknown) => {
@@ -385,13 +385,13 @@ export default function App() {
 
   const handlePickMaterialImages = useCallback((urls: string[]) => {
     if (urls.length === 0) return;
-    const markdown = urls.map((url) => formatMarkdownImage({alt: "", url})).join("\n\n");
+    const markdown = urls.map((url) => formatHtmlImage({src: url, alt: ""})).join("\n\n");
     editorRef.current?.insertAtCursor(`\n${markdown}\n`);
   }, []);
 
   const handlePickMaterialImageFlow = useCallback((urls: string[]) => {
     if (urls.length === 0) return;
-    const markdown = `<${urls.map((url) => formatMarkdownImage({alt: "", url})).join(",")}>`;
+    const markdown = urls.map((url) => formatHtmlImage({src: url, alt: ""})).join(",");
     editorRef.current?.insertBlockAtCursor(markdown);
   }, []);
 

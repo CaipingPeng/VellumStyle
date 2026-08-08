@@ -1,11 +1,13 @@
 import {memo, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
-import {CheckCircle2, CircleX, ListChecks, Loader2, Trash2} from "lucide-react";
+import {CheckCircle2, CircleX, Copy, ListChecks, Loader2, Trash2} from "lucide-react";
 import {
   imageUploadTasks,
   type ImageUploadPhase,
   type ImageUploadTask,
 } from "../../utils/imageUploadTasks.ts";
+import {copyPlainText} from "../../utils/clipboard.ts";
+import {toast} from "../Toast/toast.ts";
 
 interface Props {
   currentDocumentPath: string | null;
@@ -57,6 +59,16 @@ function ArticleTaskLog({currentDocumentPath}: Props) {
   const [panelPosition, setPanelPosition] = useState({left: 12, top: 12, width: 420});
   const activeCount = tasks.filter((task) => task.status === "active").length;
   const errorCount = tasks.filter((task) => task.status === "error").length;
+
+  const copyErrorLog = async () => {
+    const text = tasks
+      .filter((task) => task.status === "error")
+      .map((task) => `[${documentLabel(task)}] ${task.filename}：${task.error || "未知错误"}`)
+      .join("\n");
+    if (!text) return;
+    const copied = await copyPlainText(text);
+    toast.show(copied ? "已复制错误信息" : "复制失败：剪贴板不可用", copied ? "info" : "error");
+  };
 
   const groups = useMemo(() => {
     const grouped = new Map<string, ImageUploadTask[]>();
@@ -152,17 +164,30 @@ function ArticleTaskLog({currentDocumentPath}: Props) {
               文章任务
               {activeCount > 0 && <span className="text-xs font-normal text-accent">{activeCount} 个进行中</span>}
             </div>
-            {tasks.some((task) => task.status !== "active") && (
-              <button
-                type="button"
-                onClick={() => imageUploadTasks.clearFinished()}
-                aria-label="清除已结束任务"
-                title="清除已结束任务"
-                className="grid h-7 w-7 place-items-center rounded text-text-muted outline-none hover:bg-bg-hover hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
-              >
-                <Trash2 size={14} />
-              </button>
-            )}
+            <div className="flex items-center gap-1">
+              {errorCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void copyErrorLog()}
+                  aria-label="复制错误信息"
+                  title="复制错误信息"
+                  className="grid h-7 w-7 place-items-center rounded text-danger outline-none hover:bg-bg-hover focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+                >
+                  <Copy size={14} />
+                </button>
+              )}
+              {tasks.some((task) => task.status !== "active") && (
+                <button
+                  type="button"
+                  onClick={() => imageUploadTasks.clearFinished()}
+                  aria-label="清除已结束任务"
+                  title="清除已结束任务"
+                  className="grid h-7 w-7 place-items-center rounded text-text-muted outline-none hover:bg-bg-hover hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="max-h-[420px] overflow-y-auto">

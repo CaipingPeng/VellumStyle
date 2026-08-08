@@ -117,8 +117,17 @@ function fileNameFromPath(path: string): string {
 
 function fileNameFromUrl(url: string): string {
   try {
-    const name = new URL(url).pathname.split("/").filter(Boolean).pop();
-    return name ? decodeURIComponent(name) : "远程图片";
+    const parsed = new URL(url);
+    const segments = parsed.pathname.split("/").filter(Boolean);
+    const name = segments.pop();
+    // 有真实文件名（带扩展名）时用文件名；否则用 域名/路径 标识，避免只显示「远程图片」。
+    if (name && /\./i.test(name)) {
+      return decodeURIComponent(name);
+    }
+    if (name) {
+      return `${parsed.hostname}/${name}`;
+    }
+    return parsed.hostname || "远程图片";
   } catch {
     return "远程图片";
   }

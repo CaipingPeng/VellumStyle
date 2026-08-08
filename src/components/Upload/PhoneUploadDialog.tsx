@@ -7,6 +7,7 @@ import {
 } from "../../utils/publish.ts";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
 import {waitBackendCommand} from "../../utils/wechatBackend.ts";
+import {formatHtmlImage} from "../../markdown/imageMarkdown.ts";
 import {toast} from "../Toast/toast.ts";
 import Button from "../ui/Button.tsx";
 import Dialog from "../ui/Dialog.tsx";
@@ -217,7 +218,7 @@ export default function PhoneUploadDialog({open, canInsert, onClose, onPick, onN
         throw new Error(`确认保存失败：${parseErrorHint(response)}`);
       }
       const markdown = confirmed
-        .map((pic, index) => `![手机图片${index + 1}](${pic.cdnUrl})`)
+        .map((pic, index) => formatHtmlImage({src: pic.cdnUrl, alt: `手机图片${index + 1}`}))
         .join("\n\n");
       onPick(markdown);
       toast.show(`已插入 ${confirmed.length} 张图片`, "info");

@@ -145,7 +145,53 @@ parser
 parser.use(dataLine); // 14. 顶层块注入 data-line（同步滚动用）
 
 export function render(markdown: string): string {
-  return sanitizeRenderedHtml(normalizeImageFootnoteFigures(parser.render(markdown)));
+  return sanitizeRenderedHtml(
+    normalizeHtmlImages(normalizeImageFootnoteFigures(parser.render(markdown))),
+  );
+}
+
+// 独立成段的原始 <img>（html_block 输出）补成 figure/figcaption，与
+// markdown-it-implicit-figures 对 ![](url) 的处理保持一致（图注、居中布局依赖该结构）。
+// 同时为所有非横滑图片按文档顺序统一补 data-vs-image-index，保证拖拽缩放
+// 对 <img> 源同样可用（imsize 插件只为 ![](url) 注入该标记）。
+export function normalizeHtmlImages(html: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+
+  for (const image of Array.from(doc.body.querySelectorAll("img"))) {
+    if (image.parentElement !== doc.body) {
+      continue;
+    }
+    if (image.closest(".imageflow-layer1") || image.closest("figure")) {
+      continue;
+    }
+
+    const figure = doc.createElement("figure");
+    const line = image.getAttribute("data-line");
+    if (line !== null) {
+      figure.setAttribute("data-line", line);
+      image.removeAttribute("data-line");
+    }
+
+    const alt = image.getAttribute("alt")?.trim() ?? "";
+    image.replaceWith(figure);
+    figure.appendChild(image);
+    if (alt) {
+      image.setAttribute("alt", "");
+      const figcaption = doc.createElement("figcaption");
+      figcaption.textContent = alt;
+      figure.appendChild(figcaption);
+    }
+  }
+
+  let index = 0;
+  for (const image of Array.from(doc.body.querySelectorAll("img"))) {
+    if (image.closest(".imageflow-layer1")) {
+      continue;
+    }
+    image.setAttribute("data-vs-image-index", String(index++));
+  }
+
+  return doc.body.innerHTML;
 }
 
 export function normalizeImageFootnoteFigures(html: string): string {

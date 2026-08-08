@@ -1,11 +1,10 @@
 import {invoke} from "@tauri-apps/api/core";
 import {
   scanMarkdownMedia,
-  toObsidianMarkdownImage,
   type MediaRef,
   type MediaSourceType,
 } from "./markdownMediaScanner.ts";
-import {formatMarkdownImage} from "../markdown/imageMarkdown.ts";
+import {formatHtmlImage} from "../markdown/imageMarkdown.ts";
 import {uploadLocalImage, uploadRemoteImage} from "./upload.ts";
 import {imageUploadTasks} from "./imageUploadTasks.ts";
 import {
@@ -129,47 +128,13 @@ export async function processMarkdownImportInBackground(
   }
 }
 
+// 图片处理在后台按单图任务逐个上报（每张图自带成败与原因），不再创建
+// 「N 张图片」的文章级汇总任务，避免同一张图的失败信息出现两次。
 export function enqueueMarkdownImageImport(
   prepared: PreparedMarkdownImport,
   documentPath: string,
 ): Promise<ImportMarkdownResult> {
-  const documentTitle = documentPath.split("/").pop() || documentPath;
-  const imageCount = prepared.refs.filter((ref) =>
-    ref.mediaType === "image" && UPLOADABLE_SOURCE_TYPES.has(ref.sourceType),
-  ).length;
-  if (imageCount === 0) {
-    return processMarkdownImportInBackground(prepared, documentPath);
-  }
-  const summaryTaskId = imageUploadTasks.start(
-    `${imageCount} 张图片`,
-    "文章导入",
-    {documentPath, documentTitle},
-  );
-  imageUploadTasks.progress({
-    taskId: summaryTaskId,
-    filename: `${imageCount} 张图片`,
-    phase: "queued",
-  });
-  const run = (async () => {
-    imageUploadTasks.progress({
-      taskId: summaryTaskId,
-      filename: `${imageCount} 张图片`,
-      phase: "processing",
-    });
-    try {
-      const result = await processMarkdownImportInBackground(prepared, documentPath);
-      if (result.failed.length > 0) {
-        imageUploadTasks.fail(summaryTaskId, `${result.failed.length} 张图片处理失败`);
-      } else {
-        imageUploadTasks.complete(summaryTaskId);
-      }
-      return result;
-    } catch (error) {
-      imageUploadTasks.fail(summaryTaskId, error);
-      throw error;
-    }
-  })();
-  return run;
+  return processMarkdownImportInBackground(prepared, documentPath);
 }
 
 interface ProcessImportOptions {
@@ -276,6 +241,9 @@ async function processPreparedMarkdownImport(
   result.content = background
     ? prepared.content
     : applyReplacements(prepared.content, replacements);
+  // 同一张图被多处引用时，上传失败会为每个引用各记一条失败；按 URL 去重，
+  // 让「N 张图片处理失败」反映的是失败的唯一图片数，而不是引用次数。
+  result.failed = dedupeFailedByUrl(result.failed);
   onProgress?.({phase: "done", completed, total: uploadableRefs.length});
   return result;
 }
@@ -383,19 +351,43 @@ function applyReplacements(content: string, replacements: Replacement[]): string
     }, content);
 }
 
+function dedupeFailedByUrl(items: ImportedMediaItem[]): ImportedMediaItem[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.originalUrl)) {
+      return false;
+    }
+    seen.add(item.originalUrl);
+    return true;
+  });
+}
+
 function replacementValueForRef(ref: MediaRef, uploadedUrl: string): string {
-  if (ref.syntax === "obsidian-embed") {
-    return toObsidianMarkdownImage(uploadedUrl, ref.obsidianMeta);
+  if (ref.syntax === "image-flow") {
+    // 横滑图组整体保留原结构，只替换组内图片 URL。
+    return uploadedUrl;
   }
-  if (ref.replacementMode === "token") {
-    return formatMarkdownImage({
-      alt: ref.htmlImageMeta?.alt ?? "",
-      url: uploadedUrl,
-      width: ref.htmlImageMeta?.width,
-      height: ref.htmlImageMeta?.height,
+  if (ref.mediaType === "image") {
+    // 统一归一化为 <img src alt width height> 标签语法。
+    const obsidianSize = parseObsidianSizeParts(ref.obsidianMeta?.size);
+    return formatHtmlImage({
+      src: uploadedUrl,
+      alt: ref.alt ?? ref.htmlImageMeta?.alt ?? ref.obsidianMeta?.alt ?? "",
+      width: ref.width ?? ref.htmlImageMeta?.width ?? obsidianSize?.width,
+      height: ref.height ?? ref.htmlImageMeta?.height ?? obsidianSize?.height,
     });
   }
   return uploadedUrl;
+}
+
+function parseObsidianSizeParts(size?: string): {width?: string; height?: string} | undefined {
+  if (!size) return undefined;
+  const match = /^(\d*%?)x(\d*%?)$/.exec(size);
+  if (!match) return undefined;
+  return {
+    width: match[1] || undefined,
+    height: match[2] || undefined,
+  };
 }
 
 function normalizeRemoteUrl(url: string): string {

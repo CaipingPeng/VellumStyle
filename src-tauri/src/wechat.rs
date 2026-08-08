@@ -923,16 +923,42 @@ pub async fn upload_remote_image(
     url: String,
     task_id: Option<String>,
 ) -> Result<String, String> {
-    emit_upload_progress(&app, &task_id, "downloading", "远程图片", None, None);
+    let label = remote_image_display_name(&url);
+    emit_upload_progress(&app, &task_id, "downloading", &label, None, None);
     let image = download_remote_image(&url).await?;
     upload_image_bytes(app, image.bytes, image.filename, image.mime, task_id).await
+}
+
+// 远程图片的任务名/错误提示用 URL 派生，避免无文件名地址（如 api 接口图）
+// 只显示笼统的「远程图片」，无法定位是哪一张。
+fn remote_image_display_name(raw_url: &str) -> String {
+    let Ok(parsed) = url::Url::parse(raw_url.trim()) else {
+        return "远程图片".to_string();
+    };
+    let segments: Vec<&str> = parsed
+        .path()
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .collect();
+    let host = parsed.host_str().unwrap_or("远程图片");
+    if let Some(name) = segments.last() {
+        if name.contains('.') {
+            return (*name).to_string();
+        }
+        return format!("{host}/{name}");
+    }
+    host.to_string()
 }
 
 async fn download_remote_image(raw_url: &str) -> Result<DownloadedImage, String> {
     let mut target =
         url::Url::parse(raw_url.trim()).map_err(|_| "图片 URL 格式错误".to_string())?;
     let mut redirect_count = 0usize;
+    // 远端（尤其是 mmbiz 图床）在并发下载时可能临时返回 429/5xx，属于瞬时故障，
+    // 单次失败直接判死会导致整张图上传失败。这里指数退避重试，不改变重定向逻辑。
+    let mut transient_attempts = 0usize;
     let resp = loop {
+        transient_attempts += 1;
         let client = remote_image_client(&target).await?;
         let mut request = client.get(target.clone());
         if ALLOWED_IMG_HOSTS.contains(&target.host_str().unwrap_or("")) {
@@ -958,10 +984,19 @@ async fn download_remote_image(raw_url: &str) -> Result<DownloadedImage, String>
             redirect_count += 1;
             continue;
         }
+        let status = response.status().as_u16();
+        if matches!(status, 429 | 500..=599) && transient_attempts < 3 {
+            tokio::time::sleep(Duration::from_millis(500 * (1 << (transient_attempts - 1)))).await;
+            continue;
+        }
         break response;
     };
     if !resp.status().is_success() {
-        return Err(format!("下载远程图片失败：HTTP {}", resp.status()));
+        return Err(format!(
+            "下载远程图片失败：HTTP {}（{}）",
+            resp.status(),
+            remote_image_display_name(raw_url)
+        ));
     }
 
     if let Some(len) = resp.content_length() {

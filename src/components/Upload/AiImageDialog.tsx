@@ -15,6 +15,7 @@ import {
 } from "../../utils/publish.ts";
 import {waitBackendCommand} from "../../utils/wechatBackend.ts";
 import {MOTION_DURATION_FAST, MOTION_SPRING_POP} from "../../utils/motion.ts";
+import {formatHtmlImage} from "../../markdown/imageMarkdown.ts";
 import {toast} from "../Toast/toast.ts";
 
 interface Props {
@@ -819,7 +820,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
         if (session !== sessionRef.current) return;
         const inserted = parseInsertResponse(response);
         if (!inserted?.cdnUrl) throw new Error(parseErrorHint(response));
-        onPick(`![AI配图](${inserted.cdnUrl})`);
+        onPick(formatHtmlImage({src: inserted.cdnUrl, alt: "AI配图"}));
         toast.show("已插入 AI 配图（永久素材链接）", "info");
         onClose();
       } catch (error) {
@@ -873,7 +874,7 @@ export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedS
         if (session !== sessionRef.current) return;
         const inserted = parseInsertResponse(insertResponse);
         if (!inserted?.cdnUrl) throw new Error(parseErrorHint(insertResponse));
-        onPick(`![AI配图](${inserted.cdnUrl})`);
+        onPick(formatHtmlImage({src: inserted.cdnUrl, alt: "AI配图"}));
         toast.show("已插入 AI 配图（永久素材链接）", "info");
         onClose();
       } catch (error) {

@@ -21,7 +21,7 @@ test("excludes markdown image titles from the scanned url", () => {
   assert.equal(refs[0].originalUrl, "./assets/my image.png");
 });
 
-test("html img refs cover the whole tag so imports can normalize to Markdown image syntax", () => {
+test("html img refs cover the whole tag so imports can normalize to img tag syntax", () => {
   const markdown = '前文\n<img src="http://mmbiz.qpic.cn/a.png" alt="image" style="zoom:50%;" />\n后文';
 
   const refs = scanMarkdownMedia(markdown);
@@ -76,7 +76,7 @@ test("html img metadata uses zoom as responsive width when dimensions are absent
   });
 });
 
-test("excludes every supported media syntax in inline code while preserving exact real-image offsets", () => {
+test("excludes every supported media syntax in inline code while preserving exact real-image token offsets", () => {
   const markdown = [
     "`![md](inline.png) <img src=\"inline-html.png\"> ![[inline-obsidian.png]] [video](inline.mp4)`",
     "``![md](multi.png) <img src=\"multi-html.png\"> ![[multi-obsidian.png]] [video](multi.mp4) ` literal``",
@@ -84,13 +84,14 @@ test("excludes every supported media syntax in inline code while preserving exac
   ].join("\n");
 
   const refs = scanMarkdownMedia(markdown);
-  const expectedStart = markdown.indexOf("real.png");
+  const token = "![real](real.png)";
+  const expectedStart = markdown.indexOf(token);
 
   assert.equal(refs.length, 1);
   assert.equal(refs[0].originalUrl, "real.png");
   assert.equal(refs[0].start, expectedStart);
-  assert.equal(refs[0].end, expectedStart + "real.png".length);
-  assert.equal(markdown.slice(refs[0].start, refs[0].end), "real.png");
+  assert.equal(refs[0].end, expectedStart + token.length);
+  assert.equal(markdown.slice(refs[0].start, refs[0].end), token);
 });
 
 test("inline code spans can cross lines", () => {
@@ -124,13 +125,14 @@ test("keeps a genuine indented list image with exact source offsets", () => {
   const markdown = "1. parent\n   - child\n     ![nested](nested.png)";
 
   const refs = scanMarkdownMedia(markdown);
-  const expectedStart = markdown.indexOf("nested.png");
+  const token = "![nested](nested.png)";
+  const expectedStart = markdown.indexOf(token);
 
   assert.equal(refs.length, 1);
   assert.equal(refs[0].originalUrl, "nested.png");
   assert.equal(refs[0].start, expectedStart);
-  assert.equal(refs[0].end, expectedStart + "nested.png".length);
-  assert.equal(markdown.slice(refs[0].start, refs[0].end), "nested.png");
+  assert.equal(refs[0].end, expectedStart + token.length);
+  assert.equal(markdown.slice(refs[0].start, refs[0].end), token);
 });
 
 
@@ -158,11 +160,12 @@ test("fenced code excludes all supported media syntax for backtick and tilde fen
   ].join("\n");
 
   const refs = scanMarkdownMedia(markdown);
-  const expectedStart = markdown.lastIndexOf("real.png");
+  const token = "![real](real.png)";
+  const expectedStart = markdown.lastIndexOf(token);
 
   assert.deepEqual(refs.map((ref) => ref.originalUrl), ["real.png"]);
   assert.equal(refs[0].start, expectedStart);
-  assert.equal(refs[0].end, expectedStart + "real.png".length);
+  assert.equal(refs[0].end, expectedStart + token.length);
 });
 
 test("fenced code follows repeated blockquotes, nested lists, and continuation indentation", () => {
@@ -267,11 +270,12 @@ test("closed HTML code excludes every supported media syntax across multiline at
   ].join("\n");
 
   const refs = scanMarkdownMedia(markdown);
-  const expectedStart = markdown.lastIndexOf("after-code.png");
+  const token = "![real](after-code.png)";
+  const expectedStart = markdown.lastIndexOf(token);
 
   assert.deepEqual(refs.map((ref) => ref.originalUrl), ["after-code.png"]);
   assert.equal(refs[0].start, expectedStart);
-  assert.equal(refs[0].end, expectedStart + "after-code.png".length);
+  assert.equal(refs[0].end, expectedStart + token.length);
 });
 
 test("closed HTML pre excludes every supported media syntax", () => {
@@ -317,11 +321,12 @@ test("unmatched inline HTML code does not suppress remaining media", () => {
 test("closed block-level HTML pre scans media after its closing tag on the opening line", () => {
   const markdown = '<pre>![hidden](hidden.png)</pre> ![real](same-line.png)';
   const refs = scanMarkdownMedia(markdown);
-  const expectedStart = markdown.indexOf("same-line.png");
+  const token = "![real](same-line.png)";
+  const expectedStart = markdown.indexOf(token);
 
   assert.deepEqual(refs.map((ref) => ref.originalUrl), ["same-line.png"]);
   assert.equal(refs[0].start, expectedStart);
-  assert.equal(refs[0].end, expectedStart + "same-line.png".length);
+  assert.equal(refs[0].end, expectedStart + token.length);
 });
 
 test("multiline block-level HTML pre scans media after its closing tag on a later line", () => {
@@ -331,11 +336,12 @@ test("multiline block-level HTML pre scans media after its closing tag on a late
     "</pre> ![real](later-closing-line.png)",
   ].join("\n");
   const refs = scanMarkdownMedia(markdown);
-  const expectedStart = markdown.indexOf("later-closing-line.png");
+  const token = "![real](later-closing-line.png)";
+  const expectedStart = markdown.indexOf(token);
 
   assert.deepEqual(refs.map((ref) => ref.originalUrl), ["later-closing-line.png"]);
   assert.equal(refs[0].start, expectedStart);
-  assert.equal(refs[0].end, expectedStart + "later-closing-line.png".length);
+  assert.equal(refs[0].end, expectedStart + token.length);
 });
 
 test("a later closed block-level HTML pre does not suppress media before its source range", () => {
@@ -376,11 +382,12 @@ test("HTML pre block maps preserve container boundaries and following image offs
   ].join("\n");
 
   const refs = scanMarkdownMedia(markdown);
-  const expectedStart = markdown.indexOf("after-quoted-pre.png");
+  const token = "![real](after-quoted-pre.png)";
+  const expectedStart = markdown.indexOf(token);
 
   assert.deepEqual(refs.map((ref) => ref.originalUrl), ["after-quoted-pre.png"]);
   assert.equal(refs[0].start, expectedStart);
-  assert.equal(refs[0].end, expectedStart + "after-quoted-pre.png".length);
+  assert.equal(refs[0].end, expectedStart + token.length);
 });
 
 test("CRLF block maps preserve an Obsidian token's whole-token replacement coordinates", () => {
@@ -396,4 +403,67 @@ test("CRLF block maps preserve an Obsidian token's whole-token replacement coord
   assert.equal(refs[0].start, expectedStart);
   assert.equal(refs[0].end, expectedStart + token.length);
   assert.equal(markdown.slice(refs[0].start, refs[0].end), token);
+});
+
+test("markdown image refs carry alt and size dimensions for normalization", () => {
+  const refs = scanMarkdownMedia('![图注]("./a.png" "标题" =40%x)');
+
+  assert.equal(refs.length, 1);
+  assert.equal(refs[0].syntax, "markdown-image");
+  assert.equal(refs[0].alt, "图注");
+  assert.equal(refs[0].width, "40%");
+  assert.equal(refs[0].height, undefined);
+});
+
+test("markdown image size with both dimensions is captured", () => {
+  const refs = scanMarkdownMedia("![图](a.png =320x180)");
+
+  assert.equal(refs[0].width, "320");
+  assert.equal(refs[0].height, "180");
+});
+
+test("legacy image-flow lines are scanned as url-only refs and excluded from markdown-image scan", () => {
+  const markdown = "<![a](https://example.com/a.png),![b](https://example.com/b.png)>\n\n![real](https://example.com/real.png)";
+
+  const refs = scanMarkdownMedia(markdown);
+
+  assert.deepEqual(
+    refs.map((ref) => ({syntax: ref.syntax, replacementMode: ref.replacementMode, url: ref.originalUrl})),
+    [
+      {syntax: "image-flow", replacementMode: "url", url: "https://example.com/a.png"},
+      {syntax: "image-flow", replacementMode: "url", url: "https://example.com/b.png"},
+      {syntax: "markdown-image", replacementMode: "token", url: "https://example.com/real.png"},
+    ],
+  );
+});
+
+test("html image-flow lines are scanned as url-only refs", () => {
+  const markdown =
+    '<img src="https://example.com/a.png" alt="a">,<img src="https://example.com/b.png" alt="b">\n\n![real](https://example.com/real.png)';
+
+  const refs = scanMarkdownMedia(markdown);
+
+  assert.deepEqual(
+    refs.map((ref) => ({syntax: ref.syntax, replacementMode: ref.replacementMode, url: ref.originalUrl})),
+    [
+      {syntax: "image-flow", replacementMode: "url", url: "https://example.com/a.png"},
+      {syntax: "image-flow", replacementMode: "url", url: "https://example.com/b.png"},
+      {syntax: "markdown-image", replacementMode: "token", url: "https://example.com/real.png"},
+    ],
+  );
+});
+
+test("single img tag on its own line is a normal html image, not a flow group", () => {
+  const refs = scanMarkdownMedia('<img src="https://example.com/a.png" alt="a">');
+
+  assert.equal(refs.length, 1);
+  assert.equal(refs[0].syntax, "html-img");
+  assert.equal(refs[0].replacementMode, "token");
+});
+
+test("html attribute values decode entities so uploaded urls are exact", () => {
+  const refs = scanMarkdownMedia('<img src="https://example.com/a&amp;b.png?x=1&amp;y=2" alt="a&quot;b">');
+
+  assert.equal(refs[0].originalUrl, "https://example.com/a&b.png?x=1&y=2");
+  assert.equal(refs[0].htmlImageMeta?.alt, 'a"b');
 });

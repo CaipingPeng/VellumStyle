@@ -76,3 +76,50 @@ test("task log renders concurrent and completed entries instead of replacing the
     host.remove();
   }
 });
+
+test("copy error log copies failed image details to the clipboard", async () => {
+  imageUploadTasks.clearFinished();
+  const clipboardEvents: string[] = [];
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: {writeText: async (text: string) => clipboardEvents.push(text)},
+  });
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  await act(async () => {
+    root.render(<ArticleTaskLog currentDocumentPath="文章.md" />);
+  });
+
+  try {
+    act(() => {
+      const first = imageUploadTasks.start("broken-remote.svg", "导入图片", {
+        documentPath: "文章.md",
+        documentTitle: "文章.md",
+      });
+      imageUploadTasks.fail(first, "下载远程图片失败：HTTP 404 Not Found（broken-remote.svg）");
+      const second = imageUploadTasks.start("ok.png", "导入图片", {documentPath: "文章.md"});
+      imageUploadTasks.complete(second);
+    });
+    const trigger = host.querySelector<HTMLButtonElement>('[aria-label="文章任务日志"]');
+    assert.ok(trigger);
+    act(() => trigger.click());
+
+    const copyButton = document.body.querySelector<HTMLButtonElement>('[aria-label="复制错误信息"]');
+    assert.ok(copyButton, "copy error button should appear when there are failures");
+    await act(async () => {
+      copyButton.click();
+    });
+
+    assert.equal(clipboardEvents.length, 1);
+    assert.equal(
+      clipboardEvents[0],
+      "[文章.md] broken-remote.svg：下载远程图片失败：HTTP 404 Not Found（broken-remote.svg）",
+    );
+  } finally {
+    act(() => imageUploadTasks.clearFinished());
+    await act(async () => root.unmount());
+    host.remove();
+    Reflect.deleteProperty(navigator, "clipboard");
+  }
+});

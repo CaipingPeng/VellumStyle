@@ -40,6 +40,56 @@ test("百分比图片宽度不写入固定高度，窄视图下保持等比例�
   assert.doesNotMatch(html, /\sheight=/);
 });
 
+test("独立成段的原始 <img> 渲染为带图注的 figure 并分配图片序号", () => {
+  const html = render('<img src="https://example.com/a.png" alt="图注内容">');
+
+  assert.match(html, /<figure><img src="https:\/\/example\.com\/a\.png" alt="" data-vs-image-index="0"><figcaption>图注内容<\/figcaption><\/figure>/);
+});
+
+test("独立成段的无 alt 原始 <img> 只补 figure 不生成空图注", () => {
+  const html = render('<img src="https://example.com/a.png">');
+
+  assert.match(html, /<figure><img src="https:\/\/example\.com\/a\.png" data-vs-image-index="0"><\/figure>/);
+  assert.doesNotMatch(html, /<figcaption>/);
+});
+
+test("markdown 与原始 html 图片共享同一序号序列", () => {
+  const html = render(
+    "![第一张](https://example.com/a.png)\n\n<img src=\"https://example.com/b.png\" alt=\"第二张\">\n\n![](https://example.com/c.png)",
+  );
+
+  assert.match(html, /<img src="https:\/\/example\.com\/a\.png"[^>]*data-vs-image-index="0"/);
+  assert.match(html, /<img src="https:\/\/example\.com\/b\.png"[^>]*data-vs-image-index="1"/);
+  assert.match(html, /<img src="https:\/\/example\.com\/c\.png"[^>]*data-vs-image-index="2"/);
+});
+
+test("行内原始 <img> 不补 figure 但仍可缩放", () => {
+  const html = render('正文 <img src="https://example.com/a.png" alt="表情"> 结尾');
+
+  assert.doesNotMatch(html, /<figure/);
+  assert.match(html, /<p data-line="0">正文 <img src="https:\/\/example\.com\/a\.png" alt="表情" data-vs-image-index="0"> 结尾<\/p>/);
+});
+
+test("横滑图组内的图片不参与缩放序号", () => {
+  const html = render(
+    "<![a](https://example.com/a.png),![b](https://example.com/b.png)>\n\n<img src=\"https://example.com/c.png\" alt=\"c\">",
+  );
+
+  assert.doesNotMatch(html, /class="imageflow-img"[^>]*data-vs-image-index/);
+  assert.match(html, /<img src="https:\/\/example\.com\/c\.png"[^>]*data-vs-image-index="0"/);
+});
+
+test("新语法横滑图组（逗号分隔 img 标签）渲染为横滑图组", () => {
+  const html = render(
+    '<img src="https://example.com/a.png" alt="a" width="50%">,<img src="https://example.com/b.png" alt="b">',
+  );
+
+  assert.match(html, /class="imageflow-layer1"/);
+  assert.equal((html.match(/class="imageflow-img"/g) ?? []).length, 2);
+  assert.match(html, /<img alt="a" src="https:\/\/example\.com\/a\.png" width="50%" class="imageflow-img"/);
+  assert.doesNotMatch(html, /data-vs-image-index/);
+});
+
 test("普通 Markdown 链接渲染为脚注引用而不是外链", () => {
   const html = render("项目地址仍然是：[CaipingPeng/VellumStyle](https://github.com/CaipingPeng/VellumStyle)。");
 

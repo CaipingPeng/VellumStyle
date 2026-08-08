@@ -66,7 +66,7 @@ test("AI 配图对话框：仿官方聊天式布局，历史/生成/调整/应�
   assert.match(source, /pic_id/);
   assert.match(source, /cdn_url/);
   assert.match(source, /fileid/);
-  assert.match(source, /!\[AI配图\]\(\$\{inserted\.cdnUrl\}\)/);
+  assert.match(source, /formatHtmlImage\(\{src: inserted\.cdnUrl, alt: "AI配图"\}\)/);
 
   // 主题化优化：按钮显式去边框（preflight 关闭时避免 UA 默认黑边），输入框有可见底框
   assert.match(source, /border-0 p-0/);

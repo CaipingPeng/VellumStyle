@@ -36,6 +36,9 @@ export interface MediaRef {
   sourceType: MediaSourceType;
   syntax: MediaSyntax;
   replacementMode: ReplacementMode;
+  alt?: string;
+  width?: string;
+  height?: string;
   obsidianMeta?: ObsidianMeta;
   htmlImageMeta?: HtmlImageMeta;
 }
@@ -45,15 +48,22 @@ const VIDEO_EXT = /\.(?:mp4|mov|m4v|webm|avi|mkv)(?:[?#].*)?$/i;
 const MARKDOWN_IMAGE_RE = /!\[([^\]\\]*(?:\\.[^\]\\]*)*)\]\(([^)\n]+)\)/g;
 const MARKDOWN_LINK_RE = /(?<!!)\[([^\]\\]*(?:\\.[^\]\\]*)*)\]\(([^)\n]+)\)/g;
 const OBSIDIAN_EMBED_RE = /!\[\[([^\]\n]+)\]\]/g;
+const HTML_IMG_RE = /<img\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
+// 横滑图组行：旧语法 <![a](x),![b](y)> / 新语法 <img ...>,<img ...>。
+const IMAGE_FLOW_OLD_LINE_RE = /^<((?:!\[[^[\]]*\]\([^()]+\)(?:,?\s*(?=>)|,\s*(?!>)))+)>/;
+const IMAGE_FLOW_HTML_LINE_RE = /^<img\b[^>]*>(?:\s*,\s*<img\b[^>]*>)+$/;
 const markdownIt = new MarkdownIt({html: true});
 
 export function scanMarkdownMedia(markdown: string): MediaRef[] {
   const ignoredRanges = findIgnoredCodeRanges(markdown);
+  const flow = scanImageFlow(markdown);
+  const skipRanges = [...flow.ranges];
   const refs: MediaRef[] = [];
-  refs.push(...scanMarkdownImages(markdown));
-  refs.push(...scanHtmlMedia(markdown));
-  refs.push(...scanObsidianEmbeds(markdown));
-  refs.push(...scanMarkdownVideoLinks(markdown));
+  refs.push(...scanMarkdownImages(markdown, skipRanges));
+  refs.push(...scanHtmlMedia(markdown, skipRanges));
+  refs.push(...scanObsidianEmbeds(markdown, skipRanges));
+  refs.push(...scanMarkdownVideoLinks(markdown, skipRanges));
+  refs.push(...flow.refs);
   return dedupeRefs(refs)
     .filter((ref) => !ignoredRanges.some((range) => overlapsRange(ref, range)))
     .sort((a, b) => a.start - b.start);
@@ -257,7 +267,7 @@ export function toObsidianMarkdownImage(url: string, meta?: ObsidianMeta): strin
   return `![${escapeMarkdownAlt(alt)}](${url})`;
 }
 
-function scanMarkdownImages(markdown: string): MediaRef[] {
+function scanMarkdownImages(markdown: string, skipRanges: SourceRange[]): MediaRef[] {
   const refs: MediaRef[] = [];
   for (const match of markdown.matchAll(MARKDOWN_IMAGE_RE)) {
     const rawInner = match[2];
@@ -266,20 +276,28 @@ function scanMarkdownImages(markdown: string): MediaRef[] {
 
     const matchStart = match.index ?? 0;
     const innerStart = matchStart + match[0].indexOf(rawInner);
+    const urlStart = innerStart + parsed.urlStart;
+    const urlEnd = innerStart + parsed.urlEnd;
+    if (overlapsAnyRange(urlStart, urlEnd, skipRanges)) continue;
+    const size = parseMarkdownImageSize(rawInner);
     refs.push({
-      start: innerStart + parsed.urlStart,
-      end: innerStart + parsed.urlEnd,
+      // 覆盖整个 ![...](...) 记号：导入时整体替换为 <img> 标签。
+      start: matchStart,
+      end: matchStart + match[0].length,
       originalUrl: parsed.url,
       mediaType: isVideoUrl(parsed.url) ? "video" : "image",
       sourceType: classifyMediaSource(parsed.url),
       syntax: "markdown-image",
-      replacementMode: "url",
+      replacementMode: "token",
+      alt: unescapeMarkdownAlt(match[1]),
+      width: size?.width,
+      height: size?.height,
     });
   }
   return refs;
 }
 
-function scanMarkdownVideoLinks(markdown: string): MediaRef[] {
+function scanMarkdownVideoLinks(markdown: string, skipRanges: SourceRange[]): MediaRef[] {
   const refs: MediaRef[] = [];
   for (const match of markdown.matchAll(MARKDOWN_LINK_RE)) {
     const rawInner = match[2];
@@ -288,9 +306,12 @@ function scanMarkdownVideoLinks(markdown: string): MediaRef[] {
 
     const matchStart = match.index ?? 0;
     const innerStart = matchStart + match[0].indexOf(rawInner);
+    const urlStart = innerStart + parsed.urlStart;
+    const urlEnd = innerStart + parsed.urlEnd;
+    if (overlapsAnyRange(urlStart, urlEnd, skipRanges)) continue;
     refs.push({
-      start: innerStart + parsed.urlStart,
-      end: innerStart + parsed.urlEnd,
+      start: urlStart,
+      end: urlEnd,
       originalUrl: parsed.url,
       mediaType: "video",
       sourceType: classifyMediaSource(parsed.url),
@@ -301,7 +322,7 @@ function scanMarkdownVideoLinks(markdown: string): MediaRef[] {
   return refs;
 }
 
-function scanHtmlMedia(markdown: string): MediaRef[] {
+function scanHtmlMedia(markdown: string, skipRanges: SourceRange[]): MediaRef[] {
   const refs: MediaRef[] = [];
   for (const htmlTag of findHtmlTags(markdown)) {
     if (htmlTag.closing || !["img", "video", "source"].includes(htmlTag.name)) continue;
@@ -310,9 +331,12 @@ function scanHtmlMedia(markdown: string): MediaRef[] {
 
     const urlStart = htmlTag.start + src.start;
     const isImage = htmlTag.name === "img";
+    const start = isImage ? htmlTag.start : urlStart;
+    const end = isImage ? htmlTag.end : urlStart + src.value.length;
+    if (overlapsAnyRange(start, end, skipRanges)) continue;
     refs.push({
-      start: isImage ? htmlTag.start : urlStart,
-      end: isImage ? htmlTag.end : urlStart + src.value.length,
+      start,
+      end,
       originalUrl: src.value,
       mediaType: isImage ? "image" : "video",
       sourceType: classifyMediaSource(src.value),
@@ -342,27 +366,30 @@ function htmlAttributeInfo(tag: string, name: string): {value: string; start: nu
   const match = new RegExp(`(?:^|\\s)${escapedName}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i").exec(tag);
   if (!match) return undefined;
 
-  const value = match[1] ?? match[2] ?? match[3] ?? "";
+  const rawValue = match[1] ?? match[2] ?? match[3] ?? "";
   const quote = match[1] !== undefined ? '"' : match[2] !== undefined ? "'" : undefined;
-  const relativeStart = quote ? match[0].indexOf(quote) + 1 : match[0].lastIndexOf(value);
-  return {value, start: match.index + relativeStart};
+  const relativeStart = quote ? match[0].indexOf(quote) + 1 : match[0].lastIndexOf(rawValue);
+  return {value: decodeHtmlEntities(rawValue), start: match.index + relativeStart};
 }
 
 function htmlAttribute(tag: string, name: string): string | undefined {
   return htmlAttributeInfo(tag, name)?.value;
 }
 
-function scanObsidianEmbeds(markdown: string): MediaRef[] {
+function scanObsidianEmbeds(markdown: string, skipRanges: SourceRange[]): MediaRef[] {
   const refs: MediaRef[] = [];
   for (const match of markdown.matchAll(OBSIDIAN_EMBED_RE)) {
+    const start = match.index ?? 0;
+    const end = start + match[0].length;
+    if (overlapsAnyRange(start, end, skipRanges)) continue;
     const body = match[1].trim();
     const meta = parseObsidianBody(body);
     const target = meta.target;
     if (!target) continue;
 
     refs.push({
-      start: match.index ?? 0,
-      end: (match.index ?? 0) + match[0].length,
+      start,
+      end,
       originalUrl: target,
       mediaType: isVideoUrl(target) ? "video" : "image",
       sourceType: classifyMediaSource(target),
@@ -432,6 +459,96 @@ function parseObsidianSize(hint: string): string | undefined {
   if (/^\d+x$/.test(hint)) return hint;
   if (/^x\d+$/.test(hint)) return hint;
   return undefined;
+}
+
+// 横滑图组整行识别：返回组内每张图的 URL 引用（只替换 URL，保留横滑结构）和整行范围。
+function scanImageFlow(markdown: string): {refs: MediaRef[]; ranges: SourceRange[]} {
+  const refs: MediaRef[] = [];
+  const ranges: SourceRange[] = [];
+  const lineStarts = findLineStarts(markdown);
+  for (let lineIndex = 0; lineIndex < lineStarts.length; lineIndex++) {
+    const start = lineStarts[lineIndex];
+    const end = lineStarts[lineIndex + 1] ?? markdown.length;
+    let line = markdown.slice(start, end);
+    if (line.endsWith("\n")) {
+      line = line.slice(0, -1);
+    }
+    if (line.endsWith("\r")) {
+      line = line.slice(0, -1);
+    }
+
+    const oldMatch = IMAGE_FLOW_OLD_LINE_RE.exec(line);
+    if (oldMatch) {
+      for (const match of line.matchAll(MARKDOWN_IMAGE_RE)) {
+        const rawInner = match[2];
+        const parsed = parseMarkdownDestination(rawInner);
+        if (!parsed) continue;
+        const matchStart = start + (match.index ?? 0);
+        const innerStart = matchStart + match[0].indexOf(rawInner);
+        refs.push({
+          start: innerStart + parsed.urlStart,
+          end: innerStart + parsed.urlEnd,
+          originalUrl: parsed.url,
+          mediaType: isVideoUrl(parsed.url) ? "video" : "image",
+          sourceType: classifyMediaSource(parsed.url),
+          syntax: "image-flow",
+          replacementMode: "url",
+        });
+      }
+      ranges.push({start, end});
+      continue;
+    }
+
+    if (IMAGE_FLOW_HTML_LINE_RE.test(line)) {
+      for (const tagMatch of line.matchAll(HTML_IMG_RE)) {
+        const src = htmlAttributeInfo(tagMatch[0], "src");
+        if (!src) continue;
+        refs.push({
+          start: start + (tagMatch.index ?? 0) + src.start,
+          end: start + (tagMatch.index ?? 0) + src.start + src.value.length,
+          originalUrl: src.value,
+          mediaType: "image",
+          sourceType: classifyMediaSource(src.value),
+          syntax: "image-flow",
+          replacementMode: "url",
+        });
+      }
+      ranges.push({start, end});
+    }
+  }
+  return {refs, ranges};
+}
+
+// 解析 Markdown 图片尺寸后缀 =WxH / =Wx / =xH / =40%x。
+function parseMarkdownImageSize(rawInner: string): {width?: string; height?: string} | undefined {
+  const match = /\s+=\s*([^\s)]+)\s*$/.exec(rawInner);
+  if (!match) return undefined;
+  const sizeMatch = /^(\d*%?)x(\d*%?)$/.exec(match[1]);
+  if (!sizeMatch) return undefined;
+  return {
+    width: sizeMatch[1] || undefined,
+    height: sizeMatch[2] || undefined,
+  };
+}
+
+function overlapsAnyRange(start: number, end: number, ranges: SourceRange[]): boolean {
+  return ranges.some((range) => start < range.end && range.start < end);
+}
+
+function unescapeMarkdownAlt(value: string): string {
+  return value.replace(/\\([\]\\])/g, "$1");
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#34;/gi, '"')
+    .replace(/&#x22;/gi, '"');
 }
 
 function dedupeRefs(refs: MediaRef[]): MediaRef[] {

@@ -601,8 +601,8 @@ test("addDraft 会把作者和评论设置传给草稿接口", async () => {
 });
 
 const PUBLISH_IMAGE_VALIDATION_REGRESSION_FIXTURE = [
-  "最终统一为 `![imgDescription](imgUrl)` 语法。",
-  "缩放写法是 `![imgDescription](imgUrl =缩放参数)`。",
+  "最终统一为 `<img src=\"imgUrl\" alt=\"imgDescription\">` 语法。",
+  "旧写法 `![imgDescription](imgUrl =缩放参数)` 继续兼容。",
   "  - ![已上传](//mmbiz.qpic.cn/mmbiz_png/real/0)",
   "![本地](./assets/cover.png)",
   "![外链](https://example.com/external.png)",
@@ -624,7 +624,7 @@ test("findUnuploadedImages returns exhaustive structured diagnostics at original
     {
       url: "./assets/cover.png",
       line: 4,
-      column: 7,
+      column: 1,
       sourceType: "local",
       syntax: "markdown-image",
       reason: "local",
@@ -632,7 +632,7 @@ test("findUnuploadedImages returns exhaustive structured diagnostics at original
     {
       url: "https://example.com/external.png",
       line: 5,
-      column: 7,
+      column: 1,
       sourceType: "remote",
       syntax: "markdown-image",
       reason: "external",
@@ -680,7 +680,7 @@ test("findUnuploadedImages returns exhaustive structured diagnostics at original
     {
       url: "https://[mmbiz.qpic.cn",
       line: 11,
-      column: 9,
+      column: 1,
       sourceType: "remote",
       syntax: "markdown-image",
       reason: "unsupported",
@@ -688,7 +688,7 @@ test("findUnuploadedImages returns exhaustive structured diagnostics at original
     {
       url: "https://mmbiz.qpic.cn.evil.test/image.png",
       line: 12,
-      column: 9,
+      column: 1,
       sourceType: "remote",
       syntax: "markdown-image",
       reason: "external",
@@ -696,7 +696,7 @@ test("findUnuploadedImages returns exhaustive structured diagnostics at original
     {
       url: "./assets/cover.png",
       line: 13,
-      column: 9,
+      column: 1,
       sourceType: "local",
       syntax: "markdown-image",
       reason: "local",
@@ -743,8 +743,8 @@ test("findUnuploadedImages locates diagnostics across LF lines without repeated 
   assert.deepEqual(
     diagnostics.map(({url, line, column}) => ({url, line, column})),
     [
-      {url: "./one.png", line: 2, column: 8},
-      {url: "https://example.com/two.png", line: 4, column: 10},
+      {url: "./one.png", line: 2, column: 1},
+      {url: "https://example.com/two.png", line: 4, column: 3},
       {url: "data:image/png;base64,three", line: 5, column: 6},
     ],
   );
@@ -764,9 +764,9 @@ test("findUnuploadedImages locates diagnostics across CRLF lines without repeate
   assert.deepEqual(
     diagnostics.map(({url, line, column}) => ({url, line, column})),
     [
-      {url: "./first.png", line: 1, column: 10},
+      {url: "./first.png", line: 1, column: 1},
       {url: "blob:https://example.com/id", line: 3, column: 5},
-      {url: "#anchor", line: 5, column: 9},
+      {url: "#anchor", line: 5, column: 1},
     ],
   );
 });

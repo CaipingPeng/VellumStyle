@@ -8,7 +8,7 @@ import {
 import {registerBackgroundDocumentUpdater} from "./backgroundDocumentUpdates.ts";
 import {imageUploadTasks} from "./imageUploadTasks.ts";
 
-test("importMarkdownFile normalizes html img tags to standard Markdown image syntax", async () => {
+test("importMarkdownFile normalizes html img tags to img tag syntax", async () => {
   const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
   const sourceUrl =
     "http://mmbiz.qpic.cn/mmbiz_png/w6BjglibIFcjerY35751TWjb4CmhB0ds8B944Kts9VibJVichRauZn6sQOibeBtSWtT5eTib0ibrvjmHNia2iaMpIfnOjichP5G8xuSXs0zTicAoxibq8s/0?wx_fmt=png";
@@ -39,7 +39,10 @@ test("importMarkdownFile normalizes html img tags to standard Markdown image syn
   try {
     const result = await importMarkdownFile({markdownPath: "C:\\article.md"});
 
-    assert.equal(result.content, `前文\n![image-20260702205417533](${uploadedUrl} =50%x)\n后文`);
+    assert.equal(
+      result.content,
+      `前文\n<img src="${uploadedUrl}" alt="image-20260702205417533" width="50%">\n后文`,
+    );
     assert.equal(result.totalRefs, 1);
     assert.equal(result.uploadedRemote.length, 1);
     assert.equal(result.uploadedRemote[0].syntax, "html-img");
@@ -114,7 +117,7 @@ test("importMarkdownFile ignores code-example media while importing one genuine 
     assert.deepEqual(result.failed, []);
     assert.equal(
       result.content,
-      source.replace(realImage, `![真实图片](${uploadedUrl} =40%x)`),
+      source.replace(realImage, `<img src="${uploadedUrl}" alt="真实图片" width="40%">`),
     );
   } finally {
     if (previousInternals === undefined) {
@@ -153,7 +156,7 @@ test("background import preserves concurrent edits and records the target articl
     assert.equal(prepared.content, source);
     await processMarkdownImportInBackground(prepared, "导入/article.md");
 
-    assert.equal(currentContent, `# 导入文章\n\n![原图](${uploadedUrl})\n\n用户继续编辑`);
+    assert.equal(currentContent, `# 导入文章\n\n<img src="${uploadedUrl}" alt="原图">\n\n用户继续编辑`);
     const task = imageUploadTasks.getSnapshot().find((item) => item.documentPath === "导入/article.md");
     assert.equal(task?.status, "success");
     assert.equal(task?.category, "导入图片");
@@ -254,6 +257,86 @@ test("background import uploads up to sixteen images concurrently while serializ
     for (const name of names) {
       assert.match(currentContent, new RegExp(`https://mmbiz\\.qpic\\.cn/${name}\\.jpg`));
     }
+  } finally {
+    unregister();
+    imageUploadTasks.clearFinished();
+    if (previousInternals === undefined) {
+      delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+    } else {
+      (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
+    }
+  }
+});
+
+test("import dedupes failures when the same remote image is referenced multiple times", async () => {
+  const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+  const duplicatedUrl = "https://images.example.com/duplicated.png";
+  const source = `![第一处](${duplicatedUrl})\n\n![第二处](${duplicatedUrl})`;
+
+  (window as unknown as {__TAURI_INTERNALS__: {invoke: (cmd: string) => Promise<unknown>}}).__TAURI_INTERNALS__ = {
+    invoke: async (cmd) => {
+      if (cmd === "read_markdown_file") {
+        return {path: "C:\\duplicated.md", base_dir: "C:\\", content: source};
+      }
+      if (cmd === "upload_remote_image") {
+        throw "下载远程图片失败：HTTP 503 Service Unavailable";
+      }
+      throw new Error(`unexpected command: ${cmd}`);
+    },
+  };
+
+  try {
+    const result = await importMarkdownFile({markdownPath: "C:\\duplicated.md"});
+
+    assert.equal(result.totalRefs, 2);
+    assert.equal(result.uploadedRemote.length, 0);
+    assert.equal(result.failed.length, 1);
+    assert.equal(result.failed[0].originalUrl, duplicatedUrl);
+    assert.match(result.failed[0].reason ?? "", /503/);
+  } finally {
+    if (previousInternals === undefined) {
+      delete (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+    } else {
+      (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
+    }
+  }
+});
+
+test("background import uploads a duplicated remote image only once and replaces every reference", async () => {
+  const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
+  const duplicatedUrl = "https://images.example.com/duplicated.png";
+  const uploadedUrl = "https://mmbiz.qpic.cn/uploaded/duplicated.jpg";
+  const source = `![第一处](${duplicatedUrl})\n\n![第二处](${duplicatedUrl})`;
+  let uploadCalls = 0;
+  let currentContent = source;
+
+  (window as unknown as {__TAURI_INTERNALS__: {invoke: (cmd: string) => Promise<unknown>}}).__TAURI_INTERNALS__ = {
+    invoke: async (cmd) => {
+      if (cmd === "read_markdown_file") {
+        return {path: "C:\\dedupe-upload.md", base_dir: "C:\\", content: source};
+      }
+      if (cmd === "upload_remote_image") {
+        uploadCalls += 1;
+        return uploadedUrl;
+      }
+      throw new Error(`unexpected command: ${cmd}`);
+    },
+  };
+  const unregister = registerBackgroundDocumentUpdater(async (_documentPath, transform) => {
+    currentContent = transform(currentContent);
+    return true;
+  });
+
+  try {
+    imageUploadTasks.clearFinished();
+    const prepared = await prepareMarkdownImport({markdownPath: "C:\\dedupe-upload.md"});
+    await processMarkdownImportInBackground(prepared, "dedupe-upload.md");
+
+    assert.equal(uploadCalls, 1);
+    assert.equal(
+      currentContent,
+      `<img src="${uploadedUrl}" alt="第一处">\n\n<img src="${uploadedUrl}" alt="第二处">`,
+    );
   } finally {
     unregister();
     imageUploadTasks.clearFinished();

@@ -1,7 +1,9 @@
 import type MarkdownIt from "markdown-it";
 import type StateBlock from "markdown-it/lib/rules_block/state_block.mjs";
 
-// 横屏滑动图片：<![a](x),![b](y),![c](z)> 渲染为可左右滑动的图片组。
+// 横屏滑动图片：一行内多个图片用逗号分隔即渲染为可左右滑动的图片组。
+// 新插入语法：<img src="x" alt="a"/>,<img src="y" alt="b"/>（与单图统一为 <img>）；
+// 旧语法 <![a](x),![b](y),![c](z)> 继续兼容解析。
 // 滑动结构（flex + scroll-snap）以内联样式输出，保证任何主题下都呈现逐页翻动的轮播感；
 // 提示文案由插件直接输出，与主题完全解耦（微信导出时真实文本可保留，伪元素内容会被丢弃）。
 interface ImageFlowOptions {
@@ -25,6 +27,7 @@ const FLOW_IMG_STYLE = "display:block;max-width:100%;height:auto";
 const FLOW_CAPTION_TEXT = "<<< 左右滑动见更多 >>>";
 
 const IMAGE_FLOW_LINE_RE = /^<((!\[[^[\]]*\]\([^()]+\)(,?\s*(?=>)|,\s*(?!>)))+)>/;
+const IMAGE_FLOW_HTML_LINE_RE = /^<img\b[^>]*>(?:\s*,\s*<img\b[^>]*>)+$/;
 
 // 解析一行是否为合法的横滑语法；不是则返回 null。
 function matchImageFlowLine(state: StateBlock, line: number): string[] | null {
@@ -34,7 +37,10 @@ function matchImageFlowLine(state: StateBlock, line: number): string[] | null {
   }
   const match = IMAGE_FLOW_LINE_RE.exec(srcLine);
   if (!match) {
-    return null;
+    if (!IMAGE_FLOW_HTML_LINE_RE.test(srcLine)) {
+      return null;
+    }
+    return srcLine.match(/<img\b[^>]*>/g) ?? null;
   }
   return match[1].match(/\[[^\]]*\]\([^)]+\)/g) ?? null;
 }
@@ -72,23 +78,50 @@ export default function imageFlow(md: MarkdownIt, opt?: Partial<ImageFlowOptions
     const contents: string[] = tokens[idx].meta;
     let wrapped = "";
     for (const content of contents) {
-      const altMatch = content.match(/\[([^[\]]*)\]/);
-      const srcMatch = content.match(/[^[]*\(([^()]*)\)[^\]]*/);
-      const alt = md.utils.escapeHtml(altMatch ? altMatch[1] : "");
-      const rawSrc = srcMatch ? srcMatch[1].trim() : "";
+      let alt = "";
+      let rawSrc = "";
+      let width = "";
+      let height = "";
+      if (content.startsWith("<img")) {
+        rawSrc = htmlAttribute(content, "src") ?? "";
+        alt = htmlAttribute(content, "alt") ?? "";
+        width = htmlAttribute(content, "width") ?? "";
+        height = htmlAttribute(content, "height") ?? "";
+      } else {
+        const altMatch = content.match(/\[([^[\]]*)\]/);
+        const srcMatch = content.match(/[^[]*\(([^()]*)\)[^\]]*/);
+        alt = altMatch ? altMatch[1] : "";
+        rawSrc = srcMatch ? srcMatch[1].trim() : "";
+      }
       const src = stateSafeLink(md, rawSrc);
       if (!src) {
         continue;
       }
-      wrapped += `<section class="imageflow-layer3" style="${LAYER3_STYLE}"><img alt="${alt}" src="${src}" class="imageflow-img" style="${FLOW_IMG_STYLE}" /></section>`;
+      const widthAttr = width ? ` width="${md.utils.escapeHtml(width)}"` : "";
+      const heightAttr = height ? ` height="${md.utils.escapeHtml(height)}"` : "";
+      wrapped += `<section class="imageflow-layer3" style="${LAYER3_STYLE}"><img alt="${md.utils.escapeHtml(alt)}" src="${src}"${widthAttr}${heightAttr} class="imageflow-img" style="${FLOW_IMG_STYLE}" /></section>`;
     }
     return open + wrapped + close;
   };
 
-  md.block.ruler.before("paragraph", "imageFlow", tokenize);
+  // 新语法以 <img 开头，html_block 规则会先吞掉整行；必须注册在 html_block 之前。
+  // 单张 <img> 行不匹配横滑正则，仍会正常落回 html_block 渲染为单图。
+  md.block.ruler.before("html_block", "imageFlow", tokenize);
 }
 
 function stateSafeLink(md: MarkdownIt, rawSrc: string): string {
   const src = md.normalizeLink(rawSrc);
   return md.validateLink(src) ? md.utils.escapeHtml(src) : "";
+}
+
+function htmlAttribute(tag: string, name: string): string | undefined {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(
+    `(?:^|\\s)${escapedName}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`,
+    "i",
+  ).exec(tag);
+  if (!match) {
+    return undefined;
+  }
+  return match[1] ?? match[2] ?? match[3] ?? "";
 }
