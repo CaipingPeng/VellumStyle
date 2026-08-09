@@ -96,7 +96,8 @@ ${ARTICLE_ROOT_SELECTOR} .footnotes .footnote-item p {
 const IMAGEFLOW_LAYOUT_BASE_CSS = `
 ${ARTICLE_ROOT_SELECTOR} .imageflow-layer1 {
   overflow: hidden;
-  margin: 16px 0;
+  /* 底部留白由 caption 承接（margin 0），避免图片与提示文字之间多出 16px */
+  margin: 16px 0 0;
 }
 ${ARTICLE_ROOT_SELECTOR} .imageflow-layer2 {
   display: flex !important;
@@ -117,7 +118,9 @@ ${ARTICLE_ROOT_SELECTOR} .imageflow-img {
   height: auto !important;
 }
 ${ARTICLE_ROOT_SELECTOR} .imageflow-caption {
-  margin: 8px 0 0;
+  /* 图片容器（layer3）底部已有内边距容纳阴影，提示文字贴紧它，
+     整体间距与独立图 figcaption 一致，避免"分离感" */
+  margin: 0;
   padding: 0;
   text-align: center;
   color: rgba(136, 136, 136, 1);

@@ -377,7 +377,9 @@
 
 /* ---------- 11. 横滑图组提示文字 ---------- */
 #article .imageflow-caption {
-  margin: 8px 0 0;
+  /* 图片容器底部已有 12px 内边距（容纳阴影），提示文字贴紧它，
+     整体间距与独立图 figcaption 一致，不再有分离感 */
+  margin: 0;
   color: #8a8172;
   font-size: 14px;
   text-align: center;
