@@ -16,7 +16,12 @@ export async function loadAllThemes(): Promise<ThemeOption[]> {
       if (!css.trim()) return [];
       // 统一作用域到 #article：作者写裸选择器也不会污染应用 UI，
       // 预览/导出/缩略图共用同一份已作用域 CSS。
-      return [{id: u.id, name: u.name || u.id, css: scopeCssTo(css, ARTICLE_ROOT_SELECTOR)}];
+      return [{
+        id: u.id,
+        name: u.name || u.id,
+        css: scopeCssTo(css, ARTICLE_ROOT_SELECTOR),
+        source: "user",
+      }];
     });
   } catch {
     // 非 Tauri 环境，仅内置主题
@@ -35,4 +40,9 @@ export async function openThemesDir(): Promise<void> {
 // 导入 CSS 主题：raw 为 CSS 文本，id 为新主题名。
 export async function importCssTheme(id: string, rawCss: string): Promise<void> {
   await invoke("import_css_theme", {id, rawCss});
+}
+
+// 删除用户主题（内置主题不可删除，前端也不会对其调用）。
+export async function deleteUserTheme(id: string): Promise<void> {
+  await invoke("delete_user_theme", {id});
 }

@@ -134,6 +134,30 @@ pub fn import_css_theme(app: AppHandle, id: String, raw_css: String) -> Result<S
     Ok(safe_id)
 }
 
+/// 删除用户主题：删除 themes/{id}.css。id 按文件名原样解析（与扫描一致，
+/// 支持中文/空格等文件系统允许的字符），但做路径安全校验，防止目录穿越。
+#[tauri::command]
+pub fn delete_user_theme(app: AppHandle, id: String) -> Result<(), String> {
+    let dir = themes_dir(&app).ok_or_else(|| "无法定位数据目录".to_string())?;
+    delete_theme_file(&dir, &id)
+}
+
+fn delete_theme_file(dir: &std::path::Path, id: &str) -> Result<(), String> {
+    if id.is_empty()
+        || id.starts_with('.')
+        || id.contains("..")
+        || id.contains(['/', '\\'])
+    {
+        return Err("非法的主题 id".into());
+    }
+    let path = dir.join(format!("{id}.css"));
+    match std::fs::remove_file(&path) {
+        Ok(_) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(format!("删除主题失败：{e}")),
+    }
+}
+
 /// 确保 app_data_dir/themes/ 存在，返回其绝对路径（供 UI「打开主题文件夹」用）。
 #[tauri::command]
 pub fn ensure_themes_dir(app: AppHandle) -> Result<String, String> {
@@ -202,4 +226,29 @@ mod tests {
         );
     }
 
+    #[test]
+    fn delete_theme_rejects_traversal_and_dot_names() {
+        let dir = std::env::temp_dir().join("vellum-theme-delete-reject");
+        let _ = std::fs::create_dir_all(&dir);
+        assert!(delete_theme_file(&dir, "").is_err());
+        assert!(delete_theme_file(&dir, ".hidden").is_err());
+        assert!(delete_theme_file(&dir, "a..b").is_err());
+        assert!(delete_theme_file(&dir, "../escape").is_err());
+        assert!(delete_theme_file(&dir, "a/b").is_err());
+        assert!(delete_theme_file(&dir, "a\\b").is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn delete_theme_removes_file_and_tolerates_missing() {
+        let dir = std::env::temp_dir().join(format!("vellum-theme-delete-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join("我的主题.css");
+        std::fs::write(&path, "body{}").unwrap();
+        assert!(delete_theme_file(&dir, "我的主题").is_ok());
+        assert!(!path.exists());
+        // 文件不存在视为已删除，不报错。
+        assert!(delete_theme_file(&dir, "不存在的主题").is_ok());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

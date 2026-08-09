@@ -31,7 +31,8 @@ ${ARTICLE_ROOT_SELECTOR} pre.custom {
   border-radius: 8px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  white-space: pre;
+  /* 不写 white-space：微信会把显式的 white-space: pre 改成 pre-wrap（导致长行换行）；
+     留空靠浏览器 UA 默认 pre（不换行），微信不干预，发布后配合 overflow-x 横向滚动。 */
   word-wrap: normal;
 }
 ${ARTICLE_ROOT_SELECTOR} pre.custom code.hljs {
@@ -185,7 +186,22 @@ function scopeHljsCss(css: string): string {
 
     const selectors = scopeSelectorList(prelude);
     if (selectors.length > 0) {
-      rules.push(`${selectors.join(",\n")} { ${body} }`);
+      // .hljs 规则同时落到代码块容器 pre.custom 时，把纯色 background 简写
+      // 转成 background-color：简写会重置 background-image，把主题的顶部
+      // 渐变装饰条等背景图清掉；code.hljs 保持原样（含 url 的混合值也保持）。
+      const rootSelector = `${ARTICLE_ROOT_SELECTOR} pre.custom`;
+      const rootIdx = selectors.indexOf(rootSelector);
+      if (rootIdx !== -1) {
+        const rootBody = body.replace(
+          /(^|;)\s*background:\s*(#[0-9a-fA-F]{3,8}|rgb\(\s*[^)]*\)|rgba\(\s*[^)]*\)|transparent)\s*(;|$)/g,
+          "$1 background-color: $2 $3",
+        );
+        rules.push(`${rootSelector} { ${rootBody} }`);
+        const others = selectors.filter((_, i) => i !== rootIdx);
+        if (others.length > 0) rules.push(`${others.join(",\n")} { ${body} }`);
+      } else {
+        rules.push(`${selectors.join(",\n")} { ${body} }`);
+      }
     }
     i = close + 1;
   }

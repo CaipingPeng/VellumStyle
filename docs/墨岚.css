@@ -1,0 +1,471 @@
+/* ============================================================
+   「墨岚」· Ink Haze —— VellumStyle 自定义主题 v3（微信安全版）
+   ------------------------------------------------------------
+   气质：暖纸书卷 + 墨色正文 + 黛蓝/赭金点缀的编辑风排版。
+   v2 更新：点阵纸纹理、拍立得图片、h3~h6 自动装饰符、
+   底部 ✦ ✦ ✦ 收尾、分隔线 ✦ ✦ ✦（迁移自炫彩实验版）；
+   重新设计 h1/h2 标题、引用双角引号卡、加粗高亮。
+   约束：全部样式都能被 juice 内联进微信（无 @media / :hover /
+   @keyframes / @font-face 依赖），微信端所见即所得。
+
+   v3 更新（微信安全化，已实测）：
+   1. 删除全部 CSS 变量（--x）定义，var() 全部替换成写死色值；
+   2. 根元素 #article 展开为长手属性（背景/内边距，对齐内置
+      「全栈蓝」的存活写法）；
+   3. 根元素与列表项显式 text-align: left（微信默认会给未显式
+      对齐的列表内容套两端对齐）。
+   已实测：整页纸底背景在微信端存活。
+
+   用法：复制到主题文件夹（Windows：
+   %APPDATA%\com.vellumstyle.desktop\themes），重新扫描后使用。
+   ============================================================ */
+
+/* ---------- 0. 全局基调 ---------- */
+#article {
+  margin-top: 0px;
+  margin-bottom: 0px;
+  margin-left: 0px;
+  margin-right: 0px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 12px;
+  padding-right: 12px;
+  background-attachment: scroll;
+  background-clip: border-box;
+  background-color: #faf7f0;
+  background-image:
+    radial-gradient(ellipse 34% 24% at 76% 8%, rgba(246, 239, 226, 0.7), rgba(246, 239, 226, 0) 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(63, 93, 122, 0.05) 100%),
+    radial-gradient(circle at 4px 6px, rgba(63, 93, 122, 0.2) 0 1px, rgba(63, 93, 122, 0.07) 1px 2px, transparent 2.8px),
+    radial-gradient(circle at 20px 24px, rgba(168, 123, 63, 0.18) 0 1.2px, rgba(168, 123, 63, 0.06) 1.2px 2.3px, transparent 3.2px),
+    radial-gradient(circle at 32px 8px, rgba(63, 93, 122, 0.12) 0 0.7px, rgba(63, 93, 122, 0.04) 0.7px 1.6px, transparent 2.4px),
+    radial-gradient(circle at 14px 32px, rgba(168, 123, 63, 0.14) 0 1px, rgba(168, 123, 63, 0.05) 1px 2.1px, transparent 3px);
+  background-origin: padding-box;
+  background-position-x: left;
+  background-position-y: top;
+  background-repeat: repeat;
+  background-size: auto, auto, 46px 46px, 46px 46px, 46px 46px, 46px 46px;
+  width: auto;
+  height: auto;
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  font-size: 16px;
+  line-height: 1.9;
+  letter-spacing: 0.01em;
+  color: #38342c;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  text-align: left;
+}
+
+/* 文章底部 ✦ ✦ ✦ 收尾 */
+#article::after {
+  content: "✦ ✦ ✦";
+  display: block;
+  text-align: center;
+  margin-top: 34px;
+  color: #a87b3f;
+  font-size: 14px;
+  letter-spacing: 0.6em;
+}
+
+/* ---------- 1. 段落 ---------- */
+#article p {
+  margin: 15px 0;
+  text-align: justify;
+  color: #38342c;
+}
+
+/* ---------- 2. 标题：衬线 + 装饰 ---------- */
+#article h1 .content,
+#article h2 .content,
+#article h3 .content,
+#article h4 .content,
+#article h5 .content,
+#article h6 .content {
+  display: block;
+  font-family: "Noto Serif SC", "Songti SC", "SimSun", serif;
+}
+
+/* h1：居中刊头式——顶部 ✦ 装饰 + 渐变字 + 底部居中短横（重新设计） */
+#article h1 .content {
+  font-size: 31px;
+  font-weight: 700;
+  color: #26241f;
+  background: linear-gradient(120deg, #26241f 25%, #3f5d7a 65%, #a87b3f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+#article h1 {
+  margin: 36px 0 20px;
+  position: relative;
+  text-align: center;
+}
+#article h1::before {
+  content: "✦ ✦";
+  display: block;
+  text-align: center;
+  margin-bottom: 8px;
+  color: #a87b3f;
+  font-size: 13px;
+  letter-spacing: 0.5em;
+  line-height: 1;
+}
+
+/* h2：自动 ❖ 装饰 + 可选编号徽章 + 底部渐隐细线 */
+#article h2 .content {
+  font-size: 22px;
+  font-weight: 700;
+  color: #26241f;
+}
+#article h2 .content::before {
+  content: "❖ ";
+  color: #3f5d7a;
+  font-size: 18px;
+}
+#article h2 {
+  margin: 26px 0 12px;
+  padding-bottom: 8px;
+  position: relative;
+  border-bottom: 0;
+}
+/* 注意：渲染插件会给每个 h2 自动加空的 .prefix/.suffix span，
+   徽章选择器必须限定在 .content 内，否则会出现"幻影短条"。 */
+#article h2 .content .prefix {
+  display: inline-block;
+  margin-right: 10px;
+  padding: 2px 9px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #3f5d7a, #5c7a6b);
+  color: #fff;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  vertical-align: 3px;
+}
+#article h2 .content .suffix {
+  display: inline;
+  color: #a87b3f;
+  margin-left: 6px;
+}
+
+/* h3：自动 ✦ 装饰（前置装饰只保留一个，去掉左侧竖条） */
+#article h3 .content {
+  font-size: 19px;
+  font-weight: 600;
+  color: #26241f;
+}
+#article h3 .content::before {
+  content: "✦ ";
+  color: #a87b3f;
+}
+#article h3 {
+  margin: 26px 0 12px;
+}
+
+/* h4~h6：小标题，自动装饰符 */
+#article h4 .content { font-size: 17px; color: #3f5d7a; font-weight: 700; }
+#article h4 .content::before { content: "◆ "; color: #3f5d7a; }
+#article h5 .content { font-size: 16px; color: #26241f; font-weight: 700; }
+#article h5 .content::before { content: "▪ "; color: #a87b3f; }
+#article h6 .content { font-size: 15px; color: #a87b3f; font-weight: 700; }
+#article h6 .content::before { content: "· "; color: #5c7a6b; }
+#article h4,
+#article h5,
+#article h6 { margin: 20px 0 10px; }
+
+/* ---------- 3. 行内文字 ---------- */
+#article strong {
+  color: #26241f;
+  font-weight: 700;
+  background: linear-gradient(180deg, transparent 62%, rgba(63, 93, 122, 0.14) 62%);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+#article em { color: #3f5d7a; }
+#article s,
+#article del { color: #a49b8c; }
+#article mark {
+  background: linear-gradient(180deg, transparent 55%, #f6efe2 55%);
+  color: #26241f;
+  padding: 0 2px;
+}
+#article p code,
+#article li code {
+  background: #f6efe2;
+  color: #8a5a2b;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(168, 123, 63, 0.25);
+  font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+  font-size: 0.88em;
+}
+
+/* ---------- 4. 原始 HTML：链接 / 下划线 ---------- */
+#article a { color: #3f5d7a; text-decoration: none; border-bottom: 1px solid rgba(63, 93, 122, 0.4); }
+#article u { text-decoration: underline; text-decoration-color: #a87b3f; }
+
+/* ---------- 5. 列表 ---------- */
+#article ul { padding-left: 26px; list-style: disc; }
+#article ol { padding-left: 26px; list-style: decimal; }
+#article li section { margin: 7px 0; text-align: left; }
+#article li::marker { color: #a87b3f; }
+#article ol li::marker { color: #3f5d7a; font-weight: 600; }
+#article ul ul { list-style: circle; }
+#article ul ul ul { list-style: square; }
+
+/* ---------- 6. 引用块：双角引号卡片，嵌套分层（重新设计） ---------- */
+#article blockquote {
+  margin: 22px 0;
+  padding: 8px 24px 8px 24px;
+  position: relative;
+  background: linear-gradient(180deg, #e8eef4, rgba(255, 255, 255, 0.6));
+  border-left: 4px solid #3f5d7a;
+  border-radius: 0 12px 12px 0;
+  box-shadow: 0 6px 18px rgba(38, 36, 31, 0.06);
+  color: #4c4a44;
+}
+/* 左引号：引用块自己的左上装饰区，零占位（正负 margin 抵消），不进入文字行 */
+#article blockquote::before {
+  content: "❝";
+  display: block;
+  text-align: left;
+  height: 0;
+  line-height: 0;
+  margin-top: 14px;
+  margin-bottom: -15px;
+  margin-left: -12px;
+  font-size: 18px;
+  color: rgba(63, 93, 122, 0.32);
+  font-family: Georgia, "Times New Roman", serif;
+}
+#article blockquote::after {
+  content: "❞";
+  float: right;
+  height: 0;
+  line-height: 0;
+  margin-right: -12px;
+  font-size: 18px;
+  color: rgba(168, 123, 63, 0.3);
+  font-family: Georgia, "Times New Roman", serif;
+}
+#article blockquote p { color: inherit; }
+
+/* 第二层：赭金 */
+#article blockquote blockquote {
+  background: linear-gradient(180deg, #f6efe2, rgba(255, 255, 255, 0.6));
+  border-left-color: #a87b3f;
+}
+#article blockquote blockquote::before { color: rgba(168, 123, 63, 0.4); }
+#article blockquote blockquote::after { color: rgba(63, 93, 122, 0.3); }
+
+/* 第三层：松绿 */
+#article blockquote blockquote blockquote {
+  background: linear-gradient(180deg, #eaf0ec, rgba(255, 255, 255, 0.6));
+  border-left-color: #5c7a6b;
+}
+#article blockquote blockquote blockquote::before { color: rgba(92, 122, 107, 0.4); }
+#article blockquote blockquote blockquote::after { color: rgba(168, 123, 63, 0.3); }
+
+/* ---------- 7. 代码块：顶部渐变条 + 投影 ---------- */
+#article pre.custom {
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid rgba(63, 93, 122, 0.18);
+  box-shadow: 0 8px 24px rgba(38, 36, 31, 0.12);
+  /* 顶部 4px 渐变装饰条：不能用伪元素（微信会把 pre 内的伪元素 span 剥掉），
+     改用背景渐变实现，微信端保留 */
+  background-image: linear-gradient(90deg, #3f5d7a, #a87b3f, #5c7a6b) !important;
+  background-size: 100% 4px !important;
+  background-repeat: no-repeat !important;
+  background-position: top !important;
+  /* code.hljs 的不透明背景会盖住 pre 的背景，用 padding-top 把代码内容
+     下移 4px，让顶部渐变条露出来（原伪元素方案也是 4px 占位） */
+  padding-top: 4px !important;
+}
+
+/* ---------- 8. 流程图 ---------- */
+#article pre.mermaid {
+  text-align: center;
+  margin: 22px 0;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #e7dfd0;
+  border-radius: 12px;
+}
+#article pre.mermaid svg { max-width: 100%; height: auto; }
+#article pre.mermaid.mermaid-error { color: #9f1239; text-align: left; }
+
+/* ---------- 9. 表格：三线书刊表（重新设计） ----------
+   书刊式三线表：上下粗线 + 表头细线，无竖线、无底色、无斑马纹。 */
+#article .table-container {
+  overflow-x: auto;
+  margin: 24px 0;
+}
+#article table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 15px;
+  border-top: 2px solid #3f5d7a;
+  border-bottom: 2px solid #3f5d7a;
+}
+#article table th,
+#article table td {
+  border: 0;
+  padding: 10px 14px;
+  vertical-align: middle;
+}
+#article thead th {
+  border-bottom: 1px solid #3f5d7a;
+  color: #3f5d7a;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: left;
+  /* 微信粘贴会给 th 自动加浅灰底（rgb(240,240,240)），用透明覆盖 */
+  background-color: transparent !important;
+}
+#article tbody td { border-bottom: 1px solid #e7dfd0; color: #38342c; }
+#article tbody tr:last-child td { border-bottom: 0; }
+#article tbody td:first-child { color: #26241f; }
+/* 表格单元格内的图片：垂直居中，与同行文字对齐 */
+#article table td img {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* ---------- 10. 图片与图注 ---------- */
+/* 兜底：任何位置的图片都不超过容器宽度（含表格单元格内的图片） */
+#article img {
+  max-width: 100%;
+  height: auto;
+}
+#article figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 26px 0;
+}
+#article figure img {
+  box-sizing: border-box;
+  border-radius: 12px;
+  /* 四周均匀扩散阴影：偏移 0 0，四边扩散完全对称 */
+  box-shadow: 0 0 18px rgba(38, 36, 31, 0.14), 0 0 8px rgba(38, 36, 31, 0.07);
+}
+#article figure figcaption {
+  margin-top: 12px;
+  color: #8a8172;
+  font-size: 14px;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+#article figure figcaption::before { content: "— "; color: #a87b3f; }
+#article figure figcaption::after { content: " —"; color: #a87b3f; }
+/* 行内小图（表情等）保持行内 */
+#article p img { display: inline-block; vertical-align: middle; max-width: 100%; }
+/* 轮播图组：与独立图一致的浮空卡片 */
+#article .imageflow-img {
+  border-radius: 12px;
+  /* 轮播图阴影调淡：滚动容器内边距会凸显阴影矩形轮廓，淡一点抑制"框"感 */
+  box-shadow: 0 0 14px rgba(38, 36, 31, 0.08), 0 0 6px rgba(38, 36, 31, 0.04);
+  /* 块级图片固有宽小于容器时默认靠左，居中后与独立图一致 */
+  margin: 0 auto !important;
+}
+/* 滚动容器会裁掉图片溢出的阴影，给每张图留出呼吸空间 */
+#article .imageflow-layer3 {
+  box-sizing: border-box;
+  /* 内边距容纳四周阴影扩散（约 9px），避免被滚动容器裁出硬边 */
+  padding: 12px;
+}
+
+/* ---------- 11. 横滑图组提示文字 ---------- */
+#article .imageflow-caption {
+  margin: 8px 0 0;
+  color: #8a8172;
+  font-size: 14px;
+  text-align: center;
+  letter-spacing: 0.2em;
+}
+
+/* ---------- 12. 链接与脚注 ---------- */
+#article .footnote-word { color: #3f5d7a; font-weight: 600; }
+#article .footnote-ref {
+  color: #a87b3f;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 2px;
+}
+#article .footnotes {
+  margin-top: 34px;
+  padding-top: 16px;
+  position: relative;
+  color: #7d7668;
+  font-size: 14px;
+  line-height: 1.8;
+}
+#article .footnotes::before {
+  content: "· ✦ ·";
+  display: block;
+  text-align: center;
+  color: #a87b3f;
+  padding: 0 10px;
+  letter-spacing: 0.4em;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+#article .footnote-item { color: inherit; }
+#article .footnote-num { color: #3f5d7a; font-weight: 700; }
+
+/* ---------- 13. 数学公式 ---------- */
+#article mjx-container { font-size: 18px; }
+#article mjx-container[display="true"] {
+  display: block;
+  margin: 20px 0;
+  text-align: center;
+  padding: 10px;
+  background: rgba(63, 93, 122, 0.04);
+  border-radius: 8px;
+}
+
+/* ---------- 14. 其他块 ---------- */
+/* 分隔线：中段泛金的渐变细线（重新设计）
+   注意：不能用 hr::before/::after 做装饰——hr 是空元素，
+   juice 内联时会把伪元素变成 hr 后的兄弟 span，微信端会错位。 */
+#article hr {
+  height: 1px;
+  border: 0;
+  margin: 36px 0;
+  background: linear-gradient(90deg, transparent 0%, #e7dfd0 30%, #a87b3f 50%, #e7dfd0 70%, transparent 100%);
+}
+
+/* 定义列表 */
+#article dl { margin: 18px 0; padding: 14px 18px; background: rgba(168, 123, 63, 0.06); border-left: 3px solid #a87b3f; border-radius: 0 8px 8px 0; }
+#article dt { font-weight: 700; color: #26241f; }
+#article dd { margin: 6px 0 8px 22px; color: #6b665c; }
+
+/* 注音 */
+#article ruby rt { font-size: 0.6em; color: #9a927f; }
+
+/* 目录卡片 */
+#article .table-of-contents {
+  background: linear-gradient(135deg, rgba(63, 93, 122, 0.07), rgba(168, 123, 63, 0.06));
+  border: 1px solid #e7dfd0;
+  border-left: 3px solid #3f5d7a;
+  border-radius: 0 12px 12px 0;
+  padding: 16px 20px;
+  margin: 24px 0;
+}
+#article .table-of-contents ul { padding-left: 20px; list-style: none; }
+#article .table-of-contents ul ul { padding-left: 18px; }
+#article .table-of-contents li { margin: 6px 0; }
+#article .table-of-contents li::marker { color: #3f5d7a; }
+#article .table-of-contents a { color: #3f5d7a; border-bottom: 0; }
+
+/* ---------- 15. 原始 HTML：视频 / SVG ---------- */
+#article iframe { max-width: 100%; border-radius: 10px; }
+#article svg { max-width: 100%; height: auto; }
+
+/* ============================================================
+   改完保存 → 应用「主题」→「打开主题文件夹」→ 使用
+   说明与边界见 docs/用户主题制作指南.md
+   ============================================================ */

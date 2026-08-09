@@ -1,0 +1,237 @@
+/* ============================================================
+   VellumStyle 主题模板（覆盖渲染管线的全部元素）
+   ------------------------------------------------------------
+   用法：
+   1. 把这个文件复制到你的主题文件夹（Windows：
+      %APPDATA%\com.vellumstyle.desktop\themes），
+      重命名成你的主题名，例如 我的主题.css；
+   2. 用编辑器打开，按下面每一节的注释改颜色/字号/间距；
+   3. 回到应用 →「主题」→「打开主题文件夹」重新扫描 → 使用。
+
+   图例：
+   🎨 可样式化   —— 主题的正常目标，放心改
+   📄 仅原始 HTML —— 只有手写/导入 HTML 才会出现（提供兜底规则）
+   ⚠️ 系统托管    —— 应用/代码主题管理，模板不写样式、也不要覆盖
+   ℹ️ 说明        —— 结构提示，无需写样式
+   ============================================================ */
+
+/* ---------- 0. 全局基调 🎨 ---------- */
+#article {
+  /* 改这里：整篇的字体、字号、行距、文字颜色、背景 */
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  font-size: 16px;
+  line-height: 1.85;
+  color: #3a3f45;
+  /* 超长字符串/URL 自动断行，防止溢出容器（微信端同样需要） */
+  overflow-wrap: break-word;
+  word-break: break-word;
+  background: #ffffff;
+  padding: 0 4px;
+  /* 微信编辑器会给未显式对齐的内容默认两端对齐，根元素显式写 left 兜底 */
+  text-align: left;
+}
+
+/* ---------- 1. 段落 🎨 ---------- */
+#article p {
+  margin: 14px 0;
+  text-align: justify;
+}
+
+/* ---------- 2. 标题 h1 ~ h6 🎨 ----------
+   结构：<h2><span class="prefix"></span><span class="content">文字</span><span class="suffix"></span></h2>
+   文字样式写 .content；标题整体间距/边框写 h2 本身。 */
+#article h1 .content,
+#article h2 .content,
+#article h3 .content,
+#article h4 .content,
+#article h5 .content,
+#article h6 .content {
+  display: block;
+}
+
+#article h1 .content { font-size: 28px; color: #1f2d3d; font-weight: 700; }
+#article h1 { margin: 30px 0 14px; padding-bottom: 10px; border-bottom: 2px solid #dce6f0; }
+
+#article h2 .content { font-size: 22px; color: #2b4a63; font-weight: 700; }
+#article h2 { margin: 26px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #e6eef6; }
+
+#article h3 .content { font-size: 18px; color: #33475b; font-weight: 600; }
+#article h3 { margin: 22px 0 10px; }
+
+#article h4 .content,
+#article h5 .content,
+#article h6 .content { color: #40566b; font-weight: 600; }
+
+/* 标题装饰插槽（可选）：想让 h2 显示「01.」式编号，就在正文里写
+   <span class="prefix">01.</span> 放在标题前，或配合复杂样式技巧 */
+#article h2 .prefix {
+  display: inline-block;
+  margin-right: 8px;
+  color: #9db8d2;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+/* ---------- 3. 行内文字 🎨 ---------- */
+#article strong { color: #1f2d3d; font-weight: 700; }
+#article em { color: #5a6472; }
+/* 删除线是 <s>（markdown-it 产出），不是 <del>；两个一起写更保险 */
+#article s,
+#article del { color: #a0a8b0; text-decoration: line-through; }
+/* ==高亮== 渲染成 <mark> */
+#article mark { background: #fff1b8; color: #594300; padding: 0 3px; border-radius: 3px; }
+#article p code,
+#article li code {
+  background: #f2f4f7;
+  color: #b5475d;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+  font-size: 0.88em;
+}
+
+/* ---------- 4. 原始 HTML：链接 / 下划线 📄 ----------
+   只有手写/导入的 <a>、<u> 才到这里；[文字](url) 已转成脚注。 */
+#article a { color: #3b82a0; text-decoration: underline; }
+#article u { text-decoration: underline; }
+
+/* ---------- 5. 列表 🎨 ---------- */
+#article ul { padding-left: 30px; list-style: disc; }
+#article ol { padding-left: 30px; list-style: decimal; }
+/* 列表项内容包在 <li><section>…</section></li> 里 */
+#article li section { margin: 6px 0; text-align: left; }
+#article li::marker { color: #3b82a0; }
+
+/* ---------- 6. 引用块 🎨 ----------
+   实测：所有层级都只带 multiquote-1，分层用结构选择器 */
+#article blockquote {
+  margin: 18px 0;
+  padding: 12px 18px;
+  background: #f4f8fb;
+  border-left: 4px solid #7fb0cf;
+  color: #54626f;
+}
+#article blockquote blockquote { border-left-color: #8fc3a9; background: #f4faf6; }
+#article blockquote blockquote blockquote { border-left-color: #c9a7d6; background: #faf7fc; }
+
+/* ---------- 7. 代码块 🎨(容器) / ⚠️(内部) ----------
+   容器（圆角/边框/阴影）由你管；
+   内部 span.hljs-* 配色归「代码主题」，别覆盖 .hljs。 */
+#article pre.custom {
+  border-radius: 10px;
+  border: 1px solid #e3e9f0;
+  box-shadow: 0 2px 10px rgba(31, 45, 61, 0.05);
+}
+/* ℹ️ 代码换行是 <br>，无需样式 */
+
+/* ---------- 8. 流程图 Mermaid 🎨 ----------
+   静态是 <pre class="mermaid"> 原始文本，运行时替换成 svg */
+#article pre.mermaid { text-align: center; margin: 18px 0; }
+#article pre.mermaid svg { max-width: 100%; height: auto; }
+#article pre.mermaid.mermaid-error { color: #9f1239; text-align: left; }
+
+/* ---------- 9. 表格 🎨 ----------
+   结构：<section class="table-container"><table><thead>…<tbody>… */
+#article .table-container { overflow-x: auto; margin: 18px 0; }
+#article table { border-collapse: collapse; width: 100%; font-size: 15px; }
+#article table th,
+#article table td {
+  border: 1px solid #dfe6ee;
+  padding: 9px 14px;
+  vertical-align: middle;
+}
+#article table th { background: #f2f6fa; color: #2b4a63; font-weight: 600; }
+/* 斑马纹：tbody 里的偶数行 */
+#article table tr:nth-child(2n) td { background: #fafcfe; }
+/* 表格单元格内的图片：垂直居中，与同行文字对齐 */
+#article table td img {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* ---------- 10. 图片、图注、行内图 🎨 ----------
+   独立图片：<figure><img><figcaption>图注</figcaption></figure>
+   图注文字 = 图片的 alt/描述 */
+/* 兜底：任何位置的图片都不超过容器宽度（含表格单元格内的图片） */
+#article img { max-width: 100%; height: auto; }
+#article figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 22px 0;
+}
+#article figure img { border-radius: 8px; }
+#article figure figcaption {
+  margin-top: 8px;
+  color: #8a94a0;
+  font-size: 14px;
+  text-align: center;
+}
+/* 行内小图（搜索表情等）保持行内 */
+#article p img { display: inline-block; vertical-align: middle; max-width: 100%; }
+
+/* ---------- 11. 横滑图组 🎨(提示文字) / ⚠️(布局) ----------
+   布局由应用内联样式 + !important 托管，主题只改文字。 */
+#article .imageflow-caption { color: #8a94a0; font-size: 14px; text-align: center; }
+/* ⚠️ 微信经典微表情：尺寸由内联样式固定（20×20），不要覆盖 */
+
+/* ---------- 12. 链接与脚注 🎨 ---------- */
+#article .footnote-word { color: #3b82a0; }
+#article .footnote-ref { color: #3b82a0; font-size: 12px; }
+/* ⚠️ .footnote-item 的块级布局由应用 !important 托管，改颜色/字号没问题 */
+#article .footnotes {
+  margin-top: 28px;
+  padding-top: 14px;
+  border-top: 1px solid #e6eef6;
+  color: #7a8694;
+  font-size: 14px;
+}
+
+/* ---------- 13. 数学公式 🎨 ----------
+   运行时由 MathJax 排版成 <mjx-container> */
+#article mjx-container { font-size: 18px; }
+#article mjx-container[display="true"] { display: block; margin: 18px 0; text-align: center; }
+
+/* ---------- 14. 其他块 🎨 ---------- */
+/* 分隔线 */
+#article hr {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(90deg, transparent, #dce6f0, transparent);
+  margin: 26px 0;
+}
+/* 定义列表 */
+#article dl { margin: 16px 0; }
+#article dt { font-weight: 600; }
+#article dd { margin: 4px 0 12px 24px; color: #666; }
+/* 注音 {汉字|拼音} */
+#article ruby rt { font-size: 0.6em; color: #999; }
+/* 目录 [toc] */
+#article .table-of-contents {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 16px 0;
+}
+#article .table-of-contents ul { padding-left: 20px; }
+#article .table-of-contents a { color: #3b82a0; }
+
+/* ---------- 15. 原始 HTML：视频 / SVG 📄 ---------- */
+#article iframe { max-width: 100%; }
+#article svg { max-width: 100%; height: auto; }
+/* ⚠️ 微信富媒体卡片（mpvoice / mp-common-mpaudio / mp-common-videosnap /
+   mp-common-clmusic）是官方结构，不要覆盖，否则发布后卡片可能失效 */
+
+/* ---------- 16. 窄窗口适配 🎨 ----------
+   @media 按应用窗口宽度生效（不是预览面板宽度） */
+@media (max-width: 480px) {
+  #article { font-size: 15px; }
+  #article h1 .content { font-size: 24px; }
+  #article h2 .content { font-size: 20px; }
+  #article table { font-size: 13px; }
+}
+
+/* ============================================================
+   改完保存 → 应用「主题」→「打开主题文件夹」→ 使用
+   详细说明见 docs/用户主题制作指南.md
+   ============================================================ */

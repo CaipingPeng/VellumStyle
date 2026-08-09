@@ -37,8 +37,10 @@ test("文章主题 CSS 先注入，代码主题 CSS 后注入以保持独立覆�
   const articleCss = `${ARTICLE_ROOT_SELECTOR} pre.custom { background: #ffffff; }`;
   const css = buildMarkdownCss(articleCss);
 
-  assert.ok(css.indexOf(articleCss) < css.indexOf(`${ARTICLE_ROOT_SELECTOR} pre.custom,\n${ARTICLE_ROOT_SELECTOR} pre.custom code.hljs`));
-  assert.match(css, /#article pre\.custom,\s*#article pre\.custom code\.hljs\s*\{[^}]*background:\s*#1E1E1E/i);
+  const codeRootBg = css.search(/#article pre\.custom\s*\{\s*background-color:\s*#1E1E1E/i);
+  assert.ok(css.indexOf(articleCss) < codeRootBg);
+  assert.match(css, /#article pre\.custom\s*\{[^}]*background-color:\s*#1E1E1E/i);
+  assert.match(css, /#article pre\.custom code\.hljs\s*\{[^}]*background:\s*#1E1E1E/i);
 });
 
 test("脚注编号和内容布局兜底覆盖 mdnice 双列脚注规则", () => {

@@ -1,11 +1,12 @@
 import {type FormEvent, useEffect, useMemo, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import {motion} from "framer-motion";
-import {ArrowRight, Braces, Check, ChevronLeft, ChevronRight, FolderOpen, Palette, Search, Star, Upload, X} from "lucide-react";
+import {ArrowRight, Braces, Check, ChevronLeft, ChevronRight, FolderOpen, Palette, Search, Star, Trash2, Upload, X} from "lucide-react";
 import {MOTION_DURATION_FAST, MOTION_SPRING_POP} from "../../utils/motion.ts";
 import {getThemeById, useStore} from "../../store/index.ts";
 import {CODE_THEMES, getCodeThemeById, loadAllCodeThemes, subscribeCodeThemes} from "../../markdown/codeThemes.ts";
-import {loadAllThemes, openThemesDir, importCssTheme} from "../../themes/loader.ts";
+import {deleteUserTheme, loadAllThemes, openThemesDir, importCssTheme} from "../../themes/loader.ts";
+import type {ThemeOption} from "../../themes/index.ts";
 import {toast} from "../Toast/toast.ts";
 import IconButton from "../ui/IconButton.tsx";
 import CodeThemeThumbnail from "./CodeThemeThumbnail.tsx";
@@ -60,6 +61,7 @@ export default function ThemePickerDialog({onClose}: Props) {
   const [query, setQuery] = useState("");
   const [jumpPage, setJumpPage] = useState("");
   const [codeThemesVersion, setCodeThemesVersion] = useState(0);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const ref = useClickOutside(onClose);
 
   useEffect(() => {
@@ -79,6 +81,13 @@ export default function ThemePickerDialog({onClose}: Props) {
     setPage(0);
     setJumpPage("");
   }, [activeTab, query]);
+
+  // 两步确认删除：点击垃圾桶进入确认态，3 秒不操作自动复原。
+  useEffect(() => {
+    if (!confirmDeleteId) return;
+    const timer = window.setTimeout(() => setConfirmDeleteId(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [confirmDeleteId]);
 
   const visibleThemes = useMemo(
     () => filterAndRankThemes(themes, query, favoriteThemeIds, markdownThemeId),
@@ -149,6 +158,18 @@ export default function ThemePickerDialog({onClose}: Props) {
       }
     };
     input.click();
+  }
+
+  async function deleteTheme(theme: ThemeOption) {
+    try {
+      await deleteUserTheme(theme.id);
+      setConfirmDeleteId(null);
+      setThemes(await loadAllThemes());
+      toast.show(`已删除主题「${theme.name}」`, "info");
+    } catch (e) {
+      const message = typeof e === "string" ? e : (e as Error)?.message || "删除失败";
+      toast.show(`删除失败：${message}`, "error");
+    }
   }
 
   return createPortal(
@@ -322,6 +343,32 @@ export default function ThemePickerDialog({onClose}: Props) {
                     >
                       <Star size={14} fill={favorite ? "currentColor" : "none"} />
                     </button>
+                    {t.source === "user" && (confirmDeleteId === t.id ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void deleteTheme(t);
+                        }}
+                        title="再次点击确认删除"
+                        className="inline-flex h-6 flex-none items-center whitespace-nowrap rounded-sm border-0 bg-transparent px-1.5 text-xs font-medium text-danger cursor-pointer transition-colors duration-fast outline-none hover:bg-bg-tertiary focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+                      >
+                        确认删除
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDeleteId(t.id);
+                        }}
+                        title="删除主题"
+                        aria-label={`删除主题 ${t.name}`}
+                        className="inline-flex h-6 w-6 flex-none items-center justify-center rounded-sm border-0 bg-transparent text-text-muted cursor-pointer transition-colors duration-fast outline-none hover:bg-bg-tertiary hover:text-danger focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    ))}
                     <span
                       title={`${t.name} (${t.id})`}
                       className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text"

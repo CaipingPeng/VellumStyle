@@ -128,6 +128,7 @@ pub fn run() {
             sync::test_sync_connection,
             themes::list_user_themes,
             themes::import_css_theme,
+            themes::delete_user_theme,
             themes::ensure_themes_dir,
             themes::open_themes_dir,
             external::open_external_url,
