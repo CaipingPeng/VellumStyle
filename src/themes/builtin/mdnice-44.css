@@ -12,9 +12,9 @@
 #article h5 { margin-top: 30px; margin-bottom: 15px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 0px; padding-right: 0px }
 #article h6 .content { font-size: 14px; color: rgba(0, 0, 0, 1); line-height: 1.5em; letter-spacing: 0em; text-align: left; font-weight: bold }
 #article h6 { margin-top: 30px; margin-bottom: 15px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 0px; padding-right: 0px }
-#article ul li section { color: rgba(1, 1, 1, 1); font-size: 16px; line-height: 1.8em; letter-spacing: 0em; text-align: left; font-weight: normal }
+#article ul li section { color: rgba(216, 222, 233, 1); font-size: 16px; line-height: 1.8em; letter-spacing: 0em; text-align: left; font-weight: normal }
 #article ul { list-style-type: disc; margin-top: 8px; margin-bottom: 8px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 25px; padding-right: 0px }
-#article ol li section { color: rgba(1, 1, 1, 1); font-size: 16px; line-height: 1.8em; letter-spacing: 0em; text-align: left; font-weight: normal }
+#article ol li section { color: rgba(216, 222, 233, 1); font-size: 16px; line-height: 1.8em; letter-spacing: 0em; text-align: left; font-weight: normal }
 #article ol { list-style-type: decimal; margin-top: 8px; margin-bottom: 8px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 25px; padding-right: 0px }
 #article blockquote p { color: rgba(189, 189, 189, 1); font-size: 16px; line-height: 1.8em; letter-spacing: 0em; text-align: left; font-weight: normal }
 #article .custom-blockquote p { color: rgba(189, 189, 189, 1); font-size: 16px; line-height: 1.8em; letter-spacing: 0em; text-align: left; font-weight: normal }
@@ -377,7 +377,7 @@
   border-radius: 8px;
   overflow-x: auto;
   overflow-y: hidden;
-  background: rgba(131, 252, 253, 1);
+  background: rgba(131, 252, 253, 0.06);
 }
 /* 图片：独立图与轮播图统一浮空卡片（偏移 0 的四周柔和阴影） */
 #article figure img {
@@ -398,4 +398,21 @@
 #article li,
 #article li section {
   text-align: left;
+}
+
+/* 超长串/URL 自动断行（防右溢出） */
+#article {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+/* 定义列表：术语加粗、定义缩进 */
+#article dl {
+  margin: 16px 0;
+  padding: 12px 16px;
+}
+#article dt {
+  font-weight: 700;
+}
+#article dd {
+  margin: 6px 0 8px 20px;
 }

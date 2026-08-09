@@ -64,3 +64,20 @@
   background-repeat: no-repeat !important;
   background-position: top !important;
 }
+
+/* 超长串/URL 自动断行（防右溢出） */
+#article {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+/* 定义列表：术语加粗、定义缩进 */
+#article dl {
+  margin: 16px 0;
+  padding: 12px 16px;
+}
+#article dt {
+  font-weight: 700;
+}
+#article dd {
+  margin: 6px 0 8px 20px;
+}

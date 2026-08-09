@@ -17,7 +17,6 @@ const BUILTIN_NAMES: Record<string, string> = {
   "ink-haze-night": "墨岚·星空",
   happysimple: "清欢",
   "morandi-garden": "雾屿",
-  "notion-style-light-enhanced": "纸间",
   "see-yue": "望月",
   "mdnice-1": "暮橙",
   "mdnice-3": "紫陌",

@@ -224,7 +224,12 @@ function compareCodeThemes(a: CodeTheme, b: CodeTheme): number {
 }
 
 function buildCodeTheme(theme: {id: string; name: string; group: "Highlight.js" | "Base16"; sourcePath: string; css: string}): CodeTheme {
-  return {...theme, css: scopeHljsCss(theme.css)};
+  return {
+    ...theme,
+    // hljs 主题给 code.hljs 自带的 overflow-x: auto 会与 pre.custom 的
+    // 滚动容器叠加成"双滚动条"；code 不应滚动，滚动交给 pre。
+    css: scopeHljsCss(theme.css).replace(/overflow-x:\s*auto;?\s*/g, ""),
+  };
 }
 
 // 常驻主题：启动即同步可用（预览/导出立即生效），覆盖绝大多数场景。
