@@ -215,12 +215,11 @@
 #article ul ul { list-style: circle; }
 #article ul ul ul { list-style: square; }
 
-/* ---------- 6. 引用块：双角引号卡片，嵌套分层（重新设计） ---------- */
+/* ---------- 6. 引用块：透明底，左竖线 + 双角引号，嵌套分层 ---------- */
 #article blockquote {
   margin: 22px 0;
   padding: 8px 24px 8px 24px;
   position: relative;
-  background: linear-gradient(180deg, #e8eef4, rgba(255, 255, 255, 0.6));
   border-left: 4px solid #3f5d7a;
   border-radius: 0 12px 12px 0;
   box-shadow: 0 6px 18px rgba(38, 36, 31, 0.06);
@@ -254,7 +253,6 @@
 
 /* 第二层：赭金 */
 #article blockquote blockquote {
-  background: linear-gradient(180deg, #f6efe2, rgba(255, 255, 255, 0.6));
   border-left-color: #a87b3f;
 }
 #article blockquote blockquote::before { color: rgba(168, 123, 63, 0.4); }
@@ -262,7 +260,6 @@
 
 /* 第三层：松绿 */
 #article blockquote blockquote blockquote {
-  background: linear-gradient(180deg, #eaf0ec, rgba(255, 255, 255, 0.6));
   border-left-color: #5c7a6b;
 }
 #article blockquote blockquote blockquote::before { color: rgba(92, 122, 107, 0.4); }
@@ -418,7 +415,10 @@
 
 /* ---------- 13. 数学公式 ---------- */
 #article mjx-container { font-size: 18px; }
-#article mjx-container[display="true"] {
+/* 预览是 mjx-container，导出到微信会转成 section.MathJax.block-equation，
+   两个选择器都要覆盖，否则行间公式的浅底/圆角在微信端丢失 */
+#article mjx-container[display="true"],
+#article section.MathJax.block-equation {
   display: block;
   margin: 20px 0;
   text-align: center;
