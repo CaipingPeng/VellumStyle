@@ -179,7 +179,9 @@
 #article h6 { margin: 20px 0 10px; }
 
 /* ---------- 3. 行内文字 ---------- */
-#article strong {
+/* 排除音乐/音频卡片占位符的歌名（vs-audio-placeholder-title），
+   否则正文加粗的渐变高亮特效会误伤卡片内名字 */
+#article strong:not(.vs-audio-placeholder-title) {
   color: #f4f7fc;
   font-weight: 700;
   background: linear-gradient(180deg, transparent 62%, rgba(143, 183, 221, 0.18) 62%);
