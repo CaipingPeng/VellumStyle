@@ -37,6 +37,10 @@ interface EmojiPage {
 const PAGE_SIZE = 40;
 
 const SMILEY_KEY_PREFIX = "smiley:";
+// normal（全部表情）的动图数据是加密的，直接拉取无法解码；hover 时经官方
+// get_cdn_url 转换后缓存解密链接（按 docId），避免重复转换。gen（合成表情）
+// 返回未加密的 search.c2c 链接，无需转换即可直接播放动图。
+const emojiCdnCache = new Map<string, string>();
 
 function smileyKey(name: string): string {
   return `${SMILEY_KEY_PREFIX}${name}`;
@@ -107,13 +111,15 @@ function parseErrorHint(source: string): string {
   if (!text.startsWith("{")) return `返回内容不是 JSON：${text.slice(0, 120)}`;
   try {
     const data = JSON.parse(text) as {
-      vs_error?: boolean;
+      vs_error?: boolean | string;
       reason?: string;
       message?: string;
       base_resp?: {ret?: number; err_msg?: string};
     };
     if (data?.vs_error) {
-      return `后台页面脚本异常：${data.reason || data.message || "未知"}`;
+      return typeof data.vs_error === "string" && data.vs_error
+        ? `后台页面脚本异常：${data.vs_error}`
+        : `后台页面脚本异常：${data.reason || data.message || "未知"}`;
     }
     if (data?.base_resp && data.base_resp.ret !== undefined && data.base_resp.ret !== 0) {
       return `微信接口错误(${data.base_resp.ret})：${data.base_resp.err_msg || ""}`;
@@ -140,7 +146,7 @@ function parseCdnUrlResponse(source: string): string | null {
 
 export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onNeedSettings}: Props) {
   const [query, setQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"search" | "smiley">("smiley");
+  const [activeTab, setActiveTab] = useState<"search" | "smiley">("search");
   const [items, setItems] = useState<EmojiItem[]>([]);
   const [genNextOffset, setGenNextOffset] = useState(0);
   const [genContinue, setGenContinue] = useState(false);
@@ -240,9 +246,11 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
     void runSearch(keyword, session);
   }, [query, runSearch]);
 
-  // 打开弹窗时清空旧结果；搜索只由用户按回车触发，不做输入防抖/补全搜索。
+  // 打开弹窗时清空旧结果并回到默认的搜索页；搜索只由用户按回车触发，
+  // 不做输入防抖/补全搜索。
   useEffect(() => {
     sessionRef.current += 1;
+    setActiveTab("search");
     setItems([]);
     setSelectedIds(new Set());
     setLoading(false);
@@ -377,7 +385,7 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
           {activeTab === "smiley" ? (
             <>
               <div className="flex h-8 min-w-0 flex-1 items-center justify-center rounded-md bg-accent">
-                <span className="text-sm font-medium text-white">微表情</span>
+                <span className="text-sm font-medium text-white">经典表情</span>
               </div>
               <button
                 type="button"
@@ -409,8 +417,8 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
               <button
                 type="button"
                 onClick={() => switchTab("smiley")}
-                title="微表情"
-                aria-label="微表情"
+                title="经典表情"
+                aria-label="经典表情"
                 className="grid h-8 w-8 flex-none place-items-center rounded-md border border-border bg-bg text-text-secondary transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
               >
                 <Smile size={17} />
@@ -444,10 +452,50 @@ export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onN
                       }`}
                     >
                       <img
-                        src={toProxyImageUrl(item.thumbUrl)}
+                        // gen（合成表情）的 emoji_url 是未加密的 search.c2c 链接，
+                        // 直接加载即可播放动图；normal（全部表情）返回加密数据，
+                        // 只能先显示静态缩略图，hover 时经官方 get_cdn_url 转换。
+                        src={
+                          item.emoticonType === 1
+                            ? toProxyImageUrl(item.emojiUrl)
+                            : toProxyImageUrl(item.thumbUrl)
+                        }
+                        onMouseEnter={async (event) => {
+                          // gen 动图已直接播放，无需再转换
+                          if (item.emoticonType === 1) return;
+                          const target = event.currentTarget;
+                          const cached = emojiCdnCache.get(item.docId);
+                          if (cached) {
+                            target.src = toProxyImageUrl(cached);
+                            return;
+                          }
+                          try {
+                            const response = await getEmojiCdnUrl(
+                              item.emojiUrl,
+                              item.thumbUrl,
+                              item.aesKey,
+                              item.emoticonType,
+                            );
+                            const cdnUrl = parseCdnUrlResponse(response);
+                            if (cdnUrl) {
+                              emojiCdnCache.set(item.docId, cdnUrl);
+                              target.src = toProxyImageUrl(cdnUrl);
+                            }
+                          } catch {
+                            // 转换失败保持静态缩略图
+                          }
+                        }}
+                        onError={(event) => {
+                          // 动图加载失败时回退静态缩略图
+                          const target = event.currentTarget;
+                          if (target.dataset.fallback === "true") return;
+                          target.dataset.fallback = "true";
+                          target.src = toProxyImageUrl(item.thumbUrl);
+                        }}
                         alt=""
-                        loading="lazy"
-                        decoding="async"
+                        // 不用 lazy：Chromium 对懒加载的 GIF 常只渲染第一帧，
+                        // 搜索结果的动图会因此显示静态
+                        loading="eager"
                         className="block h-full w-full object-contain p-1"
                       />
                       {selected && (

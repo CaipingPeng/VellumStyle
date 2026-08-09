@@ -44,6 +44,15 @@ fn handle_wximg<R: tauri::Runtime>(
     tauri::async_runtime::spawn(async move {
         match wechat::fetch_proxied_image(&raw_url).await {
             Ok((content_type, bytes)) => {
+                eprintln!(
+                    "[wximg] ok host={} type={} bytes={}",
+                    url::Url::parse(&raw_url)
+                        .ok()
+                        .and_then(|u| u.host_str().map(String::from))
+                        .unwrap_or_else(|| "?".into()),
+                    content_type,
+                    bytes.len(),
+                );
                 let resp = Response::builder()
                     .status(StatusCode::OK)
                     .header("Content-Type", content_type)
@@ -54,6 +63,7 @@ fn handle_wximg<R: tauri::Runtime>(
                 responder.respond(resp);
             }
             Err(msg) => {
+                eprintln!("[wximg] fail url={raw_url} err={msg}");
                 responder.respond(
                     Response::builder()
                         .status(StatusCode::BAD_GATEWAY)

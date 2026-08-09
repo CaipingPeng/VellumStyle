@@ -388,7 +388,9 @@ async fn eval_in_backend_window(app: AppHandle, expression: String) -> Result<St
     }
 }
 
-/// 在后台窗口上下文里搜索微信表情（operateremoticon?action=search_all）。
+/// 在后台窗口上下文里搜索微信表情。与官方编辑器一致，同时请求
+/// operateremoticon?action=search_all（"全部表情"）和 action=search_gen
+/// （"合成表情"），合并后返回原始 JSON 响应文本。
 /// 返回原始 JSON 响应文本；窗口未打开时返回 "WECHAT_BACKEND_NOT_OPENED"。
 #[tauri::command]
 pub async fn search_remoticon(
@@ -416,14 +418,52 @@ fn remoticon_search_expr(query: &str, size: u32, offset: u32) -> String {
         r#"(function () {{
           try {{
             var token = new URL(location.href).searchParams.get("token") || "";
+            var fp = "";
+            try {{ fp = window.fingerprint || ""; }} catch (e) {{}}
             var body =
-              "size={size}&offset={offset}&query={query}&firstFlush=1&fingerprint=&token=" +
+              "size={size}&offset={offset}&query={query}&firstFlush=1&fingerprint=" +
+              encodeURIComponent(fp) + "&token=" +
               encodeURIComponent(token) + "&lang=zh_CN&f=json&ajax=1";
-            var xhr = new XMLHttpRequest();
-            xhr.open("POST", "/cgi-bin/operateremoticon?action=search_all", false);
-            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-            xhr.send(body);
-            return xhr.responseText;
+            function post(action) {{
+              var xhr = new XMLHttpRequest();
+              xhr.open("POST", "/cgi-bin/operateremoticon?action=" + action, false);
+              xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+              xhr.send(body);
+              return xhr.responseText;
+            }}
+            // 官方编辑器同时请求"全部表情"与"合成表情"两个接口：
+            // search_all 返回的 emoji_url 是加密数据（网页端也只能显示静态），
+            // search_gen 返回未加密的 search.c2c 链接，可直接播放动图。
+            // 这里合并两者，合成表情排前，让搜索结果的动图直接显示动画。
+            var merged = {{}};
+            var lastBase = null;
+            function merge(parsed) {{
+              if (!parsed) return;
+              if (parsed.base_resp) {{
+                lastBase = parsed.base_resp;
+                if (parsed.base_resp.ret === 0) merged.base_resp = parsed.base_resp;
+              }}
+              if (parsed.normal_emoji_result) merged.normal_emoji_result = parsed.normal_emoji_result;
+              if (parsed.gen_emoji_result) merged.gen_emoji_result = parsed.gen_emoji_result;
+              if (parsed.query_type !== undefined) merged.query_type = parsed.query_type;
+              if (parsed.search_id !== undefined) merged.search_id = parsed.search_id;
+            }}
+            try {{
+              merge(JSON.parse(post("search_all")));
+            }} catch (e) {{
+              merged.search_all_error = String(e);
+            }}
+            try {{
+              merge(JSON.parse(post("search_gen")));
+            }} catch (e) {{
+              merged.search_gen_error = String(e);
+            }}
+            var ok = merged.base_resp && merged.base_resp.ret === 0;
+            if (ok) return JSON.stringify(merged);
+            if (merged.search_all_error) return JSON.stringify({{ vs_error: "全部表情搜索: " + merged.search_all_error }});
+            if (merged.search_gen_error) return JSON.stringify({{ vs_error: "合成表情搜索: " + merged.search_gen_error }});
+            if (lastBase) merged.base_resp = lastBase;
+            return JSON.stringify(merged);
           }} catch (e) {{
             return JSON.stringify({{ vs_error: String(e) }});
           }}
@@ -960,13 +1000,14 @@ fn parse_evaluate_response(response_json: &str) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        ai_image_get_expr, ai_image_post_expr, parse_evaluate_response, phone_upload_confirm_expr,
-        phone_upload_pic_list_expr, phone_upload_qrcode_expr, remoticon_cdn_url_expr,
-        music_search_expr, music_info_expr, material_upload_page_expr,
-        video_account_search_expr, video_feed_list_expr, video_media_list_expr,
-        mp_video_info_expr,
-    };
+      use super::{
+          ai_image_get_expr, ai_image_post_expr, parse_evaluate_response, phone_upload_confirm_expr,
+          phone_upload_pic_list_expr, phone_upload_qrcode_expr, remoticon_cdn_url_expr,
+          remoticon_search_expr,
+          music_search_expr, music_info_expr, material_upload_page_expr,
+          video_account_search_expr, video_feed_list_expr, video_media_list_expr,
+          mp_video_info_expr,
+      };
 
     #[test]
     fn evaluate_response_extracts_string_value() {
@@ -1047,10 +1088,10 @@ mod tests {
         assert!(expr.contains("f=json&ajax=1"));
     }
 
-    #[test]
-    fn cdn_url_expr_encodes_emoji_params() {
-        // normal 表情：emoticonType=0 + aesKey
-        let expr = remoticon_cdn_url_expr(
+      #[test]
+      fn cdn_url_expr_encodes_emoji_params() {
+          // normal 表情：emoticonType=0 + aesKey
+          let expr = remoticon_cdn_url_expr(
             "http://search.c2c.weixin.qq.com/download?a=1&b=2",
             "http://thumb.cdn/x",
             Some("0cd0499ac22a9de26a653c89d019b24e"),
@@ -1070,12 +1111,27 @@ mod tests {
             1,
         );
         assert!(gen_expr.contains("emoticonType=1"));
-        assert!(gen_expr.contains("aesKey="));
-    }
+          assert!(gen_expr.contains("aesKey="));
+      }
 
-    #[test]
-    fn phone_upload_qrcode_expr_requests_wxa_qrcode() {
-        let expr = phone_upload_qrcode_expr();
+      #[test]
+      fn remoticon_search_expr_queries_all_and_gen() {
+          let expr = remoticon_search_expr("懂我", 40, 0);
+          // 与官方编辑器一致：同时请求"全部表情"和"合成表情"两个接口
+          assert!(expr.contains(r#""search_all""#));
+          assert!(expr.contains(r#""search_gen""#));
+          assert!(expr.contains("size=40&offset=0"));
+          assert!(expr.contains("query=%E6%87%82%E6%88%91"));
+          assert!(expr.contains("gen_emoji_result"));
+          assert!(expr.contains("normal_emoji_result"));
+          assert!(expr.contains("lang=zh_CN&f=json&ajax=1"));
+          // 合并时合成表情排前（gen 未加密可直接播放动图）
+          assert!(expr.contains("var merged = {};"));
+      }
+
+      #[test]
+      fn phone_upload_qrcode_expr_requests_wxa_qrcode() {
+          let expr = phone_upload_qrcode_expr();
         assert!(expr.contains("action=get_wxa_qrcode"));
         assert!(expr.contains("count=20"));
         assert!(expr.contains("lang=zh_CN&f=json&ajax=1"));

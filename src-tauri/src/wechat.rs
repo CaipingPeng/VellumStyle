@@ -29,12 +29,15 @@ const PNG_LOSSLESS_RETRY_RATIO: usize = 5;
 const ALLOWED_TYPES: [&str; 3] = ["image/jpeg", "image/png", "image/gif"];
 
 // 防盗链图片域名白名单，防 SSRF。
-pub const ALLOWED_IMG_HOSTS: [&str; 10] = [
+pub const ALLOWED_IMG_HOSTS: [&str; 13] = [
     "mmbiz.qpic.cn",
     "mmbiz.qlogo.cn",
+    "res.wx.qq.com",
+    "emoji.sz.wx.qq.com",
     "wx.qlogo.cn",
     "search.c2c.weixin.qq.com",
     "wxapp.tc.qq.com",
+    "vweixinf.tc.qq.com",
     "y.gtimg.cn",
     "wx.y.gtimg.cn",
     "findermp.video.qq.com",
@@ -1564,8 +1567,10 @@ pub async fn fetch_proxied_image(raw_url: &str) -> Result<(String, Vec<u8>), Str
         eprintln!("[wximg] 拒绝代理非白名单域名: {host}");
         return Err(format!("forbidden host: {host}"));
     }
-    // 微信返回 http 链接，统一升级 https。
-    if target.scheme() == "http" {
+    // 微信返回 http 链接，统一升级 https；vweixinf.tc.qq.com（表情动图 CDN）
+    // 不支持 https（TLS 握手失败），保持 http 拉取。
+    let host = target.host_str().unwrap_or("");
+    if target.scheme() == "http" && host != "vweixinf.tc.qq.com" {
         let _ = target.set_scheme("https");
     }
     let client = reqwest::Client::builder()
@@ -1591,7 +1596,7 @@ pub async fn fetch_proxied_image(raw_url: &str) -> Result<(String, Vec<u8>), Str
             return Err("upstream image too large".into());
         }
     }
-    let content_type = resp
+    let upstream_type = resp
         .headers()
         .get(reqwest::header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
@@ -1604,6 +1609,26 @@ pub async fn fetch_proxied_image(raw_url: &str) -> Result<(String, Vec<u8>), Str
         .to_vec();
     if bytes.len() > MAX_PROXY_BYTES {
         return Err("upstream image too large".into());
+    }
+    // 微信表情动图 CDN（vweixinf.tc.qq.com）返回的 Content-Type 是
+    // application/octet-stream，浏览器不会按 GIF 播放动画；
+    // 按内容魔数嗅探，把真正的 GIF 修正为 image/gif。
+    let content_type = if bytes.starts_with(b"GIF8") {
+        "image/gif".to_string()
+    } else if bytes.starts_with(b"\x89PNG") {
+        "image/png".to_string()
+    } else if bytes.starts_with(b"\xFF\xD8") {
+        "image/jpeg".to_string()
+    } else if bytes.len() > 12 && &bytes[..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        "image/webp".to_string()
+    } else {
+        upstream_type.to_string()
+    };
+    if content_type != upstream_type {
+        eprintln!("[wximg] sniff {upstream_type} -> {content_type} bytes={}", bytes.len());
+    } else if upstream_type.contains("octet") {
+        let head = bytes.iter().take(16).map(|b| format!("{b:02x}")).collect::<Vec<_>>().join(" ");
+        eprintln!("[wximg] octet head: {head} bytes={}", bytes.len());
     }
     Ok((content_type, bytes))
 }

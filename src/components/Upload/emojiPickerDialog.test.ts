@@ -19,7 +19,12 @@ test("表情搜索弹窗接入后台搜索并以上传后的永久链接插入",
   assert.match(source, /gen_emoji_result\?\.items, 1\)/);
   assert.match(source, /normal_emoji_result\?\.items, 0\)/);
   assert.match(source, /thumbUrl/);
-  assert.match(source, /微表情/);
+  // 合成表情（emoticonType=1）的 emoji_url 未加密，搜索结果直接显示动图；
+  // 普通表情（emoticonType=0）才回退静态缩略图 + hover 转换。
+  assert.match(source, /item\.emoticonType === 1/);
+  assert.match(source, /toProxyImageUrl\(item\.emojiUrl\)/);
+  assert.match(source, /if \(item\.emoticonType === 1\) return;/);
+  assert.match(source, /经典表情/);
   assert.match(source, /smileyKey/);
   assert.match(source, /smileyImgHtml/);
   assert.match(source, /display:inline-block/);
@@ -27,8 +32,10 @@ test("表情搜索弹窗接入后台搜索并以上传后的永久链接插入",
   // 微表情必须用 !important 固定 20×20，否则主题/微信编辑器会覆盖为原图尺寸
   assert.match(source, /width:20px !important/);
   assert.match(source, /height:20px !important/);
-  // 默认微表情占主区域，搜索/微表情通过右侧图标切换
-  assert.match(source, /useState<"search" \| "smiley">\("smiley"\)/);
+  // 默认搜索表情占主区域，经典表情通过右侧图标切换；
+  // 每次打开弹窗都回到搜索页，经典表情仅作为可选项。
+  assert.match(source, /useState<"search" \| "smiley">\("search"\)/);
+  assert.match(source, /setActiveTab\("search"\)/);
   assert.match(source, /switchTab\("search"\)/);
   assert.match(source, /switchTab\("smiley"\)/);
   assert.match(source, /border border-border bg-bg/);
