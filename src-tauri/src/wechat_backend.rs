@@ -411,7 +411,8 @@ pub async fn search_remoticon(
     }
 }
 
-#[cfg(windows)]
+// Linux 下仅测试引用，避免 dead_code 警告。
+#[cfg_attr(not(windows), allow(dead_code))]
 fn remoticon_search_expr(query: &str, size: u32, offset: u32) -> String {
     let encoded_query = urlencoding::encode(query);
     format!(
