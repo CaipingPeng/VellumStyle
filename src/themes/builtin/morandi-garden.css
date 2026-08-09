@@ -16,10 +16,51 @@
 #article th { color: #506956; font-weight: 700; background: #EAF0EB; border: 1px solid #7ea388; padding: 0.9rem 1rem }
 #article td { color: #403C3C; border: 1px solid #7ea388; padding: 0.8rem 1rem }
 #article pre.custom { font-family: Menlo, Monaco, Consolas, "Courier New", monospace; color: #403C3C; font-size: 13px; line-height: 1.8rem; background-color: #F0F5F3; padding: 12px; border-radius: 6px; margin: 16px 0 }
-#article pre.custom::before { display: block; color: #98948C; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; text-align: center; background: #F0F5F3; border-radius: 20px; width: 100%; height: 30px; padding-right: 15px; content: "" }
 #article p code { color: #7A6F89; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; letter-spacing: 0.5px; background: #F0F5F3; border-radius: 5px; padding: 3px 3px 1px }
 #article li code { color: #7A6F89; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background: #F0F5F3; border-radius: 5px; padding: 3px 3px 1px }
 #article td code { color: #7A6F89; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background: #F0F5F3; border-radius: 5px; padding: 3px 3px 1px }
 #article blockquote code { color: #7A6F89; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background: #F0F5F3; border-radius: 5px; padding: 3px 3px 1px }
 #article code { color: #7A6F89; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; background: #F0F5F3; border-radius: 5px; padding: 3px 3px 1px }
 #article hr { background: #ccd8cf; border: none; height: 2px; opacity: 1; margin: 2.5rem 0; border-top: 1px solid #dddddd }
+
+/* ===== VellumStyle 编辑器适配（微信安全，参照墨岚经验） ===== */
+/* 行间公式：预览 mjx-container 与导出后 section.MathJax.block-equation */
+#article mjx-container[display="true"],
+#article section.MathJax.block-equation {
+  display: block;
+  margin: 18px 0;
+  text-align: center;
+  padding: 10px;
+  border-radius: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: rgba(80, 105, 86, 0.06);
+}
+/* 图片：独立图与轮播图统一浮空卡片（偏移 0 的四周柔和阴影） */
+#article figure img {
+  box-sizing: border-box;
+  border-radius: 12px;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.14), 0 0 8px rgba(0, 0, 0, 0.07);
+}
+#article .imageflow-img {
+  border-radius: 12px;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.14), 0 0 8px rgba(0, 0, 0, 0.07);
+  margin: 0 auto !important;
+}
+#article .imageflow-layer3 {
+  box-sizing: border-box;
+  padding: 12px;
+}
+/* 列表项显式左对齐（微信默认会给未对齐的列表内容套两端对齐） */
+#article li,
+#article li section {
+  text-align: left;
+}
+
+/* 代码块顶部渐变装饰条（微信安全：pre 内伪元素会被剥，改用背景渐变实现） */
+#article pre.custom {
+  background-image: linear-gradient(90deg, #7a5f52, #506956, #6f7f88) !important;
+  background-size: 100% 4px !important;
+  background-repeat: no-repeat !important;
+  background-position: top !important;
+}

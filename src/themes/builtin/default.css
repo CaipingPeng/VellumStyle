@@ -20,7 +20,7 @@
 #article .custom-blockquote p { color: rgba(119, 119, 119, 1); line-height: 1.6em }
 #article blockquote { margin-top: 13px; margin-bottom: 13px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 15px; padding-right: 15px }
 #article a { color: rgba(65, 131, 196, 1) }
-#article strong { color: rgba(51, 51, 51, 1); font-weight: bold }
+#article strong:not(.vs-audio-placeholder-title) { color: rgba(51, 51, 51, 1); font-weight: bold }
 #article em { color: rgba(51, 51, 51, 1) }
 #article del { color: rgba(51, 51, 51, 1) }
 #article s { color: rgba(51, 51, 51, 1) }
@@ -63,3 +63,37 @@
 #article table tr th, #article table tr td { border: 1px solid rgba(223, 226, 229, 1); padding: 6px 13px; text-align: left; font-size: 16px; color: rgba(51, 51, 51, 1); }
 #article table tr th { font-weight: bold; background-color: rgba(248, 248, 248, 1); }
 #article table tr:nth-child(2n) { background-color: rgba(248, 248, 248, 1); }
+
+/* ===== VellumStyle 编辑器适配（微信安全，参照墨岚经验） ===== */
+/* 行间公式：预览 mjx-container 与导出后 section.MathJax.block-equation */
+#article mjx-container[display="true"],
+#article section.MathJax.block-equation {
+  display: block;
+  margin: 18px 0;
+  text-align: center;
+  padding: 10px;
+  border-radius: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: rgba(51, 51, 51, 1);
+}
+/* 图片：独立图与轮播图统一浮空卡片（偏移 0 的四周柔和阴影） */
+#article figure img {
+  box-sizing: border-box;
+  border-radius: 12px;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.14), 0 0 8px rgba(0, 0, 0, 0.07);
+}
+#article .imageflow-img {
+  border-radius: 12px;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.14), 0 0 8px rgba(0, 0, 0, 0.07);
+  margin: 0 auto !important;
+}
+#article .imageflow-layer3 {
+  box-sizing: border-box;
+  padding: 12px;
+}
+/* 列表项显式左对齐（微信默认会给未对齐的列表内容套两端对齐） */
+#article li,
+#article li section {
+  text-align: left;
+}

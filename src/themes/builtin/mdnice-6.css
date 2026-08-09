@@ -23,7 +23,7 @@
 #article blockquote::before { display: block; content: "“"; color: rgba(248, 57, 41, 1); font-size: 28px; line-height: 1.5em; letter-spacing: 0em; text-align: left; font-weight: bold }
 #article .custom-blockquote::before { display: block; content: "“"; color: rgba(248, 57, 41, 1); font-size: 28px; line-height: 1.5em; letter-spacing: 0em; text-align: left; font-weight: bold }
 #article a { color: rgba(248, 57, 41, 1); font-weight: bold; border-top-style: none; border-bottom-style: solid; border-left-style: none; border-right-style: none; border-top-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-right-width: 1px; border-top-color: rgba(30, 107, 184, 1); border-bottom-color: rgba(248, 57, 41, 1); border-left-color: rgba(30, 107, 184, 1); border-right-color: rgba(30, 107, 184, 1); border-top-left-radius: 0px; border-top-right-radius: 0px; border-bottom-right-radius: 0px; border-bottom-left-radius: 0px; margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 0px; padding-right: 0px }
-#article strong { color: rgba(248, 57, 41, 1); font-weight: bold; background-attachment: scroll; background-clip: border-box; background-color: rgba(0, 0, 0, 0); background-image: none; background-origin: padding-box; background-position-x: left; background-position-y: top; background-repeat: no-repeat; background-size: auto; width: auto; height: auto; margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 0px; padding-right: 0px; border-top-style: none; border-bottom-style: none; border-left-style: none; border-right-style: none; border-top-width: 3px; border-bottom-width: 3px; border-left-width: 3px; border-right-width: 3px; border-top-color: rgba(0, 0, 0, 0.4); border-bottom-color: rgba(0, 0, 0, 0.4); border-left-color: rgba(0, 0, 0, 0.4); border-right-color: rgba(0, 0, 0, 0.4); border-top-left-radius: 0px; border-top-right-radius: 0px; border-bottom-right-radius: 0px; border-bottom-left-radius: 0px }
+#article strong:not(.vs-audio-placeholder-title) { color: rgba(248, 57, 41, 1); font-weight: bold; background-attachment: scroll; background-clip: border-box; background-color: rgba(0, 0, 0, 0); background-image: none; background-origin: padding-box; background-position-x: left; background-position-y: top; background-repeat: no-repeat; background-size: auto; width: auto; height: auto; margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 0px; padding-right: 0px; border-top-style: none; border-bottom-style: none; border-left-style: none; border-right-style: none; border-top-width: 3px; border-bottom-width: 3px; border-left-width: 3px; border-right-width: 3px; border-top-color: rgba(0, 0, 0, 0.4); border-bottom-color: rgba(0, 0, 0, 0.4); border-left-color: rgba(0, 0, 0, 0.4); border-right-color: rgba(0, 0, 0, 0.4); border-top-left-radius: 0px; border-top-right-radius: 0px; border-bottom-right-radius: 0px; border-bottom-left-radius: 0px }
 #article em { color: rgba(248, 57, 41, 1); font-style: italic; background-attachment: scroll; background-clip: border-box; background-color: rgba(0, 0, 0, 0); background-image: none; background-origin: padding-box; background-position-x: left; background-position-y: top; background-repeat: no-repeat; background-size: auto; width: auto; height: auto; margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 0px; padding-right: 0px; border-top-style: none; border-bottom-style: none; border-left-style: none; border-right-style: none; border-top-width: 3px; border-bottom-width: 3px; border-left-width: 3px; border-right-width: 3px; border-top-color: rgba(0, 0, 0, 0.4); border-bottom-color: rgba(0, 0, 0, 0.4); border-left-color: rgba(0, 0, 0, 0.4); border-right-color: rgba(0, 0, 0, 0.4); border-top-left-radius: 0px; border-top-right-radius: 0px; border-bottom-right-radius: 0px; border-bottom-left-radius: 0px }
 #article em strong { color: rgba(248, 51, 47, 1); font-weight: bold; font-style: italic; background-attachment: scroll; background-clip: border-box; background-color: rgba(0, 0, 0, 0); background-image: none; background-origin: padding-box; background-position-x: left; background-position-y: top; background-repeat: no-repeat; background-size: auto; width: auto; height: auto }
 #article strong em { margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; padding-top: 0px; padding-bottom: 0px; padding-left: 0px; padding-right: 0px; border-top-style: none; border-bottom-style: none; border-left-style: none; border-right-style: none; border-top-width: 3px; border-bottom-width: 3px; border-left-width: 3px; border-right-width: 3px; border-top-color: rgba(0, 0, 0, 0.4); border-bottom-color: rgba(0, 0, 0, 0.4); border-left-color: rgba(0, 0, 0, 0.4); border-right-color: rgba(0, 0, 0, 0.4); border-top-left-radius: 0px; border-top-right-radius: 0px; border-bottom-right-radius: 0px; border-bottom-left-radius: 0px }
@@ -399,4 +399,38 @@
   text-align: center;
   padding-left: 5px;
   width: 50%;
+}
+
+/* ===== VellumStyle 编辑器适配（微信安全，参照墨岚经验） ===== */
+/* 行间公式：预览 mjx-container 与导出后 section.MathJax.block-equation */
+#article mjx-container[display="true"],
+#article section.MathJax.block-equation {
+  display: block;
+  margin: 18px 0;
+  text-align: center;
+  padding: 10px;
+  border-radius: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: rgba(255, 255, 255, 1);
+}
+/* 图片：独立图与轮播图统一浮空卡片（偏移 0 的四周柔和阴影） */
+#article figure img {
+  box-sizing: border-box;
+  border-radius: 12px;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.14), 0 0 8px rgba(0, 0, 0, 0.07);
+}
+#article .imageflow-img {
+  border-radius: 12px;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.14), 0 0 8px rgba(0, 0, 0, 0.07);
+  margin: 0 auto !important;
+}
+#article .imageflow-layer3 {
+  box-sizing: border-box;
+  padding: 12px;
+}
+/* 列表项显式左对齐（微信默认会给未对齐的列表内容套两端对齐） */
+#article li,
+#article li section {
+  text-align: left;
 }

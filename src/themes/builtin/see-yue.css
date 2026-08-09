@@ -8,7 +8,7 @@
 #article h6 { font-size: 17px; color: rgba(129, 178, 154, 0.55); font-weight: bold; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; margin: 16px 0 6px }
 #article blockquote { font-size: 16px; color: #777777; line-height: 1.75; font-family: "LXGW WenKai", "KaiTi", "STKaiti", serif; background-color: rgba(236, 244, 249, 0.75); border-left: 4px solid #8496b0; border-radius: 6px; margin: 18px 0; padding: 12px 14px }
 #article a { color: #81b29a; font-weight: normal; text-decoration: none; border-bottom: 1px dashed #81b29a }
-#article strong { color: #000000; font-weight: bold; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif }
+#article strong:not(.vs-audio-placeholder-title) { color: #000000; font-weight: bold; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif }
 #article em { color: #111111; font-style: italic; padding: 0 5px 0 2px }
 #article del { color: #808080; text-decoration: line-through }
 #article ul { font-size: 17px; color: #222222; line-height: 1.8; margin: 1em 0; padding-left: 30px }
@@ -51,8 +51,7 @@
 #article table tr th:last-child, #article table tr td:last-child { border-right-width: 0; }
 #article table tr th { border-top: none; }
 #article table tbody td { border-bottom: none; }
-#article pre.custom { position: relative; overflow-x: auto; white-space: pre-wrap; word-break: break-word; border-top: 40px solid rgba(167, 187, 195, 0.6); }
-#article pre.custom::before { content: ""; position: absolute; left: 12px; top: -26px; width: 12px; height: 12px; border-radius: 50%; background: #fc625d; box-shadow: 25px 0 #fdbc40, 50px 0 #35cd4b; }
+#article pre.custom { position: relative; overflow-x: auto; word-break: break-word; border-top: 40px solid rgba(167, 187, 195, 0.6); }
 #article pre.custom code { display: block; color: #2c74c7; background: transparent; border: none; padding: 0; font-family: "Fira Code", Menlo, Monaco, Consolas, "Courier New", monospace; }
 #article pre.custom .hljs-keyword, #article pre.custom .hljs-selector-tag { color: #8f08c4; }
 #article pre.custom .hljs-operator { color: #36374c; }
@@ -68,3 +67,37 @@
 #article hr { height: 2px; padding: 0; margin: 2rem 0; background-color: #dddddd; border: none; }
 #article .footnotes, #article .footnotes p, #article .footnotes li { font-size: 14px; color: #777777; }
 #article sup.md-footnote { color: #e96900; font-size: 12px; }
+
+/* ===== VellumStyle 编辑器适配（微信安全，参照墨岚经验） ===== */
+/* 行间公式：预览 mjx-container 与导出后 section.MathJax.block-equation */
+#article mjx-container[display="true"],
+#article section.MathJax.block-equation {
+  display: block;
+  margin: 18px 0;
+  text-align: center;
+  padding: 10px;
+  border-radius: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: rgba(255, 255, 255, 0.06);
+}
+/* 图片：独立图与轮播图统一浮空卡片（偏移 0 的四周柔和阴影） */
+#article figure img {
+  box-sizing: border-box;
+  border-radius: 12px;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.14), 0 0 8px rgba(0, 0, 0, 0.07);
+}
+#article .imageflow-img {
+  border-radius: 12px;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.14), 0 0 8px rgba(0, 0, 0, 0.07);
+  margin: 0 auto !important;
+}
+#article .imageflow-layer3 {
+  box-sizing: border-box;
+  padding: 12px;
+}
+/* 列表项显式左对齐（微信默认会给未对齐的列表内容套两端对齐） */
+#article li,
+#article li section {
+  text-align: left;
+}

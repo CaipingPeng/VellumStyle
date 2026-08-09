@@ -8,7 +8,7 @@
 #article h6 { font-size: 14px; color: #666666; font-weight: bold; margin: 16px 0 8px }
 #article blockquote { font-size: 15px; color: #333333; line-height: 1.75; background-color: #f3f0ff; border: 2px solid #111111; border-left: 6px solid #a68bff; border-radius: 10px; box-shadow: 3px 3px 0 #111111; margin: 18px 0; padding: 12px 14px }
 #article a { color: #2563eb; font-weight: bold; text-decoration: none; border-bottom: 1px solid #2563eb }
-#article strong { color: #ef4444; font-weight: bold }
+#article strong:not(.vs-audio-placeholder-title) { color: #ef4444; font-weight: bold }
 #article em { color: #7c3aed; font-style: italic }
 #article del { color: #999999; text-decoration: line-through }
 #article ul { font-size: 15px; color: #222222; line-height: 1.9; margin: 12px 0; padding-left: 22px }
@@ -51,8 +51,7 @@
 #article .table-container { margin: 18px 0; overflow-x: auto; }
 #article tbody tr:nth-child(odd) { background-color: #ededed; }
 #article tbody tr:nth-child(even) { background-color: #e2f2f9; }
-#article pre.custom { position: relative; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
-#article pre.custom::before { content: ""; position: absolute; left: 12px; top: 12px; width: 12px; height: 12px; border-radius: 50%; background: #fc625d; box-shadow: 22px 0 #fdbc40, 44px 0 #35cd4b; }
+#article pre.custom { position: relative; overflow-x: auto; word-break: break-word; }
 #article pre.custom code { display: block; color: #e5e7eb; background: transparent; border: none; padding: 0; font-family: Menlo, Monaco, Consolas, "Courier New", monospace; }
 #article pre.custom .hljs-keyword, #article pre.custom .hljs-selector-tag { color: #c084fc; }
 #article pre.custom .hljs-string, #article pre.custom .hljs-regexp { color: #86efac; }
@@ -61,3 +60,45 @@
 #article pre.custom .hljs-title, #article pre.custom .hljs-function { color: #93c5fd; }
 #article pre.custom .hljs-attr, #article pre.custom .hljs-attribute, #article pre.custom .hljs-variable { color: #fca5a5; }
 #article pre.custom .hljs-built_in, #article pre.custom .hljs-type { color: #fde68a; }
+
+/* ===== VellumStyle 编辑器适配（微信安全，参照墨岚经验） ===== */
+/* 行间公式：预览 mjx-container 与导出后 section.MathJax.block-equation */
+#article mjx-container[display="true"],
+#article section.MathJax.block-equation {
+  display: block;
+  margin: 18px 0;
+  text-align: center;
+  padding: 10px;
+  border-radius: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: rgba(17, 17, 17, 0.06);
+}
+/* 图片：独立图与轮播图统一浮空卡片（偏移 0 的四周柔和阴影） */
+#article figure img {
+  box-sizing: border-box;
+  border-radius: 12px;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.14), 0 0 8px rgba(0, 0, 0, 0.07);
+}
+#article .imageflow-img {
+  border-radius: 12px;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.14), 0 0 8px rgba(0, 0, 0, 0.07);
+  margin: 0 auto !important;
+}
+#article .imageflow-layer3 {
+  box-sizing: border-box;
+  padding: 12px;
+}
+/* 列表项显式左对齐（微信默认会给未对齐的列表内容套两端对齐） */
+#article li,
+#article li section {
+  text-align: left;
+}
+
+/* 代码块顶部渐变装饰条（微信安全：pre 内伪元素会被剥，改用背景渐变实现） */
+#article pre.custom {
+  background-image: linear-gradient(90deg, #fc625d, #fdbc40, #35cd4b) !important;
+  background-size: 100% 4px !important;
+  background-repeat: no-repeat !important;
+  background-position: top !important;
+}
