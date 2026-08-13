@@ -44,15 +44,8 @@ fn handle_wximg<R: tauri::Runtime>(
     tauri::async_runtime::spawn(async move {
         match wechat::fetch_proxied_image(&raw_url).await {
             Ok((content_type, bytes)) => {
-                eprintln!(
-                    "[wximg] ok host={} type={} bytes={}",
-                    url::Url::parse(&raw_url)
-                        .ok()
-                        .and_then(|u| u.host_str().map(String::from))
-                        .unwrap_or_else(|| "?".into()),
-                    content_type,
-                    bytes.len(),
-                );
+                // 成功路径不打日志：预览每张图都会触发，开发运行时避免刷屏；
+                // 失败与异常（fetch_proxied_image 内）仍保留诊断输出。
                 let resp = Response::builder()
                     .status(StatusCode::OK)
                     .header("Content-Type", content_type)
