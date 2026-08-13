@@ -1,5 +1,5 @@
 import {memo, useCallback, useEffect, useRef, useState} from "react";
-import {FilePlus, FolderPlus} from "lucide-react";
+import {FilePlus, FileText, FolderPlus} from "lucide-react";
 import {motion} from "framer-motion";
 import {useStore} from "../../store/index.ts";
 import {MOTION_DURATION_MEDIUM, MOTION_EASE_SMOOTH, MOTION_STAGGER_STEP} from "../../utils/motion.ts";
@@ -227,8 +227,13 @@ function DocTree() {
             />
           )}
           {tree.length === 0 && !creating ? (
-            <div className="p-4 text-xs leading-relaxed text-text-muted">
-              点击上方 + 新建第一篇文档
+            <div className="flex flex-col items-center gap-2.5 px-4 py-10 text-center">
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-bg-tertiary text-text-muted">
+                <FileText size={18} strokeWidth={1.6} />
+              </div>
+              <p className="text-xs leading-relaxed text-text-muted">
+                点击上方 + 新建第一篇文档
+              </p>
             </div>
           ) : (
             tree.map((node, i) => (
