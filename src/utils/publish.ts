@@ -321,6 +321,12 @@ export function getVideoFeedList(username: string, buffer: string): Promise<stri
   return invoke<string>("get_video_feed_list", {username, buffer});
 }
 
+/// 在视频号账号内按视频描述搜索（videosnap?action=search_feeds），返回原始 JSON 文本。
+/// 与 get_feed_list 同构：list + continue_flag + last_buff，可继续翻页。
+export function searchVideoFeeds(username: string, query: string, buffer: string): Promise<string> {
+  return invoke<string>("search_video_feeds", {username, query, buffer});
+}
+
 /// 按 vid 获取官方视频信息（官方编辑器插入视频时同款 get_mp_video_info 接口），
 /// 返回原始 JSON 文本；窗口未打开时返回 "WECHAT_BACKEND_NOT_OPENED"。
 export function getMpVideoInfo(vid: string): Promise<string> {

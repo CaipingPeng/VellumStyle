@@ -1664,6 +1664,14 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
   background-repeat: no-repeat;
 }
 
+/* 视频号检索结果描述里的命中高亮（官方 search_feeds 的 highlight_desc） */
+.vs-video-desc em.highlight {
+  font-style: normal;
+  color: inherit;
+  background: rgba(250, 157, 59, 0.28);
+  border-radius: 2px;
+}
+
 .vs-videosnap-nickname {
   min-width: 0;
   overflow: hidden;

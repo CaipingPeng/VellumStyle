@@ -968,6 +968,24 @@ pub async fn get_video_feed_list(
     eval_backend_expr(app, video_feed_list_expr(&username, &buffer), "视频号内容").await
 }
 
+/// 在视频号账号内按视频描述搜索（videosnap?action=search_feeds），
+/// 返回结构与 get_feed_list 相同（list + continue_flag + last_buff），
+/// 命中项额外带 highlight_desc（<em class="highlight"> 高亮）。
+#[tauri::command]
+pub async fn search_video_feeds(
+    app: AppHandle,
+    username: String,
+    query: String,
+    buffer: String,
+) -> Result<String, String> {
+    eval_backend_expr(
+        app,
+        video_feed_search_expr(&username, &query, &buffer),
+        "视频号内容搜索",
+    )
+    .await
+}
+
 /// 获取选中视频的媒体信息（videosnap?action=get_media_list），插入前调用。
 #[tauri::command]
 pub async fn get_video_media_list(
@@ -1020,6 +1038,31 @@ fn video_feed_list_expr(username: &str, buffer: &str) -> String {
         }})()"#,
         username = encoded_username,
         buffer = encoded_buffer,
+    )
+}
+
+fn video_feed_search_expr(username: &str, query: &str, buffer: &str) -> String {
+    let encoded_username = urlencoding::encode(username);
+    let encoded_query = urlencoding::encode(query);
+    let encoded_buffer = urlencoding::encode(buffer);
+    format!(
+        r#"(function () {{
+          try {{
+            var token = new URL(location.href).searchParams.get("token") || "";
+            var url = "/cgi-bin/videosnap?action=search_feeds&username={username}&buffer={buffer}&count=15&query={query}&scene=0" +
+              "&token=" + encodeURIComponent(token) + "&lang=zh_CN&f=json&ajax=1";
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, false);
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            xhr.send();
+            return xhr.responseText;
+          }} catch (e) {{
+            return JSON.stringify({{ vs_error: String(e) }});
+          }}
+        }})()"#,
+        username = encoded_username,
+        buffer = encoded_buffer,
+        query = encoded_query,
     )
 }
 
@@ -1349,7 +1392,7 @@ mod tests {
           phone_upload_pic_list_expr, phone_upload_qrcode_expr, remoticon_cdn_url_expr,
           remoticon_search_expr,
           music_search_expr, music_info_expr, material_upload_page_expr, material_upload_target,
-          video_account_search_expr, video_feed_list_expr, video_media_list_expr,
+          video_account_search_expr, video_feed_list_expr, video_feed_search_expr, video_media_list_expr,
           mp_video_info_expr, extract_token_from_url, extract_token_from_html, is_token_like,
       };
 
@@ -1412,6 +1455,23 @@ mod tests {
         assert!(expr.contains("action=get_feed_list"));
         assert!(expr.contains("username=v2_xxx%40finder"));
         assert!(expr.contains("count=15&scene=0"));
+    }
+
+    #[test]
+    fn video_feed_search_expr_encodes_username_query_and_buffer() {
+        let expr = video_feed_search_expr(
+            "v2_060000231003b20faec8c4e68b1ec4d5cf01ef34b077d4b55c0c5f38106a7dbe893f7e6b822c@finder",
+            "对我这种手机都要",
+            "",
+        );
+        assert!(expr.contains("action=search_feeds"));
+        assert!(expr.contains("username=v2_060000231003b20faec8c4e68b1ec4d5cf01ef34b077d4b55c0c5f38106a7dbe893f7e6b822c%40finder"));
+        assert!(expr.contains("query=%E5%AF%B9%E6%88%91%E8%BF%99%E7%A7%8D%E6%89%8B%E6%9C%BA%E9%83%BD%E8%A6%81"));
+        assert!(expr.contains("count=15"));
+        assert!(expr.contains("&scene=0"));
+
+        let paged = video_feed_search_expr("v2_xxx@finder", "黄金", "CAEQmqS8z4jYoxc=");
+        assert!(paged.contains("buffer=CAEQmqS8z4jYoxc%3D"));
     }
 
     #[test]
