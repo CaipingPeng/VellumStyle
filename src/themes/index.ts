@@ -36,10 +36,12 @@ const defaultTheme: ThemeOption = {
   source: "builtin",
 };
 
-const builtinModules = import.meta.glob("./builtin/*.css", {query: "?raw", import: "default"}) as Record<
-  string,
-  () => Promise<string>
->;
+// ink-haze.css 已由上方静态导入（默认主题首帧必需），从 glob 排除，
+// 避免同一模块被静态+动态双导入而无法拆 chunk（构建期警告）。
+const builtinModules = import.meta.glob(["./builtin/*.css", "!./builtin/ink-haze.css"], {
+  query: "?raw",
+  import: "default",
+}) as Record<string, () => Promise<string>>;
 
 let builtinThemesPromise: Promise<ThemeOption[]> | undefined;
 

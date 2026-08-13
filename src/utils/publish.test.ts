@@ -11,7 +11,6 @@ import {
   getMpVideoInfo,
   parseMpVideoInfoSize,
   getVideoPlayUrl,
-  getCoverCandidates,
   listImageMaterials,
   listVideoMaterials,
   listVoiceMaterials,
@@ -20,7 +19,6 @@ import {
   openMaterialUploadPage,
   openWechatBackend,
   parseVoiceBackendResponse,
-  parseVoiceCode,
   saveVoiceBinding,
   saveVideoMediaId,
   searchRemoticon,
@@ -234,27 +232,6 @@ test("listVoiceMaterials 调用永久音频素材库命令并保留分页参数"
       (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__ = previousInternals;
     }
   }
-});
-
-test("parseVoiceCode 兼容老版 mpvoice 与新版 js_editor_audio 源码", () => {
-  const mpvoice = parseVoiceCode(
-    '<mpvoice class="js_editor_audio audio_iframe js_uneditable" src="/cgi-bin/readtemplate?t=tmpl/audio_tmpl&amp;name=%E6%B5%8B%E8%AF%95%E9%9F%B3%E9%A2%91&amp;play_length=02:12" isaac2="1" low_size="257.96" source_size="258" high_size="1038.91" name="测试音频" play_length="132000" voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA=" data-pluginname="insertaudio"></mpvoice>',
-  );
-  assert.ok(mpvoice);
-  assert.equal(mpvoice.voiceEncodeFileid, "Mzk0NTMyNzk3N18xMDAwMDI1MzA=");
-  assert.equal(mpvoice.name, "测试音频");
-  assert.equal(mpvoice.playLength, "132000");
-  assert.equal(mpvoice.src, "/cgi-bin/readtemplate?t=tmpl/audio_tmpl&name=%E6%B5%8B%E8%AF%95%E9%9F%B3%E9%A2%91&play_length=02:12");
-  assert.equal(mpvoice.lowSize, "257.96");
-
-  const sectionForm = parseVoiceCode(
-    '<section src="/cgi-bin/readtemplate?t=tmpl/audio_tmpl&amp;play_length=2分钟" isaac2="1" low_size="257.96" source_size="258" high_size="1038.91" name="测试音频" play_length="132000" author="时代编译日志" voice_encode_fileid="Mzk0NTMyNzk3N18xMDAwMDI1MzA=" class="js_editor_audio audio_iframe res_iframe js_uneditable"></section>',
-  );
-  assert.ok(sectionForm);
-  assert.equal(sectionForm.voiceEncodeFileid, "Mzk0NTMyNzk3N18xMDAwMDI1MzA=");
-  assert.equal(sectionForm.author, "时代编译日志");
-
-  assert.equal(parseVoiceCode("<p>没有音频代码</p>"), null);
 });
 
 test("formatVoiceMarkup 生成带封面的 mp-common-mpaudio 标签", () => {
@@ -769,23 +746,4 @@ test("findUnuploadedImages locates diagnostics across CRLF lines without repeate
       {url: "#anchor", line: 5, column: 1},
     ],
   );
-});
-
-test("getCoverCandidates excludes code-only WeChat images and normalizes a real protocol-relative image", () => {
-  const markdown = [
-    "`![code](https://mmbiz.qpic.cn/code-only.png)`",
-    '`<img src="https://mmbiz.qlogo.cn/code-only.png">`',
-    "![real](//mmbiz.qlogo.cn/mmbiz_png/real/0)",
-    "![duplicate](https://mmbiz.qlogo.cn/mmbiz_png/real/0)",
-    "![malformed](https://[mmbiz.qpic.cn)",
-    "![evil](https://mmbiz.qpic.cn.evil.test/image.png)",
-  ].join("\n");
-
-  assert.deepEqual(getCoverCandidates(markdown), [
-    {
-      url: "https://mmbiz.qlogo.cn/mmbiz_png/real/0",
-      syntax: "markdown-image",
-      sourceType: "remote",
-    },
-  ]);
 });

@@ -11,14 +11,7 @@ const MMBIZ_HOSTS = ["mmbiz.qpic.cn", "mmbiz.qlogo.cn"];
 // 微信官方静态资源域名：官方编辑器直接引用的表情等图片无需上传素材库。
 const OFFICIAL_IMG_HOSTS = [...MMBIZ_HOSTS, "res.wx.qq.com"];
 
-export interface CoverCandidate {
-  url: string;
-  syntax: MediaRef["syntax"];
-  sourceType: MediaRef["sourceType"];
-}
-
 export type UnuploadedImageReason = "local" | "external" | "temporary" | "unsupported";
-
 export interface UnuploadedImage {
   url: string;
   line: number;
@@ -168,19 +161,6 @@ export function findUnuploadedImages(markdown: string): UnuploadedImage[] {
   return diagnostics;
 }
 
-export function getCoverCandidates(markdown: string): CoverCandidate[] {
-  const seen = new Set<string>();
-  const candidates: CoverCandidate[] = [];
-  for (const ref of scanMarkdownMedia(markdown)) {
-    if (ref.mediaType !== "image" || ref.sourceType !== "remote") continue;
-    const url = normalizeRemoteImageUrl(ref.originalUrl);
-    if (!url || !isMmbizImageUrl(url) || seen.has(url)) continue;
-    seen.add(url);
-    candidates.push({url, syntax: ref.syntax, sourceType: ref.sourceType});
-  }
-  return candidates;
-}
-
 export async function uploadThumb(
   file: File,
   context: Omit<ImageUploadTaskContext, "category"> = {},
@@ -198,21 +178,6 @@ export async function uploadThumb(
         "x-vellum-task-id": taskId,
       },
     });
-    imageUploadTasks.complete(taskId);
-    return mediaId;
-  } catch (error) {
-    imageUploadTasks.fail(taskId, error);
-    throw error;
-  }
-}
-
-export async function uploadRemoteThumb(
-  url: string,
-  context: Omit<ImageUploadTaskContext, "category"> = {},
-): Promise<string> {
-  const taskId = imageUploadTasks.start("远程封面", "封面图片", context);
-  try {
-    const mediaId = await invoke<string>("upload_remote_thumb", {url, taskId});
     imageUploadTasks.complete(taskId);
     return mediaId;
   } catch (error) {
@@ -599,34 +564,6 @@ export function bindVoiceMaterials(
   return bound;
 }
 
-// 从微信后台复制来的音频代码里提取 voice_encode_fileid 及展示字段。
-// 兼容 <mpvoice> 与新版 <section class="js_editor_audio"> 两种形态。
-export function parseVoiceCode(source: string): VoiceCodeInfo | null {
-  const doc = new DOMParser().parseFromString(source, "text/html");
-  const node = Array.from(doc.querySelectorAll<HTMLElement>("[voice_encode_fileid]")).find((el) => {
-    const tag = el.tagName.toLowerCase();
-    return tag === "mpvoice" || el.classList.contains("js_editor_audio");
-  });
-  if (!node) return null;
-  const voiceEncodeFileid = node.getAttribute("voice_encode_fileid")?.trim() ?? "";
-  if (!voiceEncodeFileid) return null;
-  const name = node.getAttribute("name")?.trim() ?? "音频";
-  const playLength = node.getAttribute("play_length")?.trim() ?? "";
-  const src = node.getAttribute("src")?.trim() ?? "";
-  return {
-    voiceEncodeFileid,
-    name,
-    playLength,
-    src,
-    coverUrl: node.getAttribute("cover")?.trim() || undefined,
-    isaac2: node.getAttribute("isaac2")?.trim() || undefined,
-    lowSize: node.getAttribute("low_size")?.trim() || undefined,
-    sourceSize: node.getAttribute("source_size")?.trim() || undefined,
-    highSize: node.getAttribute("high_size")?.trim() || undefined,
-    author: node.getAttribute("author")?.trim() || undefined,
-  };
-}
-
 // 生成微信图文可发布的 mp-common-mpaudio 标签（官方新版音频卡片格式，
 // 实测 draft/add 原样保留 cover/fileid 并可播放）。
 export function formatVoiceMarkup(info: VoiceCodeInfo): string {
@@ -672,11 +609,6 @@ function normalizeRemoteImageUrl(url: string): string | null {
   if (!value) return null;
   if (value.startsWith("//")) return `https:${value}`;
   return value;
-}
-
-function isMmbizImageUrl(url: string): boolean {
-  const parsed = parseRemoteImageUrl(url);
-  return parsed !== null && MMBIZ_HOSTS.includes(parsed.hostname.toLowerCase());
 }
 
 function parseRemoteImageUrl(url: string): URL | null {

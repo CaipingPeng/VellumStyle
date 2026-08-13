@@ -49,7 +49,7 @@ async function loadRuntimeModules() {
         setup(pluginBuild) {
           pluginBuild.onLoad({filter: /src[\\/]themes[\\/]index\.ts$/}, async (args) => ({
             contents: (await readFile(args.path, "utf8")).replace(
-              'import.meta.glob("./builtin/*.css", {query: "?raw", import: "default"})',
+              'import.meta.glob(["./builtin/*.css", "!./builtin/ink-haze.css"], {\n  query: "?raw",\n  import: "default",\n})',
               "({})",
             ),
             loader: "ts",

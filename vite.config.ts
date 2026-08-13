@@ -57,6 +57,25 @@ export default defineConfig({
     port: 41737,
     strictPort: true,
   },
+  optimizeDeps: {
+    // 显式预构建大依赖：避免会话中新依赖首次加载触发整页 reload。
+    // mermaid/mathjax/html2canvas 等懒加载依赖不预构建（用了才下，预构建反而浪费）。
+    include: [
+      "react",
+      "react-dom",
+      "zustand",
+      "framer-motion",
+      "@codemirror/state",
+      "@codemirror/view",
+      "@codemirror/language",
+      "@codemirror/lang-markdown",
+      "@codemirror/search",
+      "@codemirror/commands",
+      "@uiw/react-codemirror",
+      "markdown-it",
+      "dompurify",
+    ],
+  },
   build: {
     // MathJax 按需加载块约 2 MB，这是公式排版能力的预期成本；超过该值仍继续提醒。
     chunkSizeWarningLimit: 2200,

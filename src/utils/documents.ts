@@ -264,15 +264,6 @@ export function isFolderPath(nodes: DocNode[], path: string): boolean {
   return false;
 }
 
-// 在树里查某相对路径是否已存在（文件或文件夹）。
-export function treeHasPath(nodes: DocNode[], path: string): boolean {
-  for (const n of nodes) {
-    if (n.path === path) return true;
-    if (n.isDir && treeHasPath(n.children, path)) return true;
-  }
-  return false;
-}
-
 // 新建落点：选中项是文件夹→落其下；选中项是文件→落其同级目录；无选中→根("")。
 export function targetDirFor(tree: DocNode[], selectedPath: string | null): string {
   if (!selectedPath) return "";

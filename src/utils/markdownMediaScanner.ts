@@ -43,7 +43,6 @@ export interface MediaRef {
   htmlImageMeta?: HtmlImageMeta;
 }
 
-const IMAGE_EXT = /\.(?:jpe?g|png|gif|svg)(?:[?#].*)?$/i;
 const VIDEO_EXT = /\.(?:mp4|mov|m4v|webm|avi|mkv)(?:[?#].*)?$/i;
 const MARKDOWN_IMAGE_RE = /!\[([^\]\\]*(?:\\.[^\]\\]*)*)\]\(([^)\n]+)\)/g;
 const MARKDOWN_LINK_RE = /(?<!!)\[([^\]\\]*(?:\\.[^\]\\]*)*)\]\(([^)\n]+)\)/g;
@@ -250,21 +249,8 @@ export function classifyMediaSource(url: string): MediaSourceType {
   return "local";
 }
 
-export function isImageUrl(url: string): boolean {
-  return IMAGE_EXT.test(stripUrlDecorations(url));
-}
-
 export function isVideoUrl(url: string): boolean {
   return VIDEO_EXT.test(stripUrlDecorations(url));
-}
-
-export function toObsidianMarkdownImage(url: string, meta?: ObsidianMeta): string {
-  const alt = meta?.alt ?? "";
-  const size = meta?.size;
-  if (size) {
-    return `![${escapeMarkdownAlt(alt)}](${url} =${size})`;
-  }
-  return `![${escapeMarkdownAlt(alt)}](${url})`;
 }
 
 function scanMarkdownImages(markdown: string, skipRanges: SourceRange[]): MediaRef[] {
@@ -565,9 +551,5 @@ function dedupeRefs(refs: MediaRef[]): MediaRef[] {
 
 function stripUrlDecorations(url: string): string {
   return url.split(/[?#]/)[0];
-}
-
-function escapeMarkdownAlt(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/]/g, "\\]");
 }
 
