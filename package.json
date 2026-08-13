@@ -6,6 +6,10 @@
   "author": "pengcaiping",
   "license": "MIT",
   "type": "module",
+  "packageManager": "npm@10.9.3",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "dev:web": "vite",
@@ -13,7 +17,11 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "tauri": "tauri dev",
-    "test": "node scripts/run-tests.mjs"
+    "typecheck": "tsc -b",
+    "test": "node scripts/run-tests.mjs",
+    "test:watch": "node scripts/run-tests.mjs --watch",
+    "test:coverage": "node scripts/run-tests.mjs --test-coverage --test-coverage-lines=80",
+    "check": "npm run typecheck && npm test"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.3.1",

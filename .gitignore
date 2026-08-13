@@ -5,9 +5,14 @@ node_modules/
 dist/
 dist-ssr/
 .vite/
+# 体积审计用的未压缩构建产物
+dist-unmin/
 
 # TypeScript cache
 *.tsbuildinfo
+
+# 测试运行时产物（node:test + esbuild 的临时 bundle 会落在源码目录）
+*.runtime-*.mjs
 
 # Tauri / Rust build outputs
 src-tauri/target/
@@ -51,3 +56,7 @@ coverage/
 
 # Isolated development worktrees
 .worktrees/
+
+# 调试/临时目录
+.scratch-videosnap/
+.uploads/
