@@ -8,6 +8,11 @@ export default {
   },
   theme: {
     extend: {
+      fontSize: {
+        // 高频 arbitrary 字号收敛为命名 token（仅字号、不带行高，等价于 text-[npx]）
+        xs2: "11px",
+        sm2: "13px",
+      },
       colors: {
         accent: {
           DEFAULT: "var(--accent)",

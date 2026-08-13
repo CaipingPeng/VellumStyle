@@ -54,7 +54,7 @@ export default function UpdatePromptDialog({
             aria-modal="true"
             aria-labelledby="update-prompt-title"
           >
-            <div className="flex shrink-0 items-start gap-3 border-b border-border px-5 py-4">
+            <div className="flex shrink-0 items-start gap-3 bg-bg-secondary/70 border-b border-border px-5 py-4">
               <div className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded bg-accent-subtle text-accent">
                 <Download size={18} />
               </div>
@@ -88,7 +88,7 @@ export default function UpdatePromptDialog({
 
               {statusMessage && (
                 <div
-                  className={`${trimmedNotes ? "mt-3" : ""} rounded border px-3 py-2.5 text-[13px] leading-5 ${
+                  className={`${trimmedNotes ? "mt-3" : ""} rounded border px-3 py-2.5 text-sm2 leading-5 ${
                     installing
                       ? "border-border bg-accent-subtle text-text-secondary"
                       : "border-danger/25 bg-danger/5 text-danger"

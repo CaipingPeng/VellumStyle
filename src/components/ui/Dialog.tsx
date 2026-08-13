@@ -129,7 +129,12 @@ export default function Dialog({
                 </button>
               </div>
             </div>
-            <div className={`min-h-0 flex-1 ${contentPadding ? "overflow-y-auto p-4" : "overflow-hidden"}`}>{children}</div>
+            <div
+              className={`vs-rise min-h-0 flex-1 ${contentPadding ? "overflow-y-auto p-4" : "overflow-hidden"}`}
+              style={{animationDelay: "60ms"}}
+            >
+              {children}
+            </div>
             {footer && <div className="flex shrink-0 justify-end gap-2 border-t border-border px-4 py-3">{footer}</div>}
           </motion.div>
         </motion.div>

@@ -102,7 +102,7 @@ export default function IpChangedDialog({open = true, previousIp, currentIp, onC
             aria-labelledby="ip-changed-title"
           >
             {/* 头部：警示图标 + 标题 + 后果说明 + 关闭 */}
-            <div className="flex shrink-0 items-start gap-3 border-b border-border px-5 py-4">
+            <div className="flex shrink-0 items-start gap-3 bg-bg-secondary/70 border-b border-border px-5 py-4">
               <div className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[color:rgba(183,121,31,0.1)] text-warning">
                 <AlertTriangle size={18} />
               </div>
@@ -129,8 +129,8 @@ export default function IpChangedDialog({open = true, previousIp, currentIp, onC
               {/* 新旧 IP 对比卡 */}
               <div className="flex items-stretch gap-2.5 rounded border border-border bg-bg-secondary p-3">
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="text-[11px] leading-none text-text-muted">变更前</span>
-                  <span className="truncate font-mono text-[13px] leading-5 text-text-muted line-through">
+                  <span className="text-xs2 leading-none text-text-muted">变更前</span>
+                  <span className="truncate font-mono text-sm2 leading-5 text-text-muted line-through">
                     {previousIp || "—"}
                   </span>
                 </div>
@@ -138,7 +138,7 @@ export default function IpChangedDialog({open = true, previousIp, currentIp, onC
                   <ArrowRight size={16} />
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="text-[11px] leading-none text-text-secondary">当前出口 IP</span>
+                  <span className="text-xs2 leading-none text-text-secondary">当前出口 IP</span>
                   <div className="flex items-center gap-1.5">
                     <span className="truncate font-mono text-[15px] font-semibold leading-5 text-accent">
                       {currentIp}
@@ -158,14 +158,14 @@ export default function IpChangedDialog({open = true, previousIp, currentIp, onC
 
               {/* 更新步骤 */}
               <div className="mt-4">
-                <div className="mb-2 text-[13px] font-semibold leading-5 text-text">更新白名单步骤</div>
+                <div className="mb-2 text-sm2 font-semibold leading-5 text-text">更新白名单步骤</div>
                 <ol className="m-0 flex flex-col gap-1.5 p-0">
                   {STEPS.map((step, i) => (
                     <li key={i} className="flex items-start gap-2.5">
-                      <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-subtle text-[11px] font-semibold leading-none text-accent">
+                      <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-subtle text-xs2 font-semibold leading-none text-accent">
                         {i + 1}
                       </span>
-                      <span className="text-[13px] leading-5 text-text-secondary">
+                      <span className="text-sm2 leading-5 text-text-secondary">
                         {step.label}
                         {step.emphasis && <b className="font-semibold text-text">{step.emphasis}</b>}
                       </span>

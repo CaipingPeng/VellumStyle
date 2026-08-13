@@ -45,7 +45,7 @@ export default function DeleteConfirmDialog({open, node, onCancel, onConfirm}: P
             aria-labelledby="delete-confirm-title"
             aria-describedby="delete-confirm-body"
           >
-            <div className="flex shrink-0 items-start gap-3 px-5 pb-3 pt-4">
+            <div className="flex shrink-0 items-start gap-3 bg-bg-secondary/70 px-5 pb-3 pt-4">
               <div className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-danger/15 bg-danger/10 text-danger">
                 <AlertTriangle size={18} />
               </div>
@@ -53,7 +53,7 @@ export default function DeleteConfirmDialog({open, node, onCancel, onConfirm}: P
                 <h2 id="delete-confirm-title" className="m-0 text-[18px] font-semibold leading-6 text-text">
                   {title}
                 </h2>
-                <p className="m-0 mt-1 text-[13px] leading-5 text-text-secondary">
+                <p className="m-0 mt-1 text-sm2 leading-5 text-text-secondary">
                   请确认这个删除动作。
                 </p>
               </div>
@@ -69,15 +69,15 @@ export default function DeleteConfirmDialog({open, node, onCancel, onConfirm}: P
 
             <div className="px-5 pb-4">
               <div className="rounded-md border border-border bg-bg-secondary px-3 py-2.5">
-                <div className="text-[11px] font-medium leading-4 text-text-muted">
+                <div className="text-xs2 font-medium leading-4 text-text-muted">
                   将删除的{targetKind}
                 </div>
-                <div className="mt-1 break-words text-[13px] font-medium leading-5 text-text">
+                <div className="mt-1 break-words text-sm2 font-medium leading-5 text-text">
                   “{node.name}”
                 </div>
               </div>
 
-              <div id="delete-confirm-body" className="mt-3 rounded-md border border-danger/25 bg-danger/5 px-3 py-2.5 text-[13px] leading-5 text-text-secondary">
+              <div id="delete-confirm-body" className="mt-3 rounded-md border border-danger/25 bg-danger/5 px-3 py-2.5 text-sm2 leading-5 text-text-secondary">
                 {recursive ? (
                   <>
                     该文件夹包含 <span className="font-semibold text-danger">{childCount} 个子项</span>

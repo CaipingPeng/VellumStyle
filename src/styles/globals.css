@@ -1779,8 +1779,32 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
   animation: vs-float 3.6s ease-in-out infinite;
 }
 
+/* 一次性入场动效：大纲项/弹窗内容挂载时阶梯淡入（CSS 动画只跑一次，无持续开销） */
+@keyframes vs-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vs-rise {
+  animation: vs-rise 220ms var(--ease) both;
+}
+
+/* 拖动工作区分隔条期间强制显示分隔线（常态隐藏，见 .workspace-split-separator） */
+html.workspace-is-resizing .workspace-split-separator::before {
+  opacity: 1;
+  width: 2px;
+  background: var(--accent);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .vs-float {
+  .vs-float,
+  .vs-rise {
     animation: none;
   }
 }

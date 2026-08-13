@@ -662,7 +662,7 @@ export default function VideoChannelDialog({open = true, onClose, onPick, onNeed
                         type="button"
                         disabled={Boolean(insertingId)}
                         onClick={() => void insertVideo(video)}
-                        className="group relative flex min-w-0 cursor-pointer flex-col overflow-hidden border-0 bg-bg-secondary p-0 text-left disabled:cursor-default"
+                        className="group relative flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-lg border border-[color:var(--card-border)] bg-bg-secondary p-0 text-left transition-[border-color,background-color,transform] duration-slow ease-bounce hover:-translate-y-1 hover:bg-bg focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default"
                       >
                         {/* 封面：固定 9:16 容器，封面 cover 完全填满 */}
                         <span className="relative block w-full overflow-hidden bg-bg-tertiary pb-[177.78%]">
