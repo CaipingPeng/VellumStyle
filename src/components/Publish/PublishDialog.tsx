@@ -45,7 +45,7 @@ const titleInputClass =
   "h-full min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 font-[inherit] text-[15px] text-text outline-none placeholder:text-text-muted";
 
 const segmentedButtonClass = (active: boolean) =>
-  `inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md border px-2.5 text-[13px] font-semibold outline-none transition-all duration-fast ease-smooth focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+  `inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md border px-2.5 text-sm2 font-semibold outline-none transition-all duration-fast ease-smooth focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
     active
       ? "border-[rgba(94,106,210,0.42)] bg-bg text-accent shadow-[0_8px_18px_rgba(94,106,210,0.12)]"
       : "border-transparent bg-transparent text-text-secondary hover:bg-bg hover:text-text"
@@ -469,7 +469,7 @@ export default function PublishDialog({open = true, onClose, onNeedSettings}: Pr
           className="flex min-w-0 flex-col gap-4 rounded border border-border bg-[linear-gradient(180deg,#fff_0%,#fbfbfd_100%)] p-4 shadow-sm"
         >
           <div>
-            <label htmlFor="publish-title" className="mb-2 block text-[13px] font-medium text-text-secondary">
+            <label htmlFor="publish-title" className="mb-2 block text-sm2 font-medium text-text-secondary">
               文章标题
             </label>
             <div className={titleInputShellClass}>
@@ -486,7 +486,7 @@ export default function PublishDialog({open = true, onClose, onNeedSettings}: Pr
 
           <div className="space-y-3">
             <div>
-              <label htmlFor="publish-author" className="mb-2 block text-[13px] font-medium text-text-secondary">
+              <label htmlFor="publish-author" className="mb-2 block text-sm2 font-medium text-text-secondary">
                 作者
               </label>
               <div className={titleInputShellClass}>
@@ -503,7 +503,7 @@ export default function PublishDialog({open = true, onClose, onNeedSettings}: Pr
 
             <div className="grid gap-3 sm:grid-cols-2">
               <fieldset className="m-0 min-w-0 border-0 p-0">
-                <legend className="mb-2 block text-[13px] font-medium text-text-secondary">评论</legend>
+                <legend className="mb-2 block text-sm2 font-medium text-text-secondary">评论</legend>
                 <div className="flex rounded-lg border border-border bg-bg-secondary p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
                   <button
                     type="button"
@@ -530,7 +530,7 @@ export default function PublishDialog({open = true, onClose, onNeedSettings}: Pr
               </fieldset>
 
               <fieldset className="m-0 min-w-0 border-0 p-0">
-                <legend className="mb-2 block text-[13px] font-medium text-text-secondary">评论范围</legend>
+                <legend className="mb-2 block text-sm2 font-medium text-text-secondary">评论范围</legend>
                 <div
                   className={`flex rounded-lg border border-border bg-bg-secondary p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] transition-opacity duration-fast ${
                     commentsEnabled ? "opacity-100" : "opacity-55"
@@ -564,7 +564,7 @@ export default function PublishDialog({open = true, onClose, onNeedSettings}: Pr
           <div className="flex flex-col">
             <div className="mb-2 flex items-end justify-between gap-3">
               <div>
-                <label htmlFor="publish-thumb" className="block text-[13px] font-medium text-text">
+                <label htmlFor="publish-thumb" className="block text-sm2 font-medium text-text">
                   封面图
                 </label>
                 <div className="mt-1 text-xs text-text-muted">建议使用2.35:1的清晰横图；点击封面可从本地上传</div>
@@ -708,7 +708,7 @@ export default function PublishDialog({open = true, onClose, onNeedSettings}: Pr
                           alt={`素材库候选封面：${item.name}`}
                           className="block h-full w-full object-cover transition-transform duration-fast group-hover:scale-105"
                         />
-                        <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-left text-[11px] leading-4 text-white/90 opacity-0 transition-opacity group-hover:opacity-100">
+                        <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-left text-xs2 leading-4 text-white/90 opacity-0 transition-opacity group-hover:opacity-100">
                           <span className="block truncate">{item.name}</span>
                           <span className="block text-white/70">{formatMaterialTime(item.updateTime)}</span>
                         </span>

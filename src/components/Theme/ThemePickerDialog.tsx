@@ -184,7 +184,7 @@ export default function ThemePickerDialog({onClose}: Props) {
       <div className="flex items-start justify-between gap-4 px-7 pb-[18px] pt-6">
         <div>
           <div className="text-lg font-semibold text-text">选择主题</div>
-          <div className="mt-1.5 text-[13px] text-text-secondary">
+          <div className="mt-1.5 text-sm2 text-text-secondary">
             {isCodeTab
               ? `${visibleCodeThemes.length} 个代码主题 · ${pinnedCodeThemeIds.length} 个置顶 · 当前 ${currentCodeTheme.name}`
               : `${visibleThemes.length} 个排版主题 · ${favoriteThemeIds.length} 个收藏 · 当前 ${currentTheme.name}`}
@@ -232,7 +232,7 @@ export default function ThemePickerDialog({onClose}: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={isCodeTab ? "搜索代码主题名称、id 或分组" : "搜索排版主题名称或 id"}
-            className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-text outline-none placeholder:text-text-muted"
+            className="min-w-0 flex-1 border-0 bg-transparent text-sm2 text-text outline-none placeholder:text-text-muted"
           />
         </label>
       </div>
@@ -275,11 +275,11 @@ export default function ThemePickerDialog({onClose}: Props) {
                     <div className="min-w-0">
                       <div
                         title={`${theme.name} (${theme.id})`}
-                        className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text"
+                        className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm2 font-medium text-text"
                       >
                         {theme.name}
                       </div>
-                      <div className="mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-text-muted">
+                      <div className="mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-xs2 text-text-muted">
                         {theme.group}
                       </div>
                     </div>
@@ -365,7 +365,7 @@ export default function ThemePickerDialog({onClose}: Props) {
                     ))}
                     <span
                       title={`${t.name} (${t.id})`}
-                      className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium text-text"
+                      className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm2 font-medium text-text"
                     >
                       {t.name}
                     </span>

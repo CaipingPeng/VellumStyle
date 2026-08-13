@@ -285,7 +285,7 @@ export default function MusicPickerDialog({open = true, onClose, onPick, onNeedS
                       <span className="mt-0.5 block truncate text-xs text-text-secondary">
                         {item.author || "未知歌手"}
                       </span>
-                      <span className="mt-0.5 block text-[11px] text-text-muted">
+                      <span className="mt-0.5 block text-xs2 text-text-muted">
                         {formatDuration(item.duration)}
                       </span>
                     </span>

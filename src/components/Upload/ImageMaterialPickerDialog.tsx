@@ -1078,12 +1078,12 @@ export default function ImageMaterialPickerDialog({open = true, canInsert, onClo
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="flex min-w-0 items-center gap-1.5">
-                                <span className="min-w-0 truncate text-[13px] font-medium leading-5 text-text-secondary">{item.name}</span>
+                                <span className="min-w-0 truncate text-sm2 font-medium leading-5 text-text-secondary">{item.name}</span>
                                 {!boundVoiceIds.has(item.mediaId) && (
                                   <span className="flex-none rounded-sm bg-bg-tertiary px-1 py-px text-[10px] leading-4 text-text-muted">未绑定</span>
                                 )}
                               </span>
-                              <span className="mt-0.5 block text-[11px] leading-4 text-text-muted">{formatMaterialTime(item.updateTime)}</span>
+                              <span className="mt-0.5 block text-xs2 leading-4 text-text-muted">{formatMaterialTime(item.updateTime)}</span>
                             </span>
                             {selected && (
                               <span aria-hidden="true" className="grid h-6 w-6 flex-none place-items-center rounded-full border-2 border-white bg-accent text-white">

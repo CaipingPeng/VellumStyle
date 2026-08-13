@@ -20,7 +20,7 @@ export default function Toaster() {
             className="overflow-hidden"
           >
             <div
-              className="max-w-[360px] rounded-[10px] px-3.5 py-2.5 text-[13px] leading-relaxed text-white shadow-lg"
+              className="max-w-[360px] rounded-[10px] px-3.5 py-2.5 text-sm2 leading-relaxed text-white shadow-lg"
               style={{
                 background: "rgba(26,26,30,0.86)",
                 backdropFilter: "blur(8px)",

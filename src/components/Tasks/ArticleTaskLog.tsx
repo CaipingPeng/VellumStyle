@@ -193,7 +193,7 @@ function ArticleTaskLog({currentDocumentPath}: Props) {
           <div className="max-h-[420px] overflow-y-auto">
             {groups.map(([documentPath, group]) => (
               <section key={documentPath} className="border-b border-border/70 last:border-b-0">
-                <div className="flex items-center justify-between bg-bg-secondary px-3 py-1.5 text-[11px] text-text-muted">
+                <div className="flex items-center justify-between bg-bg-secondary px-3 py-1.5 text-xs2 text-text-muted">
                   <span className="max-w-[300px] truncate" title={documentPath === "__unassigned__" ? undefined : documentPath}>
                     {documentLabel(group[0])}
                   </span>
@@ -212,13 +212,13 @@ function ArticleTaskLog({currentDocumentPath}: Props) {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-3">
                           <span className="truncate text-xs font-medium text-text" title={task.filename}>{task.filename}</span>
-                          <span className="flex-none text-[11px] tabular-nums text-text-muted">{formatElapsed(task, now)}</span>
+                          <span className="flex-none text-xs2 tabular-nums text-text-muted">{formatElapsed(task, now)}</span>
                         </div>
-                        <div className={`mt-1 text-[11px] ${task.status === "error" ? "text-danger" : "text-text-muted"}`}>
+                        <div className={`mt-1 text-xs2 ${task.status === "error" ? "text-danger" : "text-text-muted"}`}>
                           {task.category} · {phaseLabels[task.phase]}
                           {original && <span className="ml-2 tabular-nums">{original}{output && output !== original ? ` → ${output}` : ""}</span>}
                         </div>
-                        {task.error && <div className="mt-1 break-words text-[11px] leading-4 text-danger">{task.error}</div>}
+                        {task.error && <div className="mt-1 break-words text-xs2 leading-4 text-danger">{task.error}</div>}
                       </div>
                     </div>
                   );

@@ -1130,7 +1130,7 @@ export default function AiImageDialog({open = true, canInsert, onClose, onPick, 
                     <div className="px-4 py-2 text-xs leading-[1.4] text-text-muted">历史对话</div>
                     <div className="max-h-[360px] flex-1 overflow-y-auto">
                       {history.length === 0 && (
-                        <div className="px-4 py-5 text-center text-[13px] text-text-muted">暂无历史对话</div>
+                        <div className="px-4 py-5 text-center text-sm2 text-text-muted">暂无历史对话</div>
                       )}
                       {history.map((item) => {
                         const active = item.sessionId === sessionId;
@@ -1184,7 +1184,7 @@ export default function AiImageDialog({open = true, canInsert, onClose, onPick, 
                     <div className="text-sm text-text-secondary">AI 配图初始化失败</div>
                     <button
                       type="button"
-                      className="h-8 cursor-pointer rounded-sm border border-border bg-bg-secondary px-3 text-[13px] font-medium text-text transition-colors duration-200 hover:bg-bg-tertiary"
+                      className="h-8 cursor-pointer rounded-sm border border-border bg-bg-secondary px-3 text-sm2 font-medium text-text transition-colors duration-200 hover:bg-bg-tertiary"
                       onClick={() => setRetryToken((token) => token + 1)}
                     >
                       重试

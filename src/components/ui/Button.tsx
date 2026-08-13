@@ -23,7 +23,7 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const base =
-  "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-sm px-3 text-[13px] font-medium leading-none " +
+  "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-sm px-3 text-sm2 font-medium leading-none " +
   "cursor-pointer transition-all duration-fast ease-smooth outline-none " +
   "focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] " +
   "active:scale-[0.97] disabled:cursor-default disabled:opacity-60";

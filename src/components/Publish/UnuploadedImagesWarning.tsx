@@ -46,7 +46,7 @@ export default function UnuploadedImagesWarning({items, busy, onBack, onContinue
           const displayedUrl = item.url || "（空地址）";
           return (
             <li key={`${item.line}-${item.column}-${index}`} className="rounded-sm border border-border bg-bg-secondary p-3">
-              <div className="text-[13px] font-medium text-text">第 {item.line} 行 · {reasonLabels[item.reason]}</div>
+              <div className="text-sm2 font-medium text-text">第 {item.line} 行 · {reasonLabels[item.reason]}</div>
               <code title={item.url || undefined} className="mt-1 block select-text break-all whitespace-pre-wrap text-xs leading-5 text-text-secondary">
                 {displayedUrl}
               </code>
@@ -56,7 +56,7 @@ export default function UnuploadedImagesWarning({items, busy, onBack, onContinue
       </ul>
 
       <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
-        <button ref={backButtonRef} type="button" disabled={busy} onClick={onBack} className="inline-flex h-8 items-center justify-center rounded-sm bg-bg-secondary px-3 text-[13px] font-medium text-text-secondary hover:bg-bg-tertiary focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60">返回检查</button>
+        <button ref={backButtonRef} type="button" disabled={busy} onClick={onBack} className="inline-flex h-8 items-center justify-center rounded-sm bg-bg-secondary px-3 text-sm2 font-medium text-text-secondary hover:bg-bg-tertiary focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-60">返回检查</button>
         <Button type="button" disabled={busy} onClick={onContinue} className="bg-danger text-white border-0 hover:bg-danger">仍然发布</Button>
       </div>
     </section>

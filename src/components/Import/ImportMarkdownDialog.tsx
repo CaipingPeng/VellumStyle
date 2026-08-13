@@ -23,12 +23,12 @@ const fieldShellClass =
   "hover:bg-bg-tertiary focus-within:bg-bg focus-within:shadow-[inset_0_0_0_1px_rgba(94,106,210,0.22),0_0_0_3px_rgba(94,106,210,0.09),0_8px_22px_rgba(20,20,30,0.055)]";
 
 const inputClass =
-  "h-full min-w-0 flex-1 appearance-none border-0 bg-transparent px-1 text-[13px] leading-none text-text shadow-none outline-none " +
+  "h-full min-w-0 flex-1 appearance-none border-0 bg-transparent px-1 text-sm2 leading-none text-text shadow-none outline-none " +
   "placeholder:text-text-muted";
 
 const pickerButtonClass =
   "mr-1 inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-0 bg-bg px-3 " +
-  "text-[13px] font-medium text-text shadow-[0_1px_2px_rgba(80,66,40,0.08),inset_0_1px_0_rgba(255,255,255,0.94)] " +
+  "text-sm2 font-medium text-text shadow-[0_1px_2px_rgba(80,66,40,0.08),inset_0_1px_0_rgba(255,255,255,0.94)] " +
   "cursor-pointer transition-[background,box-shadow,transform,color] duration-fast ease-smooth " +
   "hover:bg-bg-tertiary hover:text-accent hover:shadow-[0_6px_18px_rgba(80,66,40,0.08),inset_0_1px_0_rgba(255,255,255,0.96)] " +
   "active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] " +
@@ -41,7 +41,7 @@ const headerOptionClass =
 
 const footerButtonBase =
   "inline-flex h-9 min-w-[88px] items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-0 px-4 " +
-  "text-[13px] font-semibold leading-none cursor-pointer transition-[background,box-shadow,transform,color] duration-fast ease-smooth " +
+  "text-sm2 font-semibold leading-none cursor-pointer transition-[background,box-shadow,transform,color] duration-fast ease-smooth " +
   "active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] " +
   "disabled:cursor-default disabled:translate-y-0 disabled:opacity-50";
 
@@ -100,7 +100,7 @@ export default function ImportMarkdownDialog({
     >
       <div className="flex flex-col gap-4">
         <div className="rounded-md bg-bg-secondary px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.95)]">
-          <p className="m-0 text-[13px] leading-[1.7] text-text-secondary">
+          <p className="m-0 text-sm2 leading-[1.7] text-text-secondary">
             选择一个或多个 Markdown 文件后会立即创建并打开文章，图片将在后台上传到公众号永久素材库。Obsidian 的 <code>![[...]]</code> 图片语法也会在上传成功后转换为标准 Markdown 图片。
           </p>
           <p className="m-0 mt-1 text-xs leading-relaxed text-text-muted">
@@ -184,7 +184,7 @@ function FieldPicker({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-3">
-        <div className="text-[13px] font-semibold text-text">{label}</div>
+        <div className="text-sm2 font-semibold text-text">{label}</div>
         <div className="flex min-w-0 items-center gap-2">
           <div className="text-xs text-text-muted">{hint}</div>
           {headerAction}
