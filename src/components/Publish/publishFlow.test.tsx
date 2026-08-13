@@ -65,7 +65,7 @@ async function loadRuntimeModules() {
         setup(pluginBuild) {
           pluginBuild.onLoad({filter: /src[\\/]themes[\\/]index\.ts$/}, async (args) => ({
             contents: (await readFile(args.path, "utf8")).replace(
-              'import.meta.glob("./builtin/*.css", {query: "?raw", import: "default"})',
+              'import.meta.glob(["./builtin/*.css", "!./builtin/ink-haze.css"], {\n  query: "?raw",\n  import: "default",\n})',
               "({})",
             ),
             loader: "ts",
@@ -81,6 +81,16 @@ async function loadRuntimeModules() {
           pluginBuild.onLoad({filter: /src[\\/]markdown[\\/]mathjax\.ts$/}, () => ({
             contents: "export function waitForMathJaxIdle() { return globalThis.__PUBLISH_TEST_MATHJAX_IDLE__ ?? Promise.resolve(); }",
             loader: "ts",
+          }));
+          // juice 在 solveDraftHtml 里被动态 import（懒加载优化后），
+          // 首次加载多 tick 会让同步断言竞态；按 mathjax 同款方式 stub 为恒等内联。
+          pluginBuild.onResolve({filter: /^juice$/}, () => ({
+            path: "juice-stub",
+            namespace: "juice-stub",
+          }));
+          pluginBuild.onLoad({filter: /.*/, namespace: "juice-stub"}, () => ({
+            contents: "export default { inlineContent: (html) => html };",
+            loader: "js",
           }));
         },
       }],

@@ -35,7 +35,7 @@ export interface ExportRenderTarget {
 export interface ExportArticleDependencies {
   waitForMathJaxIdle: () => Promise<void> | void;
   readMarkdownSource: () => string;
-  readArticleHtml: () => string;
+  readArticleHtml: () => Promise<string>;
   renderArticleCanvas: () => Promise<HTMLCanvasElement>;
   saveExportBlob: (blob: Blob, format: ExportFormat, fileName: string) => Promise<ExportResult>;
   pickExportPath: (format: ExportFormat, fileName: string) => Promise<string | null>;
@@ -120,7 +120,7 @@ export async function exportArticle(
   await dependencies.waitForMathJaxIdle();
 
   if (format === "html") {
-    const html = dependencies.readArticleHtml();
+    const html = await dependencies.readArticleHtml();
     if (!html) {
       throw new Error("没有可导出的预览内容");
     }
@@ -130,7 +130,7 @@ export async function exportArticle(
   }
 
   if (format === "pdf") {
-    const html = dependencies.readArticleHtml();
+    const html = await dependencies.readArticleHtml();
     if (!html) {
       throw new Error("没有可导出的预览内容");
     }

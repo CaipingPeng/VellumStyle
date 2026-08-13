@@ -49,7 +49,7 @@ test("Markdown 导出原样保存当前源文本，不读取预览 HTML", async 
       throw new Error("Markdown 导出不应等待预览渲染");
     },
     readMarkdownSource: () => source,
-    readArticleHtml: () => {
+    readArticleHtml: async () => {
       throw new Error("Markdown 导出不应读取预览 HTML");
     },
     saveExportBlob: async (blob, format, fileName) => {
@@ -102,7 +102,7 @@ test("PDF 导出保存为干净 A4 PDF，不打开打印窗口", async () => {
 
   const result = await exportArticle("pdf", "草稿.md", {
     waitForMathJaxIdle: async () => {},
-    readArticleHtml: () => "<section><p>正文内容</p></section>",
+    readArticleHtml: async () => "<section><p>正文内容</p></section>",
     isTauriRuntime: () => true,
     pickExportPath: async () => "C:\\Users\\Administrator\\Desktop\\草稿.pdf",
     exportPdfFile: async (html: string, path: string) => {

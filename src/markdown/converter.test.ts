@@ -228,7 +228,7 @@ test("导出链接包在微信编辑器可识别的 leaf 节点里", () => {
   assert.match(html, /textvalue="CaipingPeng\/VellumStyle"/);
 });
 
-test("solveHtml 导出 Mermaid SVG 时内联关键样式且移除 SVG style", () => {
+test("solveHtml 导出 Mermaid SVG 时内联关键样式且移除 SVG style", async () => {
   const style = document.createElement("style");
   style.id = STYLE_IDS.markdown;
   style.innerText = "";
@@ -268,7 +268,7 @@ test("solveHtml 导出 Mermaid SVG 时内联关键样式且移除 SVG style", ()
   }) as typeof window.getComputedStyle;
 
   try {
-    const html = solveHtml();
+    const html = await solveHtml();
     assert.match(html, /<svg/);
     assert.doesNotMatch(html, /<style>/);
     assert.match(html, /<rect[^>]*fill="#ffffff"[^>]*stroke="#333333"[^>]*stroke-width="2px"/);
@@ -281,7 +281,7 @@ test("solveHtml 导出 Mermaid SVG 时内联关键样式且移除 SVG style", ()
   }
 });
 
-test("solveHtml 导出 Mermaid SVG 时移除 foreignObject，保留可复制的 SVG text", () => {
+test("solveHtml 导出 Mermaid SVG 时移除 foreignObject，保留可复制的 SVG text", async () => {
   const style = document.createElement("style");
   style.id = STYLE_IDS.markdown;
   style.innerText = "";
@@ -306,7 +306,7 @@ test("solveHtml 导出 Mermaid SVG 时移除 foreignObject，保留可复制的 
   document.body.appendChild(box);
 
   try {
-    const html = solveHtml();
+    const html = await solveHtml();
     assert.doesNotMatch(html, /foreignObject/i);
     assert.doesNotMatch(html, /<p\b/i);
     assert.match(html, /<text[^>]*text-anchor="middle"[^>]*>/);
@@ -318,7 +318,7 @@ test("solveHtml 导出 Mermaid SVG 时移除 foreignObject，保留可复制的 
   }
 });
 
-test("solveHtml 导出视频 iframe 时保留 src/data-src/mpvid/cover", () => {
+test("solveHtml 导出视频 iframe 时保留 src/data-src/mpvid/cover", async () => {
   const style = document.createElement("style");
   style.id = STYLE_IDS.markdown;
   style.innerText = "";
@@ -335,7 +335,7 @@ test("solveHtml 导出视频 iframe 时保留 src/data-src/mpvid/cover", () => {
   document.body.appendChild(box);
 
   try {
-    const html = solveHtml();
+    const html = await solveHtml();
     assert.match(html, /<iframe /);
     assert.match(html, /data-mpvid="wxv_2628424322221359104"/);
     assert.match(html, /data-cover="http:\/\/mmbiz\.qpic\.cn\/mmbiz_jpg\/example\/0\?wx_fmt=jpeg"/);
@@ -348,7 +348,7 @@ test("solveHtml 导出视频 iframe 时保留 src/data-src/mpvid/cover", () => {
   }
 });
 
-test("solveHtml 不给视频号卡片容器加 data-tool 水印", () => {
+test("solveHtml 不给视频号卡片容器加 data-tool 水印", async () => {
   const style = document.createElement("style");
   style.id = STYLE_IDS.markdown;
   style.innerText = "";
@@ -368,7 +368,7 @@ test("solveHtml 不给视频号卡片容器加 data-tool 水印", () => {
   document.body.appendChild(box);
 
   try {
-    const html = solveHtml();
+    const html = await solveHtml();
     // 普通顶层元素仍带水印，视频号卡片不带，避免微信草稿箱重建节点时出问题。
     assert.match(html, /<p[^>]*data-tool="vellumstyle"/);
     const doc = new DOMParser().parseFromString(html, "text/html");
@@ -384,7 +384,7 @@ test("solveHtml 不给视频号卡片容器加 data-tool 水印", () => {
   }
 });
 
-test("solveHtml 清洗历史视频号卡片容器的内联样式与 data-tool", () => {
+test("solveHtml 清洗历史视频号卡片容器的内联样式与 data-tool", async () => {
   const style = document.createElement("style");
   style.id = STYLE_IDS.markdown;
   style.innerText = "";
@@ -403,7 +403,7 @@ test("solveHtml 清洗历史视频号卡片容器的内联样式与 data-tool", 
   document.body.appendChild(box);
 
   try {
-    const html = solveHtml();
+    const html = await solveHtml();
     const doc = new DOMParser().parseFromString(html, "text/html");
     const card = doc.querySelector("section.channels_iframe_wrp");
     assert.ok(card, "应保留官方结构 section");
@@ -423,7 +423,7 @@ test("solveHtml 清洗历史视频号卡片容器的内联样式与 data-tool", 
   }
 });
 
-test("solveHtml 把裸视频号组件（含 <p> 包裹）还原为官方 section 结构", () => {
+test("solveHtml 把裸视频号组件（含 <p> 包裹）还原为官方 section 结构", async () => {
   const style = document.createElement("style");
   style.id = STYLE_IDS.markdown;
   style.innerText = "";
@@ -440,7 +440,7 @@ test("solveHtml 把裸视频号组件（含 <p> 包裹）还原为官方 section
   document.body.appendChild(box);
 
   try {
-    const html = solveHtml();
+    const html = await solveHtml();
     const doc = new DOMParser().parseFromString(html, "text/html");
     const card = doc.querySelector("section.channels_iframe_wrp");
     assert.ok(card, "应为裸组件补上官方 section 包裹");

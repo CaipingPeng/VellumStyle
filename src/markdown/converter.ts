@@ -1,8 +1,17 @@
-import juice from "juice";
 import {ARTICLE_BOX_ID} from "../articleRoot.ts";
 import {STYLE_IDS} from "../utils/style.ts";
 import {fromProxyHtml} from "../utils/imageProxy.ts";
 import {inlineMermaidSvgElementStylesForWechat} from "./mermaidExport.ts";
+
+// juice（含 cheerio/parse5 等约 560KB）只在复制/发布/导出时才需要，
+// 改为按需加载，避免整条链常驻主包。type-only 导入无运行时开销。
+import type juice from "juice";
+
+let juicePromise: Promise<typeof juice> | null = null;
+function loadJuice(): Promise<typeof juice> {
+  juicePromise ??= import("juice").then((module) => module.default);
+  return juicePromise;
+}
 
 const DISPLAY_MATH_STYLE =
   "display:block;text-align:center;margin:1em 0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch";
@@ -317,7 +326,7 @@ function elementAtPath(root: Element, path: number[]): Element | null {
 // 1. 给预览区每个顶层子元素加 data-tool 水印
 // 2. MathJax 节点后处理（行内/块级公式转换、防吞空格）
 // 3. juice 把所有 CSS 内联进 style 属性（微信只认 inline style）
-export function solveHtml(): string {
+export async function solveHtml(): Promise<string> {
   const box = document.getElementById(ARTICLE_BOX_ID);
   if (!box) {
     return "";
@@ -350,7 +359,7 @@ export function solveHtml(): string {
   const allCss = readStyle(STYLE_IDS.markdown);
 
   try {
-    const inlined = juice.inlineContent(html, allCss, {
+    const inlined = (await loadJuice()).inlineContent(html, allCss, {
       inlinePseudoElements: true,
       preserveImportant: true,
     });
@@ -361,8 +370,8 @@ export function solveHtml(): string {
   }
 }
 
-export function solveDraftHtml(): string {
-  return normalizeDraftLists(solveHtml());
+export async function solveDraftHtml(): Promise<string> {
+  return normalizeDraftLists(await solveHtml());
 }
 
 export function normalizeDraftLists(html: string): string {
