@@ -365,30 +365,43 @@ function linkFoot(state: StateInline, silent: boolean): boolean {
     state.pos = labelStart;
     state.posMax = labelEnd;
 
-    if (title) {
-      const footnoteList = ensureFootnoteList(state.env);
-      const footnoteId = footnoteList.length;
-      const tokens: Token[] = [];
-      // *用来让链接倾斜
-      state.md.inline.parse(
-        `${title}: *${escapeMarkdownInline(readableUrl(footnoteContent))}*`,
-        state.md,
-        state.env,
-        tokens,
-      );
+    const footnoteList = ensureFootnoteList(state.env);
+    if (!state.env.footnotes.urls) {
+      state.env.footnotes.urls = {};
+    }
+    // 按源链接去重：同一 URL 只在文末生成一条脚注，后续引用复用同一编号，
+    // 保证多处引用同一来源时编号一致。去重键取解码后的可读形式，浏览器复制的
+    // 百分号编码链接与手打原文视为同一来源；键只含链接本身，首次出现时的
+    // 写法（带/不带 title）决定该脚注的展示内容。
+    const urlKey = readableUrl(footnoteContent || href);
+    const existingId = state.env.footnotes.urls[urlKey];
+    const footnoteId = typeof existingId === "number" ? existingId : footnoteList.length;
 
+    if (typeof existingId !== "number") {
+      state.env.footnotes.urls[urlKey] = footnoteId;
+      if (title) {
+        const tokens: Token[] = [];
+        // *用来让链接倾斜
+        state.md.inline.parse(
+          `${title}: *${escapeMarkdownInline(urlKey)}*`,
+          state.md,
+          state.env,
+          tokens,
+        );
+        footnoteList[footnoteId] = {tokens};
+      } else {
+        const tokens = [createTextToken(state, urlKey)];
+        footnoteList[footnoteId] = {tokens};
+      }
+    }
+
+    if (title) {
       token = state.push("footnote_word", "", 0);
       token.content = state.src.slice(labelStart, labelEnd);
 
       token = state.push("footnote_ref", "", 0);
       token.meta = {id: footnoteId};
-
-      footnoteList[footnoteId] = {tokens};
     } else {
-      const footnoteList = ensureFootnoteList(state.env);
-      const footnoteId = footnoteList.length;
-      const tokens = [createTextToken(state, readableUrl(footnoteContent || href))];
-
       token = state.push("footnote_word_open", "span", 1);
       token.attrs = [["class", "footnote-word"]];
 
@@ -404,8 +417,6 @@ function linkFoot(state: StateInline, silent: boolean): boolean {
 
       token = state.push("footnote_ref", "", 0);
       token.meta = {id: footnoteId};
-
-      footnoteList[footnoteId] = {tokens};
     }
   }
 

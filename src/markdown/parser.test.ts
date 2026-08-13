@@ -105,6 +105,55 @@ test("带 title 的 Markdown 链接也使用同一套取整符号脚注样式", 
   assert.match(html, /<span id="fn1" class="footnote-item" style="display:block;"><span class="footnote-num" style="display:inline;width:auto;">\[1\] <\/span>术语: <em>这里是脚注的解释内容<\/em><\/span>/);
 });
 
+test("同一 URL 多处引用只渲染一条脚注且文中编号一致", () => {
+  const html = render("A处：[xxx](https://src.example.com/a)\n\nB处：[yyy](https://src.example.com/a)\n\nA处：[zzz](https://src.example.com/a)");
+
+  assert.match(html, /A处：<span class="footnote-word">⌈xxx⌋<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
+  assert.match(html, /B处：<span class="footnote-word">⌈yyy⌋<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
+  assert.match(html, /A处：<span class="footnote-word">⌈zzz⌋<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
+  assert.doesNotMatch(html, /footnote-ref">\[2\]/);
+  const itemCount = (html.match(/<span id="fn\d+" class="footnote-item"/g) ?? []).length;
+  assert.equal(itemCount, 1);
+  assert.match(html, /<span id="fn1" class="footnote-item" style="display:block;"><span class="footnote-num" style="display:inline;width:auto;">\[1\] <\/span>https:\/\/src\.example\.com\/a<\/span>/);
+});
+
+test("同一 URL 带 title 与不带 title 混用时仍按源去重", () => {
+  const html = render('A处：[xxx](https://src.example.com/a "来源")\n\nB处：[yyy](https://src.example.com/a)');
+
+  assert.match(html, /A处：<span class="footnote-word">⌈xxx⌋<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
+  assert.match(html, /B处：<span class="footnote-word">⌈yyy⌋<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
+  const itemCount = (html.match(/<span id="fn\d+" class="footnote-item"/g) ?? []).length;
+  assert.equal(itemCount, 1);
+  assert.match(html, /<span id="fn1" class="footnote-item"[^>]*><span class="footnote-num"[^>]*>\[1\] <\/span>来源: <em>https:\/\/src\.example\.com\/a<\/em><\/span>/);
+});
+
+test("编码与未编码的中文 URL 视为同一来源去重", () => {
+  const html = render("复制：[a](https://example.com/%E2%80%9C%E5%96%9C%E7%BE%8A%E7%BE%8A%E6%9A%B4%E5%8A%9B%E2%80%9D%E6%A1%88)\n\n手输：[b](https://example.com/“喜羊羊暴力”案)");
+
+  assert.match(html, /<sup class="footnote-ref">\[1\]<\/sup>/);
+  const itemCount = (html.match(/<span id="fn\d+" class="footnote-item"/g) ?? []).length;
+  assert.equal(itemCount, 1);
+  assert.match(html, /<span id="fn1" class="footnote-item"[^>]*><span class="footnote-num"[^>]*>\[1\] <\/span>https:\/\/example\.com\/“喜羊羊暴力”案<\/span>/);
+});
+
+test("不同 URL 仍各自渲染独立脚注", () => {
+  const html = render("一处：[xxx](https://src.example.com/a)\n\n二处：[yyy](https://src.example.com/b)");
+
+  assert.match(html, /<sup class="footnote-ref">\[1\]<\/sup>/);
+  assert.match(html, /<sup class="footnote-ref">\[2\]<\/sup>/);
+  const itemCount = (html.match(/<span id="fn\d+" class="footnote-item"/g) ?? []).length;
+  assert.equal(itemCount, 2);
+});
+
+test("同一 URL 与标准脚注标记共用时互不干扰", () => {
+  const html = render("链接：[xxx](https://src.example.com/a)\n\n标准[^注1]\n\n[^注1]: 这是脚注内容");
+
+  assert.match(html, /<sup class="footnote-ref">\[1\]<\/sup>/);
+  assert.match(html, /<sup class="footnote-ref">\[2\]<\/sup>/);
+  const itemCount = (html.match(/<span id="fn\d+" class="footnote-item"/g) ?? []).length;
+  assert.equal(itemCount, 2);
+});
+
 test("素材库视频 iframe 保留 src/data-src/mpvid/cover 供预览与发布", () => {
   const html = render(
     '<iframe class="video_iframe rich_pages" data-vidtype="2" data-mpvid="wxv_2628424322221359104" data-cover="http://mmbiz.qpic.cn/mmbiz_jpg/example/0?wx_fmt=jpeg" allowfullscreen frameborder="0" data-w="1920" data-ratio="1.7777777777777777" height="325" width="578" data-src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104" src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;action=mpvideo&amp;auto=0&amp;vid=wxv_2628424322221359104"></iframe>',
