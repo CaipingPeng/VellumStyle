@@ -911,12 +911,12 @@ function PreviewSkeleton() {
 function PreviewEmptyState() {
   return (
     <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 px-6 text-center">
-      <div className="grid h-14 w-14 place-items-center rounded-full bg-bg-tertiary text-text-muted">
+      <div className="vs-float grid h-14 w-14 place-items-center rounded-full bg-bg-tertiary text-text-muted">
         <FileText size={24} strokeWidth={1.6} />
       </div>
       <div>
-        <p className="text-sm font-medium text-[#6b6b76]">开始写作</p>
-        <p className="mx-auto mt-1 max-w-[280px] text-xs leading-relaxed text-[#9b9ba6]">
+        <p className="text-sm font-medium text-text-secondary">开始写作</p>
+        <p className="mx-auto mt-1 max-w-[280px] text-xs leading-relaxed text-text-muted">
           在左侧输入 Markdown 内容，这里会实时渲染公众号文章的排版效果
         </p>
       </div>

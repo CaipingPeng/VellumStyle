@@ -271,10 +271,22 @@ textarea {
 /* 主行动按钮：品牌渐变强调色（端点随亮暗主题切换） */
 .vs-btn-accent {
   background-image: var(--accent-gradient);
+  /* 内高光 + accent 色投影：主按钮立体感，颜色随配色方案自适应 */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 1px 3px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .vs-btn-accent:hover {
   background-image: var(--accent-gradient-hover);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 3px 10px color-mix(in srgb, var(--accent) 38%, transparent);
+  transform: translateY(-1px);
+}
+
+.vs-btn-accent:active {
+  transform: translateY(0);
 }
 
 html,
@@ -324,7 +336,10 @@ html.has-app-bg .workspace-frame {
   border: 1px solid var(--workspace-panel-border);
   border-radius: var(--workspace-panel-radius);
   background: var(--workspace-panel);
-  transition: border-color var(--duration-fast) var(--ease);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
 }
 
 .workspace-editor-panel:focus-within,
@@ -1690,4 +1705,82 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
   background-position: center;
   background-size: contain;
   background-repeat: no-repeat;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   视觉打磨层（z-index 统一层级）
+   50    顶栏
+   1900  浮层（菜单/右键菜单/任务面板等弹出层，低于弹窗）
+   2000  弹窗遮罩与面板
+   3000  Toast / 图片灯箱
+   ════════════════════════════════════════════════════════════════ */
+
+/* 全局轻量滚动条：文档树/大纲/弹窗内容等未单独定制的区域，
+   与编辑器/预览的悬停显形设计同规格（10px 圆角细条，token 色自适应亮暗）。
+   编辑器与预览的专用规则特异性更高，不受影响。 */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  min-height: 36px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--text-muted) 26%, transparent);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  border-width: 2px;
+  background-color: color-mix(in srgb, var(--text-muted) 46%, transparent);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  border-width: 1px;
+  background-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* 顶栏毛玻璃：半透明暖底 + 背景图透过时轻微提色；
+   无背景图时近似纯色，有背景图时形成漂亮的玻璃层次。 */
+.app-header {
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
+  backdrop-filter: blur(14px) saturate(1.35);
+  -webkit-backdrop-filter: blur(14px) saturate(1.35);
+}
+
+html.has-app-bg .app-header {
+  background: color-mix(in srgb, var(--bg) 52%, transparent);
+}
+
+/* 弹窗遮罩毛玻璃：统一由各弹窗的遮罩元素挂 .vs-overlay-blur */
+.vs-overlay-blur {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* 空状态图标浮动呼吸动效 */
+@keyframes vs-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.vs-float {
+  animation: vs-float 3.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vs-float {
+    animation: none;
+  }
 }

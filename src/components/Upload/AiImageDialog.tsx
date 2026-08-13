@@ -1071,7 +1071,7 @@ export default function AiImageDialog({open = true, canInsert, onClose, onPick, 
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[2000] flex items-center justify-center"
+          className="vs-overlay-blur fixed inset-0 z-[2000] flex items-center justify-center"
           style={{background: "rgba(20,20,30,0.4)"}}
           initial={{opacity: 0}}
           animate={{opacity: 1}}

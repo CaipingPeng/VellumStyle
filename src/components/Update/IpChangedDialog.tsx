@@ -82,7 +82,7 @@ export default function IpChangedDialog({open = true, previousIp, currentIp, onC
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[2000] flex items-center justify-center px-4"
+          className="vs-overlay-blur fixed inset-0 z-[2000] flex items-center justify-center px-4"
           style={{background: "rgba(20,20,30,0.42)"}}
           initial={{opacity: 0}}
           animate={{opacity: 1}}

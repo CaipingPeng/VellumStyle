@@ -95,7 +95,7 @@ export default function Dialog({
         <motion.div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-[2000] flex items-center justify-center"
+          className="vs-overlay-blur fixed inset-0 z-[2000] flex items-center justify-center"
           style={{background: "rgba(20,20,30,0.4)"}}
           initial={{opacity: 0}}
           animate={{opacity: 1}}
@@ -105,7 +105,7 @@ export default function Dialog({
         >
           <motion.div
             ref={panelRef}
-            className="flex max-h-[86vh] flex-col overflow-hidden rounded bg-bg shadow-md"
+            className="flex max-h-[86vh] flex-col overflow-hidden rounded bg-bg shadow-lg"
             style={{width, maxWidth: "90vw"}}
             initial={{opacity: 0, scale: 0.96, y: 8}}
             animate={{opacity: 1, scale: 1, y: 0}}
@@ -113,7 +113,7 @@ export default function Dialog({
             transition={MOTION_SPRING_POP}
             onClick={(e) => e.stopPropagation()}
           >
-            <div data-dialog-header className="flex min-h-11 shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-1.5 text-sm font-semibold text-text">
+            <div data-dialog-header className="flex min-h-11 shrink-0 items-center justify-between gap-3 border-b border-border bg-bg-secondary/70 px-4 py-1.5 text-sm font-semibold text-text">
               <span className="min-w-0">{title}</span>
               <div className="flex flex-none items-center gap-2">
                 {headerActions}

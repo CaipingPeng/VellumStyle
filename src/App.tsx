@@ -756,7 +756,7 @@ export default function App() {
   return (
     <div style={{display: "flex", flexDirection: "column", height: "100%"}}>
       {/* Navbar */}
-      <header className="relative z-50 flex h-[52px] flex-shrink-0 items-center justify-between gap-3 border-b border-border bg-transparent px-4">
+      <header className="app-header relative z-50 flex h-[52px] flex-shrink-0 items-center justify-between gap-3 border-b border-border px-4">
         <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
           <IconButton variant="surface" active={sidebarOpen} title="文档" aria-pressed={sidebarOpen} onClick={toggleSidebar}>
             <PanelLeft size={16} />

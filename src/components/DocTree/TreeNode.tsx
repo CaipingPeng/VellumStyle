@@ -257,7 +257,7 @@ function TreeNode({
       </div>
       {contextMenu && (
         <div
-          className="fixed z-[70] min-w-[160px] overflow-hidden rounded-sm border border-border bg-bg py-1 shadow-lg"
+          className="fixed z-[1900] min-w-[160px] overflow-hidden rounded-sm border border-border bg-bg py-1 shadow-lg"
           style={{left: contextMenu.x, top: contextMenu.y}}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}

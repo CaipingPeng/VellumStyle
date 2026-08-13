@@ -168,7 +168,7 @@ export default function ThemePickerDialog({onClose}: Props) {
 
   return createPortal(
     <motion.div
-      className="fixed inset-0 z-[2000] flex items-center justify-center"
+      className="vs-overlay-blur fixed inset-0 z-[2000] flex items-center justify-center"
       style={{background: "rgba(20,20,30,0.32)"}}
       initial={{opacity: 0}}
       animate={{opacity: 1}}

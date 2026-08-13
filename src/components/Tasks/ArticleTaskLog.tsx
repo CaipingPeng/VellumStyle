@@ -142,7 +142,7 @@ function ArticleTaskLog({currentDocumentPath}: Props) {
         aria-label="文章任务日志"
         aria-expanded={open}
         title="文章任务日志"
-        className={`relative grid h-8 w-8 place-items-center rounded-md outline-none transition-colors hover:bg-bg-hover focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${activeCount > 0 ? "text-accent" : errorCount > 0 ? "text-danger" : "text-text-muted"}`}
+        className={`relative grid h-8 w-8 place-items-center rounded-md outline-none transition-colors hover:bg-bg-tertiary focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${activeCount > 0 ? "text-accent" : errorCount > 0 ? "text-danger" : "text-text-muted"}`}
       >
         {activeCount > 0 ? <Loader2 size={16} className="animate-spin" /> : <ListChecks size={16} />}
         {(activeCount > 0 || errorCount > 0) && (
@@ -155,7 +155,7 @@ function ArticleTaskLog({currentDocumentPath}: Props) {
       {open && createPortal(
         <div
           ref={panelRef}
-          className="fixed z-[2600] overflow-hidden rounded-md border border-border bg-bg shadow-xl"
+          className="fixed z-[1900] overflow-hidden rounded-md border border-border bg-bg shadow-xl"
           style={panelPosition}
         >
           <div className="flex h-11 items-center justify-between border-b border-border px-3">
@@ -171,7 +171,7 @@ function ArticleTaskLog({currentDocumentPath}: Props) {
                   onClick={() => void copyErrorLog()}
                   aria-label="复制错误信息"
                   title="复制错误信息"
-                  className="grid h-7 w-7 place-items-center rounded text-danger outline-none hover:bg-bg-hover focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+                  className="grid h-7 w-7 place-items-center rounded text-danger outline-none hover:bg-bg-tertiary focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
                 >
                   <Copy size={14} />
                 </button>
@@ -182,7 +182,7 @@ function ArticleTaskLog({currentDocumentPath}: Props) {
                   onClick={() => imageUploadTasks.clearFinished()}
                   aria-label="清除已结束任务"
                   title="清除已结束任务"
-                  className="grid h-7 w-7 place-items-center rounded text-text-muted outline-none hover:bg-bg-hover hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+                  className="grid h-7 w-7 place-items-center rounded text-text-muted outline-none hover:bg-bg-tertiary hover:text-text focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
                 >
                   <Trash2 size={14} />
                 </button>
