@@ -1095,6 +1095,9 @@ pub async fn get_mp_video_info(app: AppHandle, vid: String) -> Result<String, St
 }
 
 fn mp_video_info_expr(vid: &str) -> String {
+    // 与其余 expr builder 一致：用户可控输入必须 urlencoding，既保证 URL 合法，
+    // 也防止 vid 含引号/反斜杠时逃逸出 JS 字符串字面量（在持有微信会话的后台窗口注入脚本）。
+    let enc_vid = urlencoding::encode(vid);
     format!(
         r#"(function () {{
           try {{
@@ -1110,7 +1113,7 @@ fn mp_video_info_expr(vid: &str) -> String {
             return JSON.stringify({{ vs_error: String(e) }});
           }}
         }})()"#,
-        vid = vid,
+        vid = enc_vid,
     )
 }
 
@@ -1223,8 +1226,11 @@ fn phone_upload_confirm_expr(data: &str) -> String {
 }
 
 /// AI 配图：GET 类接口（get_session / get_style / related_search / get_ai_pic）。
-/// params 为已编码的追加查询参数（以 & 开头）。token 从后台首页 URL 提取。
+/// params 为调用方已 urlencoding 的追加查询参数（以 & 开头，含用户输入时必须编码，
+/// 否则可逃逸 JS 字符串字面量）。token 从后台首页 URL 提取。
 fn ai_image_get_expr(action: &str, params: &str) -> String {
+    // action 目前全为硬编码常量，仍与其余 builder 一致做 urlencoding，防未来引入用户输入。
+    let enc_action = urlencoding::encode(action);
     format!(
         r#"(function () {{
           try {{
@@ -1240,7 +1246,7 @@ fn ai_image_get_expr(action: &str, params: &str) -> String {
             return JSON.stringify({{ vs_error: String(e) }});
           }}
         }})()"#,
-        action = action,
+        action = enc_action,
         params = params,
     )
 }
@@ -1490,6 +1496,26 @@ mod tests {
         assert!(expr.contains("get_option=1"));
         assert!(expr.contains("token"));
         assert!(expr.contains("f=json&ajax=1"));
+    }
+
+    #[test]
+    fn mp_video_info_expr_encodes_malicious_vid() {
+        // 引号/反斜杠必须被 URL 编码，不能原样进入 JS 字符串字面量，
+        // 否则可在持有微信会话的后台窗口注入任意脚本。
+        let expr = mp_video_info_expr("wxv_1\");alert(1);//");
+        assert!(!expr.contains("\");alert(1);//"));
+        assert!(expr.contains("vid=wxv_1%22%29%3Balert%281%29%3B%2F%2F"));
+    }
+
+    #[test]
+    fn ai_image_get_expr_encodes_action() {
+        let expr = ai_image_get_expr("get_session", "&style_id=0");
+        assert!(expr.contains("action=get_session"));
+        assert!(expr.contains("style_id=0"));
+        // 恶意 action 同样不能逃逸 JS 字符串字面量。
+        let evil = ai_image_get_expr("\");alert(1);//", "&style_id=0");
+        assert!(!evil.contains("\");alert(1);//"));
+        assert!(evil.contains("action=%22%29%3Balert%281%29%3B%2F%2F"));
     }
 
       #[test]
