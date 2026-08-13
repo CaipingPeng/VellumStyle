@@ -1,7 +1,6 @@
 import {forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef} from "react";
 import {useCodeMirror} from "@uiw/react-codemirror";
 import {markdown, markdownLanguage} from "@codemirror/lang-markdown";
-import {languages} from "@codemirror/language-data";
 import {Compartment, EditorSelection, EditorState, Prec, StateEffect, StateField} from "@codemirror/state";
 import {EditorView, keymap, ViewPlugin} from "@codemirror/view";
 import {undo, redo} from "@codemirror/commands";
@@ -392,7 +391,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     const extensions = useMemo(
       () => [
         ...(cspNonce ? [EditorView.cspNonce.of(cspNonce)] : []),
-        markdown({base: markdownLanguage, codeLanguages: languages}),
+        markdown({base: markdownLanguage}),
         searchLoadedField,
         uploadPlaceholderField,
         searchCompartment.of([]),
