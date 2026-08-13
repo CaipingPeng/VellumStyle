@@ -375,13 +375,17 @@ html.has-app-bg .workspace-frame {
   transform: translateX(-50%);
   border-radius: 999px;
   background: var(--border-strong);
+  /* 常态不可见：编辑/预览之间保持无缝，悬停或键盘聚焦时才现形提示可拖拽 */
+  opacity: 0;
   transition:
+    opacity var(--duration-fast) var(--ease),
     background-color var(--duration-fast) var(--ease),
     width var(--duration-fast) var(--ease);
 }
 
 .workspace-split-separator:hover::before,
 .workspace-split-separator:focus-visible::before {
+  opacity: 1;
   width: 2px;
   background: var(--accent);
 }
@@ -1752,18 +1756,6 @@ mpvoice.js_editor_audio[data-vs-audio-hidden="true"] {
 *::-webkit-scrollbar-thumb:active {
   border-width: 1px;
   background-color: color-mix(in srgb, var(--accent) 55%, transparent);
-}
-
-/* 顶栏毛玻璃：半透明暖底 + 背景图透过时轻微提色；
-   无背景图时近似纯色，有背景图时形成漂亮的玻璃层次。 */
-.app-header {
-  background: color-mix(in srgb, var(--bg) 74%, transparent);
-  backdrop-filter: blur(14px) saturate(1.35);
-  -webkit-backdrop-filter: blur(14px) saturate(1.35);
-}
-
-html.has-app-bg .app-header {
-  background: color-mix(in srgb, var(--bg) 52%, transparent);
 }
 
 /* 弹窗遮罩毛玻璃：统一由各弹窗的遮罩元素挂 .vs-overlay-blur */
