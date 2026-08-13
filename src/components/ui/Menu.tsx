@@ -94,7 +94,7 @@ export function MenuItem({onClick, children}: ItemProps) {
     <button
       type="button"
       onClick={onClick}
-      className="flex h-8 w-full cursor-pointer items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-[13px] text-text outline-none transition-colors duration-fast hover:bg-bg-tertiary focus-visible:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)]"
+      className="flex h-8 w-full cursor-pointer items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-sm2 text-text outline-none transition-colors duration-fast hover:bg-bg-tertiary active:bg-bg-tertiary focus-visible:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)]"
     >
       {children}
     </button>

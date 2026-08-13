@@ -41,7 +41,7 @@ test("文件树选中文件或文件夹后按 F2 进入重命名", async () => {
   const docTreeSource = await readFile(new URL("./DocTree.tsx", import.meta.url), "utf8");
   const nodeSource = await readFile(new URL("./TreeNode.tsx", import.meta.url), "utf8");
 
-  assert.match(docTreeSource, /event\.key !== "F2"/);
+  assert.match(docTreeSource, /event\.key === "F2"/);
   assert.match(docTreeSource, /setRenameSignal/);
   assert.match(docTreeSource, /renameSignal=\{renameSignal\}/);
   assert.match(nodeSource, /renameSignal\.path === node\.path/);

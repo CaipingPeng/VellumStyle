@@ -17,7 +17,7 @@ function OutlineNav({items, activeLine, onJump}: Props) {
   return (
     <aside className="workspace-panel workspace-outline-panel flex w-[220px] flex-shrink-0 flex-col overflow-hidden">
       <div className="flex h-[42px] flex-none items-center justify-between border-b border-border px-3">
-        <span className="text-[13px] font-medium text-text">大纲</span>
+        <span className="text-sm2 font-medium text-text">大纲</span>
         <span className="text-xs tabular-nums text-text-muted">{countLabel(items.length)}</span>
       </div>
 
@@ -25,7 +25,7 @@ function OutlineNav({items, activeLine, onJump}: Props) {
         <div className="p-4 text-xs leading-relaxed text-text-muted">当前文档暂无标题</div>
       ) : (
         <nav className="flex-1 overflow-y-auto py-1" aria-label="当前文档大纲">
-          {items.map((item) => {
+          {items.map((item, index) => {
             const active = activeLine === item.line;
             const tone = active
               ? "bg-accent-subtle text-accent"
@@ -35,8 +35,12 @@ function OutlineNav({items, activeLine, onJump}: Props) {
                 key={item.id}
                 type="button"
                 title={item.text}
-                className={`group flex h-7 w-full cursor-pointer items-center gap-2 border-0 bg-transparent pr-2 text-left text-[13px] outline-none transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)] ${tone}`}
-                style={{paddingLeft: 8 + (item.level - minLevel) * 14}}
+                className={`group flex h-7 w-full cursor-pointer items-center gap-2 border-0 bg-transparent pr-2 text-left text-sm2 outline-none transition-[color,background-color,transform] duration-fast active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)] vs-rise ${tone}`}
+                style={{
+                  paddingLeft: 8 + (item.level - minLevel) * 14,
+                  // 抽屉打开/文档切换时阶梯淡入（一次性动画，见 .vs-rise）
+                  animationDelay: `${Math.min(index * 18, 270)}ms`,
+                }}
                 aria-current={active ? "location" : undefined}
                 onClick={() => onJump(item.line)}
               >

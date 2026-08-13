@@ -50,7 +50,7 @@ const inputClass =
 const inputShellClass =
   "group flex h-10 items-center gap-2 rounded border border-border bg-bg px-3 text-text-muted shadow-sm transition-all duration-fast ease-smooth focus-within:border-accent focus-within:bg-bg-secondary focus-within:ring-2 focus-within:ring-[color:var(--ring)] hover:border-border-strong has-[:disabled]:bg-bg-secondary has-[:disabled]:opacity-70";
 
-const labelClass = "mb-1.5 block text-[13px] font-medium text-text";
+const labelClass = "mb-1.5 block text-sm2 font-medium text-text";
 const helpDocumentUrl = "https://my.feishu.cn/docx/RUDpd1zWnoWuuyx0uFxcahIGnmC";
 const wechatDeveloperConsoleUrl = "https://developers.weixin.qq.com/console/member/manage/mp";
 
@@ -306,12 +306,12 @@ export default function SettingsDialog({
                 type="button"
                 onClick={() => setActiveSection(item.id)}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-h-12 cursor-pointer items-center gap-2 rounded border-0 px-3 text-left transition-colors duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+                className={`flex min-h-12 cursor-pointer items-center gap-2 rounded border-0 px-3 text-left transition-[color,background-color,transform] duration-fast active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
                   active ? "bg-bg text-accent shadow-sm" : "bg-transparent text-text-secondary hover:bg-bg hover:text-text"
                 }`}
               >
                 <Icon size={16} className="flex-none" />
-                <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold leading-5">
+                <span className="flex min-w-0 items-center gap-1.5 text-sm2 font-semibold leading-5">
                   {item.label}
                   {item.id === "about" && updateState?.status === "available" && (
                     <span className="h-1.5 w-1.5 flex-none rounded-full bg-danger" aria-label="有可用更新" />
@@ -332,7 +332,7 @@ export default function SettingsDialog({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="m-0 text-[16px] font-semibold leading-6 text-text">微信素材上传凭证</h2>
-                    <span className="rounded-sm bg-bg-secondary px-2 py-0.5 text-[11px] font-medium text-text-muted">
+                    <span className="rounded-sm bg-bg-secondary px-2 py-0.5 text-xs2 font-medium text-text-muted">
                       {loaded ? "本机配置" : "读取中"}
                     </span>
                   </div>
@@ -410,7 +410,7 @@ export default function SettingsDialog({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="m-0 text-[16px] font-semibold leading-6 text-text">文件同步</h2>
-                    <span className="rounded-sm bg-bg-secondary px-2 py-0.5 text-[11px] font-medium text-text-muted">
+                    <span className="rounded-sm bg-bg-secondary px-2 py-0.5 text-xs2 font-medium text-text-muted">
                       {syncConfigured ? "坚果云 WebDAV" : "未启用"}
                     </span>
                   </div>
@@ -593,7 +593,7 @@ export default function SettingsDialog({
                         type="button"
                         onClick={() => onAppearanceModeChange(mode)}
                         aria-pressed={active}
-                        className={`flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border-0 text-[13px] font-medium transition-all duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
+                        className={`flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border-0 text-sm2 font-medium transition-all duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] ${
                           active
                             ? "bg-bg text-accent shadow-sm"
                             : "bg-transparent text-text-secondary hover:text-text"
@@ -632,7 +632,7 @@ export default function SettingsDialog({
                           <span className="h-5 w-5 rounded-full" style={{backgroundImage: scheme.gradient}} />
                         </span>
                         <span className="min-w-0">
-                          <span className="block text-[13px] font-semibold leading-5 text-text">{scheme.label}</span>
+                          <span className="block text-sm2 font-semibold leading-5 text-text">{scheme.label}</span>
                         </span>
                         {active && <Check size={15} className="ml-auto flex-none text-accent" />}
                       </button>
@@ -721,7 +721,7 @@ export default function SettingsDialog({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="m-0 text-[16px] font-semibold leading-6 text-text">VellumStyle</h2>
-                    <span className="rounded-sm bg-bg-secondary px-2 py-0.5 text-[11px] font-medium text-text-muted">
+                    <span className="rounded-sm bg-bg-secondary px-2 py-0.5 text-xs2 font-medium text-text-muted">
                       文澜排版
                     </span>
                   </div>
@@ -733,18 +733,18 @@ export default function SettingsDialog({
 
               <div className="rounded border border-border bg-bg shadow-sm">
                 <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
-                  <span className="text-[13px] font-medium text-text-secondary">当前版本</span>
-                  <span className="font-mono text-[13px] text-text">{updateState?.currentVersion || "—"}</span>
+                  <span className="text-sm2 font-medium text-text-secondary">当前版本</span>
+                  <span className="font-mono text-sm2 text-text">{updateState?.currentVersion || "—"}</span>
                 </div>
                 {updateState?.status === "available" && (
                   <div className="flex items-center justify-between border-b border-border bg-danger/5 px-3 py-2.5">
-                    <span className="text-[13px] font-medium text-danger">最新版本</span>
-                    <span className="font-mono text-[13px] text-danger">{updateState.version}</span>
+                    <span className="text-sm2 font-medium text-danger">最新版本</span>
+                    <span className="font-mono text-sm2 text-danger">{updateState.version}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between px-3 py-2.5">
-                  <span className="text-[13px] font-medium text-text-secondary">更新状态</span>
-                  <span className={`text-[13px] font-medium ${updateState?.status === "available" ? "text-danger" : "text-text"}`}>
+                  <span className="text-sm2 font-medium text-text-secondary">更新状态</span>
+                  <span className={`text-sm2 font-medium ${updateState?.status === "available" ? "text-danger" : "text-text"}`}>
                     {formatUpdateStatus(updateState)}
                   </span>
                 </div>
@@ -753,7 +753,7 @@ export default function SettingsDialog({
               {updateState?.status === "available" && releaseNotes && (
                 <div className="rounded border border-border bg-bg shadow-sm">
                   <div className="border-b border-border px-3 py-2.5">
-                    <div className="text-[13px] font-semibold leading-5 text-text">更新内容</div>
+                    <div className="text-sm2 font-semibold leading-5 text-text">更新内容</div>
                   </div>
                   <div className="max-h-48 overflow-y-auto px-3 py-2.5 editor-preview-scrollbar">
                     <ReleaseNotesView markdown={releaseNotes} />
@@ -763,7 +763,7 @@ export default function SettingsDialog({
 
               {showUpdateMessage && (
                 <div
-                  className={`rounded border px-3 py-2.5 text-[13px] leading-5 ${
+                  className={`rounded border px-3 py-2.5 text-sm2 leading-5 ${
                     updateState.status === "error"
                       ? "border-danger/25 bg-danger/5 text-danger"
                       : "border-border bg-bg-secondary text-text-secondary"
@@ -854,7 +854,7 @@ function AppearanceSlider({
   return (
     <div>
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[13px] font-medium leading-5 text-text">{label}</span>
+        <span className="text-sm2 font-medium leading-5 text-text">{label}</span>
         <span className="flex-none text-xs text-text-muted tabular-nums">{valueLabel}</span>
       </div>
       <input

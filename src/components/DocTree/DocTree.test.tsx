@@ -157,3 +157,47 @@ test("焦点不在文件树面板上时按 F2 不触发重命名", async () => {
     useStore.setState({tree: [], selectedPath: null});
   }
 });
+
+function pressKeyOn(panel: HTMLElement, key: string) {
+  act(() => {
+    panel.dispatchEvent(new window.KeyboardEvent("keydown", {key, bubbles: true, cancelable: true}));
+  });
+}
+
+test("方向键在可见节点间移动选中", async () => {
+  const {DocTree, useStore} = await loadRuntimeModules();
+  useStore.setState({tree: TREE, selectedPath: "素材", currentDocPath: null});
+  const {panel, cleanup} = renderDocTree(DocTree);
+  try {
+    pressKeyOn(panel(), "ArrowDown");
+    assert.equal(useStore.getState().selectedPath, "草稿.md");
+    pressKeyOn(panel(), "ArrowUp");
+    assert.equal(useStore.getState().selectedPath, "素材");
+  } finally {
+    cleanup();
+    useStore.setState({tree: [], selectedPath: null});
+  }
+});
+
+test("右方向键展开文件夹并进入首个子节点，左方向键收起", async () => {
+  const {DocTree, useStore} = await loadRuntimeModules();
+  useStore.setState({tree: TREE, selectedPath: "素材", currentDocPath: null});
+  const {panel, cleanup} = renderDocTree(DocTree);
+  try {
+    // 首次按右：展开文件夹
+    pressKeyOn(panel(), "ArrowRight");
+    assert.equal(useStore.getState().selectedPath, "素材");
+    // 再按右：进入第一个子节点
+    pressKeyOn(panel(), "ArrowRight");
+    assert.equal(useStore.getState().selectedPath, "素材/图片.md");
+    // 左方向键：回到父文件夹
+    pressKeyOn(panel(), "ArrowLeft");
+    assert.equal(useStore.getState().selectedPath, "素材");
+    // 左方向键：收起文件夹
+    pressKeyOn(panel(), "ArrowLeft");
+    assert.equal(useStore.getState().selectedPath, "素材");
+  } finally {
+    cleanup();
+    useStore.setState({tree: [], selectedPath: null});
+  }
+});

@@ -894,7 +894,19 @@ export default function App() {
               <StatusDivider />
             </>
           )}
-          <span className="tabular-nums">行数 {lineCount}</span>
+          <span className="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className={`h-1.5 w-1.5 flex-none rounded-full transition-colors duration-fast ${
+                saveStatus === "error" || syncStatus === "error"
+                  ? "bg-danger"
+                  : saveStatus === "saving" || syncStatus === "syncing"
+                    ? "bg-accent animate-pulse"
+                    : "bg-text-muted/40"
+              }`}
+            />
+            <span className="tabular-nums">行数 {lineCount}</span>
+          </span>
           <StatusDivider />
           <span className="tabular-nums">字数 {charCount}</span>
         </div>

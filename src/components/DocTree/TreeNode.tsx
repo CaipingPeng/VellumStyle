@@ -18,6 +18,7 @@ interface Props {
   sidebarFocused: boolean; // 侧栏是否聚焦（决定活跃/失焦配色）
   expanded: Set<string>;
   dragOverPath: string | null;
+  dragSrcPath?: string | null; // 拖拽中的源节点（视觉淡化），无拖拽时省略
   creating: CreatingState | null;
   onToggle: (path: string) => void;
   onSelectDoc: (path: string) => void; // 点文档：选中并打开到编辑器
@@ -37,7 +38,7 @@ interface Props {
 }
 
 function TreeNode({
-  node, depth, selectedPath, sidebarFocused, expanded, dragOverPath, creating,
+  node, depth, selectedPath, sidebarFocused, expanded, dragOverPath, dragSrcPath, creating,
   onToggle, onSelectDoc, onSelectFolder, onRename, onDelete,
   onOpenLocation, onCopyAbsolutePath, onCreateIn, renameSignal, onDragStartNode, onDragOverNode, onDropNode,
   onDraftChange, onDraftCommit, onDraftCancel,
@@ -48,6 +49,7 @@ function TreeNode({
   const isOpen = node.isDir && expanded.has(node.path);
   const selected = selectedPath === node.path; // 文件/文件夹一视同仁
   const dropTarget = node.isDir && dragOverPath === node.path;
+  const isDragSource = dragSrcPath === node.path;
 
   const commitRename = () => {
     setEditing(false);
@@ -158,7 +160,7 @@ function TreeNode({
           setDraft(node.name);
           setEditing(true);
         }}
-        className={`group relative flex h-7 cursor-pointer items-center gap-1 overflow-hidden pr-1.5 text-[13px] transition-colors duration-fast ${rowTone}`}
+        className={`group relative flex h-7 cursor-pointer items-center gap-1 overflow-hidden pr-1.5 text-sm2 transition-[color,background-color,transform] duration-fast active:scale-[0.985] ${isDragSource ? "opacity-50" : ""} ${rowTone}`}
         style={{
           paddingLeft: 8 + depth * 14,
           outline: dropTarget ? "1px dashed var(--accent)" : "none",
@@ -264,7 +266,7 @@ function TreeNode({
         >
           <button
             type="button"
-            className="flex h-8 w-full items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-[13px] text-text outline-none transition-colors duration-fast hover:bg-bg-tertiary focus-visible:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)]"
+            className="flex h-8 w-full items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-sm2 text-text outline-none transition-colors duration-fast hover:bg-bg-tertiary focus-visible:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)]"
             onClick={() => {
               setContextMenu(null);
               onOpenLocation(node.path);
@@ -275,7 +277,7 @@ function TreeNode({
           </button>
           <button
             type="button"
-            className="flex h-8 w-full items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-[13px] text-text outline-none transition-colors duration-fast hover:bg-bg-tertiary focus-visible:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)]"
+            className="flex h-8 w-full items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-sm2 text-text outline-none transition-colors duration-fast hover:bg-bg-tertiary focus-visible:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)]"
             onClick={() => {
               setContextMenu(null);
               onCopyAbsolutePath(node.path);
@@ -315,6 +317,7 @@ function TreeNode({
                 sidebarFocused={sidebarFocused}
                 expanded={expanded}
                 dragOverPath={dragOverPath}
+                dragSrcPath={dragSrcPath}
                 creating={creating}
                 onToggle={onToggle}
                 onSelectDoc={onSelectDoc}

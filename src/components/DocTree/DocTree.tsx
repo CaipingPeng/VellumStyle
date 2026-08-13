@@ -25,6 +25,19 @@ function firstDocPath(nodes: DocNode[], excludedPath?: string): string | null {
   return null;
 }
 
+// 按展开状态展平为可见节点列表（键盘导航用）。
+function flattenVisible(nodes: DocNode[], expanded: Set<string>): Array<{path: string; isDir: boolean}> {
+  const out: Array<{path: string; isDir: boolean}> = [];
+  const walk = (list: DocNode[]) => {
+    for (const n of list) {
+      out.push({path: n.path, isDir: n.isDir});
+      if (n.isDir && expanded.has(n.path)) walk(n.children);
+    }
+  };
+  walk(nodes);
+  return out;
+}
+
 function DocTree() {
   const tree = useStore((s) => s.tree);
   const currentDocPath = useStore((s) => s.currentDocPath);
@@ -99,14 +112,76 @@ function DocTree() {
   // 顶部按钮新建：选中项是文件夹→落其下；选中项是文件→落其同级目录；无选中→根。
   const startCreate = useCallback((mode: "doc" | "folder") => startCreateIn(targetDir(), mode), [startCreateIn, selectedPath, tree]);
 
-  // Windows 习惯：选中文件/文件夹后按 F2 直接重命名。
+  // Windows 习惯：选中文件/文件夹后按 F2 直接重命名；方向键/回车做键盘导航。
   const handlePanelKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "F2" || event.repeat) return;
-    // 只响应面板自身聚焦（避免输入框/按钮上的 F2 误触发）。
+    // 只响应面板自身聚焦（避免输入框/按钮上的快捷键误触发）。
     if (event.target !== event.currentTarget) return;
-    if (creating || !selectedPath) return;
-    event.preventDefault();
-    setRenameSignal((prev) => ({path: selectedPath, token: (prev?.token ?? 0) + 1}));
+    if (creating || event.repeat) return;
+
+    if (event.key === "F2") {
+      if (!selectedPath) return;
+      event.preventDefault();
+      setRenameSignal((prev) => ({path: selectedPath, token: (prev?.token ?? 0) + 1}));
+      return;
+    }
+
+    const flat = flattenVisible(tree, expanded);
+    if (flat.length === 0) return;
+    const index = flat.findIndex((item) => item.path === selectedPath);
+    const current = index >= 0 ? flat[index] : null;
+
+    switch (event.key) {
+      case "ArrowDown": {
+        event.preventDefault();
+        const next = flat[Math.min(Math.max(index, -1) + 1, flat.length - 1)];
+        if (next) setSelectedPath(next.path);
+        break;
+      }
+      case "ArrowUp": {
+        event.preventDefault();
+        const next = flat[Math.max(index <= 0 ? 0 : index - 1, 0)];
+        if (next) setSelectedPath(next.path);
+        break;
+      }
+      case "ArrowRight": {
+        event.preventDefault();
+        if (!current) break;
+        if (current.isDir && !expanded.has(current.path)) {
+          setExpanded((prev) => {
+            const next = new Set(prev);
+            next.add(current.path);
+            return next;
+          });
+        } else {
+          // 文件夹已展开：进入第一个子节点；文件无操作。
+          const child = flat[index + 1];
+          if (child && current.isDir) setSelectedPath(child.path);
+        }
+        break;
+      }
+      case "ArrowLeft": {
+        event.preventDefault();
+        if (!current) break;
+        if (current.isDir && expanded.has(current.path)) {
+          setExpanded((prev) => {
+            const next = new Set(prev);
+            next.delete(current.path);
+            return next;
+          });
+        } else {
+          const slash = current.path.lastIndexOf("/");
+          setSelectedPath(slash === -1 ? null : current.path.slice(0, slash));
+        }
+        break;
+      }
+      case "Enter": {
+        event.preventDefault();
+        if (current && !current.isDir) {
+          void openDocument(current.path);
+        }
+        break;
+      }
+    }
   };
 
   const commitCreate = useCallback(async () => {
@@ -250,6 +325,7 @@ function DocTree() {
                   sidebarFocused={focused}
                   expanded={expanded}
                   dragOverPath={dragOverPath}
+                  dragSrcPath={dragSrc}
                   creating={creating}
                   onToggle={toggle}
                   onSelectDoc={openDocument}
