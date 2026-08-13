@@ -5,6 +5,7 @@ import {AnimatePresence, motion} from "framer-motion";
 import {AlertTriangle, ArrowRight, Check, Copy, ExternalLink, Info, X} from "lucide-react";
 import {MOTION_DURATION_FAST, MOTION_SPRING_POP} from "../../utils/motion.ts";
 import Button from "../ui/Button.tsx";
+import {useDialogEscape} from "../ui/useDialogEscape.ts";
 import {copyPlainText} from "../../utils/clipboard.ts";
 import {buildWechatWhitelistUrl} from "../../utils/wechatWhitelist.ts";
 import {isTauriRuntime} from "../../utils/tauriEnv.ts";
@@ -15,7 +16,7 @@ interface AppConfig {
 }
 
 interface Props {
-  open: boolean;
+  open?: boolean;
   previousIp: string;
   currentIp: string;
   onClose: () => void;
@@ -29,7 +30,8 @@ const STEPS = [
   {label: "添加当前出口 IP 并保存", emphasis: ""},
 ];
 
-export default function IpChangedDialog({open, previousIp, currentIp, onClose}: Props) {
+export default function IpChangedDialog({open = true, previousIp, currentIp, onClose}: Props) {
+  useDialogEscape(onClose, open);
   const [copied, setCopied] = useState(false);
   const [openingWhitelist, setOpeningWhitelist] = useState(false);
   const copiedTimer = useRef<number | undefined>(undefined);

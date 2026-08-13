@@ -3,10 +3,11 @@ import {AnimatePresence, motion} from "framer-motion";
 import {Download, X} from "lucide-react";
 import {MOTION_DURATION_FAST, MOTION_SPRING_POP} from "../../utils/motion.ts";
 import Button from "../ui/Button.tsx";
+import {useDialogEscape} from "../ui/useDialogEscape.ts";
 import ReleaseNotesView from "./ReleaseNotesView.tsx";
 
 interface Props {
-  open: boolean;
+  open?: boolean;
   version?: string;
   currentVersion?: string;
   releaseNotes?: string;
@@ -17,7 +18,7 @@ interface Props {
 }
 
 export default function UpdatePromptDialog({
-  open,
+  open = true,
   version,
   currentVersion,
   releaseNotes,
@@ -26,6 +27,7 @@ export default function UpdatePromptDialog({
   onClose,
   onInstall,
 }: Props) {
+  useDialogEscape(onClose, open && !installing);
   const trimmedNotes = releaseNotes?.trim();
   const statusMessage = getVisibleStatusMessage(message, version, installing);
 

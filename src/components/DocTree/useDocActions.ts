@@ -1,5 +1,6 @@
 // 文档树操作封装：create/rename/delete + 操作后 loadTree 刷新。
 // 错误统一 toast；删除当前文档后由调用方决定切到哪篇（这里只负责数据）。
+import {useMemo} from "react";
 import {flushSave, scheduleCloudSync, useStore} from "../../store/index.ts";
 import {createDocument, createFolder, renameEntry, deleteEntry, moveEntry, openEntryLocation} from "../../utils/documents.ts";
 import {toast} from "../Toast/toast.ts";
@@ -23,7 +24,9 @@ export function useDocActions() {
   const remapDocumentThemePaths = useStore((s) => s.remapDocumentThemePaths);
   const removeDocumentThemePaths = useStore((s) => s.removeDocumentThemePaths);
 
-  return {
+  // 返回稳定引用：方法闭包只依赖上述 store action（本身稳定），
+  // useMemo 保证 DocTree 每次渲染拿到同一对象，配合 TreeNode memo 生效。
+  return useMemo(() => ({
     async newDocument(dir: string, name: string) {
       try {
         const path = await createDocument(dir, name);
@@ -133,5 +136,5 @@ export function useDocActions() {
         toast.show(String(e), "error");
       }
     },
-  };
+  }), [loadTree, openDocument, remapDocumentThemePaths, removeDocumentThemePaths]);
 }

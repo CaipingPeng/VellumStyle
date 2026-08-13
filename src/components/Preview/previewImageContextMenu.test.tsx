@@ -372,7 +372,8 @@ after(async () => {
 });
 
 function waitForPreviewRender() {
-  return new Promise<void>((resolve) => window.setTimeout(resolve, 120));
+  // 预览渲染是 250ms 尾防抖，等待需超过该窗口。
+  return new Promise<void>((resolve) => window.setTimeout(resolve, 320));
 }
 
 function flushPromises() {

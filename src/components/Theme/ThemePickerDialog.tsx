@@ -2,6 +2,7 @@ import {type FormEvent, useEffect, useMemo, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import {motion} from "framer-motion";
 import {ArrowRight, Braces, Check, ChevronLeft, ChevronRight, FolderOpen, Palette, Search, Star, Trash2, Upload, X} from "lucide-react";
+import {useDialogEscape} from "../ui/useDialogEscape.ts";
 import {MOTION_DURATION_FAST, MOTION_SPRING_POP} from "../../utils/motion.ts";
 import {getThemeById, useStore} from "../../store/index.ts";
 import {CODE_THEMES, getCodeThemeById, loadAllCodeThemes, subscribeCodeThemes} from "../../markdown/codeThemes.ts";
@@ -44,18 +45,17 @@ interface Props {
 
 // 居中浮层：网格卡片（缩略图 + 名 + 使用）+ 分页 + 主题文件操作。
 export default function ThemePickerDialog({onClose}: Props) {
-  const {
-    markdownThemeId,
-    setMarkdownTheme,
-    codeThemeId,
-    setCodeTheme,
-    themes,
-    setThemes,
-    favoriteThemeIds,
-    toggleFavoriteTheme,
-    pinnedCodeThemeIds,
-    togglePinnedCodeTheme,
-  } = useStore();
+  // 逐个 selector 订阅，避免整 store 订阅导致任意状态变化（含输入）都重渲染弹窗。
+  const markdownThemeId = useStore((s) => s.markdownThemeId);
+  const setMarkdownTheme = useStore((s) => s.setMarkdownTheme);
+  const codeThemeId = useStore((s) => s.codeThemeId);
+  const setCodeTheme = useStore((s) => s.setCodeTheme);
+  const themes = useStore((s) => s.themes);
+  const setThemes = useStore((s) => s.setThemes);
+  const favoriteThemeIds = useStore((s) => s.favoriteThemeIds);
+  const toggleFavoriteTheme = useStore((s) => s.toggleFavoriteTheme);
+  const pinnedCodeThemeIds = useStore((s) => s.pinnedCodeThemeIds);
+  const togglePinnedCodeTheme = useStore((s) => s.togglePinnedCodeTheme);
   const [activeTab, setActiveTab] = useState<ThemeTab>("markdown");
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
@@ -69,13 +69,7 @@ export default function ThemePickerDialog({onClose}: Props) {
     return subscribeCodeThemes(() => setCodeThemesVersion((version) => version + 1));
   }, []);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  useDialogEscape(onClose, true);
 
   useEffect(() => {
     setPage(0);

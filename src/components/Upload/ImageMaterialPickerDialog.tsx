@@ -42,7 +42,7 @@ import DeleteMaterialConfirmDialog from "./DeleteMaterialConfirmDialog.tsx";
 import {runMaterialOperations} from "./materialBatch.ts";
 
 interface Props {
-  open: boolean;
+  open?: boolean;
   canInsert: boolean;
   onClose: () => void;
   onPick: (urls: string[]) => void;
@@ -79,7 +79,7 @@ function errorMessage(error: unknown): string {
   return typeof error === "string" ? error : (error as Error)?.message || "未知错误";
 }
 
-export default function ImageMaterialPickerDialog({open, canInsert, onClose, onPick, onPickFlow, onPickVideos, onPickVoices, onNeedSettings}: Props) {
+export default function ImageMaterialPickerDialog({open = true, canInsert, onClose, onPick, onPickFlow, onPickVideos, onPickVoices, onNeedSettings}: Props) {
   const [tab, setTab] = useState<MaterialTab>("image");
   const [materialItems, setMaterialItems] = useState<MaterialImage[]>([]);
   const [materialTotal, setMaterialTotal] = useState(0);

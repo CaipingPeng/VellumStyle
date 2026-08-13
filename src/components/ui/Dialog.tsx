@@ -1,4 +1,4 @@
-import type {ReactNode} from "react";
+import {useEffect, useRef, type ReactNode} from "react";
 import {createPortal} from "react-dom";
 import {AnimatePresence, motion} from "framer-motion";
 import {X} from "lucide-react";
@@ -19,6 +19,35 @@ interface Props {
   contentPadding?: boolean;
 }
 
+// 焦点圈闭选择器：可聚焦元素（含 WebView2 下的旧式可聚焦元素）。
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
+
+function trapFocus(container: HTMLElement, event: KeyboardEvent): void {
+  if (event.key !== "Tab") return;
+  const focusable = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+  if (focusable.length === 0) {
+    event.preventDefault();
+    return;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const active = document.activeElement;
+  if (event.shiftKey && (active === first || !container.contains(active))) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (active === last || !container.contains(active))) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 export default function Dialog({
   open,
   title,
@@ -31,10 +60,41 @@ export default function Dialog({
   headerActions,
   contentPadding = true,
 }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // ESC 关闭 + Tab 焦点圈闭；closeDisabled 时两样都让位。
+  useEffect(() => {
+    if (!open) return undefined;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !closeDisabled) {
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+      if (panelRef.current) {
+        trapFocus(panelRef.current, event);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
+  }, [closeDisabled, onClose, open]);
+
+  // 打开时把焦点移入弹窗（首个可聚焦元素），关闭时归还 body。
+  useEffect(() => {
+    if (!open) return undefined;
+    const panel = panelRef.current;
+    const previous = document.activeElement as HTMLElement | null;
+    const target = panel?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    target?.focus();
+    return () => previous?.focus();
+  }, [open]);
+
   return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
+          role="dialog"
+          aria-modal="true"
           className="fixed inset-0 z-[2000] flex items-center justify-center"
           style={{background: "rgba(20,20,30,0.4)"}}
           initial={{opacity: 0}}
@@ -44,6 +104,7 @@ export default function Dialog({
           onClick={closeOnOverlay && !closeDisabled ? onClose : undefined}
         >
           <motion.div
+            ref={panelRef}
             className="flex max-h-[86vh] flex-col overflow-hidden rounded bg-bg shadow-md"
             style={{width, maxWidth: "90vw"}}
             initial={{opacity: 0, scale: 0.96, y: 8}}

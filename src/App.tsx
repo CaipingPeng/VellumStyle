@@ -1,27 +1,30 @@
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {AnimatePresence, motion, useReducedMotion} from "framer-motion";
 import MarkdownEditor, {type MarkdownEditorHandle} from "./components/Editor/MarkdownEditor.tsx";
 import Preview, {type PreviewHandle} from "./components/Preview/Preview.tsx";
 import PreviewModeToggle from "./components/Preview/PreviewModeToggle.tsx";
 import AppearanceToggle from "./components/Appearance/AppearanceToggle.tsx";
-import SettingsDialog from "./components/Settings/SettingsDialog.tsx";
 import MainToolbar from "./components/Toolbar/MainToolbar.tsx";
 import DocTree from "./components/DocTree/DocTree.tsx";
 import OutlineNav from "./components/Outline/OutlineNav.tsx";
 import WorkspaceSplit from "./components/Workspace/WorkspaceSplit.tsx";
 import EditorWorkspacePanel from "./components/Workspace/EditorWorkspacePanel.tsx";
-import UpdatePromptDialog from "./components/Update/UpdatePromptDialog.tsx";
-import IpChangedDialog from "./components/Update/IpChangedDialog.tsx";
-import ImageMaterialPickerDialog from "./components/Upload/ImageMaterialPickerDialog.tsx";
-import EmojiPickerDialog from "./components/Upload/EmojiPickerDialog.tsx";
-import PhoneUploadDialog from "./components/Upload/PhoneUploadDialog.tsx";
-import AiImageDialog from "./components/Upload/AiImageDialog.tsx";
-import MusicPickerDialog from "./components/Upload/MusicPickerDialog.tsx";
-import VideoChannelDialog from "./components/Upload/VideoChannelDialog.tsx";
 import ArticleTaskLog from "./components/Tasks/ArticleTaskLog.tsx";
 import IconButton from "./components/ui/IconButton.tsx";
 import Toaster from "./components/Toast/Toaster.tsx";
 import {toast} from "./components/Toast/toast.ts";
+
+// 对话框全部懒加载 + 条件挂载：打开时才下载对应 chunk、关闭即卸载，
+// 主包不再包含这些大体积对话框（此前常驻挂载导致每次输入都重建其 JSX）。
+const SettingsDialog = lazy(() => import("./components/Settings/SettingsDialog.tsx"));
+const UpdatePromptDialog = lazy(() => import("./components/Update/UpdatePromptDialog.tsx"));
+const IpChangedDialog = lazy(() => import("./components/Update/IpChangedDialog.tsx"));
+const ImageMaterialPickerDialog = lazy(() => import("./components/Upload/ImageMaterialPickerDialog.tsx"));
+const EmojiPickerDialog = lazy(() => import("./components/Upload/EmojiPickerDialog.tsx"));
+const PhoneUploadDialog = lazy(() => import("./components/Upload/PhoneUploadDialog.tsx"));
+const AiImageDialog = lazy(() => import("./components/Upload/AiImageDialog.tsx"));
+const MusicPickerDialog = lazy(() => import("./components/Upload/MusicPickerDialog.tsx"));
+const VideoChannelDialog = lazy(() => import("./components/Upload/VideoChannelDialog.tsx"));
 import {useStore, getThemeById, flushDocumentThemeWrite, flushSave} from "./store/index.ts";
 import {getCodeThemeById, loadAllCodeThemes, subscribeCodeThemes} from "./markdown/codeThemes.ts";
 import {formatHtmlImage, replaceMarkdownImageSizeByIndex} from "./markdown/imageMarkdown.ts";
@@ -52,6 +55,7 @@ import {
   type BackgroundDocumentTarget,
 } from "./utils/backgroundDocumentUpdates.ts";
 import {formatSyncStatus as formatCloudSyncStatus, syncStatusTone, type CloudSyncTone} from "./utils/cloudSync.ts";
+import {baseName} from "./utils/path.ts";
 import {isTauriRuntime} from "./utils/tauriEnv.ts";
 import {
   checkForAppUpdate,
@@ -352,7 +356,7 @@ export default function App() {
           taskId = id;
           beginInlineUpload(id);
         },
-        {documentPath: currentDocPath, documentTitle: currentDocPath?.split("/").pop()},
+        {documentPath: currentDocPath, documentTitle: currentDocPath ? baseName(currentDocPath) : undefined},
       );
       if (taskId) finishInlineUpload(taskId, url);
     } catch (e) {
@@ -370,7 +374,7 @@ export default function App() {
           taskId = id;
           beginInlineUpload(id);
         },
-        {documentPath: currentDocPath, documentTitle: currentDocPath?.split("/").pop()},
+        {documentPath: currentDocPath, documentTitle: currentDocPath ? baseName(currentDocPath) : undefined},
       );
       if (taskId) finishInlineUpload(taskId, url);
     } catch (e) {
@@ -886,7 +890,7 @@ export default function App() {
         <div className="flex min-w-0 items-center gap-2">
           {currentDocPath && (
             <>
-              <span className="min-w-0 max-w-[260px] truncate">文档 {currentDocPath.split("/").pop()}</span>
+              <span className="min-w-0 max-w-[260px] truncate">文档 {baseName(currentDocPath)}</span>
               <StatusDivider />
             </>
           )}
@@ -920,82 +924,93 @@ export default function App() {
         </div>
       </footer>
 
-      <SettingsDialog
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        updateState={updateState}
-        appearanceMode={appearanceMode}
-        colorScheme={colorScheme}
-        backgroundImagePath={backgroundImagePath}
-        backgroundBlur={backgroundBlur}
-        statusBarOpacity={statusBarOpacity}
-        onAppearanceModeChange={setAppearanceMode}
-        onColorSchemeChange={setColorScheme}
-        onBackgroundImageChange={setBackgroundImagePath}
-        onBackgroundBlurChange={setBackgroundBlur}
-        onStatusBarOpacityChange={setStatusBarOpacity}
-      />
-      <UpdatePromptDialog
-        open={startupUpdatePromptOpen}
-        version={availableUpdate?.version}
-        currentVersion={availableUpdate?.currentVersion || currentVersion}
-        releaseNotes={startupReleaseNotes}
-        message={updateMessage}
-        installing={updateInstalling}
-        onClose={() => {
-          if (!updateInstalling) setStartupUpdatePromptOpen(false);
-        }}
-        onInstall={() => void handleInstallUpdate()}
-      />
-      <IpChangedDialog
-        open={ipChanged !== null}
-        previousIp={ipChanged?.previousIp ?? ""}
-        currentIp={ipChanged?.currentIp ?? ""}
-        onClose={() => setIpChanged(null)}
-      />
-      <ImageMaterialPickerDialog
-        open={imageMaterialPickerOpen}
-        canInsert={Boolean(currentDocPath)}
-        onClose={() => setImageMaterialPickerOpen(false)}
-        onPick={handlePickMaterialImages}
-        onPickFlow={handlePickMaterialImageFlow}
-        onPickVideos={handlePickMaterialVideos}
-        onPickVoices={handlePickMaterialVoices}
-        onNeedSettings={handleNeedSettings}
-      />
-      <EmojiPickerDialog
-        open={emojiPickerOpen}
-        canInsert={Boolean(currentDocPath)}
-        onClose={() => setEmojiPickerOpen(false)}
-        onPick={handlePickEmoji}
-        onNeedSettings={handleNeedSettings}
-      />
-      <PhoneUploadDialog
-        open={phoneUploadOpen}
-        canInsert={Boolean(currentDocPath)}
-        onClose={() => setPhoneUploadOpen(false)}
-        onPick={handlePickEmoji}
-        onNeedSettings={handleNeedSettings}
-      />
-      <AiImageDialog
-        open={aiImageOpen}
-        canInsert={Boolean(currentDocPath)}
-        onClose={() => setAiImageOpen(false)}
-        onPick={handlePickEmoji}
-        onNeedSettings={handleNeedSettings}
-      />
-      <MusicPickerDialog
-        open={musicPickerOpen}
-        onClose={() => setMusicPickerOpen(false)}
-        onPick={handlePickEmoji}
-        onNeedSettings={handleNeedSettings}
-      />
-      <VideoChannelDialog
-        open={videoChannelOpen}
-        onClose={() => setVideoChannelOpen(false)}
-        onPick={handlePickEmoji}
-        onNeedSettings={handleNeedSettings}
-      />
+      <Suspense fallback={null}>
+        {settingsOpen && (
+          <SettingsDialog
+            onClose={() => setSettingsOpen(false)}
+            updateState={updateState}
+            appearanceMode={appearanceMode}
+            colorScheme={colorScheme}
+            backgroundImagePath={backgroundImagePath}
+            backgroundBlur={backgroundBlur}
+            statusBarOpacity={statusBarOpacity}
+            onAppearanceModeChange={setAppearanceMode}
+            onColorSchemeChange={setColorScheme}
+            onBackgroundImageChange={setBackgroundImagePath}
+            onBackgroundBlurChange={setBackgroundBlur}
+            onStatusBarOpacityChange={setStatusBarOpacity}
+          />
+        )}
+        {startupUpdatePromptOpen && (
+          <UpdatePromptDialog
+            version={availableUpdate?.version}
+            currentVersion={availableUpdate?.currentVersion || currentVersion}
+            releaseNotes={startupReleaseNotes}
+            message={updateMessage}
+            installing={updateInstalling}
+            onClose={() => {
+              if (!updateInstalling) setStartupUpdatePromptOpen(false);
+            }}
+            onInstall={() => void handleInstallUpdate()}
+          />
+        )}
+        {ipChanged !== null && (
+          <IpChangedDialog
+            previousIp={ipChanged.previousIp}
+            currentIp={ipChanged.currentIp}
+            onClose={() => setIpChanged(null)}
+          />
+        )}
+        {imageMaterialPickerOpen && (
+          <ImageMaterialPickerDialog
+            canInsert={Boolean(currentDocPath)}
+            onClose={() => setImageMaterialPickerOpen(false)}
+            onPick={handlePickMaterialImages}
+            onPickFlow={handlePickMaterialImageFlow}
+            onPickVideos={handlePickMaterialVideos}
+            onPickVoices={handlePickMaterialVoices}
+            onNeedSettings={handleNeedSettings}
+          />
+        )}
+        {emojiPickerOpen && (
+          <EmojiPickerDialog
+            canInsert={Boolean(currentDocPath)}
+            onClose={() => setEmojiPickerOpen(false)}
+            onPick={handlePickEmoji}
+            onNeedSettings={handleNeedSettings}
+          />
+        )}
+        {phoneUploadOpen && (
+          <PhoneUploadDialog
+            canInsert={Boolean(currentDocPath)}
+            onClose={() => setPhoneUploadOpen(false)}
+            onPick={handlePickEmoji}
+            onNeedSettings={handleNeedSettings}
+          />
+        )}
+        {aiImageOpen && (
+          <AiImageDialog
+            canInsert={Boolean(currentDocPath)}
+            onClose={() => setAiImageOpen(false)}
+            onPick={handlePickEmoji}
+            onNeedSettings={handleNeedSettings}
+          />
+        )}
+        {musicPickerOpen && (
+          <MusicPickerDialog
+            onClose={() => setMusicPickerOpen(false)}
+            onPick={handlePickEmoji}
+            onNeedSettings={handleNeedSettings}
+          />
+        )}
+        {videoChannelOpen && (
+          <VideoChannelDialog
+            onClose={() => setVideoChannelOpen(false)}
+            onPick={handlePickEmoji}
+            onNeedSettings={handleNeedSettings}
+          />
+        )}
+      </Suspense>
       <Toaster />
     </div>
   );

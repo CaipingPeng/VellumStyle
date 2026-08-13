@@ -21,7 +21,7 @@ interface MusicItem {
 }
 
 interface Props {
-  open: boolean;
+  open?: boolean;
   onClose: () => void;
   onPick: (markup: string) => void;
   onNeedSettings?: () => void;
@@ -134,7 +134,7 @@ function errorMessage(error: unknown): string {
   return typeof error === "string" ? error : (error as Error)?.message || "未知错误";
 }
 
-export default function MusicPickerDialog({open, onClose, onPick, onNeedSettings}: Props) {
+export default function MusicPickerDialog({open = true, onClose, onPick, onNeedSettings}: Props) {
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<MusicItem[]>([]);
   const [searching, setSearching] = useState(false);

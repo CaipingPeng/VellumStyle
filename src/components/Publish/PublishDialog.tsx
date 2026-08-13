@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from "react";
 import {useStore} from "../../store/index.ts";
+import {markdownTitle} from "../../utils/path.ts";
 import {hasNonVideoContent, solveDraftHtml} from "../../markdown/converter.ts";
 import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
 import {toProxyImageUrl} from "../../utils/imageProxy.ts";
@@ -24,7 +25,7 @@ import Button, {type ButtonState} from "../ui/Button.tsx";
 import UnuploadedImagesWarning from "./UnuploadedImagesWarning.tsx";
 
 interface Props {
-  open: boolean;
+  open?: boolean;
   onClose: () => void;
   onNeedSettings: () => void;
 }
@@ -70,11 +71,10 @@ function formatMaterialTime(value: number): string {
   return new Date(value * 1000).toLocaleDateString("zh-CN");
 }
 
-export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
+export default function PublishDialog({open = true, onClose, onNeedSettings}: Props) {
   const currentDocPath = useStore((s) => s.currentDocPath);
-  const defaultTitle = currentDocPath
-    ? currentDocPath.split("/").pop()!.replace(/\.md$/, "")
-    : "未命名";
+  // 兼容 Windows 反斜杠路径，避免把完整路径当文件名（见 utils/path.ts）。
+  const defaultTitle = currentDocPath ? markdownTitle(currentDocPath) : "未命名";
   const [title, setTitle] = useState(defaultTitle);
   const [author, setAuthor] = useState("");
   const [needOpenComment, setNeedOpenComment] = useState<CommentFlag>(0);
@@ -326,7 +326,7 @@ export default function PublishDialog({open, onClose, onNeedSettings}: Props) {
       if (!isCurrentSession()) return;
       stopLocalMediaPlayback();
 
-      const html = solveDraftHtml();
+      const html = await solveDraftHtml();
       if (!html.trim()) {
         toast.show("正文为空，无法发布", "error");
         return;

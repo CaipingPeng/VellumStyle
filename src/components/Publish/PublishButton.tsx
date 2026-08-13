@@ -1,7 +1,9 @@
-import {useState} from "react";
+import {lazy, Suspense, useState} from "react";
 import {Send} from "lucide-react";
-import PublishDialog from "./PublishDialog.tsx";
 import Button from "../ui/Button.tsx";
+
+// 发布对话框懒加载 + 条件挂载：打开才下载 chunk，关闭即卸载。
+const PublishDialog = lazy(() => import("./PublishDialog.tsx"));
 
 interface Props {
   onNeedSettings: () => void;
@@ -15,7 +17,11 @@ export default function PublishButton({onNeedSettings}: Props) {
         <Send size={14} />
         发布
       </Button>
-      <PublishDialog open={open} onClose={() => setOpen(false)} onNeedSettings={onNeedSettings} />
+      {open && (
+        <Suspense fallback={null}>
+          <PublishDialog onClose={() => setOpen(false)} onNeedSettings={onNeedSettings} />
+        </Suspense>
+      )}
     </>
   );
 }

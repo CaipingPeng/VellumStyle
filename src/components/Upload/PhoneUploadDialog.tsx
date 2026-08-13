@@ -13,7 +13,7 @@ import Button from "../ui/Button.tsx";
 import Dialog from "../ui/Dialog.tsx";
 
 interface Props {
-  open: boolean;
+  open?: boolean;
   canInsert: boolean;
   onClose: () => void;
   onPick: (markdown: string) => void;
@@ -121,7 +121,7 @@ function parseConfirmResponse(source: string): UploadedPic[] | null {
 
 const POLL_INTERVAL_MS = 2000;
 
-export default function PhoneUploadDialog({open, canInsert, onClose, onPick, onNeedSettings}: Props) {
+export default function PhoneUploadDialog({open = true, canInsert, onClose, onPick, onNeedSettings}: Props) {
   const [qr, setQr] = useState<QrcodeInfo | null>(null);
   const [pics, setPics] = useState<UploadedPic[]>([]);
   const [phase, setPhase] = useState<Phase>("loading");

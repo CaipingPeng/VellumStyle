@@ -19,7 +19,7 @@ import {formatHtmlImage} from "../../markdown/imageMarkdown.ts";
 import {toast} from "../Toast/toast.ts";
 
 interface Props {
-  open: boolean;
+  open?: boolean;
   canInsert: boolean;
   onClose: () => void;
   onPick: (markdown: string) => void;
@@ -321,7 +321,7 @@ function SendIcon() {
   );
 }
 
-export default function AiImageDialog({open, canInsert, onClose, onPick, onNeedSettings}: Props) {
+export default function AiImageDialog({open = true, canInsert, onClose, onPick, onNeedSettings}: Props) {
   const [sessionId, setSessionId] = useState("");
   const [scales, setScales] = useState<ScaleOption[]>([]);
   const [styles, setStyles] = useState<StyleOption[]>([]);

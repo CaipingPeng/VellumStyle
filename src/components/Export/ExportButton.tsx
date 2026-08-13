@@ -28,14 +28,14 @@ interface ExportButtonProps {
 }
 
 export function useExportController(): ExportController {
-  const currentDocPath = useStore((s) => s.currentDocPath);
-  const content = useStore((s) => s.content);
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
 
   const runExport = async (format: ExportFormat) => {
     if (exporting) return;
     setExporting(format);
     try {
+      // 导出只需点击瞬间的文档快照，不订阅 store，避免工具栏随每次输入重渲染。
+      const {currentDocPath, content} = useStore.getState();
       const result = await exportArticle(format, currentDocPath, {
         readMarkdownSource: () => content,
       });

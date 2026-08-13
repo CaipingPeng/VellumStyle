@@ -1,5 +1,5 @@
 import {create} from "zustand";
-import {persist} from "zustand/middleware";
+import {createJSONStorage, persist} from "zustand/middleware";
 import {builtinThemes, defaultMarkdownTheme, type ThemeOption} from "../themes/index.ts";
 import {
   listDocuments,
@@ -19,6 +19,7 @@ import {
 } from "../utils/documentThemes.ts";
 import {createDebouncedSaver} from "../utils/autosave.ts";
 import {runCloudSync, type CloudSyncStatusValue} from "../utils/cloudSync.ts";
+import {createDebouncedLocalStorage} from "../utils/storage.ts";
 import {toast} from "../components/Toast/toast.ts";
 import type {PreviewModeId} from "../components/Preview/previewModes.ts";
 import {DEFAULT_CODE_THEME_ID, DEFAULT_PINNED_CODE_THEME_IDS, type CodeThemeId} from "../markdown/codeThemes.ts";
@@ -469,6 +470,9 @@ export const useStore = create<EditorState>()(
     }),
     {
       name: "vellumstyle",
+      // 写盘防抖：persist 每次 set() 都同步序列化+写 localStorage，
+      // 输入时（setContent 每击键触发）用 400ms 尾防抖合并，避免阻塞主线程。
+      storage: createJSONStorage(() => createDebouncedLocalStorage()),
       // themes 是运行期扫描结果，不持久化；content 改由文件持久化，只记住打开哪篇。
       // documentThemeIds 同时写入本地状态作为启动缓存，真正的跨设备真相源是
       // documents/.vellumstyle-theme-map.json。

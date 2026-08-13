@@ -15,7 +15,7 @@ import ReleaseNotesView from "../Update/ReleaseNotesView.tsx";
 import {buildWechatWhitelistUrl} from "../../utils/wechatWhitelist.ts";
 
 interface Props {
-  open: boolean;
+  open?: boolean;
   onClose: () => void;
   updateState?: SettingsUpdateState;
   appearanceMode: AppearanceMode;
@@ -72,7 +72,7 @@ export interface SettingsUpdateState {
 
 // 设置弹窗：读 get_config 回显，保存调 save_config（写 config.local.yaml；微信凭证变更会清 token 缓存）。
 export default function SettingsDialog({
-  open,
+  open = true,
   onClose,
   updateState,
   appearanceMode,

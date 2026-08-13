@@ -9,7 +9,7 @@ import Button from "../ui/Button.tsx";
 import Dialog from "../ui/Dialog.tsx";
 
 interface Props {
-  open: boolean;
+  open?: boolean;
   canInsert: boolean;
   onClose: () => void;
   onPick: (markdown: string) => void;
@@ -144,7 +144,7 @@ function parseCdnUrlResponse(source: string): string | null {
   }
 }
 
-export default function EmojiPickerDialog({open, canInsert, onClose, onPick, onNeedSettings}: Props) {
+export default function EmojiPickerDialog({open = true, canInsert, onClose, onPick, onNeedSettings}: Props) {
   const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"search" | "smiley">("search");
   const [items, setItems] = useState<EmojiItem[]>([]);

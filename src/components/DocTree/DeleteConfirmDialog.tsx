@@ -4,6 +4,7 @@ import {AlertTriangle, Trash2, X} from "lucide-react";
 import {MOTION_DURATION_FAST, MOTION_SPRING_POP} from "../../utils/motion.ts";
 import type {DocNode} from "../../utils/documents.ts";
 import Button from "../ui/Button.tsx";
+import {useDialogEscape} from "../ui/useDialogEscape.ts";
 import {countDescendants, isRecursiveDelete} from "./deleteConfirmation.ts";
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export default function DeleteConfirmDialog({open, node, onCancel, onConfirm}: Props) {
+  useDialogEscape(onCancel, open && node !== null);
   const recursive = node ? isRecursiveDelete(node) : false;
   const childCount = node ? countDescendants(node) : 0;
   const title = node?.isDir ? "删除文件夹？" : "删除文档？";

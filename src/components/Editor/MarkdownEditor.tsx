@@ -196,10 +196,12 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     const lastDocumentKeyRef = useRef<string | null>(documentKey);
     const compositionStartValueRef = useRef<string | null>(null);
     const onChangeRef = useRef(onChange);
+    const onPasteImageRef = useRef(onPasteImage);
     const editorHostRef = useRef<HTMLDivElement | null>(null);
 
     latestPropValueRef.current = value;
     onChangeRef.current = onChange;
+    onPasteImageRef.current = onPasteImage;
 
     const syncEditorWithValue = useCallback((incomingValue: string, externalUpdate = true, documentChanged = false) => {
       const view = viewRef.current;
@@ -436,7 +438,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
             return false;
           },
           paste(event) {
-            if (!onPasteImage) {
+            if (!onPasteImageRef.current) {
               return false;
             }
             const items = event.clipboardData?.items;
@@ -448,7 +450,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
                 const file = item.getAsFile();
                 if (file) {
                   event.preventDefault();
-                  onPasteImage(file);
+                  onPasteImageRef.current(file);
                   return true;
                 }
               }
@@ -457,7 +459,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
           },
         }),
       ],
-      [cspNonce, emitCurrentEditorDoc, onPasteImage, syncEditorWithValue],
+      [cspNonce, emitCurrentEditorDoc, syncEditorWithValue],
     );
 
     const {view, setContainer} = useCodeMirror({

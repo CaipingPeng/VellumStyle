@@ -1,5 +1,6 @@
 import {forwardRef, useImperativeHandle, useState} from "react";
 import {invoke} from "@tauri-apps/api/core";
+import {markdownTitle} from "../../utils/path.ts";
 import {FileInput} from "lucide-react";
 import ImportMarkdownDialog from "./ImportMarkdownDialog.tsx";
 import {flushSave, useStore} from "../../store/index.ts";
@@ -14,8 +15,7 @@ import Button, {type ButtonVariant} from "../ui/Button.tsx";
 
 // 从源文件绝对路径取文件名（去目录、去扩展名）。兼容 Windows 反斜杠。
 function docNameFromPath(p: string): string {
-  const base = p.split(/[\\/]/).pop() || "导入文档";
-  return base.replace(/\.(md|markdown)$/i, "") || "导入文档";
+  return markdownTitle(p) || "导入文档";
 }
 
 interface Props {

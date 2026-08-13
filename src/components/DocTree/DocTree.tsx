@@ -1,4 +1,4 @@
-import {memo, useEffect, useRef, useState} from "react";
+import {memo, useCallback, useEffect, useRef, useState} from "react";
 import {FilePlus, FolderPlus} from "lucide-react";
 import {motion} from "framer-motion";
 import {useStore} from "../../store/index.ts";
@@ -44,14 +44,15 @@ function DocTree() {
   const resizeStartRef = useRef<{x: number; width: number} | null>(null);
   const cleanupResizeRef = useRef<(() => void) | null>(null);
 
-  const toggle = (path: string) => {
+  // 稳定回调：配合 memo(TreeNode)，避免无关重渲染（聚焦、宽度调整等）重建整树。
+  const toggle = useCallback((path: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(path)) next.delete(path);
       else next.add(path);
       return next;
     });
-  };
+  }, []);
 
   useEffect(() => {
     if (!currentDocPath) return;
@@ -84,7 +85,7 @@ function DocTree() {
   const targetDir = (): string => targetDirFor(tree, selectedPath);
 
   // 在指定目录开始新建：展开该目录（非根才需要），显示占位输入行。
-  const startCreateIn = (dir: string, mode: "doc" | "folder") => {
+  const startCreateIn = useCallback((dir: string, mode: "doc" | "folder") => {
     if (dir) {
       setExpanded((prev) => {
         const next = new Set(prev);
@@ -93,10 +94,10 @@ function DocTree() {
       });
     }
     setCreating({mode, dir, value: ""});
-  };
+  }, []);
 
   // 顶部按钮新建：选中项是文件夹→落其下；选中项是文件→落其同级目录；无选中→根。
-  const startCreate = (mode: "doc" | "folder") => startCreateIn(targetDir(), mode);
+  const startCreate = useCallback((mode: "doc" | "folder") => startCreateIn(targetDir(), mode), [startCreateIn, selectedPath, tree]);
 
   // Windows 习惯：选中文件/文件夹后按 F2 直接重命名。
   const handlePanelKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -108,7 +109,7 @@ function DocTree() {
     setRenameSignal((prev) => ({path: selectedPath, token: (prev?.token ?? 0) + 1}));
   };
 
-  const commitCreate = async () => {
+  const commitCreate = useCallback(async () => {
     if (!creating) return;
     const {mode, dir, value} = creating;
     const name = value.trim();
@@ -116,12 +117,15 @@ function DocTree() {
     if (!name) return;
     if (mode === "doc") await actions.newDocument(dir, name);
     else await actions.newFolder(dir, name);
-  };
+  }, [actions, creating]);
 
-  const draftChange = (v: string) =>
+  const draftChange = useCallback((v: string) => {
     setCreating((c) => (c ? {...c, value: v} : c));
+  }, []);
 
-  const handleDelete = (node: DocNode) => setPendingDelete(node);
+  const handleDelete = useCallback((node: DocNode) => setPendingDelete(node), []);
+
+  const cancelCreate = useCallback(() => setCreating(null), []);
 
   const confirmDelete = async () => {
     const node = pendingDelete;
@@ -130,14 +134,22 @@ function DocTree() {
     await actions.remove(node.path, firstDocPath(tree, node.path), {recursive: isRecursiveDelete(node)});
   };
 
-  const handleDrop = (destDir: string) => {
+  const handleDrop = useCallback((destDir: string) => {
     const src = dragSrc;
     setDragSrc(null);
     setDragOverPath(null);
     setRootDragOver(false);
     if (!src) return;
     void actions.move(src, destDir);
-  };
+  }, [actions, dragSrc]);
+
+  const handleOpenLocation = useCallback((path: string) => {
+    void actions.openLocation(path);
+  }, [actions]);
+
+  const handleCopyAbsolutePath = useCallback((path: string) => {
+    void actions.copyAbsolutePath(path);
+  }, [actions]);
 
   const startResize = (clientX: number) => {
     resizeStartRef.current = {x: clientX, width: treeWidth};
@@ -210,8 +222,8 @@ function DocTree() {
               depth={0}
               value={creating.value}
               onChange={draftChange}
-              onCommit={() => void commitCreate()}
-              onCancel={() => setCreating(null)}
+              onCommit={commitCreate}
+              onCancel={cancelCreate}
             />
           )}
           {tree.length === 0 && !creating ? (
@@ -239,16 +251,16 @@ function DocTree() {
                   onSelectFolder={setSelectedPath}
                   onRename={actions.rename}
                   onDelete={handleDelete}
-                  onOpenLocation={(path) => void actions.openLocation(path)}
-                  onCopyAbsolutePath={(path) => void actions.copyAbsolutePath(path)}
+                  onOpenLocation={handleOpenLocation}
+                  onCopyAbsolutePath={handleCopyAbsolutePath}
                   onCreateIn={startCreateIn}
                   renameSignal={renameSignal}
                   onDragStartNode={setDragSrc}
                   onDragOverNode={setDragOverPath}
                   onDropNode={handleDrop}
                   onDraftChange={draftChange}
-                  onDraftCommit={() => void commitCreate()}
-                  onDraftCancel={() => setCreating(null)}
+                  onDraftCommit={commitCreate}
+                  onDraftCancel={cancelCreate}
                 />
               </motion.div>
             ))

@@ -1,4 +1,4 @@
-import {useEffect, useState, type MouseEvent} from "react";
+import {memo, useEffect, useState, type MouseEvent} from "react";
 import {ChevronRight, Folder, FileText, FolderOpen, Copy, Pencil, Trash2, FilePlus, FolderPlus} from "lucide-react";
 import {AnimatePresence, motion} from "framer-motion";
 import type {DocNode} from "../../utils/documents.ts";
@@ -36,7 +36,7 @@ interface Props {
   onDraftCancel: () => void;
 }
 
-export default function TreeNode({
+function TreeNode({
   node, depth, selectedPath, sidebarFocused, expanded, dragOverPath, creating,
   onToggle, onSelectDoc, onSelectFolder, onRename, onDelete,
   onOpenLocation, onCopyAbsolutePath, onCreateIn, renameSignal, onDragStartNode, onDragOverNode, onDropNode,
@@ -339,3 +339,7 @@ export default function TreeNode({
     </div>
   );
 }
+
+// memo：仅当节点自身 props 变化时重渲染。回调由 DocTree 侧 useCallback 稳定化，
+// 聚焦、面板宽度调整、App 无关重渲染不再整树重建。
+export default memo(TreeNode);
