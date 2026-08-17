@@ -27,7 +27,7 @@ function renderFootnoteCaption(tokens: Token[], idx: number): string {
 }
 
 function renderFootnoteWord(tokens: Token[], idx: number): string {
-  return '<span class="footnote-word">⌈' + tokens[idx].content + "⌋</span>";
+  return '<span class="footnote-word">' + tokens[idx].content + "</span>";
 }
 
 function renderFootnoteRef(tokens: Token[], idx: number, options: any, env: any, slf: any): string {
@@ -405,13 +405,7 @@ function linkFoot(state: StateInline, silent: boolean): boolean {
       token = state.push("footnote_word_open", "span", 1);
       token.attrs = [["class", "footnote-word"]];
 
-      token = state.push("text", "", 0);
-      token.content = "⌈";
-
       state.md.inline.tokenize(state);
-
-      token = state.push("text", "", 0);
-      token.content = "⌋";
 
       state.push("footnote_word_close", "span", -1);
 

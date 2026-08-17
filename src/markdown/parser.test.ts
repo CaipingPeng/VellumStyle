@@ -90,27 +90,38 @@ test("新语法横滑图组（逗号分隔 img 标签）渲染为横滑图组", 
   assert.doesNotMatch(html, /data-vs-image-index/);
 });
 
+test("横滑图组允许连续放入 39 张图片", () => {
+  const markdown = Array.from({length: 39}, (_, index) => (
+    `<img src="https://example.com/${index + 1}.png" alt="${index + 1}">`
+  )).join(",");
+  const html = render(markdown);
+
+  assert.match(html, /class="imageflow-layer1"/);
+  assert.equal((html.match(/class="imageflow-img"/g) ?? []).length, 39);
+  assert.match(html, /src="https:\/\/example\.com\/39\.png"/);
+});
+
 test("普通 Markdown 链接渲染为脚注引用而不是外链", () => {
   const html = render("项目地址仍然是：[CaipingPeng/VellumStyle](https://github.com/CaipingPeng/VellumStyle)。");
 
   assert.doesNotMatch(html, /<a\b[^>]*href=/);
-  assert.match(html, /项目地址仍然是：<span class="footnote-word">⌈CaipingPeng\/VellumStyle⌋<\/span><sup class="footnote-ref">\[1\]<\/sup>。/);
+  assert.match(html, /项目地址仍然是：<span class="footnote-word">CaipingPeng\/VellumStyle<\/span><sup class="footnote-ref">\[1\]<\/sup>。/);
   assert.match(html, /<span id="fn1" class="footnote-item" style="display:block;"><span class="footnote-num" style="display:inline;width:auto;">\[1\] <\/span>https:\/\/github\.com\/CaipingPeng\/VellumStyle<\/span>/);
 });
 
-test("带 title 的 Markdown 链接也使用同一套取整符号脚注样式", () => {
+test("带 title 的 Markdown 链接同样不包裹取整符号", () => {
   const html = render('这是一个带脚注的[术语](这里是脚注的解释内容 "术语")。');
 
-  assert.match(html, /这是一个带脚注的<span class="footnote-word">⌈术语⌋<\/span><sup class="footnote-ref">\[1\]<\/sup>。/);
+  assert.match(html, /这是一个带脚注的<span class="footnote-word">术语<\/span><sup class="footnote-ref">\[1\]<\/sup>。/);
   assert.match(html, /<span id="fn1" class="footnote-item" style="display:block;"><span class="footnote-num" style="display:inline;width:auto;">\[1\] <\/span>术语: <em>这里是脚注的解释内容<\/em><\/span>/);
 });
 
 test("同一 URL 多处引用只渲染一条脚注且文中编号一致", () => {
   const html = render("A处：[xxx](https://src.example.com/a)\n\nB处：[yyy](https://src.example.com/a)\n\nA处：[zzz](https://src.example.com/a)");
 
-  assert.match(html, /A处：<span class="footnote-word">⌈xxx⌋<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
-  assert.match(html, /B处：<span class="footnote-word">⌈yyy⌋<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
-  assert.match(html, /A处：<span class="footnote-word">⌈zzz⌋<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
+  assert.match(html, /A处：<span class="footnote-word">xxx<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
+  assert.match(html, /B处：<span class="footnote-word">yyy<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
+  assert.match(html, /A处：<span class="footnote-word">zzz<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
   assert.doesNotMatch(html, /footnote-ref">\[2\]/);
   const itemCount = (html.match(/<span id="fn\d+" class="footnote-item"/g) ?? []).length;
   assert.equal(itemCount, 1);
@@ -120,8 +131,8 @@ test("同一 URL 多处引用只渲染一条脚注且文中编号一致", () => 
 test("同一 URL 带 title 与不带 title 混用时仍按源去重", () => {
   const html = render('A处：[xxx](https://src.example.com/a "来源")\n\nB处：[yyy](https://src.example.com/a)');
 
-  assert.match(html, /A处：<span class="footnote-word">⌈xxx⌋<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
-  assert.match(html, /B处：<span class="footnote-word">⌈yyy⌋<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
+  assert.match(html, /A处：<span class="footnote-word">xxx<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
+  assert.match(html, /B处：<span class="footnote-word">yyy<\/span><sup class="footnote-ref">\[1\]<\/sup>/);
   const itemCount = (html.match(/<span id="fn\d+" class="footnote-item"/g) ?? []).length;
   assert.equal(itemCount, 1);
   assert.match(html, /<span id="fn1" class="footnote-item"[^>]*><span class="footnote-num"[^>]*>\[1\] <\/span>来源: <em>https:\/\/src\.example\.com\/a<\/em><\/span>/);

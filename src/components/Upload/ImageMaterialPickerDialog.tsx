@@ -57,7 +57,6 @@ type MaterialTab = "image" | "video" | "voice";
 const MATERIAL_PAGE_SIZE = 20;
 const DELETE_CONCURRENCY = 4;
 const UPLOAD_CONCURRENCY = 16;
-const IMAGE_FLOW_LIMIT = 10;
 
 function mergeMaterialItems<T extends {mediaId: string}>(existing: T[], incoming: T[]): T[] {
   const seen = new Set(existing.map((item) => item.mediaId));
@@ -329,10 +328,6 @@ export default function ImageMaterialPickerDialog({open = true, canInsert, onClo
 
   const insertFlow = () => {
     if (!canInsert || selectedItems.length < 2) return;
-    if (selectedItems.length > IMAGE_FLOW_LIMIT) {
-      toast.show(`横滑组最多支持 ${IMAGE_FLOW_LIMIT} 张图片，请减少选择数量`, "error");
-      return;
-    }
     onPickFlow(selectedItems.map((item) => item.url));
     toast.show(`已插入 ${selectedItems.length} 张横滑图片`, "info");
     onClose();

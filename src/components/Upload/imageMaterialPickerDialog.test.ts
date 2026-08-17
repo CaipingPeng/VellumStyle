@@ -35,7 +35,7 @@ test("图片素材库默认多选并通过独立命令插入或删除所选素�
   assert.match(source, /aria-pressed=\{selected\}/);
   assert.match(source, /onPick\(selectedItems\.map\(\(item\) => item\.url\)\)/);
   assert.match(source, /onPickFlow\(selectedItems\.map\(\(item\) => item\.url\)\)/);
-  assert.match(source, /IMAGE_FLOW_LIMIT = 10/);
+  assert.doesNotMatch(source, /IMAGE_FLOW_LIMIT|横滑组最多支持/);
   assert.match(source, /删除所选/);
   assert.match(source, /插入所选/);
   assert.match(source, /插入横滑/);

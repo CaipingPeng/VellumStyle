@@ -6,16 +6,6 @@ import type StateBlock from "markdown-it/lib/rules_block/state_block.mjs";
 // 旧语法 <![a](x),![b](y),![c](z)> 继续兼容解析。
 // 滑动结构（flex + scroll-snap）以内联样式输出，保证任何主题下都呈现逐页翻动的轮播感；
 // 提示文案由插件直接输出，与主题完全解耦（微信导出时真实文本可保留，伪元素内容会被丢弃）。
-interface ImageFlowOptions {
-  limitless: boolean;
-  limit: number;
-}
-
-const defaultOptions: ImageFlowOptions = {
-  limitless: false,
-  limit: 10,
-};
-
 // 结构样式内联在元素上，不依赖主题 CSS（微信导出时 juice 会保留已有内联样式）。
 const LAYER1_STYLE = "overflow:hidden";
 const LAYER2_STYLE =
@@ -45,12 +35,10 @@ function matchImageFlowLine(state: StateBlock, line: number): string[] | null {
   return match[1].match(/\[[^\]]*\]\([^)]+\)/g) ?? null;
 }
 
-export default function imageFlow(md: MarkdownIt, opt?: Partial<ImageFlowOptions>) {
-  const options = {...defaultOptions, ...opt};
-
+export default function imageFlow(md: MarkdownIt) {
   const tokenize = (state: StateBlock, start: number): boolean => {
     const images = matchImageFlowLine(state, start);
-    if (!images || (!options.limitless && images.length > options.limit)) {
+    if (!images) {
       return false;
     }
     const token = state.push("imageFlow", "", 0);
@@ -69,7 +57,7 @@ export default function imageFlow(md: MarkdownIt, opt?: Partial<ImageFlowOptions
       return false;
     }
     const images = matchImageFlowLine(state, startLine);
-    return Boolean(images && (options.limitless || images.length <= options.limit));
+    return Boolean(images);
   }, {alt: ["paragraph"]});
 
   md.renderer.rules.imageFlow = (tokens, idx) => {
