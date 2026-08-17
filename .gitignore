@@ -60,3 +60,7 @@ coverage/
 # 调试/临时目录
 .scratch-videosnap/
 .uploads/
+
+# 项目参考
+
+.referenceProj/
