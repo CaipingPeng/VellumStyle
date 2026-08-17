@@ -34,7 +34,7 @@ test("图片素材库默认多选并通过独立命令插入或删除所选素�
   assert.doesNotMatch(source, /后台同步<\/span>|批量绑定<\/span>|AudioCodeBindDialog|VoiceBatchBindDialog/);
   assert.match(source, /aria-pressed=\{selected\}/);
   assert.match(source, /onPick\(selectedItems\.map\(\(item\) => item\.url\)\)/);
-  assert.match(source, /onPickFlow\(selectedItems\.map\(\(item\) => item\.url\)\)/);
+  assert.match(source, /onPickFlow\(selectedFlowItems\.map\(\(item\) => item\.url\)\)/);
   assert.doesNotMatch(source, /IMAGE_FLOW_LIMIT|横滑组最多支持/);
   assert.match(source, /删除所选/);
   assert.match(source, /插入所选/);
@@ -110,7 +110,7 @@ test("素材库点击图片切换多选并按列表顺序一次插入", async ()
   }
 });
 
-test("素材库多选后可通过「插入横滑」按列表顺序拼成横滑组插入", async () => {
+test("素材库多选后可通过「插入横滑」按点击顺序拼成横滑组插入", async () => {
   const previousInternals = (window as unknown as {__TAURI_INTERNALS__?: unknown}).__TAURI_INTERNALS__;
   (window as unknown as {__TAURI_INTERNALS__: {invoke: (cmd: string) => Promise<unknown>}}).__TAURI_INTERNALS__ = {
     invoke: async (cmd) => {
@@ -155,7 +155,7 @@ test("素材库多选后可通过「插入横滑」按列表顺序拼成横滑�
     assert.ok(insertFlow);
     act(() => insertFlow.click());
 
-    assert.deepEqual(flowPicked, [["https://mmbiz.qpic.cn/first", "https://mmbiz.qpic.cn/second"]]);
+    assert.deepEqual(flowPicked, [["https://mmbiz.qpic.cn/second", "https://mmbiz.qpic.cn/first"]]);
     assert.equal(closed, 1);
   } finally {
     act(() => root.unmount());

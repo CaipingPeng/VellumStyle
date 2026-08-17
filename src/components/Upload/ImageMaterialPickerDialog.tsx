@@ -112,6 +112,13 @@ export default function ImageMaterialPickerDialog({open = true, canInsert, onClo
     [materialItems, selectedIds],
   );
 
+  const selectedFlowItems = useMemo(
+    () => Array.from(selectedIds)
+      .map((mediaId) => materialItems.find((item) => item.mediaId === mediaId))
+      .filter((item): item is MaterialImage => Boolean(item)),
+    [materialItems, selectedIds],
+  );
+
   const selectedVideos = useMemo(
     () => videoItems.filter((item) => videoSelectedIds.has(item.mediaId)),
     [videoItems, videoSelectedIds],
@@ -327,9 +334,9 @@ export default function ImageMaterialPickerDialog({open = true, canInsert, onClo
   };
 
   const insertFlow = () => {
-    if (!canInsert || selectedItems.length < 2) return;
-    onPickFlow(selectedItems.map((item) => item.url));
-    toast.show(`已插入 ${selectedItems.length} 张横滑图片`, "info");
+    if (!canInsert || selectedFlowItems.length < 2) return;
+    onPickFlow(selectedFlowItems.map((item) => item.url));
+    toast.show(`已插入 ${selectedFlowItems.length} 张横滑图片`, "info");
     onClose();
   };
 
