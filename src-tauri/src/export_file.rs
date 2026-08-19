@@ -25,6 +25,38 @@ pub async fn export_pdf_file(app: AppHandle, html: String, path: String) -> Resu
     export_pdf_file_impl(app, html, path).await
 }
 
+/// 生成与 PDF 导出完全相同的 A4 PDF，并以内存中的 Base64 返回给前端逐页转图。
+#[tauri::command]
+pub async fn render_pdf_document(app: AppHandle, html: String) -> Result<String, String> {
+    #[cfg(windows)]
+    {
+        use base64::Engine;
+        use tauri::Manager;
+
+        let path = app
+            .path()
+            .temp_dir()
+            .map_err(|err| format!("获取临时目录失败：{err}"))?
+            .join(format!("vellumstyle-pdf-render-{}.pdf", unique_export_id()));
+        let path_string = path.to_string_lossy().into_owned();
+        if let Err(error) = export_pdf_file_impl(app, html, path_string).await {
+            let _ = tokio::fs::remove_file(&path).await;
+            return Err(error);
+        }
+        let bytes = tokio::fs::read(&path)
+            .await
+            .map_err(|err| format!("读取临时 PDF 失败：{err}"))?;
+        let _ = tokio::fs::remove_file(&path).await;
+        return Ok(base64::engine::general_purpose::STANDARD.encode(bytes));
+    }
+
+    #[cfg(not(windows))]
+    {
+        let _ = (app, html);
+        Err("PDF 图片集导出目前仅支持 Windows WebView2".to_string())
+    }
+}
+
 #[cfg(windows)]
 async fn export_pdf_file_impl(app: AppHandle, html: String, path: String) -> Result<(), String> {
     use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};

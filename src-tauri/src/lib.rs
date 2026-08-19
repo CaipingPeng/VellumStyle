@@ -148,6 +148,7 @@ pub fn run() {
             documents::open_entry_location,
             export_file::write_export_file,
             export_file::export_pdf_file,
+            export_file::render_pdf_document,
             wechat::upload_thumb,
             wechat::upload_remote_thumb,
             wechat::add_draft

@@ -1,5 +1,5 @@
 import {useState} from "react";
-import {Code2, Download, FileCode, FileImage, FileText, Loader2} from "lucide-react";
+import {Archive, Code2, Download, FileCode, FileImage, FileText, Loader2} from "lucide-react";
 import {useStore} from "../../store/index.ts";
 import {exportArticle, getExportFormatMeta, type ExportFormat} from "../../utils/exportArticle.ts";
 import Button, {type ButtonVariant} from "../ui/Button.tsx";
@@ -13,6 +13,7 @@ const EXPORT_ITEMS: Array<{
 }> = [
   {format: "png", icon: FileImage, label: "PNG 长图"},
   {format: "pdf", icon: FileText, label: "PDF"},
+  {format: "pdf-images", icon: Archive, label: "PDF 图片集 ZIP"},
   {format: "html", icon: Code2, label: "HTML"},
   {format: "markdown", icon: FileCode, label: "Markdown"},
 ];

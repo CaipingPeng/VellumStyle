@@ -9,7 +9,7 @@ import {
   getExportFormatMeta,
 } from "./exportArticle.ts";
 
-test("导出格式元信息包含 PNG 长图、PDF、HTML 和 Markdown", () => {
+test("导出格式元信息包含 PNG 长图、PDF、PDF 图片集、HTML 和 Markdown", () => {
   assert.deepEqual(getExportFormatMeta("png"), {
     extension: "png",
     mimeType: "image/png",
@@ -19,6 +19,11 @@ test("导出格式元信息包含 PNG 长图、PDF、HTML 和 Markdown", () => {
     extension: "pdf",
     mimeType: "application/pdf",
     label: "PDF",
+  });
+  assert.deepEqual(getExportFormatMeta("pdf-images"), {
+    extension: "zip",
+    mimeType: "application/zip",
+    label: "PDF 图片集 ZIP",
   });
   assert.deepEqual(getExportFormatMeta("html"), {
     extension: "html",
@@ -35,8 +40,23 @@ test("导出格式元信息包含 PNG 长图、PDF、HTML 和 Markdown", () => {
 test("默认导出文件名来自当前文档名，并清理 Windows 不安全字符", () => {
   assert.equal(buildDefaultExportName("选题/增长:复盘?.md", "png"), "增长_复盘_.png");
   assert.equal(buildDefaultExportName("草稿.md", "pdf"), "草稿.pdf");
+  assert.equal(buildDefaultExportName("草稿.md", "pdf-images"), "草稿.zip");
   assert.equal(buildDefaultExportName(null, "html"), "文澜排版导出.html");
   assert.equal(buildDefaultExportName("草稿.markdown", "markdown"), "草稿.md");
+});
+
+test("PDF 图片集导出在 Web 环境明确提示使用桌面版", async () => {
+  await assert.rejects(
+    () => exportArticle("pdf-images", "草稿.md", {
+      waitForMathJaxIdle: async () => {},
+      isTauriRuntime: () => false,
+      readArticleHtml: async () => "<p>正文内容</p>",
+      renderPdfDocument: async () => {
+        throw new Error("不应生成 PDF");
+      },
+    }),
+    /仅支持桌面版/,
+  );
 });
 
 test("Markdown 导出原样保存当前源文本，不读取预览 HTML", async () => {

@@ -1,10 +1,11 @@
 import {invoke} from "@tauri-apps/api/core";
+import JSZip from "jszip";
 import {waitForMathJaxIdle} from "../markdown/mathjax.ts";
 import {solveHtml} from "../markdown/converter.ts";
 import {ARTICLE_BOX_ID} from "../articleRoot.ts";
 import {isTauriRuntime} from "./tauriEnv.ts";
 
-export type ExportFormat = "png" | "pdf" | "html" | "markdown";
+export type ExportFormat = "png" | "pdf" | "pdf-images" | "html" | "markdown";
 
 export interface ExportFormatMeta {
   extension: string;
@@ -40,6 +41,7 @@ export interface ExportArticleDependencies {
   saveExportBlob: (blob: Blob, format: ExportFormat, fileName: string) => Promise<ExportResult>;
   pickExportPath: (format: ExportFormat, fileName: string) => Promise<string | null>;
   exportPdfFile: (html: string, path: string) => Promise<void>;
+  renderPdfDocument: (html: string) => Promise<Uint8Array>;
   isTauriRuntime: () => boolean;
 }
 
@@ -58,6 +60,11 @@ const EXPORT_FORMATS: Record<ExportFormat, ExportFormatMeta> = {
     extension: "pdf",
     mimeType: "application/pdf",
     label: "PDF",
+  },
+  "pdf-images": {
+    extension: "zip",
+    mimeType: "application/zip",
+    label: "PDF 图片集 ZIP",
   },
   html: {
     extension: "html",
@@ -148,6 +155,21 @@ export async function exportArticle(
     return {status: "saved", fileName, path};
   }
 
+  if (format === "pdf-images") {
+    if (!dependencies.isTauriRuntime()) {
+      throw new Error("PDF 图片集导出目前仅支持桌面版");
+    }
+    const html = await dependencies.readArticleHtml();
+    if (!html) {
+      throw new Error("没有可导出的预览内容");
+    }
+    const pdfFileName = buildDefaultExportName(docPath, "pdf");
+    const zipFileName = fileName;
+    const pdfBytes = await dependencies.renderPdfDocument(buildPdfPrintDocument(html, pdfFileName));
+    const zipBlob = await renderPdfPagesToZip(pdfBytes, pdfFileName);
+    return dependencies.saveExportBlob(zipBlob, format, zipFileName);
+  }
+
   const canvas = await dependencies.renderArticleCanvas();
   const meta = getExportFormatMeta(format);
   return dependencies.saveExportBlob(await canvasToBlob(canvas, meta.mimeType), format, fileName);
@@ -162,6 +184,7 @@ function createExportArticleDependencies(overrides: Partial<ExportArticleDepende
     saveExportBlob,
     pickExportPath,
     exportPdfFile,
+    renderPdfDocument,
     isTauriRuntime,
     ...overrides,
   };
@@ -311,6 +334,48 @@ function slugifyHeading(value: string): string {
 
 async function exportPdfFile(html: string, path: string): Promise<void> {
   await invoke("export_pdf_file", {html, path});
+}
+
+async function renderPdfDocument(html: string): Promise<Uint8Array> {
+  const encoded = await invoke<string>("render_pdf_document", {html});
+  const binary = atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+async function renderPdfPagesToZip(pdfBytes: Uint8Array, pdfFileName: string): Promise<Blob> {
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.mjs", import.meta.url).toString();
+  const loadingTask = pdfjs.getDocument({data: pdfBytes});
+  const pdf = await loadingTask.promise;
+  const zip = new JSZip();
+  const baseName = pdfFileName.replace(/\.pdf$/i, "");
+
+  try {
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const viewport = page.getViewport({scale: 2});
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const context = canvas.getContext("2d");
+      if (!context) {
+        throw new Error("创建 PDF 图片画布失败");
+      }
+      await page.render({canvasContext: context, viewport, canvas}).promise;
+      const blob = await canvasToBlob(canvas, "image/png");
+      zip.file(`${baseName}-${String(pageNumber).padStart(3, "0")}.png`, blob);
+      canvas.width = 0;
+      canvas.height = 0;
+      page.cleanup();
+    }
+    return await zip.generateAsync({type: "blob", compression: "DEFLATE"});
+  } finally {
+    await pdf.destroy();
+  }
 }
 
 function escapeHtml(value: string): string {
