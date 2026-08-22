@@ -125,6 +125,7 @@ test("PDF 导出保存为干净 A4 PDF，不打开打印窗口", async () => {
     readArticleHtml: async () => "<section><p>正文内容</p></section>",
     isTauriRuntime: () => true,
     pickExportPath: async () => "C:\\Users\\Administrator\\Desktop\\草稿.pdf",
+    optimizePdfImages: async (html: string) => html,
     exportPdfFile: async (html: string, path: string) => {
       capturedHtml = html;
       capturedPath = path;
@@ -144,6 +145,28 @@ test("PDF 导出保存为干净 A4 PDF，不打开打印窗口", async () => {
   assert.match(capturedHtml, /@page\s*\{\s*size:\s*A4;\s*margin:\s*12mm;\s*\}/);
   assert.match(capturedHtml, /正文内容/);
   assert.doesNotMatch(capturedHtml, /data:image\/png|<canvas|html2canvas|addImage|window\.print/);
+});
+
+test("普通 PDF 在生成打印文档前优化图片且不改变正文结构", async () => {
+  let capturedHtml = "";
+  const result = await exportArticle("pdf", "草稿.md", {
+    waitForMathJaxIdle: async () => {},
+    readArticleHtml: async () => '<figure><img src="https://example.com/large.jpg" width="50%"><figcaption>说明</figcaption></figure>',
+    isTauriRuntime: () => true,
+    pickExportPath: async () => "C:\\Users\\Administrator\\Desktop\\草稿.pdf",
+    optimizePdfImages: async (html: string) => html.replace(
+      "https://example.com/large.jpg",
+      "data:image/jpeg;base64,b3B0aW1pemVk",
+    ),
+    exportPdfFile: async (html: string) => {
+      capturedHtml = html;
+    },
+  });
+
+  assert.equal(result.status, "saved");
+  assert.match(capturedHtml, /src="data:image\/jpeg;base64,b3B0aW1pemVk"/);
+  assert.match(capturedHtml, /width="50%"/);
+  assert.match(capturedHtml, /<figcaption[^>]*>说明<\/figcaption>/);
 });
 
 test("PNG 导出使用 A4 宽度，不继承当前预览模式宽度", () => {

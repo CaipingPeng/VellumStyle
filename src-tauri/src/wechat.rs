@@ -24,7 +24,6 @@ const MAX_SIZE: usize = 10 * 1024 * 1024; // add_material 图片限制 10MB
 const TARGET_SIZE: usize = MAX_SIZE; // 实测微信接受正好 10MiB，超出 1 字节返回 45001
 const MAX_SOURCE_SIZE: usize = 50 * 1024 * 1024;
 const MAX_PROXY_BYTES: usize = 15 * 1024 * 1024; // wximg 代理响应体上限，与预览图下载一致
-const MAX_DECODED_PIXELS: u64 = 50_000_000;
 const PNG_LOSSLESS_RETRY_RATIO: usize = 5;
 const ALLOWED_TYPES: [&str; 3] = ["image/jpeg", "image/png", "image/gif"];
 
@@ -680,9 +679,8 @@ pub async fn get_video_play_url(app: AppHandle, media_id: String) -> Result<Stri
 
     let token = get_access_token(&cfg.app_id, &cfg.app_secret).await?;
     let body = serde_json::json!({ "media_id": media_id });
-    let url = format!(
-        "https://api.weixin.qq.com/cgi-bin/material/get_material?access_token={token}"
-    );
+    let url =
+        format!("https://api.weixin.qq.com/cgi-bin/material/get_material?access_token={token}");
     let resp = reqwest::Client::new()
         .post(&url)
         .json(&body)
@@ -1150,14 +1148,6 @@ fn prepare_upload_for_limit(
         "image/png" => ImageFormat::Png,
         _ => return Err("仅支持 jpg/png/gif 图片".into()),
     };
-    let (width, height) = image::ImageReader::with_format(Cursor::new(bytes.as_slice()), format)
-        .into_dimensions()
-        .map_err(|e| format!("读取图片尺寸失败：{e}"))?;
-    let pixels = u64::from(width) * u64::from(height);
-    if pixels > MAX_DECODED_PIXELS {
-        return Err("图片像素过大，最大支持 5000 万像素".into());
-    }
-
     let image = decode_for_reencoding(&bytes, format)?;
     let original_size = bytes.len();
     let prepared = if mime == "image/jpeg" {
@@ -1625,9 +1615,17 @@ pub async fn fetch_proxied_image(raw_url: &str) -> Result<(String, Vec<u8>), Str
         upstream_type.to_string()
     };
     if content_type != upstream_type {
-        eprintln!("[wximg] sniff {upstream_type} -> {content_type} bytes={}", bytes.len());
+        eprintln!(
+            "[wximg] sniff {upstream_type} -> {content_type} bytes={}",
+            bytes.len()
+        );
     } else if upstream_type.contains("octet") {
-        let head = bytes.iter().take(16).map(|b| format!("{b:02x}")).collect::<Vec<_>>().join(" ");
+        let head = bytes
+            .iter()
+            .take(16)
+            .map(|b| format!("{b:02x}"))
+            .collect::<Vec<_>>()
+            .join(" ");
         eprintln!("[wximg] octet head: {head} bytes={}", bytes.len());
     }
     Ok((content_type, bytes))
@@ -1893,11 +1891,11 @@ pub async fn add_draft(
 #[cfg(test)]
 mod tests {
     use super::{
-        build_add_draft_body, decode_for_reencoding, format_wechat_error,
-        extract_video_mp4_url, is_allowed_redirect_target, parse_delete_material_response,
-        parse_material_page_response, parse_outbound_ip_response, parse_video_material_page_response,
-        prepare_upload_for_limit, parse_voice_material_page_response, validate_remote_addresses,
-        fetch_proxied_image, OUTBOUND_IP_ENDPOINTS,
+        build_add_draft_body, decode_for_reencoding, extract_video_mp4_url, fetch_proxied_image,
+        format_wechat_error, is_allowed_redirect_target, parse_delete_material_response,
+        parse_material_page_response, parse_outbound_ip_response,
+        parse_video_material_page_response, parse_voice_material_page_response,
+        prepare_upload_for_limit, validate_remote_addresses, OUTBOUND_IP_ENDPOINTS,
     };
     use image::{DynamicImage, ImageFormat, Rgb, RgbImage, Rgba, RgbaImage};
     use std::io::Cursor;

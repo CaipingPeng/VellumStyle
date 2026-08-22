@@ -40,6 +40,7 @@ export interface ExportArticleDependencies {
   renderArticleCanvas: () => Promise<HTMLCanvasElement>;
   saveExportBlob: (blob: Blob, format: ExportFormat, fileName: string) => Promise<ExportResult>;
   pickExportPath: (format: ExportFormat, fileName: string) => Promise<string | null>;
+  optimizePdfImages: (html: string) => Promise<string>;
   exportPdfFile: (html: string, path: string) => Promise<void>;
   renderPdfDocument: (html: string) => Promise<Uint8Array>;
   isTauriRuntime: () => boolean;
@@ -49,6 +50,8 @@ const CSS_PX_PER_MM = 96 / 25.4;
 const A4_PAGE_WIDTH_MM = 210;
 const A4_PAGE_HEIGHT_MM = 297;
 const A4_MARGIN_MM = 12;
+// A4 内容区约 7.32 英寸宽；1000 px 仍有约 137 DPI，适合屏幕阅读且可显著降低解码负担。
+const PDF_IMAGE_MAX_WIDTH_PX = 1000;
 
 const EXPORT_FORMATS: Record<ExportFormat, ExportFormatMeta> = {
   png: {
@@ -141,8 +144,8 @@ export async function exportArticle(
     if (!html) {
       throw new Error("没有可导出的预览内容");
     }
-    const printHtml = buildPdfPrintDocument(html, fileName);
     if (!dependencies.isTauriRuntime()) {
+      const printHtml = buildPdfPrintDocument(html, fileName);
       const blob = new Blob([printHtml], {type: "text/html;charset=utf-8"});
       return dependencies.saveExportBlob(blob, "html", fileName.replace(/\.pdf$/i, ".html"));
     }
@@ -151,6 +154,8 @@ export async function exportArticle(
     if (!path) {
       return {status: "cancelled", fileName};
     }
+    const optimizedHtml = await dependencies.optimizePdfImages(html);
+    const printHtml = buildPdfPrintDocument(optimizedHtml, fileName);
     await dependencies.exportPdfFile(printHtml, path);
     return {status: "saved", fileName, path};
   }
@@ -183,11 +188,40 @@ function createExportArticleDependencies(overrides: Partial<ExportArticleDepende
     renderArticleCanvas,
     saveExportBlob,
     pickExportPath,
+    optimizePdfImages: optimizePdfArticleImages,
     exportPdfFile,
     renderPdfDocument,
     isTauriRuntime,
     ...overrides,
   };
+}
+
+async function optimizePdfArticleImages(articleHtml: string): Promise<string> {
+  const template = document.createElement("template");
+  template.innerHTML = articleHtml;
+  const images = Array.from(template.content.querySelectorAll<HTMLImageElement>("img[src]"));
+  const sources = Array.from(new Set(images.map((image) => image.getAttribute("src")?.trim()).filter(Boolean))) as string[];
+  if (sources.length === 0) return articleHtml;
+
+  const replacements = await invoke<Array<string | null>>("optimize_pdf_images", {
+    sources,
+    maxWidth: PDF_IMAGE_MAX_WIDTH_PX,
+  });
+  const replacementBySource = new Map<string, string>();
+  sources.forEach((source, index) => {
+    const replacement = replacements[index];
+    if (replacement) replacementBySource.set(source, replacement);
+  });
+  if (replacementBySource.size === 0) return articleHtml;
+
+  for (const image of images) {
+    const source = image.getAttribute("src")?.trim();
+    const replacement = source ? replacementBySource.get(source) : undefined;
+    if (!replacement) continue;
+    image.setAttribute("src", replacement);
+    image.removeAttribute("srcset");
+  }
+  return template.innerHTML;
 }
 
 async function renderArticleCanvas(): Promise<HTMLCanvasElement> {

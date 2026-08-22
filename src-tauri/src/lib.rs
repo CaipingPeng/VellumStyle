@@ -82,6 +82,7 @@ pub fn run() {
             preview_image::get_preview_image_asset,
             preview_image::write_preview_image_asset,
             preview_image::copy_preview_image,
+            preview_image::optimize_pdf_images,
             wechat::upload_image,
             wechat::get_outbound_ip,
             wechat::list_image_materials,

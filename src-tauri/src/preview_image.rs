@@ -11,7 +11,7 @@ use url::Url;
 
 pub const MAX_SOURCE_BYTES: usize = 15 * 1024 * 1024;
 const MAX_DIMENSION: u32 = 16_384;
-const MAX_PIXELS: u64 = 40_000_000;
+const MAX_PDF_IMAGE_BATCH: usize = 200;
 
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -64,12 +64,7 @@ struct DecodedImage {
 }
 
 fn validate_dimensions(width: u32, height: u32) -> Result<(), String> {
-    if width == 0
-        || height == 0
-        || width > MAX_DIMENSION
-        || height > MAX_DIMENSION
-        || u64::from(width) * u64::from(height) > MAX_PIXELS
-    {
+    if width == 0 || height == 0 || width > MAX_DIMENSION || height > MAX_DIMENSION {
         return Err("image dimensions exceed safety limits".into());
     }
     Ok(())
@@ -829,6 +824,99 @@ pub async fn get_preview_image_asset(source: String) -> Result<PreviewImageAsset
     })
 }
 
+/// 将普通 PDF 中超过页面所需分辨率的位图降采样，避免阅读器解码原始大图。
+/// 返回值与输入一一对应；无需处理或读取失败的图片返回 None，由前端保留原图。
+#[tauri::command]
+pub async fn optimize_pdf_images(
+    sources: Vec<String>,
+    max_width: u32,
+) -> Result<Vec<Option<String>>, String> {
+    if sources.len() > MAX_PDF_IMAGE_BATCH {
+        return Err(format!("PDF image count exceeds {MAX_PDF_IMAGE_BATCH}"));
+    }
+    if !(800..=3200).contains(&max_width) {
+        return Err("PDF image target width is invalid".into());
+    }
+
+    let mut optimized = Vec::with_capacity(sources.len());
+    for source in sources {
+        let result = optimize_pdf_image_source(&source, max_width).await;
+        match result {
+            Ok(replacement) => optimized.push(replacement),
+            Err(error) => {
+                eprintln!("[pdf-export] image optimization skipped: {error}");
+                optimized.push(None);
+            }
+        }
+    }
+    Ok(optimized)
+}
+
+async fn optimize_pdf_image_source(source: &str, max_width: u32) -> Result<Option<String>, String> {
+    let download = if source
+        .get(..5)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case("data:"))
+    {
+        parse_data_url(source)?
+    } else {
+        fetch_http_with_policy(
+            source,
+            Duration::from_secs(8),
+            Duration::from_secs(20),
+            NetworkPolicy::Strict,
+        )
+        .await?
+    };
+    optimize_pdf_image_download(&download, max_width)
+}
+
+fn optimize_pdf_image_download(
+    download: &Download,
+    max_width: u32,
+) -> Result<Option<String>, String> {
+    let kind = identify_image(&download.bytes, download.content_type.as_deref())?;
+    if kind == ImageKind::Svg {
+        return Ok(None);
+    }
+    let format = match kind {
+        ImageKind::Png => image::ImageFormat::Png,
+        ImageKind::Jpeg => image::ImageFormat::Jpeg,
+        ImageKind::Gif => image::ImageFormat::Gif,
+        ImageKind::WebP => image::ImageFormat::WebP,
+        ImageKind::Svg => unreachable!(),
+    };
+    let image = decode_raster(&download.bytes, format)?;
+    if image.width() <= max_width {
+        return Ok(None);
+    }
+
+    let target_height = ((u64::from(image.height()) * u64::from(max_width))
+        .div_ceil(u64::from(image.width())))
+    .max(1) as u32;
+    let resized = image.resize_exact(
+        max_width,
+        target_height,
+        image::imageops::FilterType::Lanczos3,
+    );
+    let (mime_type, bytes) = if resized.color().has_alpha() {
+        let mut cursor = Cursor::new(Vec::new());
+        resized
+            .write_to(&mut cursor, image::ImageFormat::Png)
+            .map_err(|error| format!("unable to encode optimized PNG: {error}"))?;
+        ("image/png", cursor.into_inner())
+    } else {
+        let mut bytes = Vec::new();
+        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes, 88)
+            .encode_image(&resized)
+            .map_err(|error| format!("unable to encode optimized JPEG: {error}"))?;
+        ("image/jpeg", bytes)
+    };
+    Ok(Some(format!(
+        "data:{mime_type};base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(bytes)
+    )))
+}
+
 #[tauri::command]
 pub async fn write_preview_image_asset(path: String, bytes_base64: String) -> Result<(), String> {
     let max_base64 = MAX_SOURCE_BYTES.div_ceil(3) * 4;
@@ -963,6 +1051,45 @@ mod tests {
     }
 
     #[test]
+    fn optimizes_large_pdf_raster_to_target_width() {
+        let download = Download {
+            bytes: encoded(image::ImageFormat::Png, 2400, 1200),
+            content_type: Some("image/png".into()),
+            file_name: Some("large.png".into()),
+        };
+        let data_url = optimize_pdf_image_download(&download, 1600)
+            .unwrap()
+            .expect("large raster should be optimized");
+        let payload = data_url
+            .strip_prefix("data:image/png;base64,")
+            .expect("alpha image should remain PNG");
+        let bytes = base64::engine::general_purpose::STANDARD
+            .decode(payload)
+            .unwrap();
+        let image = image::load_from_memory(&bytes).unwrap();
+        assert_eq!(image.dimensions(), (1600, 800));
+    }
+
+    #[test]
+    fn leaves_small_rasters_and_svg_untouched_for_pdf() {
+        let small = Download {
+            bytes: encoded(image::ImageFormat::Jpeg, 1200, 800),
+            content_type: Some("image/jpeg".into()),
+            file_name: Some("small.jpg".into()),
+        };
+        assert!(optimize_pdf_image_download(&small, 1600).unwrap().is_none());
+
+        let vector = Download {
+            bytes: svg(2400, 1200),
+            content_type: Some("image/svg+xml".into()),
+            file_name: Some("vector.svg".into()),
+        };
+        assert!(optimize_pdf_image_download(&vector, 1600)
+            .unwrap()
+            .is_none());
+    }
+
+    #[test]
     fn content_signature_wins_over_declared_mime_and_invalid_content_is_rejected() {
         let jpeg = encoded(image::ImageFormat::Jpeg, 1, 1);
         assert_eq!(
@@ -1052,9 +1179,9 @@ mod tests {
     }
 
     #[test]
-    fn enforces_dimension_and_pixel_limits_before_allocation() {
+    fn enforces_single_dimension_limit_before_allocation() {
         assert!(validate_dimensions(16_385, 1).is_err());
-        assert!(validate_dimensions(10_000, 4_001).is_err());
+        assert!(validate_dimensions(10_000, 4_001).is_ok());
         assert!(decode_for_clipboard(&svg(16_385, 1), None).is_err());
     }
 
@@ -1277,11 +1404,11 @@ mod tests {
                 .await
                 .is_err()
         );
-        let too_many_pixels = base64::engine::general_purpose::STANDARD.encode(svg(10_000, 4_001));
+        let high_resolution = base64::engine::general_purpose::STANDARD.encode(svg(10_000, 4_001));
         assert!(
-            get_preview_image_asset(format!("data:image/svg+xml;base64,{too_many_pixels}"))
+            get_preview_image_asset(format!("data:image/svg+xml;base64,{high_resolution}"))
                 .await
-                .is_err()
+                .is_ok()
         );
     }
 
