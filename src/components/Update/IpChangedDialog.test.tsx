@@ -55,3 +55,37 @@ test("whitelist shortcut copies the new IP before opening the saved AppID page",
     delete tauriWindow.__TAURI_INTERNALS__;
   }
 });
+
+test("offers completion instead of defer and copy actions", async () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  let closed = false;
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  await act(async () => {
+    root.render(
+      <IpChangedDialog
+        open
+        previousIp="198.51.100.1"
+        currentIp="203.0.113.2"
+        onClose={() => {
+          closed = true;
+        }}
+      />,
+    );
+  });
+  try {
+    const buttons = Array.from(document.querySelectorAll("button"));
+    assert.equal(buttons.some((button) => button.textContent?.includes("稍后处理")), false);
+    assert.equal(buttons.some((button) => button.textContent?.includes("复制新出口 IP")), false);
+    const doneButton = buttons.find((button) => button.textContent?.includes("更新完成"));
+    assert.ok(doneButton, "completion button should render");
+    await act(async () => {
+      doneButton.click();
+    });
+    assert.equal(closed, true);
+  } finally {
+    act(() => root.unmount());
+    container.remove();
+  }
+});

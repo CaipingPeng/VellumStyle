@@ -183,20 +183,6 @@ export default function IpChangedDialog({open = true, previousIp, currentIp, onC
 
             {/* 底部按钮 */}
             <div className="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-3">
-              <Button type="button" variant="secondary" onClick={onClose}>
-                稍后处理
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                state={copied ? "success" : "idle"}
-                successText={`已复制 ${currentIp}`}
-                onClick={handleCopy}
-                className="min-w-[120px] gap-1.5"
-              >
-                <Copy size={14} />
-                复制新出口 IP
-              </Button>
               <Button
                 type="button"
                 variant="primary"
@@ -207,6 +193,10 @@ export default function IpChangedDialog({open = true, previousIp, currentIp, onC
               >
                 <ExternalLink size={14} />
                 前往设置白名单
+              </Button>
+              <Button type="button" variant="secondary" onClick={onClose} className="gap-1.5">
+                <Check size={14} />
+                更新完成
               </Button>
             </div>
           </motion.div>
