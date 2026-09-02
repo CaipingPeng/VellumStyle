@@ -358,6 +358,48 @@ html.has-app-bg .workspace-frame {
   border-bottom: 1px solid var(--workspace-panel-border);
 }
 
+/* 左侧卡片的命中区占满相邻卡片之间的 8px 间距，不覆盖卡片内容。 */
+.workspace-side-panel-separator {
+  position: absolute;
+  z-index: 20;
+  top: 0;
+  left: 100%;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.workspace-side-panel-separator::before {
+  content: "";
+  position: absolute;
+  inset-block: 10px;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: var(--border-strong);
+  opacity: 0;
+  transition:
+    opacity var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease),
+    width var(--duration-fast) var(--ease);
+}
+
+.workspace-side-panel-separator:hover::before,
+.workspace-side-panel-separator:focus-visible::before,
+.workspace-side-panel-separator.is-resizing::before {
+  opacity: 1;
+  width: 2px;
+  background: var(--accent);
+}
+
+.workspace-side-panel-separator:focus-visible {
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 2px var(--ring);
+}
+
 .workspace-split-separator {
   position: relative;
   width: 8px;
@@ -403,6 +445,7 @@ html.workspace-is-resizing * {
 
 @media (prefers-reduced-motion: reduce) {
   .workspace-panel,
+  .workspace-side-panel-separator::before,
   .workspace-split-separator::before {
     transition: none;
   }
@@ -416,6 +459,8 @@ html.appearance-switching footer,
 html.appearance-switching .workspace-frame,
 html.appearance-switching .workspace-panel,
 html.appearance-switching .workspace-editor-toolbar,
+html.appearance-switching .workspace-side-panel-separator,
+html.appearance-switching .workspace-side-panel-separator::before,
 html.appearance-switching .workspace-split-separator,
 html.appearance-switching .workspace-split-separator::before,
 html.appearance-switching .cm-editor,

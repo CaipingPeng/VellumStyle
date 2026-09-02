@@ -1,4 +1,4 @@
-import {memo, useCallback, useEffect, useRef, useState} from "react";
+import {memo, useCallback, useEffect, useState} from "react";
 import {FilePlus, FileText, FolderPlus} from "lucide-react";
 import {motion} from "framer-motion";
 import {useStore} from "../../store/index.ts";
@@ -8,9 +8,9 @@ import TreeNode, {type CreatingState} from "./TreeNode.tsx";
 import DraftInput from "./DraftInput.tsx";
 import IconButton from "../ui/IconButton.tsx";
 import {useDocActions} from "./useDocActions.ts";
-import {DEFAULT_DOC_TREE_WIDTH, resizeDocTreeWidth} from "./docTreeLayout.ts";
 import {isRecursiveDelete} from "./deleteConfirmation.ts";
 import DeleteConfirmDialog from "./DeleteConfirmDialog.tsx";
+import ResizableSidePanel from "../Workspace/ResizableSidePanel.tsx";
 
 // 取树里第一篇文档路径（深度优先），删当前文档后回退用。
 function firstDocPath(nodes: DocNode[], excludedPath?: string): string | null {
@@ -51,11 +51,8 @@ function DocTree() {
   const [dragOverPath, setDragOverPath] = useState<string | null>(null);
   const [rootDragOver, setRootDragOver] = useState(false);
   const [focused, setFocused] = useState(false);
-  const [treeWidth, setTreeWidth] = useState(DEFAULT_DOC_TREE_WIDTH);
   const [pendingDelete, setPendingDelete] = useState<DocNode | null>(null);
   const [renameSignal, setRenameSignal] = useState<{path: string; token: number} | null>(null);
-  const resizeStartRef = useRef<{x: number; width: number} | null>(null);
-  const cleanupResizeRef = useRef<(() => void) | null>(null);
 
   // 稳定回调：配合 memo(TreeNode)，避免无关重渲染（聚焦、宽度调整等）重建整树。
   const toggle = useCallback((path: string) => {
@@ -89,10 +86,6 @@ function DocTree() {
       return changed ? next : prev;
     });
   }, [currentDocPath, setSelectedPath]);
-
-  useEffect(() => {
-    return () => cleanupResizeRef.current?.();
-  }, []);
 
   // 新建落点：选中项是文件夹→落其下；选中项是文件→落其同级目录；无选中→根。
   const targetDir = (): string => targetDirFor(tree, selectedPath);
@@ -226,46 +219,20 @@ function DocTree() {
     void actions.copyAbsolutePath(path);
   }, [actions]);
 
-  const startResize = (clientX: number) => {
-    resizeStartRef.current = {x: clientX, width: treeWidth};
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-
-    const handleMove = (event: PointerEvent) => {
-      const start = resizeStartRef.current;
-      if (!start) return;
-      setTreeWidth(resizeDocTreeWidth(start.width, start.x, event.clientX));
-    };
-
-    const cleanup = () => {
-      resizeStartRef.current = null;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-      window.removeEventListener("pointermove", handleMove);
-      window.removeEventListener("pointerup", cleanup);
-      cleanupResizeRef.current = null;
-    };
-
-    cleanupResizeRef.current?.();
-    cleanupResizeRef.current = cleanup;
-    window.addEventListener("pointermove", handleMove);
-    window.addEventListener("pointerup", cleanup);
-  };
-
   return (
     <>
-      <div
-        tabIndex={-1}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        onPointerDown={(e) => {
-          // 树行本身不可聚焦，点击任意位置都让面板拿到焦点，F2 才能落到面板。
-          e.currentTarget.focus({preventScroll: true});
-        }}
-        onKeyDown={handlePanelKeyDown}
-        className="workspace-panel workspace-documents-panel relative flex flex-shrink-0 flex-col overflow-hidden outline-none"
-        style={{width: treeWidth}}
-      >
+      <ResizableSidePanel ariaLabel="调整文件树宽度">
+        <div
+          tabIndex={-1}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          onPointerDown={(e) => {
+            // 树行本身不可聚焦，点击任意位置都让面板拿到焦点，F2 才能落到面板。
+            e.currentTarget.focus({preventScroll: true});
+          }}
+          onKeyDown={handlePanelKeyDown}
+          className="workspace-panel workspace-documents-panel flex w-full flex-shrink-0 flex-col overflow-hidden outline-none"
+        >
         <div className="flex h-[42px] flex-none items-center gap-1 border-b border-border px-2">
           <IconButton title="新建文档" onClick={() => startCreate("doc")}>
             <FilePlus size={15} />
@@ -347,29 +314,8 @@ function DocTree() {
             ))
           )}
         </div>
-        <div
-          role="separator"
-          aria-label="调整文件树宽度"
-          aria-orientation="vertical"
-          tabIndex={0}
-          className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-transparent transition-colors duration-fast hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
-          onPointerDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            startResize(e.clientX);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowLeft") {
-              e.preventDefault();
-              setTreeWidth((width) => resizeDocTreeWidth(width, 0, -16));
-            }
-            if (e.key === "ArrowRight") {
-              e.preventDefault();
-              setTreeWidth((width) => resizeDocTreeWidth(width, 0, 16));
-            }
-          }}
-        />
-      </div>
+        </div>
+      </ResizableSidePanel>
       <DeleteConfirmDialog
         open={pendingDelete !== null}
         node={pendingDelete}

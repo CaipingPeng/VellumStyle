@@ -23,6 +23,15 @@ test("分隔柄保持 8px 命中区域和克制的细视觉线", async () => {
   assert.doesNotMatch(separator.slice(0, separator.indexOf("@media")), /box-shadow:\s*var\(--shadow-(md|lg)\)/);
 });
 
+test("侧栏分隔柄位于卡片外侧，并恰好覆盖 8px 卡片间距", async () => {
+  const css = await readFile(new URL("./globals.css", import.meta.url), "utf8");
+  const separator = css.slice(css.indexOf(".workspace-side-panel-separator {"));
+  assert.match(separator, /left: 100%/);
+  assert.match(separator, /width: 8px/);
+  assert.match(separator, /\.workspace-side-panel-separator::before/);
+  assert.match(separator, /\.workspace-side-panel-separator\.is-resizing::before/);
+});
+
 test("编辑器和预览都以活动面板边框反馈焦点", async () => {
   const css = await readFile(new URL("./globals.css", import.meta.url), "utf8");
   assert.match(css, /\.workspace-editor-panel:focus-within/);

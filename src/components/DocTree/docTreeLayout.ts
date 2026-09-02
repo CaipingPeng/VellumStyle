@@ -1,12 +1,18 @@
-export const DEFAULT_DOC_TREE_WIDTH = 220;
-export const MIN_DOC_TREE_WIDTH = 180;
-export const MAX_DOC_TREE_WIDTH = 420;
+import {
+  DEFAULT_SIDE_PANEL_WIDTH,
+  MAX_SIDE_PANEL_WIDTH,
+  MIN_SIDE_PANEL_WIDTH,
+  resizeSidePanelWidth,
+} from "../Workspace/sidePanelLayout.ts";
+
+export const DEFAULT_DOC_TREE_WIDTH = DEFAULT_SIDE_PANEL_WIDTH;
+export const MIN_DOC_TREE_WIDTH = MIN_SIDE_PANEL_WIDTH;
+export const MAX_DOC_TREE_WIDTH = MAX_SIDE_PANEL_WIDTH;
 
 export function resizeDocTreeWidth(
   startWidth: number,
   startX: number,
   currentX: number,
 ): number {
-  const nextWidth = Math.round(startWidth + currentX - startX);
-  return Math.min(MAX_DOC_TREE_WIDTH, Math.max(MIN_DOC_TREE_WIDTH, nextWidth));
+  return resizeSidePanelWidth(startWidth, startX, currentX);
 }

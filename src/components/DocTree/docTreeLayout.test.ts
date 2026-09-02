@@ -55,11 +55,11 @@ test("文件树节点提供打开文件位置的右键菜单", async () => {
   assert.match(source, /onOpenLocation\(node\.path\)/);
 });
 
-test("文件树拖拽手柄保持细窄的 4px 命中区域", async () => {
+test("文件树接入卡片外侧的通用侧栏拖拽手柄", async () => {
   const source = await readFile(new URL("./DocTree.tsx", import.meta.url), "utf8");
 
-  assert.match(source, /aria-label="调整文件树宽度"/);
-  assert.match(source, /w-1 cursor-col-resize/);
+  assert.match(source, /<ResizableSidePanel ariaLabel="调整文件树宽度">/);
+  assert.doesNotMatch(source, /absolute right-0/);
 });
 
 test("文件树删除使用应用内确认弹窗，避免系统确认框和提示音", async () => {

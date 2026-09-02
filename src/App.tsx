@@ -788,7 +788,7 @@ export default function App() {
           {sidebarOpen && (
             <motion.div
               key="documents"
-              className="flex min-h-0 flex-none overflow-hidden"
+              className="flex min-h-0 flex-none overflow-visible"
               initial={{opacity: 0}}
               animate={{opacity: 1}}
               exit={{opacity: 0}}
@@ -810,7 +810,7 @@ export default function App() {
           {outlineOpen && (
             <motion.div
               key="outline"
-              className="flex min-h-0 flex-none overflow-hidden"
+              className="flex min-h-0 flex-none overflow-visible"
               initial={{opacity: 0}}
               animate={{opacity: 1}}
               exit={{opacity: 0}}

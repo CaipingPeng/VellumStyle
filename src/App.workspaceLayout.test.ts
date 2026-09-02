@@ -27,6 +27,7 @@ test("双抽屉可独立渲染且顺序稳定地位于核心分栏之前", async
   assert.ok(split > outlineNav);
   assert.ok((source.match(/<AnimatePresence initial=\{false\}>/g) ?? []).length >= 2);
   assert.doesNotMatch(source, /sidebarOpen\s*\?[^:]+:\s*<OutlineNav/s);
+  assert.equal((source.match(/flex min-h-0 flex-none overflow-visible/g) ?? []).length, 2);
 });
 
 test("预览无标题栏且模式切换器保持原位", async () => {

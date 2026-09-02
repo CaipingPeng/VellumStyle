@@ -18,6 +18,18 @@ test("文档树、大纲和编辑器使用统一面板表面与 42px 头部基�
   assert.match(editorPanel, /workspace-editor-toolbar[^"\n]*h-\[42px\]/);
 });
 
+test("文档树和大纲都接入统一的侧栏宽度调整容器", async () => {
+  const [docTree, outline] = await Promise.all([
+    read("../DocTree/DocTree.tsx"),
+    read("../Outline/OutlineNav.tsx"),
+  ]);
+
+  assert.match(docTree, /<ResizableSidePanel ariaLabel="调整文件树宽度">/);
+  assert.match(outline, /<ResizableSidePanel ariaLabel="调整大纲宽度">/);
+  assert.match(docTree, /workspace-documents-panel flex w-full/);
+  assert.match(outline, /workspace-outline-panel flex w-full/);
+});
+
 test("语法工具栏使用 18px 语义分隔线", async () => {
   const source = await read("../Toolbar/SyntaxToolbar.tsx");
   assert.match(source, /aria-hidden="true"/);
