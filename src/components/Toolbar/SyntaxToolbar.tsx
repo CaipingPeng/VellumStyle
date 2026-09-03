@@ -2,6 +2,7 @@ import {useRef, useState} from "react";
 import {
   Bold, Italic, Strikethrough, Code, Link, Heading,
   List, ListOrdered, Quote, SquareCode, Minus, Undo2, Redo2, ImageUp, Smile, Sparkles, Music, Clapperboard,
+  Table2, Sigma,
 } from "lucide-react";
 import type {RefObject} from "react";
 import type {MarkdownEditorHandle} from "../Editor/MarkdownEditor.tsx";
@@ -13,6 +14,7 @@ import {
 import IconButton from "../ui/IconButton.tsx";
 import Menu, {MenuItem} from "../ui/Menu.tsx";
 import UploadButton, {type UploadButtonHandle} from "../Upload/UploadButton.tsx";
+import {syntaxCommandLabel} from "../../commands/registry.ts";
 
 interface Props {
   editorRef: RefObject<MarkdownEditorHandle>;
@@ -23,6 +25,8 @@ interface Props {
   onOpenAiImage?: () => void;
   onOpenMusic?: () => void;
   onOpenVideoChannel?: () => void;
+  onOpenTableEditor?: () => void;
+  onOpenFormulaEditor?: () => void;
 }
 
 const ICON = 16;
@@ -41,13 +45,15 @@ export default function SyntaxToolbar({
   onOpenAiImage,
   onOpenMusic,
   onOpenVideoChannel,
+  onOpenTableEditor,
+  onOpenFormulaEditor,
 }: Props) {
   const [headingOpen, setHeadingOpen] = useState(false);
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   const uploadRef = useRef<UploadButtonHandle>(null);
   const shortcutPlatform = detectSyntaxShortcutPlatform();
-  const syntaxTitle = (label: string, action: SyntaxAction) =>
-    `${label} (${formatSyntaxShortcut(action, shortcutPlatform)})`;
+  const syntaxTitle = (action: SyntaxAction) =>
+    `${syntaxCommandLabel(action)} (${formatSyntaxShortcut(action, shortcutPlatform)})`;
   const headingStart = formatSyntaxShortcut("heading1", shortcutPlatform);
   const headingEnd = formatSyntaxShortcut("heading4", shortcutPlatform);
   let commonLength = 0;
@@ -68,11 +74,11 @@ export default function SyntaxToolbar({
       <IconButton title="撤销 (Ctrl+Z)" onClick={() => ed()?.undo()}><Undo2 size={ICON} /></IconButton>
       <IconButton title="重做 (Ctrl+Y)" onClick={() => ed()?.redo()}><Redo2 size={ICON} /></IconButton>
       <Separator />
-      <IconButton title={syntaxTitle("加粗", "bold")} onClick={run("bold")}><Bold size={ICON} /></IconButton>
-      <IconButton title={syntaxTitle("斜体", "italic")} onClick={run("italic")}><Italic size={ICON} /></IconButton>
-      <IconButton title={syntaxTitle("删除线", "strikethrough")} onClick={run("strikethrough")}><Strikethrough size={ICON} /></IconButton>
-      <IconButton title={syntaxTitle("行内代码", "inlineCode")} onClick={run("inlineCode")}><Code size={ICON} /></IconButton>
-      <IconButton title={syntaxTitle("链接", "link")} onClick={run("link")}><Link size={ICON} /></IconButton>
+      <IconButton title={syntaxTitle("bold")} onClick={run("bold")}><Bold size={ICON} /></IconButton>
+      <IconButton title={syntaxTitle("italic")} onClick={run("italic")}><Italic size={ICON} /></IconButton>
+      <IconButton title={syntaxTitle("strikethrough")} onClick={run("strikethrough")}><Strikethrough size={ICON} /></IconButton>
+      <IconButton title={syntaxTitle("inlineCode")} onClick={run("inlineCode")}><Code size={ICON} /></IconButton>
+      <IconButton title={syntaxTitle("link")} onClick={run("link")}><Link size={ICON} /></IconButton>
       <Menu
         open={uploadMenuOpen}
         onClose={() => setUploadMenuOpen(false)}
@@ -136,11 +142,13 @@ export default function SyntaxToolbar({
         ))}
       </Menu>
 
-      <IconButton title={syntaxTitle("无序列表", "unorderedList")} onClick={run("unorderedList")}><List size={ICON} /></IconButton>
-      <IconButton title={syntaxTitle("有序列表", "orderedList")} onClick={run("orderedList")}><ListOrdered size={ICON} /></IconButton>
-      <IconButton title={syntaxTitle("引用", "blockquote")} onClick={run("blockquote")}><Quote size={ICON} /></IconButton>
-      <IconButton title={syntaxTitle("代码块", "codeBlock")} onClick={run("codeBlock")}><SquareCode size={ICON} /></IconButton>
-      <IconButton title={syntaxTitle("分割线", "horizontalRule")} onClick={run("horizontalRule")}><Minus size={ICON} /></IconButton>
+      <IconButton title={syntaxTitle("unorderedList")} onClick={run("unorderedList")}><List size={ICON} /></IconButton>
+      <IconButton title={syntaxTitle("orderedList")} onClick={run("orderedList")}><ListOrdered size={ICON} /></IconButton>
+      <IconButton title={syntaxTitle("blockquote")} onClick={run("blockquote")}><Quote size={ICON} /></IconButton>
+      <IconButton title={syntaxTitle("codeBlock")} onClick={run("codeBlock")}><SquareCode size={ICON} /></IconButton>
+      <IconButton title={syntaxTitle("horizontalRule")} onClick={run("horizontalRule")}><Minus size={ICON} /></IconButton>
+      <IconButton title="插入或编辑表格" onClick={onOpenTableEditor}><Table2 size={ICON} /></IconButton>
+      <IconButton title="插入或编辑公式" onClick={onOpenFormulaEditor}><Sigma size={ICON} /></IconButton>
     </div>
   );
 }

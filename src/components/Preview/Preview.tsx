@@ -16,6 +16,7 @@ import {copyPreviewImage, savePreviewImageAs} from "../../utils/previewImageActi
 import {toast} from "../Toast/toast.ts";
 import {loadVideoMediaId} from "../../utils/publish.ts";
 import {playPreviewVideo, toggleVoicePlayback} from "./previewPlayback.ts";
+import {createDebouncedMaxWaitScheduler} from "../../utils/debouncedMaxWait.ts";
 
 interface Props {
   content: string;
@@ -33,6 +34,7 @@ export interface PreviewHandle {
 }
 
 const RENDER_DEBOUNCE_MS = 250;
+const RENDER_MAX_WAIT_MS = 800;
 const RENDER_CACHE_LIMIT = 50;
 const HEADING_ANCHOR_SELECTOR = "h1[data-line], h2[data-line], h3[data-line], h4[data-line], h5[data-line], h6[data-line]";
 const ACTIVE_HEADING_OFFSET_PX = 32;
@@ -134,8 +136,8 @@ const Preview = forwardRef<PreviewHandle, Props>(
     const [imageMenuTarget, setImageMenuTarget] = useState<PreviewImageMenuTarget | null>(null);
     const imageMenuAnchor = useRef<HTMLImageElement | null>(null);
     const [resizingHandle, setResizingHandle] = useState<ResizeHandle | null>(null);
-    const timer = useRef<number | undefined>(undefined);
     const renderCache = useRef(new Map<string, string>());
+    const renderScheduler = useRef<ReturnType<typeof createDebouncedMaxWaitScheduler<string>> | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const articleBoxRef = useRef<HTMLDivElement>(null);
     const themes = useStore((s) => s.themes);
@@ -189,17 +191,9 @@ const Preview = forwardRef<PreviewHandle, Props>(
 
     useEffect(() => subscribeCodeThemes(() => setCodeThemesVersion((version) => version + 1)), []);
 
-    // 内容渲染：250ms 尾防抖（输入停止后才渲染，避免输入期间每 100ms 全量重排）
-    // + 按 content 缓存最终 HTML：撤销/重做、切回旧内容时跳过整条解析管线
-    //   （markdown-it + DOMParser×2 + DOMPurify，实测 20KB 文档约 150-400ms/次）。
-    useEffect(() => {
-      setImageMenuTarget(null);
-      imageMenuAnchor.current = null;
-      if (timer.current) {
-        window.clearTimeout(timer.current);
-      }
-      timer.current = window.setTimeout(() => {
-        const cached = renderCache.current.get(content);
+    if (renderScheduler.current === null) {
+      renderScheduler.current = createDebouncedMaxWaitScheduler((nextContent: string) => {
+        const cached = renderCache.current.get(nextContent);
         if (cached !== undefined) {
           setHtml(cached);
           setImageOverlay(null);
@@ -208,25 +202,29 @@ const Preview = forwardRef<PreviewHandle, Props>(
         }
         // mmbiz 图片走代理显示（绕防盗链），复制时由 converter 还原成原链
         const root = document.getElementById(ARTICLE_ROOT_ID);
-        const renderedHtml = toProxyHtml(render(content));
+        const renderedHtml = toProxyHtml(render(nextContent));
         const finalHtml = reuseRenderedMermaidCharts(renderedHtml, root);
-        renderCache.current.set(content, finalHtml);
+        renderCache.current.set(nextContent, finalHtml);
         if (renderCache.current.size > RENDER_CACHE_LIMIT) {
           const oldestKey = renderCache.current.keys().next().value;
-          if (oldestKey !== undefined) {
-            renderCache.current.delete(oldestKey);
-          }
+          if (oldestKey !== undefined) renderCache.current.delete(oldestKey);
         }
         setHtml(finalHtml);
         setImageOverlay(null);
         setResizingHandle(null);
-      }, RENDER_DEBOUNCE_MS);
-      return () => {
-        if (timer.current) {
-          window.clearTimeout(timer.current);
-        }
-      };
+      }, RENDER_DEBOUNCE_MS, RENDER_MAX_WAIT_MS);
+    }
+
+    // 内容渲染：250ms 尾防抖 + 800ms 最大等待，持续输入时预览也会定期更新。
+    // + 按 content 缓存最终 HTML：撤销/重做、切回旧内容时跳过整条解析管线
+    //   （markdown-it + DOMParser×2 + DOMPurify，实测 20KB 文档约 150-400ms/次）。
+    useEffect(() => {
+      setImageMenuTarget(null);
+      imageMenuAnchor.current = null;
+      renderScheduler.current?.schedule(content);
     }, [content]);
+
+    useEffect(() => () => renderScheduler.current?.cancel(), []);
 
     useEffect(() => {
       const root = document.getElementById(ARTICLE_ROOT_ID);

@@ -25,6 +25,11 @@ const PhoneUploadDialog = lazy(() => import("./components/Upload/PhoneUploadDial
 const AiImageDialog = lazy(() => import("./components/Upload/AiImageDialog.tsx"));
 const MusicPickerDialog = lazy(() => import("./components/Upload/MusicPickerDialog.tsx"));
 const VideoChannelDialog = lazy(() => import("./components/Upload/VideoChannelDialog.tsx"));
+const CommandPalette = lazy(() => import("./components/CommandPalette/CommandPalette.tsx"));
+const TableEditorDialog = lazy(() => import("./components/Editor/TableEditorDialog.tsx"));
+const FormulaEditorDialog = lazy(() => import("./components/Editor/FormulaEditorDialog.tsx"));
+const TemplateLibraryDialog = lazy(() => import("./components/Templates/TemplateLibraryDialog.tsx"));
+const DocumentHistoryDialog = lazy(() => import("./components/History/DocumentHistoryDialog.tsx"));
 import {useStore, getThemeById, flushDocumentThemeWrite, flushSave} from "./store/index.ts";
 import {getCodeThemeById, loadAllCodeThemes, subscribeCodeThemes} from "./markdown/codeThemes.ts";
 import {formatHtmlImage, replaceMarkdownImageSizeByIndex} from "./markdown/imageMarkdown.ts";
@@ -77,6 +82,7 @@ import {applyAppearanceMode} from "./appearance/appearanceMode.ts";
 import {applyColorScheme} from "./appearance/colorScheme.ts";
 import {applyBackgroundImage} from "./appearance/backgroundImage.ts";
 import {isManualSyncShortcut} from "./utils/manualSyncShortcut.ts";
+import {buildCommandRegistry, isCommandPaletteShortcut} from "./commands/registry.ts";
 import {MOTION_DURATION_DRAWER, MOTION_EASE_OUT} from "./utils/motion.ts";
 
 // 取树里第一篇文档路径（深度优先）。
@@ -242,13 +248,58 @@ export default function App() {
   const [aiImageOpen, setAiImageOpen] = useState(false);
   const [musicPickerOpen, setMusicPickerOpen] = useState(false);
   const [videoChannelOpen, setVideoChannelOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [tableEditorOpen, setTableEditorOpen] = useState(false);
+  const [formulaEditorOpen, setFormulaEditorOpen] = useState(false);
+  const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
+  const [documentHistoryOpen, setDocumentHistoryOpen] = useState(false);
   const [, setCodeThemesVersion] = useState(0);
   const editorRef = useRef<MarkdownEditorHandle>(null);
   const previewRef = useRef<PreviewHandle>(null);
+  const commands = useMemo(() => buildCommandRegistry({
+    toggleDocuments: toggleSidebar,
+    toggleOutline,
+    openSettings,
+    openMaterialLibrary: () => setImageMaterialPickerOpen(true),
+    openEmoji: () => setEmojiPickerOpen(true),
+    openPhoneUpload: () => setPhoneUploadOpen(true),
+    openAiImage: () => setAiImageOpen(true),
+    openMusic: () => setMusicPickerOpen(true),
+    openVideoChannel: () => setVideoChannelOpen(true),
+    openTableEditor: () => setTableEditorOpen(true),
+    openFormulaEditor: () => setFormulaEditorOpen(true),
+    openTemplateLibrary: () => setTemplateLibraryOpen(true),
+    openDocumentHistory: async () => {
+      if (!useStore.getState().currentDocPath) {
+        toast.show("请先打开一篇文章。", "error");
+        return;
+      }
+      await flushSave();
+      setDocumentHistoryOpen(true);
+    },
+    syncNow: async () => {
+      await flushBackgroundDocumentOperations();
+      await useStore.getState().runSyncNow();
+    },
+    undo: () => editorRef.current?.undo(),
+    redo: () => editorRef.current?.redo(),
+    openSearch: () => editorRef.current?.openSearch(),
+    runSyntaxAction: (action) => editorRef.current?.runSyntaxAction(action),
+  }), [openSettings, toggleOutline, toggleSidebar]);
   useEffect(() => subscribeCodeThemes(() => setCodeThemesVersion((version) => version + 1)), []);
   // 后台预载全量代码主题（独立 chunk），选择器打开与非常驻主题预览无需等待。
   useEffect(() => {
     void loadAllCodeThemes().catch((error) => console.warn("加载代码主题失败：", error));
+  }, []);
+
+  useEffect(() => {
+    const handleCommandPaletteShortcut = (event: KeyboardEvent) => {
+      if (!isCommandPaletteShortcut(event)) return;
+      event.preventDefault();
+      if (!event.repeat) setCommandPaletteOpen(true);
+    };
+    window.addEventListener("keydown", handleCommandPaletteShortcut, true);
+    return () => window.removeEventListener("keydown", handleCommandPaletteShortcut, true);
   }, []);
   const outlineItems = useMemo(() => parseMarkdownOutline(content), [content]);
   const reduceMotion = useReducedMotion();
@@ -845,6 +896,8 @@ export default function App() {
               onOpenAiImage={() => setAiImageOpen(true)}
               onOpenMusic={() => setMusicPickerOpen(true)}
               onOpenVideoChannel={() => setVideoChannelOpen(true)}
+              onOpenTableEditor={() => setTableEditorOpen(true)}
+              onOpenFormulaEditor={() => setFormulaEditorOpen(true)}
               toolbarActions={<ArticleTaskLog currentDocumentPath={currentDocPath} />}
             >
               <MarkdownEditor
@@ -937,6 +990,35 @@ export default function App() {
       </footer>
 
       <Suspense fallback={null}>
+        {commandPaletteOpen && (
+          <CommandPalette commands={commands} onClose={() => setCommandPaletteOpen(false)} />
+        )}
+        {tableEditorOpen && (
+          <TableEditorDialog editorRef={editorRef} onClose={() => setTableEditorOpen(false)} />
+        )}
+        {formulaEditorOpen && (
+          <FormulaEditorDialog editorRef={editorRef} onClose={() => setFormulaEditorOpen(false)} />
+        )}
+        {templateLibraryOpen && (
+          <TemplateLibraryDialog
+            editorRef={editorRef}
+            currentContent={content}
+            currentDocumentPath={currentDocPath}
+            onClose={() => setTemplateLibraryOpen(false)}
+          />
+        )}
+        {documentHistoryOpen && currentDocPath && (
+          <DocumentHistoryDialog
+            documentPath={currentDocPath}
+            currentContent={content}
+            onRestore={(restoredContent) => {
+              const editor = editorRef.current;
+              const snapshot = editor?.getDocumentSnapshot();
+              return Boolean(editor && snapshot && editor.replaceRange(0, snapshot.text.length, restoredContent, snapshot.text));
+            }}
+            onClose={() => setDocumentHistoryOpen(false)}
+          />
+        )}
         {settingsOpen && (
           <SettingsDialog
             onClose={() => setSettingsOpen(false)}

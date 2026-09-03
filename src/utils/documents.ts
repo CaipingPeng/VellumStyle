@@ -6,6 +6,7 @@ import {
   parseDocumentThemeMap,
   type DocumentThemeMap,
 } from "./documentThemes.ts";
+import {recordWebDocumentTransition} from "./documentHistory.ts";
 
 export interface DocNode {
   name: string;
@@ -131,7 +132,9 @@ export function readDocument(path: string): Promise<string> {
 
 export function writeDocument(path: string, text: string): Promise<void> {
   if (!isTauriRuntime()) {
+    const before = webFiles.get(path) ?? "";
     webFiles.set(path, text);
+    recordWebDocumentTransition(path, before, text);
     return Promise.resolve();
   }
   return invoke("write_document", {path, text});

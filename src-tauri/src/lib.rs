@@ -5,9 +5,11 @@ mod export_file;
 mod external;
 mod import;
 mod ipc_util;
+mod history;
 mod preview_image;
 mod sync;
 mod themes;
+mod templates;
 mod wechat;
 mod wechat_backend;
 use tauri::http::{Response, StatusCode};
@@ -147,6 +149,10 @@ pub fn run() {
             documents::move_entry,
             documents::get_entry_absolute_path,
             documents::open_entry_location,
+            history::list_document_history,
+            templates::list_article_templates,
+            templates::save_article_template,
+            templates::delete_article_template,
             export_file::write_export_file,
             export_file::export_pdf_file,
             export_file::render_pdf_document,

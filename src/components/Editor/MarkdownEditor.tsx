@@ -29,6 +29,12 @@ export interface MarkdownEditorHandle {
   // 撤销/重做（CodeMirror history）。
   undo: () => void;
   redo: () => void;
+  // 打开已本地化的查找/替换面板。
+  openSearch: () => void;
+  // 对话框读取当前文档与选区；所有偏移均为 CodeMirror 字符偏移。
+  getDocumentSnapshot: () => {text: string; from: number; to: number; head: number} | null;
+  // expectedText 不匹配时拒绝写入，避免长时间打开的对话框覆盖后续编辑。
+  replaceRange: (from: number, to: number, text: string, expectedText?: string) => boolean;
   // 编辑器滚动容器（.cm-scroller），供同步滚动监听
   getScroller: () => HTMLElement | null;
   // 顶部可视行号（0-based，与渲染 data-line 同基准）
@@ -344,6 +350,36 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         if (!view) return;
         redo(view);
         view.focus();
+      },
+      openSearch: () => {
+        const view = viewRef.current;
+        if (!view) return;
+        openLocalizedSearchPanel(view);
+        view.focus();
+      },
+      getDocumentSnapshot: () => {
+        const view = viewRef.current;
+        if (!view) return null;
+        const selection = view.state.selection.main;
+        return {
+          text: view.state.doc.toString(),
+          from: selection.from,
+          to: selection.to,
+          head: selection.head,
+        };
+      },
+      replaceRange: (from, to, text, expectedText) => {
+        const view = viewRef.current;
+        if (!view || from < 0 || to < from || to > view.state.doc.length) return false;
+        if (expectedText !== undefined && view.state.sliceDoc(from, to) !== expectedText) return false;
+        view.dispatch({
+          changes: {from, to, insert: text},
+          selection: EditorSelection.cursor(from + text.length),
+          userEvent: "input.format",
+          scrollIntoView: true,
+        });
+        view.focus();
+        return true;
       },
       getScroller: () => viewRef.current?.scrollDOM ?? null,
       getTopLine: () => {

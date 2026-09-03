@@ -5,6 +5,7 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "core:app:allow-default-window-icon",
     "core:window:allow-destroy",
     "dialog:default",
     "process:default",

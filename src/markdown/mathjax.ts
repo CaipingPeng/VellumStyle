@@ -40,7 +40,8 @@ type MathJaxConfig = MathJaxApi & {
 let loadPromise: Promise<MathJaxApi> | undefined;
 let idlePromise: Promise<void> = Promise.resolve();
 let typesetQueue: Promise<void> = Promise.resolve();
-let jobId = 0;
+let nextJobId = 0;
+const rootJobIds = new WeakMap<HTMLElement, number>();
 
 export function createMathJaxConfig(): MathJaxConfig {
   return {
@@ -87,16 +88,19 @@ async function loadMathJax(): Promise<MathJaxApi> {
 }
 
 export function typesetMath(root: HTMLElement): Promise<void> {
-  const currentJob = ++jobId;
+  const currentJob = ++nextJobId;
+  rootJobIds.set(root, currentJob);
   const job = typesetQueue.then(async () => {
     const mathJax = await loadMathJax();
-    if (currentJob !== jobId || !root.isConnected) {
+    // 只淘汰同一个容器的旧任务。预览区和公式对话框可以同时排版，互不取消。
+    if (rootJobIds.get(root) !== currentJob || !root.isConnected) {
       return;
     }
 
     mathJax.typesetClear?.([root]);
     mathJax.startup?.document?.clear?.();
     await mathJax.typesetPromise?.([root]);
+    if (rootJobIds.get(root) === currentJob) rootJobIds.delete(root);
   });
 
   typesetQueue = job.catch(() => undefined);

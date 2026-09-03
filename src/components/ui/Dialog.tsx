@@ -1,4 +1,4 @@
-import {useEffect, useRef, type ReactNode} from "react";
+import {useEffect, useRef, type ReactNode, type RefObject} from "react";
 import {createPortal} from "react-dom";
 import {AnimatePresence, motion} from "framer-motion";
 import {X} from "lucide-react";
@@ -17,6 +17,7 @@ interface Props {
   footer?: ReactNode;
   headerActions?: ReactNode;
   contentPadding?: boolean;
+  initialFocusRef?: RefObject<HTMLElement | null>;
 }
 
 // 焦点圈闭选择器：可聚焦元素（含 WebView2 下的旧式可聚焦元素）。
@@ -59,6 +60,7 @@ export default function Dialog({
   footer,
   headerActions,
   contentPadding = true,
+  initialFocusRef,
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -84,10 +86,10 @@ export default function Dialog({
     if (!open) return undefined;
     const panel = panelRef.current;
     const previous = document.activeElement as HTMLElement | null;
-    const target = panel?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    const target = initialFocusRef?.current ?? panel?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
     target?.focus();
     return () => previous?.focus();
-  }, [open]);
+  }, [initialFocusRef, open]);
 
   return createPortal(
     <AnimatePresence>

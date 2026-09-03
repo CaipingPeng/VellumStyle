@@ -11,6 +11,8 @@ interface EditorWorkspacePanelProps {
   onOpenAiImage?: () => void;
   onOpenMusic?: () => void;
   onOpenVideoChannel?: () => void;
+  onOpenTableEditor?: () => void;
+  onOpenFormulaEditor?: () => void;
   toolbarActions?: ReactNode;
   children: ReactNode;
 }
@@ -24,6 +26,8 @@ export default function EditorWorkspacePanel({
   onOpenAiImage,
   onOpenMusic,
   onOpenVideoChannel,
+  onOpenTableEditor,
+  onOpenFormulaEditor,
   toolbarActions,
   children,
 }: EditorWorkspacePanelProps) {
@@ -49,6 +53,8 @@ export default function EditorWorkspacePanel({
             onOpenAiImage={onOpenAiImage}
             onOpenMusic={onOpenMusic}
             onOpenVideoChannel={onOpenVideoChannel}
+            onOpenTableEditor={onOpenTableEditor}
+            onOpenFormulaEditor={onOpenFormulaEditor}
           />
         </div>
         {toolbarActions && (

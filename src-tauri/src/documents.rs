@@ -124,7 +124,13 @@ pub fn read_document(app: AppHandle, path: String) -> Result<String, String> {
 #[tauri::command]
 pub fn write_document(app: AppHandle, path: String, text: String) -> Result<(), String> {
     let full = resolve_in_documents(&app, &path)?;
-    std::fs::write(&full, text).map_err(|e| format!("写入文档失败：{e}"))
+    let before = std::fs::read_to_string(&full).unwrap_or_default();
+    std::fs::write(&full, &text).map_err(|e| format!("写入文档失败：{e}"))?;
+    if let Err(error) = crate::history::record_document_transition(&app, &path, &before, &text) {
+        // 历史是写盘后的附加保障；其失败不应把已成功的正文保存伪装成失败。
+        eprintln!("[history] record failed path={path} err={error}");
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -180,8 +186,11 @@ pub fn rename_entry(app: AppHandle, path: String, new_name: String) -> Result<St
     if target.exists() && !same_file(&full, &target) {
         return Err("目标名已存在".into());
     }
+    let old_document_paths = markdown_paths(&full, &base);
     std::fs::rename(&full, &target).map_err(|e| format!("重命名失败：{e}"))?;
-    Ok(rel_path(&base, &target))
+    let next_path = rel_path(&base, &target);
+    migrate_history_paths(&app, &old_document_paths, &path, &next_path);
+    Ok(next_path)
 }
 
 /// 判断两个路径是否指向同一文件（用于大小写不敏感文件系统上的“自身改名”判断）。
@@ -257,8 +266,42 @@ pub fn move_entry(app: AppHandle, src: String, dest_dir: String) -> Result<Strin
             return Err("不能把文件夹移动到它自己的子目录".into());
         }
     }
+    let old_document_paths = markdown_paths(&from, &base);
     std::fs::rename(&from, &target).map_err(|e| format!("移动失败：{e}"))?;
-    Ok(rel_path(&base, &target))
+    let next_path = rel_path(&base, &target);
+    migrate_history_paths(&app, &old_document_paths, &src, &next_path);
+    Ok(next_path)
+}
+
+fn markdown_paths(full: &Path, base: &Path) -> Vec<String> {
+    if full.is_file() {
+        return full.extension().and_then(|value| value.to_str())
+            .filter(|value| value.eq_ignore_ascii_case("md"))
+            .map(|_| vec![rel_path(base, full)])
+            .unwrap_or_default();
+    }
+    let mut result = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(full) {
+        for entry in entries.flatten() {
+            result.extend(markdown_paths(&entry.path(), base));
+        }
+    }
+    result
+}
+
+fn migrate_history_paths(app: &AppHandle, paths: &[String], old_root: &str, new_root: &str) {
+    for old_path in paths {
+        let new_path = if old_path == old_root {
+            new_root.to_string()
+        } else if let Some(suffix) = old_path.strip_prefix(&format!("{}/", old_root.trim_end_matches('/'))) {
+            format!("{}/{suffix}", new_root.trim_end_matches('/'))
+        } else {
+            continue;
+        };
+        if let Err(error) = crate::history::migrate_document_history(app, old_path, &new_path) {
+            eprintln!("[history] migrate failed from={old_path} to={new_path} err={error}");
+        }
+    }
 }
 
 fn existing_absolute_path(full: PathBuf) -> Result<String, String> {
