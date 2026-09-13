@@ -2,7 +2,15 @@
 // 错误统一 toast；删除当前文档后由调用方决定切到哪篇（这里只负责数据）。
 import {useMemo} from "react";
 import {flushSave, scheduleCloudSync, useStore} from "../../store/index.ts";
-import {createDocument, createFolder, renameEntry, deleteEntry, moveEntry, openEntryLocation} from "../../utils/documents.ts";
+import {
+  createDocument,
+  createFolder,
+  renameEntry,
+  deleteEntry,
+  moveEntry,
+  openEntryLocation,
+} from "../../utils/documents.ts";
+import {remapPath, replaceTreePaths} from "./pathRemap.ts";
 import {toast} from "../Toast/toast.ts";
 import {copyAbsolutePath as copyAbsolutePathToClipboard} from "./copyAbsolutePath.ts";
 import {
@@ -12,10 +20,11 @@ import {
 } from "../../utils/backgroundDocumentUpdates.ts";
 import {imageUploadTasks} from "../../utils/imageUploadTasks.ts";
 
-function remapPath(path: string | null, fromPath: string, toPath: string): string | null {
-  if (!path) return path;
-  if (path === fromPath) return toPath;
-  return path.startsWith(`${fromPath}/`) ? `${toPath}${path.slice(fromPath.length)}` : path;
+export interface RenameOutcome {
+  ok: boolean;
+  oldPath: string;
+  newPath: string; // ok 时为新路径；失败时等于 oldPath
+  error?: string;
 }
 
 export function useDocActions() {
@@ -46,7 +55,7 @@ export function useDocActions() {
         toast.show(String(e), "error");
       }
     },
-    async rename(path: string, newName: string) {
+    async rename(path: string, newName: string): Promise<RenameOutcome> {
       try {
         const newPath = await runBackgroundDocumentMutation(
           async () => {
@@ -61,12 +70,17 @@ export function useDocActions() {
         const state = useStore.getState();
         const nextCurrentPath = remapPath(state.currentDocPath, path, newPath);
         const nextSelectedPath = remapPath(state.selectedPath, path, newPath);
+        // 乐观替换：不等后端全量重扫，改名结果立刻反映到树上（展开态与滚动位置也好保持）。
+        useStore.setState({tree: replaceTreePaths(state.tree, path, newPath)});
         if (nextCurrentPath !== state.currentDocPath) state.setCurrentDocPath(nextCurrentPath);
         if (nextSelectedPath !== state.selectedPath) state.setSelectedPath(nextSelectedPath);
         await loadTree();
         scheduleCloudSync();
+        return {ok: true, oldPath: path, newPath};
       } catch (e) {
-        toast.show(String(e), "error");
+        const message = String(e);
+        toast.show(message, "error");
+        return {ok: false, oldPath: path, newPath: path, error: message};
       }
     },
     async remove(path: string, firstDocPath: string | null, options: {recursive?: boolean} = {}) {

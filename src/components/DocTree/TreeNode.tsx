@@ -4,11 +4,14 @@ import {AnimatePresence, motion} from "framer-motion";
 import type {DocNode} from "../../utils/documents.ts";
 import {MOTION_DURATION_FAST, MOTION_DURATION_MEDIUM, MOTION_EASE_SMOOTH} from "../../utils/motion.ts";
 import DraftInput from "./DraftInput.tsx";
+import type {RenameSession} from "./renameSession.ts";
 
 export interface CreatingState {
   mode: "doc" | "folder";
   dir: string; // 目标父目录（相对 documents/，"" = 根）
   value: string;
+  error?: string | null;
+  pending?: boolean;
 }
 
 interface Props {
@@ -20,15 +23,17 @@ interface Props {
   dragOverPath: string | null;
   dragSrcPath?: string | null; // 拖拽中的源节点（视觉淡化），无拖拽时省略
   creating: CreatingState | null;
+  // 重命名会话统一下发：所有节点都能看到"当前有会话 + 目标是哪个路径"，
+  // 命中路径的节点高亮自己（输入本身在 RenameDialog 里完成，行内不再放输入框）。
+  renameSession: {path: string; session: RenameSession} | null;
   onToggle: (path: string) => void;
   onSelectDoc: (path: string) => void; // 点文档：选中并打开到编辑器
   onSelectFolder: (path: string) => void; // 点文件夹：仅选中（+展开），不打开文件
-  onRename: (path: string, newName: string) => void;
+  onStartRename: (node: DocNode) => void;
   onDelete: (node: DocNode) => void;
   onOpenLocation: (path: string) => void;
   onCopyAbsolutePath: (path: string) => void;
   onCreateIn: (dir: string, mode: "doc" | "folder") => void;
-  renameSignal: {path: string; token: number} | null; // DocTree 收到 F2 后广播，命中的节点进入重命名
   onDragStartNode: (path: string) => void;
   onDragOverNode: (path: string | null) => void;
   onDropNode: (destDir: string) => void;
@@ -38,43 +43,30 @@ interface Props {
 }
 
 function TreeNode({
-  node, depth, selectedPath, sidebarFocused, expanded, dragOverPath, dragSrcPath, creating,
-  onToggle, onSelectDoc, onSelectFolder, onRename, onDelete,
-  onOpenLocation, onCopyAbsolutePath, onCreateIn, renameSignal, onDragStartNode, onDragOverNode, onDropNode,
+  node, depth, selectedPath, sidebarFocused, expanded, dragOverPath, dragSrcPath, creating, renameSession,
+  onToggle, onSelectDoc, onSelectFolder, onStartRename,
+  onDelete, onOpenLocation, onCopyAbsolutePath, onCreateIn, onDragStartNode, onDragOverNode, onDropNode,
   onDraftChange, onDraftCommit, onDraftCancel,
 }: Props) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(node.name);
+  // 命中会话目标路径的节点高亮自己；输入在 RenameDialog 弹层里完成。
+  const renaming = renameSession !== null && renameSession.path === node.path;
   const [contextMenu, setContextMenu] = useState<{x: number; y: number} | null>(null);
   const isOpen = node.isDir && expanded.has(node.path);
   const selected = selectedPath === node.path; // 文件/文件夹一视同仁
   const dropTarget = node.isDir && dragOverPath === node.path;
   const isDragSource = dragSrcPath === node.path;
 
-  const commitRename = () => {
-    setEditing(false);
-    const name = draft.trim();
-    if (name && name !== node.name) onRename(node.path, name);
-    else setDraft(node.name);
-  };
-
-  // F2 重命名信号：命中当前节点时进入编辑（文件夹也可重命名，Windows 习惯）。
-  useEffect(() => {
-    if (renameSignal && renameSignal.path === node.path) {
-      setDraft(node.name);
-      setEditing(true);
-    }
-  }, [renameSignal, node.path, node.name]);
-
   // 选中样式：选中（文件/文件夹一视同仁）用 accent-subtle 底 + accent 字；
-  // 拖拽落点同样用 accent-subtle 高亮；未选中悬停淡灰底。sidebarFocused 仍透传。
+  // 改名中的行用虚线圈出，让弹层与树上的目标对得上；未选中悬停淡灰底。
   void sidebarFocused;
-  const rowTone = selected
+  const rowTone = renaming
     ? "bg-accent-subtle text-accent"
-    : dropTarget
-      ? "bg-accent-subtle text-text"
-      : "text-text hover:bg-bg-tertiary";
-  const actionTone = selected || dropTarget ? "bg-accent-subtle" : "bg-bg-tertiary";
+    : selected
+      ? "bg-accent-subtle text-accent"
+      : dropTarget
+        ? "bg-accent-subtle text-text"
+        : "text-text hover:bg-bg-tertiary";
+  const actionTone = selected || dropTarget || renaming ? "bg-accent-subtle" : "bg-bg-tertiary";
   // 文件夹行 hover 时除重命名/删除外还显示「新建文档/新建文件夹」，操作区更宽，标题让位更多。
   const hoverLabelPadding = node.isDir ? "group-hover:pr-20" : "group-hover:pr-12";
   const hoverActionMaxWidth = node.isDir ? "group-hover:max-w-20" : "group-hover:max-w-12";
@@ -100,7 +92,7 @@ function TreeNode({
   const openContextMenu = (event: MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    if (editing) return;
+    if (renaming) return;
     setContextMenu({
       x: Math.max(8, Math.min(event.clientX, window.innerWidth - 176)),
       y: Math.max(8, Math.min(event.clientY, window.innerHeight - 80)),
@@ -110,9 +102,9 @@ function TreeNode({
   return (
     <div>
       <div
-        title={!editing ? node.name : undefined}
+        title={node.name}
         aria-label={node.name}
-        draggable={!editing}
+        draggable={!renaming}
         onContextMenu={openContextMenu}
         onDragStart={(e) => {
           e.stopPropagation();
@@ -146,24 +138,26 @@ function TreeNode({
         }}
         onClick={(e) => {
           e.stopPropagation();
+          if (renaming) return; // 改名弹层打开时，树上的点击不改变选中
           if (node.isDir) {
             // 文件夹：仅选中 + 展开/收起，不打开任何文件。
             onSelectFolder(node.path);
             onToggle(node.path);
-          } else {
-            onSelectDoc(node.path);
+            return;
           }
+          onSelectDoc(node.path);
         }}
         onDoubleClick={(e) => {
           e.stopPropagation();
-          if (node.isDir || editing) return;
-          setDraft(node.name);
-          setEditing(true);
+          // Windows 习惯：文件与文件夹都以双击进入重命名；文件夹的展开/收起由单击负责，
+          // 双击时两次单击相互抵消，展开态回到原样。
+          if (renaming) return;
+          onStartRename(node);
         }}
         className={`group relative flex h-7 cursor-pointer items-center gap-1 overflow-hidden pr-1.5 text-sm2 transition-[color,background-color,transform] duration-fast active:scale-[0.985] ${isDragSource ? "opacity-50" : ""} ${rowTone}`}
         style={{
           paddingLeft: 8 + depth * 14,
-          outline: dropTarget ? "1px dashed var(--accent)" : "none",
+          outline: dropTarget ? "1px dashed var(--accent)" : renaming ? "1px dashed var(--accent)" : "none",
           outlineOffset: -1,
         }}
       >
@@ -180,28 +174,10 @@ function TreeNode({
           <span style={{width: 14, flexShrink: 0}} />
         )}
         {node.isDir ? <Folder size={14} /> : <FileText size={14} />}
-        {editing ? (
-          <input
-            autoFocus
-            value={draft}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commitRename}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commitRename();
-              if (e.key === "Escape") {
-                setEditing(false);
-                setDraft(node.name);
-              }
-            }}
-            style={{flex: 1, fontSize: 13, minWidth: 0}}
-          />
-        ) : (
-          <span className={`min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap transition-[padding] duration-fast ${hoverLabelPadding}`}>
-            {node.name}
-          </span>
-        )}
-        {!editing && (
+        <span className={`min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap transition-[padding] duration-fast ${hoverLabelPadding}`}>
+          {node.name}
+        </span>
+        {!renaming && (
           <span
             className={`pointer-events-none absolute inset-y-0 right-0 flex max-w-0 items-center gap-1 overflow-hidden pl-2 pr-1.5 opacity-0 transition-[max-width,opacity] duration-fast group-hover:pointer-events-auto ${hoverActionMaxWidth} group-hover:opacity-100 ${actionTone}`}
           >
@@ -211,8 +187,7 @@ function TreeNode({
               className="flex flex-shrink-0 items-center justify-center border-0 bg-transparent p-0"
               onClick={(e) => {
                 e.stopPropagation();
-                setDraft(node.name);
-                setEditing(true);
+                onStartRename(node);
               }}
             >
               <Pencil size={13} />
@@ -269,6 +244,17 @@ function TreeNode({
             className="flex h-8 w-full items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-sm2 text-text outline-none transition-colors duration-fast hover:bg-bg-tertiary focus-visible:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)]"
             onClick={() => {
               setContextMenu(null);
+              onStartRename(node);
+            }}
+          >
+            <Pencil size={14} />
+            重命名
+          </button>
+          <button
+            type="button"
+            className="flex h-8 w-full items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 text-left text-sm2 text-text outline-none transition-colors duration-fast hover:bg-bg-tertiary focus-visible:bg-accent-subtle focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--ring)]"
+            onClick={() => {
+              setContextMenu(null);
               onOpenLocation(node.path);
             }}
           >
@@ -303,6 +289,8 @@ function TreeNode({
                 mode={creating.mode}
                 depth={depth + 1}
                 value={creating.value}
+                error={creating.error ?? null}
+                pending={creating.pending ?? false}
                 onChange={onDraftChange}
                 onCommit={onDraftCommit}
                 onCancel={onDraftCancel}
@@ -319,15 +307,15 @@ function TreeNode({
                 dragOverPath={dragOverPath}
                 dragSrcPath={dragSrcPath}
                 creating={creating}
+                renameSession={renameSession}
                 onToggle={onToggle}
                 onSelectDoc={onSelectDoc}
                 onSelectFolder={onSelectFolder}
-                onRename={onRename}
+                onStartRename={onStartRename}
                 onDelete={onDelete}
                 onOpenLocation={onOpenLocation}
                 onCopyAbsolutePath={onCopyAbsolutePath}
                 onCreateIn={onCreateIn}
-                renameSignal={renameSignal}
                 onDragStartNode={onDragStartNode}
                 onDragOverNode={onDragOverNode}
                 onDropNode={onDropNode}
@@ -345,4 +333,9 @@ function TreeNode({
 
 // memo：仅当节点自身 props 变化时重渲染。回调由 DocTree 侧 useCallback 稳定化，
 // 聚焦、面板宽度调整、App 无关重渲染不再整树重建。
+// 重命名会话在树上只命中一条路径：其余节点的 rename 恒为 null，不会因输入抖动整树重渲染。
+// memo：仅当节点自身 props 变化时重渲染。回调由 DocTree 侧 useCallback 稳定化，
+// 聚焦、面板宽度调整、App 无关重渲染不再整树重建。
+// 注意：会话必须以 {path, session} 形式下发给**所有**节点。若只在命中节点上挂 rename，
+// 祖先节点会被浅比较判定"props 未变"而跳过渲染，嵌套节点永远拿不到会话（改名完全无反应）。
 export default memo(TreeNode);

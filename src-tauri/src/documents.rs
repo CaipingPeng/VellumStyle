@@ -23,12 +23,45 @@ fn documents_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
-// 名称非法字符过滤（Windows 文件名约束 + 路径分隔符）。
+// 名称非法字符过滤（Windows 文件名约束 + 路径分隔符 + 尾部点/空格 + 设备保留名）。
+// 前端 validateEntryName 保持同一套规则，输入过程中即可提示；
+// 这里的校验是权威兜底（命令可能被其它入口调用）。
 fn is_valid_name(name: &str) -> bool {
-    !name.is_empty()
-        && !name.contains(['/', '\\', ':', '*', '?', '"', '<', '>', '|'])
-        && name != "."
-        && name != ".."
+    if name.is_empty()
+        || name.contains(['/', '\\', ':', '*', '?', '"', '<', '>', '|'])
+        || name == "."
+        || name == ".."
+    {
+        return false;
+    }
+    // Windows 会静默去掉结尾的点和空格，导致实际文件名与用户输入不一致。
+    if name.ends_with('.') || name.ends_with(' ') {
+        return false;
+    }
+    let stem = match name.rsplit_once('.') {
+        Some((stem, _)) => stem,
+        None => name,
+    };
+    if stem.is_empty() || stem.ends_with('.') || stem.ends_with(' ') {
+        return false;
+    }
+    !is_windows_reserved_name(stem)
+}
+
+// CON / PRN / NUL / COM1..9 / LPT1..9 等在 Windows 上是设备名，不能作为文件名。
+fn is_windows_reserved_name(stem: &str) -> bool {
+    let upper = stem.to_ascii_uppercase();
+    if matches!(upper.as_str(), "CON" | "PRN" | "AUX" | "NUL") {
+        return true;
+    }
+    for prefix in ["COM", "LPT"] {
+        if let Some(digit) = upper.strip_prefix(prefix) {
+            if digit.len() == 1 && matches!(digit.as_bytes()[0], b'1'..=b'9') {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 // 把相对路径解析为 documents/ 下的绝对路径，校验不逃逸。
@@ -135,8 +168,9 @@ pub fn write_document(app: AppHandle, path: String, text: String) -> Result<(), 
 
 #[tauri::command]
 pub fn create_document(app: AppHandle, dir: String, name: String) -> Result<String, String> {
-    if !is_valid_name(&name) {
-        return Err("名称含非法字符".into());
+    let name = name.trim();
+    if !is_valid_name(name) {
+        return Err("名称含非法字符或为系统保留名".into());
     }
     let base = documents_dir(&app)?;
     let parent = resolve_in_documents(&app, &dir)?;
@@ -151,12 +185,13 @@ pub fn create_document(app: AppHandle, dir: String, name: String) -> Result<Stri
 
 #[tauri::command]
 pub fn create_folder(app: AppHandle, dir: String, name: String) -> Result<String, String> {
-    if !is_valid_name(&name) {
-        return Err("名称含非法字符".into());
+    let name = name.trim();
+    if !is_valid_name(name) {
+        return Err("名称含非法字符或为系统保留名".into());
     }
     let base = documents_dir(&app)?;
     let parent = resolve_in_documents(&app, &dir)?;
-    let full = parent.join(&name);
+    let full = parent.join(name);
     if full.exists() {
         return Err("已存在同名文件夹".into());
     }
@@ -166,8 +201,9 @@ pub fn create_folder(app: AppHandle, dir: String, name: String) -> Result<String
 
 #[tauri::command]
 pub fn rename_entry(app: AppHandle, path: String, new_name: String) -> Result<String, String> {
-    if !is_valid_name(&new_name) {
-        return Err("名称含非法字符".into());
+    let new_name = new_name.trim();
+    if !is_valid_name(new_name) {
+        return Err("名称含非法字符或为系统保留名".into());
     }
     let base = documents_dir(&app)?;
     let full = resolve_in_documents(&app, &path)?;
@@ -177,14 +213,19 @@ pub fn rename_entry(app: AppHandle, path: String, new_name: String) -> Result<St
     let is_dir = full.is_dir();
     let parent = full.parent().ok_or_else(|| "无父目录".to_string())?;
     let target = if is_dir {
-        parent.join(&new_name)
+        parent.join(new_name)
     } else {
         parent.join(format!("{new_name}.md"))
     };
     // Windows/macOS 文件系统大小写不敏感：target.exists() 会命中源自身，
     // 纯大小写改名（readme.md -> Readme.md）应放行；同名不同文件才拒绝。
     if target.exists() && !same_file(&full, &target) {
-        return Err("目标名已存在".into());
+        // 区分文件/文件夹，前端行内提示与这里保持同一措辞。
+        return Err(if is_dir {
+            "同级已有同名文件夹".into()
+        } else {
+            "同级已有同名文档".into()
+        });
     }
     let old_document_paths = markdown_paths(&full, &base);
     std::fs::rename(&full, &target).map_err(|e| format!("重命名失败：{e}"))?;
@@ -392,6 +433,21 @@ mod tests {
         assert!(!is_valid_name("a:b"));
         assert!(is_valid_name("周报"));
         assert!(is_valid_name("2026-周报_v1"));
+    }
+
+    #[test]
+    fn rejects_trailing_dot_space_and_reserved_device_names() {
+        // Windows 会静默吞掉结尾的点和空格，实际名字与用户输入不一致。
+        assert!(!is_valid_name("周报."));
+        assert!(!is_valid_name("周报 "));
+        assert!(!is_valid_name("周报 ."));
+        // 设备保留名：CON.md 之类同样不可用（与前端 validateEntryName 一致）。
+        assert!(!is_valid_name("CON"));
+        assert!(!is_valid_name("con.md"));
+        assert!(!is_valid_name("LPT9"));
+        assert!(is_valid_name("CONSOLE"));
+        assert!(is_valid_name("COM10"));
+        assert!(is_valid_name("v1.0 周报"));
     }
 
     #[cfg(windows)]

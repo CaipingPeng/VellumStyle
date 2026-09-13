@@ -23,12 +23,12 @@ function renderTreeNode(
     onToggle: () => {},
     onSelectDoc: () => {},
     onSelectFolder: () => {},
-    onRename: () => {},
+    onStartRename: () => {},
     onDelete: () => {},
     onOpenLocation: () => {},
     onCopyAbsolutePath: () => {},
     onCreateIn: () => {},
-    renameSignal: null,
+    renameSession: null,
     onDragStartNode: () => {},
     onDragOverNode: () => {},
     onDropNode: () => {},
@@ -51,13 +51,16 @@ function renderTreeNode(
   };
 }
 
-test("文件节点双击进入重命名输入", () => {
+test("文件节点双击请求进入重命名", () => {
   (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const started: string[] = [];
   const {container, cleanup} = renderTreeNode({
     name: "草稿.md",
     path: "草稿.md",
     isDir: false,
     children: [],
+  }, {
+    onStartRename: (node) => started.push(node.path),
   });
 
   try {
@@ -66,19 +69,22 @@ test("文件节点双击进入重命名输入", () => {
       container.querySelector('[aria-label="草稿.md"]')?.dispatchEvent(new window.MouseEvent("dblclick", {bubbles: true}));
     });
 
-    assert.equal(container.querySelector<HTMLInputElement>("input")?.value, "草稿.md");
+    assert.deepEqual(started, ["草稿.md"]);
   } finally {
     cleanup();
   }
 });
 
-test("文件夹节点双击不进入重命名，避免和展开折叠冲突", () => {
+test("文件夹节点双击同样进入重命名（Windows 习惯）", () => {
   (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const started: string[] = [];
   const {container, cleanup} = renderTreeNode({
     name: "素材",
     path: "素材",
     isDir: true,
     children: [],
+  }, {
+    onStartRename: (node) => started.push(node.path),
   });
 
   try {
@@ -86,7 +92,32 @@ test("文件夹节点双击不进入重命名，避免和展开折叠冲突", ()
       container.querySelector('[aria-label="素材"]')?.dispatchEvent(new window.MouseEvent("dblclick", {bubbles: true}));
     });
 
-    assert.equal(container.querySelector("input"), null);
+    assert.deepEqual(started, ["素材"]);
+  } finally {
+    cleanup();
+  }
+});
+
+test("改名中的行高亮自己，且不再渲染行内输入框（输入在弹层里）", () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const {container, cleanup} = renderTreeNode({
+    name: "草稿.md",
+    path: "草稿.md",
+    isDir: false,
+    children: [],
+  }, {
+    renameSession: {path: "草稿.md", session: {path: "草稿.md", value: "新草稿.md", isDir: false, error: null, pending: false}},
+  });
+
+  try {
+    const row = container.querySelector<HTMLElement>('[aria-label="草稿.md"]');
+    assert.ok(row);
+    assert.match(row.className, /bg-accent-subtle/);
+    assert.match(row.style.outline, /dashed/);
+    // 行内不再有输入框，改名输入由 RenameDialog 承担
+    assert.equal(container.querySelectorAll("input").length, 0);
+    // 改名中不可拖拽，避免与弹层操作打架
+    assert.equal(row.getAttribute("draggable"), "false");
   } finally {
     cleanup();
   }
@@ -136,7 +167,7 @@ test("文件节点 hover 不显示新建按钮", () => {
   }
 });
 
-test("收到 F2 重命名信号后文件节点进入编辑", () => {
+test("重命名会话目标不是本节点时保持只读展示", () => {
   (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
   const {container, cleanup} = renderTreeNode({
     name: "草稿.md",
@@ -144,47 +175,12 @@ test("收到 F2 重命名信号后文件节点进入编辑", () => {
     isDir: false,
     children: [],
   }, {
-    renameSignal: {path: "草稿.md", token: 1},
+    renameSession: {path: "其他.md", session: {path: "其他.md", value: "其他.md", isDir: false, error: null, pending: false}},
   });
 
   try {
-    assert.equal(container.querySelector<HTMLInputElement>("input")?.value, "草稿.md");
-  } finally {
-    cleanup();
-  }
-});
-
-test("收到 F2 重命名信号后文件夹节点进入编辑", () => {
-  (globalThis as typeof globalThis &{IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
-  const {container, cleanup} = renderTreeNode({
-    name: "素材",
-    path: "素材",
-    isDir: true,
-    children: [],
-  }, {
-    renameSignal: {path: "素材", token: 1},
-  });
-
-  try {
-    assert.equal(container.querySelector<HTMLInputElement>("input")?.value, "素材");
-  } finally {
-    cleanup();
-  }
-});
-
-test("F2 重命名信号只命中对应路径的节点", () => {
-  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
-  const {container, cleanup} = renderTreeNode({
-    name: "草稿.md",
-    path: "草稿.md",
-    isDir: false,
-    children: [],
-  }, {
-    renameSignal: {path: "其他.md", token: 1},
-  });
-
-  try {
-    assert.equal(container.querySelector("input"), null);
+    assert.equal(container.querySelectorAll("input").length, 0);
+    assert.equal(container.querySelector('[aria-label="草稿.md"]')?.textContent, "草稿.md");
   } finally {
     cleanup();
   }
@@ -249,6 +245,60 @@ test("文件夹节点右键菜单可复制绝对路径", () => {
     act(() => button.dispatchEvent(new window.MouseEvent("click", {bubbles: true})));
 
     assert.deepEqual(copied, ["资料"]);
+  } finally {
+    cleanup();
+  }
+});
+
+test("右键菜单第一项是重命名，点击后请求进入重命名会话", () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const started: string[] = [];
+  const {container, cleanup} = renderTreeNode({
+    name: "草稿.md",
+    path: "草稿.md",
+    isDir: false,
+    children: [],
+  }, {
+    onStartRename: (node) => started.push(node.path),
+  });
+
+  try {
+    act(() => {
+      container.querySelector('[aria-label="草稿.md"]')?.dispatchEvent(
+        new window.MouseEvent("contextmenu", {bubbles: true, clientX: 20, clientY: 20}),
+      );
+    });
+
+    const button = contextMenuButton(container, "重命名");
+    assert.ok(button);
+    act(() => button.dispatchEvent(new window.MouseEvent("click", {bubbles: true})));
+
+    assert.deepEqual(started, ["草稿.md"]);
+  } finally {
+    cleanup();
+  }
+});
+
+test("改名中的行不响应再次双击，避免重复开会话", () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const started: string[] = [];
+  const {container, cleanup} = renderTreeNode({
+    name: "草稿.md",
+    path: "草稿.md",
+    isDir: false,
+    children: [],
+  }, {
+    renameSession: {path: "草稿.md", session: {path: "草稿.md", value: "草稿.md", isDir: false, error: null, pending: false}},
+    onStartRename: (node) => started.push(node.path),
+  });
+
+  try {
+    act(() => {
+      container.querySelector('[aria-label="草稿.md"]')?.dispatchEvent(
+        new window.MouseEvent("dblclick", {bubbles: true, cancelable: true}),
+      );
+    });
+    assert.deepEqual(started, []);
   } finally {
     cleanup();
   }

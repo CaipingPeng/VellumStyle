@@ -18,7 +18,15 @@ const TREE: DocNode[] = [
     name: "素材",
     path: "素材",
     isDir: true,
-    children: [{name: "图片.md", path: "素材/图片.md", isDir: false, children: []}],
+    children: [
+      {name: "图片.md", path: "素材/图片.md", isDir: false, children: []},
+      {
+        name: "内层",
+        path: "素材/内层",
+        isDir: true,
+        children: [{name: "深.md", path: "素材/内层/深.md", isDir: false, children: []}],
+      },
+    ],
   },
   {name: "草稿.md", path: "草稿.md", isDir: false, children: []},
 ];
@@ -96,53 +104,114 @@ function renderDocTree(DocTreeComponent: DocTreeComponent) {
   };
 }
 
+// 改名弹层挂在 document.body 上（portal），所以从文档根查询。
+const dialog = () => document.querySelector('[role="dialog"][aria-labelledby="rename-dialog-title"]') as HTMLElement | null;
+const dialogInput = () => document.getElementById("rename-dialog-input") as HTMLInputElement | null;
+const dialogText = () => dialog()?.textContent ?? "";
+
+// jsdom 里 framer-motion 的退出动画不收敛，AnimatePresence 会把"正在退出"的弹层留在 DOM 中，
+// 因此测试只断言不受动画影响的行为（会话状态、输入内容、确认态）；真正的关闭行为由
+// 真实浏览器端到端验证覆盖（tests 之外的手验 + CDP 验证脚本）。
+const confirmDiscardVisible = () => dialogText().includes("放弃修改");
+const openDialogCount = () => document.querySelectorAll("#rename-dialog-input").length;
+
+async function settleDialogExit() {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  });
+}
+
 function pressF2On(panel: HTMLElement) {
   act(() => {
     panel.dispatchEvent(new window.KeyboardEvent("keydown", {key: "F2", bubbles: true, cancelable: true}));
   });
 }
 
-test("选中文件后按 F2 进入重命名", async () => {
+function pressKeyOn(panel: HTMLElement, key: string) {
+  act(() => {
+    panel.dispatchEvent(new window.KeyboardEvent("keydown", {key, bubbles: true, cancelable: true}));
+  });
+}
+
+function setInputValue(input: HTMLInputElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+  act(() => {
+    setter.call(input, value);
+    input.dispatchEvent(new window.Event("input", {bubbles: true}));
+  });
+}
+
+function pressEnterInDialog() {
+  const input = dialogInput();
+  assert.ok(input, "改名弹层输入框应存在");
+  act(() => {
+    input.dispatchEvent(new window.KeyboardEvent("keydown", {key: "Enter", bubbles: true, cancelable: true}));
+  });
+}
+
+function pressEscapeInDialog() {
+  // useDialogEscape 在 document 上以捕获阶段监听，与真实按键路径一致。
+  const target: EventTarget = dialogInput() ?? document;
+  act(() => {
+    target.dispatchEvent(new window.KeyboardEvent("keydown", {key: "Escape", bubbles: true, cancelable: true}));
+  });
+}
+
+function clickDialogButton(label: string) {
+  const button = Array.from(dialog()?.querySelectorAll("button") ?? [])
+    .find((item) => item.textContent?.includes(label));
+  assert.ok(button, `弹层按钮应存在：${label}`);
+  act(() => button.dispatchEvent(new window.MouseEvent("click", {bubbles: true})));
+}
+
+test("选中文件后按 F2 打开改名弹层", async () => {
   const {DocTree, useStore} = await loadRuntimeModules();
   useStore.setState({tree: TREE, selectedPath: "草稿.md", currentDocPath: null});
   const {container, panel, cleanup} = renderDocTree(DocTree);
   try {
-    assert.equal(container.querySelector("input"), null);
+    assert.equal(dialog(), null);
     pressF2On(panel());
-    assert.equal(container.querySelector<HTMLInputElement>("input")?.value, "草稿.md");
+    assert.ok(dialog(), "应打开改名弹层");
+    assert.equal(dialogInput()?.value, "草稿.md");
+    assert.match(dialogText(), /重命名文档/);
+    // 扩展名以并排后缀显示（不再是说明文案），避免用户以为扩展名丢了
+    assert.equal(dialog()?.querySelector("span.text-sm2")?.textContent, ".md");
+    // 行内不再有输入框：输入完全在弹层里完成。
+    assert.equal(container.querySelectorAll("input").length, 0);
   } finally {
     cleanup();
     useStore.setState({tree: [], selectedPath: null});
   }
 });
 
-test("选中文件夹后按 F2 进入重命名", async () => {
+test("选中文件夹后按 F2 打开改名弹层", async () => {
   const {DocTree, useStore} = await loadRuntimeModules();
   useStore.setState({tree: TREE, selectedPath: "素材", currentDocPath: null});
-  const {container, panel, cleanup} = renderDocTree(DocTree);
+  const {panel, cleanup} = renderDocTree(DocTree);
   try {
     pressF2On(panel());
-    assert.equal(container.querySelector<HTMLInputElement>("input")?.value, "素材");
+    assert.equal(dialogInput()?.value, "素材");
+    assert.match(dialogText(), /重命名文件夹/);
   } finally {
     cleanup();
     useStore.setState({tree: [], selectedPath: null});
   }
 });
 
-test("未选中任何节点时按 F2 不进入重命名", async () => {
+test("未选中任何节点时按 F2 不打开弹层", async () => {
   const {DocTree, useStore} = await loadRuntimeModules();
   useStore.setState({tree: TREE, selectedPath: null, currentDocPath: null});
-  const {container, panel, cleanup} = renderDocTree(DocTree);
+  const {panel, cleanup} = renderDocTree(DocTree);
   try {
     pressF2On(panel());
-    assert.equal(container.querySelector("input"), null);
+    assert.equal(dialog(), null);
   } finally {
     cleanup();
     useStore.setState({tree: [], selectedPath: null});
   }
 });
 
-test("焦点不在文件树面板上时按 F2 不触发重命名", async () => {
+test("焦点不在文件树面板上时按 F2 不打开弹层", async () => {
   const {DocTree, useStore} = await loadRuntimeModules();
   useStore.setState({tree: TREE, selectedPath: "草稿.md", currentDocPath: null});
   const {container, cleanup} = renderDocTree(DocTree);
@@ -151,18 +220,227 @@ test("焦点不在文件树面板上时按 F2 不触发重命名", async () => {
     act(() => {
       row.dispatchEvent(new window.KeyboardEvent("keydown", {key: "F2", bubbles: true, cancelable: true}));
     });
-    assert.equal(container.querySelector("input"), null);
+    assert.equal(dialog(), null);
   } finally {
     cleanup();
     useStore.setState({tree: [], selectedPath: null});
   }
 });
 
-function pressKeyOn(panel: HTMLElement, key: string) {
-  act(() => {
-    panel.dispatchEvent(new window.KeyboardEvent("keydown", {key, bubbles: true, cancelable: true}));
-  });
-}
+test("F2 进入改名弹层后 Esc 退出，重新按 F2 拿到的是原始名字", async () => {
+  const {DocTree, useStore} = await loadRuntimeModules();
+  useStore.setState({tree: TREE, selectedPath: "草稿.md", currentDocPath: null});
+  const {panel, cleanup} = renderDocTree(DocTree);
+  try {
+    pressF2On(panel());
+    assert.ok(dialog());
+    // 再按两次 F2：仍是同一个会话，不会叠加弹层。
+    pressF2On(panel());
+    pressF2On(panel());
+    assert.equal(openDialogCount(), 1);
+
+    // 改了一半后 Esc：明确取消，直接退出（遮罩负责防误触，Esc 是主动放弃）。
+    setInputValue(dialogInput()!, "改了一半");
+    pressEscapeInDialog();
+    await settleDialogExit();
+    assert.equal(confirmDiscardVisible(), false);
+
+    pressF2On(panel());
+    assert.equal(dialogInput()?.value, "草稿.md", "重开应回到节点原名");
+  } finally {
+    cleanup();
+    useStore.setState({tree: [], selectedPath: null});
+  }
+});
+
+test("弹层里回车提交改名，树上立即更新且弹层关闭", async () => {
+  const {DocTree, useStore} = await loadRuntimeModules();
+  useStore.setState({tree: TREE, selectedPath: "草稿.md", currentDocPath: "草稿.md"});
+  const {panel, cleanup} = renderDocTree(DocTree);
+  try {
+    pressF2On(panel());
+    setInputValue(dialogInput()!, "新草稿");
+    pressEnterInDialog();
+    // 换名命令是异步的：让 store 更新与弹层关闭都在 act 里落定。
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const state = useStore.getState();
+    assert.equal(state.selectedPath, "新草稿");
+    assert.equal(state.currentDocPath, "新草稿");
+  } finally {
+    cleanup();
+    useStore.setState({tree: [], selectedPath: null, currentDocPath: null});
+  }
+});
+
+test("弹层输入时鼠标点到遮罩不会丢掉已输入内容", async () => {
+  const {DocTree, useStore} = await loadRuntimeModules();
+  useStore.setState({tree: TREE, selectedPath: "草稿.md", currentDocPath: null});
+  const {panel, cleanup} = renderDocTree(DocTree);
+  try {
+    pressF2On(panel());
+    setInputValue(dialogInput()!, "改了一半的名字");
+
+    // 点遮罩：绝不静默丢弃——只在有改动时提示，弹层与输入内容原样保留。
+    const overlay = dialog()!.parentElement as HTMLElement;
+    act(() => overlay.dispatchEvent(new window.MouseEvent("click", {bubbles: true})));
+    assert.equal(confirmDiscardVisible(), true, "未保存时点遮罩应先提示");
+    assert.equal(dialogInput()?.value, "改了一半的名字");
+
+    // 点"继续编辑"：回到编辑态，内容还在，焦点交回输入框。
+    clickDialogButton("继续编辑");
+    assert.equal(dialogInput()?.value, "改了一半的名字");
+    assert.equal(confirmDiscardVisible(), false);
+    assert.equal(document.activeElement, dialogInput());
+
+    // 明确点"放弃修改"才退出；重开回到原名。
+    act(() => overlay.dispatchEvent(new window.MouseEvent("click", {bubbles: true})));
+    clickDialogButton("放弃修改");
+    await settleDialogExit();
+    assert.equal(useStore.getState().selectedPath, "草稿.md");
+    pressF2On(panel());
+    assert.equal(dialogInput()?.value, "草稿.md", "放弃后重开应回到原名");
+  } finally {
+    cleanup();
+    useStore.setState({tree: [], selectedPath: null});
+  }
+});
+
+test("弹层的常驻文案保持精简：无原名称/位置/快捷键说明", async () => {
+  const {DocTree, useStore} = await loadRuntimeModules();
+  useStore.setState({tree: TREE, selectedPath: "草稿.md", currentDocPath: null});
+  const {panel, cleanup} = renderDocTree(DocTree);
+  try {
+    pressF2On(panel());
+    const text = dialogText();
+    assert.doesNotMatch(text, /原名称/);
+    assert.doesNotMatch(text, /位置：/);
+    assert.doesNotMatch(text, /回车确认/);
+    assert.doesNotMatch(text, /Esc 取消/);
+  } finally {
+    cleanup();
+    useStore.setState({tree: [], selectedPath: null});
+  }
+});
+
+test("弹层外的按下被拦回输入框，不会把输入打到编辑器", async () => {
+  const {DocTree, useStore} = await loadRuntimeModules();
+  useStore.setState({tree: TREE, selectedPath: "草稿.md", currentDocPath: null});
+  const {panel, cleanup} = renderDocTree(DocTree);
+  try {
+    pressF2On(panel());
+    const input = dialogInput()!;
+    assert.equal(document.activeElement, input);
+
+    const outside = document.createElement("div");
+    document.body.appendChild(outside);
+    act(() => {
+      outside.dispatchEvent(new window.MouseEvent("mousedown", {bubbles: true, cancelable: true}));
+    });
+    assert.equal(document.activeElement, input, "焦点应被钉在输入框上");
+    outside.remove();
+  } finally {
+    cleanup();
+    useStore.setState({tree: [], selectedPath: null});
+  }
+});
+
+test("同级重名在弹层里被拦下，弹层保持打开", async () => {
+  const {DocTree, useStore} = await loadRuntimeModules();
+  useStore.setState({tree: TREE, selectedPath: "草稿.md", currentDocPath: null});
+  const {panel, cleanup} = renderDocTree(DocTree);
+  try {
+    pressF2On(panel());
+    setInputValue(dialogInput()!, "素材");
+    assert.match(dialogText(), /同级已有「素材」/);
+    pressEnterInDialog();
+    assert.ok(dialog(), "非法名字不得关闭弹层");
+    assert.equal(dialogInput()?.value, "素材");
+    assert.equal(useStore.getState().selectedPath, "草稿.md");
+
+    // 名字没变：直接收工，不产生后端调用；重开回到原名。
+    setInputValue(dialogInput()!, "草稿");
+    pressEnterInDialog();
+    await settleDialogExit();
+    assert.equal(useStore.getState().selectedPath, "草稿.md");
+    pressF2On(panel());
+    assert.equal(dialogInput()?.value, "草稿.md");
+  } finally {
+    cleanup();
+    useStore.setState({tree: [], selectedPath: null});
+  }
+});
+
+test("输入框只选中主文件名，扩展名留在原地", async () => {
+  const {DocTree, useStore} = await loadRuntimeModules();
+  useStore.setState({tree: TREE, selectedPath: "草稿.md", currentDocPath: null});
+  const {panel, cleanup} = renderDocTree(DocTree);
+  try {
+    pressF2On(panel());
+    const input = dialogInput()!;
+    assert.equal(input.selectionStart, 0);
+    assert.equal(input.selectionEnd, "草稿".length);
+  } finally {
+    cleanup();
+    useStore.setState({tree: [], selectedPath: null});
+  }
+});
+
+test("嵌套文档双击也能打开改名弹层（祖先节点被 memo 短路的历史 bug）", async () => {
+  const {DocTree, useStore} = await loadRuntimeModules();
+  useStore.setState({tree: TREE, selectedPath: null, currentDocPath: null});
+  const {container, cleanup} = renderDocTree(DocTree);
+  const clickOn = (label: string) => {
+    const row = container.querySelector(`[aria-label="${label}"]`);
+    assert.ok(row, `行应可见：${label}`);
+    act(() => {
+      row.dispatchEvent(new window.MouseEvent("click", {bubbles: true, cancelable: true}));
+    });
+  };
+  try {
+    clickOn("素材");
+    clickOn("内层");
+
+    const deepRow = container.querySelector('[aria-label="深.md"]');
+    assert.ok(deepRow, "嵌套文档行应可见");
+    act(() => {
+      deepRow.dispatchEvent(new window.MouseEvent("dblclick", {bubbles: true, cancelable: true}));
+    });
+
+    assert.ok(dialog(), "嵌套文档双击后必须打开改名弹层");
+    assert.equal(dialogInput()?.value, "深.md");
+  } finally {
+    cleanup();
+    useStore.setState({tree: [], selectedPath: null});
+  }
+});
+
+test("新建名字非法时保留草稿行并给出行内原因", async () => {
+  const {DocTree, useStore} = await loadRuntimeModules();
+  useStore.setState({tree: TREE, selectedPath: null, currentDocPath: null});
+  const {container, cleanup} = renderDocTree(DocTree);
+  try {
+    const newDocButton = Array.from(container.querySelectorAll("button"))
+      .find((button) => button.title === "新建文档") as HTMLButtonElement;
+    act(() => newDocButton.dispatchEvent(new window.MouseEvent("click", {bubbles: true})));
+    const input = container.querySelector<HTMLInputElement>('input[aria-label="新建文档名"]');
+    assert.ok(input);
+
+    setInputValue(input, "a/b");
+    act(() => {
+      input.dispatchEvent(new window.KeyboardEvent("keydown", {key: "Enter", bubbles: true, cancelable: true}));
+    });
+
+    // 非法名字：草稿行仍在，并显示原因（旧实现只弹 toast，输入被清空）
+    assert.match(container.textContent ?? "", /名称不能包含 \//);
+    assert.equal(container.querySelector('input[aria-label="新建文档名"]'), input);
+  } finally {
+    cleanup();
+    useStore.setState({tree: [], selectedPath: null});
+  }
+});
 
 test("方向键在可见节点间移动选中", async () => {
   const {DocTree, useStore} = await loadRuntimeModules();

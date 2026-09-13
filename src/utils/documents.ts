@@ -275,6 +275,135 @@ export function targetDirFor(tree: DocNode[], selectedPath: string | null): stri
   return slash === -1 ? "" : selectedPath.slice(0, slash);
 }
 
+// —— 重命名/新建的名称校验 ——
+// 与 Rust 侧 is_valid_name 保持同一套约束，保证输入过程中就能给出提示，
+// 而不是等到回车后由后端返回“名称含非法字符”。
+const INVALID_NAME_CHARS = ["/", "\\", ":", "*", "?", '"', "<", ">", "|"];
+// Windows 保留设备名：这类名字在资源管理器里改不出来，直接拦下。
+const WINDOWS_RESERVED_NAMES = new Set([
+  "CON", "PRN", "AUX", "NUL",
+  "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+  "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+]);
+
+// 去掉扩展名后的可编辑部分；`.md` 这类隐藏式命名整段都是 stem。
+export function entryStem(name: string): string {
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? name.slice(0, dot) : name;
+}
+
+// 扩展名（含点）；无扩展名返回空串。
+export function entryExtension(name: string): string {
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? name.slice(dot) : "";
+}
+
+// 相对 documents/ 的路径取末段（即节点显示名）。
+export function entryBasename(path: string): string {
+  const slash = path.lastIndexOf("/");
+  return slash === -1 ? path : path.slice(slash + 1);
+}
+
+// 名称是否可提交；返回中文原因或 null。ignoreName 用于“保持原名”豁免。
+// 先看原始输入再看 trim 后的结果：把“周报 ”当成错误提示出来，
+// 而不是静默改成“周报”（Windows 对结尾空格的处理同样不透明）。
+export function validateEntryName(displayName: string, ignoreName?: string): string | null {
+  if (displayName.endsWith(" ")) return "名称不能以空格结尾";
+  if (displayName.endsWith(".")) return "名称不能以点号结尾";
+  const name = displayName.trim();
+  if (!name) return "名称不能为空";
+  if (name === ignoreName) return null;
+  const invalidChar = INVALID_NAME_CHARS.find((char) => name.includes(char));
+  if (invalidChar) return `名称不能包含 ${invalidChar}`;
+  // 中间的点和空格没问题，但落盘前会被 trim，这里只拦“去掉首尾后变了”的情况。
+  if (name !== displayName) return `保存时会去掉首尾空格：${name}`;
+  const stem = entryStem(name).trim();
+  if (!stem || stem === "." || stem === "..") return "名称无效";
+  if (WINDOWS_RESERVED_NAMES.has(stem.toUpperCase())) return `${stem} 是系统保留名`;
+  return null;
+}
+
+// 同名冲突：siblingPaths 为同级条目的路径集合，ignorePath 为被改名项自身。
+// candidateNames 为候选名字列表（文件节点同时提供主名与带 .md 的落盘名），
+// 逐个与同级条目的显示名做大小写不敏感比较；忽略被改名项自身。
+export function findSiblingConflict(
+  siblingPaths: Iterable<string>,
+  candidateNames: Iterable<string>,
+  ignorePath: string,
+): string | null {
+  const names = new Set<string>();
+  for (const candidate of candidateNames) {
+    const name = candidate.trim().toLocaleLowerCase();
+    if (name) names.add(name);
+  }
+  if (names.size === 0) return null;
+  for (const siblingPath of siblingPaths) {
+    if (siblingPath === ignorePath) continue;
+    const siblingName = entryBasename(siblingPath);
+    if (names.has(siblingName.toLocaleLowerCase())) return siblingName;
+  }
+  return null;
+}
+
+// 单名冲突判断（同为显示名比较），保留给只关心一个候选名的调用方。
+export function findSiblingNameConflict(
+  siblingPaths: Iterable<string>,
+  candidateName: string,
+  ignorePath: string,
+): string | null {
+  return findSiblingConflict(siblingPaths, [candidateName], ignorePath);
+}
+
+export function collectChildPaths(nodes: DocNode[]): string[] {
+  return nodes.map((node) => node.path);
+}
+
+// 树里某路径的同级条目集合（非重命名项自身的兄弟）；根级返回整棵树的顶层。
+export function siblingPathsFor(tree: DocNode[], dirPath: string): string[] {
+  if (!dirPath) return collectChildPaths(tree);
+  const dir = findTreeNode(tree, dirPath);
+  return dir ? collectChildPaths(dir.children) : [];
+}
+
+export function findTreeNode(nodes: DocNode[], path: string): DocNode | null {
+  for (const node of nodes) {
+    if (node.path === path) return node;
+    if (node.isDir) {
+      const found = findTreeNode(node.children, path);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// 路径的全部祖先目录（从根到直接父级），用于改名后保持展开态。
+export function treePathAncestors(path: string): string[] {
+  const parts = path.split("/").filter(Boolean);
+  const dirs: string[] = [];
+  for (let i = 1; i < parts.length; i++) dirs.push(parts.slice(0, i).join("/"));
+  return dirs;
+}
+
+// 乐观替换：把 oldPath 及其整棵子树重映射为 newPath，避免等后端全量扫描才更新 UI。
+export function replaceTreePaths(nodes: DocNode[], oldPath: string, newPath: string): DocNode[] {
+  const remap = (path: string): string => {
+    if (path === oldPath) return newPath;
+    return path.startsWith(`${oldPath}/`) ? `${newPath}${path.slice(oldPath.length)}` : path;
+  };
+
+  const walk = (list: DocNode[]): DocNode[] => list.map((node) => {
+    const path = remap(node.path);
+    return {
+      ...node,
+      name: path === node.path ? node.name : entryBasename(path),
+      path,
+      children: node.children.length > 0 ? walk(node.children) : node.children,
+    };
+  });
+
+  return walk(nodes);
+}
+
 // 给文档路径返回所有父级目录，用于文件树自动展开。
 export function ancestorDirsForPath(path: string | null): string[] {
   if (!path) return [];

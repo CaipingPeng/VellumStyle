@@ -18,7 +18,8 @@ test("文件树宽度拖拽计算会按起点偏移并限制范围", () => {
 test("文件树节点 hover 时显示完整名称且操作区不常驻占位", async () => {
   const source = await readFile(new URL("./TreeNode.tsx", import.meta.url), "utf8");
 
-  assert.match(source, /title=\{!editing \? node\.name : undefined\}/);
+  // 行内不再进入编辑态：名字始终直接展示，改名输入在 RenameDialog 里。
+  assert.match(source, /title=\{node\.name\}/);
   assert.match(source, /aria-label=\{node\.name\}/);
   assert.match(source, /group-hover:pr-12/);
   assert.match(source, /absolute inset-y-0 right-0/);
@@ -37,14 +38,37 @@ test("文件夹行 hover 显示新建文档/新建文件夹按钮，文件行不
   assert.match(docTreeSource, /onCreateIn=\{startCreateIn\}/);
 });
 
-test("文件树选中文件或文件夹后按 F2 进入重命名", async () => {
+test("文件树选中文件或文件夹后按 F2 进入重命名会话", async () => {
   const docTreeSource = await readFile(new URL("./DocTree.tsx", import.meta.url), "utf8");
   const nodeSource = await readFile(new URL("./TreeNode.tsx", import.meta.url), "utf8");
+  const dialogSource = await readFile(new URL("./RenameDialog.tsx", import.meta.url), "utf8");
 
   assert.match(docTreeSource, /event\.key === "F2"/);
-  assert.match(docTreeSource, /setRenameSignal/);
-  assert.match(docTreeSource, /renameSignal=\{renameSignal\}/);
-  assert.match(nodeSource, /renameSignal\.path === node\.path/);
+  assert.match(docTreeSource, /startRenaming\(node\)/);
+  // 会话对象下发给所有节点：由节点自行按 path 判断是否高亮。
+  // 若只在命中节点上挂 rename，祖先会被 memo 浅比较短路，嵌套节点改名会完全无反应。
+  assert.match(docTreeSource, /renameSession=\{renameForNodes\}/);
+  assert.match(nodeSource, /renameSession\.path === node\.path/);
+  assert.match(nodeSource, /renameSession=\{renameSession\}/);
+  // 改名输入在遮罩弹层里：portal 到 body、aria-modal、带"放弃修改"保护。
+  assert.match(dialogSource, /createPortal/);
+  assert.match(dialogSource, /aria-modal="true"/);
+  assert.match(dialogSource, /放弃修改/);
+  assert.match(dialogSource, /id="rename-dialog-input"/);
+  // TreeNode 内不得再出现行内输入框或按 token 复位的信号。
+  assert.doesNotMatch(nodeSource, /renameSignal/);
+  assert.doesNotMatch(docTreeSource, /renameSignal/);
+  assert.doesNotMatch(nodeSource, /<input/);
+});
+
+test("重命名失败与非法名字保留输入态而非静默丢弃", async () => {
+  const docTreeSource = await readFile(new URL("./DocTree.tsx", import.meta.url), "utf8");
+
+  // 校验不过 → 会话保留 + 行内 error；后端失败 → pending 复位 + error，会话仍保留。
+  assert.match(docTreeSource, /error: invalid, pending: false/);
+  assert.match(docTreeSource, /outcome\.error \?\? "重命名失败", pending: false/);
+  // 文件夹改名后展开态跟随迁移（否则整棵子树莫名收起）。
+  assert.match(docTreeSource, /remapExpandedPaths\(prev, outcome\.oldPath, outcome\.newPath/);
 });
 
 test("文件树节点提供打开文件位置的右键菜单", async () => {
