@@ -1,5 +1,5 @@
 /* ============================================================
-   「墨岚」· Ink Haze —— VellumStyle 自定义主题 v3（微信安全版）
+   「墨岚」· Ink Haze —— VellumStyle 自定义主题 v4（微信安全版）
    ------------------------------------------------------------
    气质：暖纸书卷 + 墨色正文 + 黛蓝/赭金点缀的编辑风排版。
    v2 更新：点阵纸纹理、拍立得图片、h3~h6 自动装饰符、
@@ -16,11 +16,18 @@
       对齐的列表内容套两端对齐）。
    已实测：整页纸底背景在微信端存活。
 
+   v4 更新：
+   4. 去掉整页背景（暖纸底色 + 点阵纸纹理全部移除），文章底色
+      交由白底兜底：预览走 .vs-article-neutral-bg 垫白，微信端
+      本身就是白底，两端一致。装饰性背景（代码块顶条、引用卡、
+      表格线等块级样式）不受影响。
+
    用法：复制到主题文件夹（Windows：
    %APPDATA%\com.vellumstyle.desktop\themes），重新扫描后使用。
    ============================================================ */
 
 /* ---------- 0. 全局基调 ---------- */
+/* 不设整页背景：底色交给预览/微信的白底兜底，只保留内边距与正文排版。 */
 #article {
   margin-top: 0px;
   margin-bottom: 0px;
@@ -30,21 +37,6 @@
   padding-bottom: 8px;
   padding-left: 12px;
   padding-right: 12px;
-  background-attachment: scroll;
-  background-clip: border-box;
-  background-color: #faf7f0;
-  background-image:
-    radial-gradient(ellipse 34% 24% at 76% 8%, rgba(246, 239, 226, 0.7), rgba(246, 239, 226, 0) 70%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(63, 93, 122, 0.05) 100%),
-    radial-gradient(circle at 4px 6px, rgba(63, 93, 122, 0.2) 0 1px, rgba(63, 93, 122, 0.07) 1px 2px, transparent 2.8px),
-    radial-gradient(circle at 20px 24px, rgba(168, 123, 63, 0.18) 0 1.2px, rgba(168, 123, 63, 0.06) 1.2px 2.3px, transparent 3.2px),
-    radial-gradient(circle at 32px 8px, rgba(63, 93, 122, 0.12) 0 0.7px, rgba(63, 93, 122, 0.04) 0.7px 1.6px, transparent 2.4px),
-    radial-gradient(circle at 14px 32px, rgba(168, 123, 63, 0.14) 0 1px, rgba(168, 123, 63, 0.05) 1px 2.1px, transparent 3px);
-  background-origin: padding-box;
-  background-position-x: left;
-  background-position-y: top;
-  background-repeat: repeat;
-  background-size: auto, auto, 46px 46px, 46px 46px, 46px 46px, 46px 46px;
   width: auto;
   height: auto;
   font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
