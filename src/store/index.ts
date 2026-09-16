@@ -44,6 +44,13 @@ import {
   sanitizeBackgroundImagePath,
   sanitizeStatusBarOpacity,
 } from "../appearance/backgroundImage.ts";
+import {
+  clampGlobal,
+  clampRole,
+  DEFAULT_TYPOGRAPHY,
+  sanitizeTypography,
+  type TypographyState,
+} from "../themes/typography.ts";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -74,6 +81,7 @@ export interface EditorState {
   statusBarOpacity: number; // 状态栏不透明度 0-1，persist
   favoriteThemeIds: string[]; // 收藏主题，persist
   pinnedCodeThemeIds: CodeThemeId[]; // 置顶代码主题，persist
+  typography: TypographyState; // 文章排版缩放（全局 + 按元素角色），persist
   setContent: (content: string) => void;
   setMarkdownTheme: (id: string) => void;
   loadDocumentThemes: (options?: {persistMissing?: boolean}) => Promise<void>;
@@ -93,6 +101,9 @@ export interface EditorState {
   toggleAppearanceMode: () => void;
   toggleFavoriteTheme: (id: string) => void;
   togglePinnedCodeTheme: (id: CodeThemeId) => void;
+  setGlobalFontScale: (scale: number) => void;
+  setRoleFontScale: (roleKey: string, scale: number) => void;
+  resetTypography: () => void;
   toggleSidebar: () => void;
   toggleOutline: () => void;
   loadTree: () => Promise<void>;
@@ -299,6 +310,7 @@ export const useStore = create<EditorState>()(
       statusBarOpacity: DEFAULT_STATUS_BAR_OPACITY,
       favoriteThemeIds: [],
       pinnedCodeThemeIds: [...DEFAULT_PINNED_CODE_THEME_IDS],
+      typography: {...DEFAULT_TYPOGRAPHY, roles: {}},
       setContent: (content) => {
         set({content, saveStatus: "idle"});
         scheduleSave(content);
@@ -417,6 +429,18 @@ export const useStore = create<EditorState>()(
             ? s.pinnedCodeThemeIds.filter((themeId) => themeId !== id)
             : [...s.pinnedCodeThemeIds, id],
         })),
+      setGlobalFontScale: (scale) =>
+        set((s) => ({typography: {...s.typography, global: clampGlobal(scale)}})),
+      setRoleFontScale: (roleKey, scale) =>
+        set((s) => {
+          const next = clampRole(scale);
+          const roles = {...s.typography.roles};
+          // 倍率回到 1 等于没设置，从状态里摘掉，避免无意义的覆盖规则。
+          if (next === 1) delete roles[roleKey];
+          else roles[roleKey] = next;
+          return {typography: {...s.typography, roles}};
+        }),
+      resetTypography: () => set({typography: {...DEFAULT_TYPOGRAPHY, roles: {}}}),
       toggleSidebar: () => set((s) => ({sidebarOpen: !s.sidebarOpen})),
       toggleOutline: () => set((s) => ({outlineOpen: !s.outlineOpen})),
       loadTree: async () => {
@@ -492,6 +516,7 @@ export const useStore = create<EditorState>()(
         statusBarOpacity: s.statusBarOpacity,
         favoriteThemeIds: s.favoriteThemeIds,
         pinnedCodeThemeIds: s.pinnedCodeThemeIds,
+        typography: s.typography,
       }),
       merge: (persisted, current) => {
         const saved = persisted as (Partial<EditorState> & {themeMapMigrationPending?: boolean}) | undefined;
@@ -535,6 +560,7 @@ export const useStore = create<EditorState>()(
           backgroundImagePath: sanitizeBackgroundImagePath(saved?.backgroundImagePath),
           backgroundBlur: sanitizeBackgroundBlur(saved?.backgroundBlur),
           statusBarOpacity: sanitizeStatusBarOpacity(saved?.statusBarOpacity),
+          typography: sanitizeTypography(saved?.typography),
         };
       },
     },

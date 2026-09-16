@@ -1,4 +1,4 @@
-import {forwardRef, memo, useEffect, useImperativeHandle, useMemo, useRef, useState} from "react";
+import {forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState} from "react";
 import {FileText} from "lucide-react";
 import {render} from "../../markdown/parser.ts";
 import {useStore, getThemeById} from "../../store/index.ts";
@@ -16,7 +16,11 @@ import {copyPreviewImage, savePreviewImageAs} from "../../utils/previewImageActi
 import {toast} from "../Toast/toast.ts";
 import {loadVideoMediaId} from "../../utils/publish.ts";
 import {playPreviewVideo, toggleVoicePlayback} from "./previewPlayback.ts";
+import {createRenderCache} from "./renderCache.ts";
 import {createDebouncedMaxWaitScheduler} from "../../utils/debouncedMaxWait.ts";
+import FontSizePanel from "./FontSizePanel.tsx";
+import {viewportRectOf, type PanelRect} from "./fontSizePanel.ts";
+import {elementsForRole, roleForElement} from "../../themes/typography.ts";
 
 interface Props {
   content: string;
@@ -35,7 +39,11 @@ export interface PreviewHandle {
 
 const RENDER_DEBOUNCE_MS = 250;
 const RENDER_MAX_WAIT_MS = 800;
-const RENDER_CACHE_LIMIT = 50;
+const RENDER_CACHE_MAX_ENTRIES = 50;
+// 缓存 key 是全文、value 是最终 HTML，只按条数限流挡不住大文档：
+// 20KB 文档 ≈ 60–80KB HTML（50 条 ≈ 4MB），100KB 文档 50 条能到几十 MB。
+// 因此再加一条字节预算，条数与字节谁先到就淘汰谁。
+const RENDER_CACHE_MAX_BYTES = 8 * 1024 * 1024;
 const HEADING_ANCHOR_SELECTOR = "h1[data-line], h2[data-line], h3[data-line], h4[data-line], h5[data-line], h6[data-line]";
 const ACTIVE_HEADING_OFFSET_PX = 32;
 
@@ -136,13 +144,26 @@ const Preview = forwardRef<PreviewHandle, Props>(
     const [imageMenuTarget, setImageMenuTarget] = useState<PreviewImageMenuTarget | null>(null);
     const imageMenuAnchor = useRef<HTMLImageElement | null>(null);
     const [resizingHandle, setResizingHandle] = useState<ResizeHandle | null>(null);
-    const renderCache = useRef(new Map<string, string>());
+    const renderCache = useRef(
+      createRenderCache({maxEntries: RENDER_CACHE_MAX_ENTRIES, maxBytes: RENDER_CACHE_MAX_BYTES}),
+    );
     const renderScheduler = useRef<ReturnType<typeof createDebouncedMaxWaitScheduler<string>> | null>(null);
+    // 最近一次真正注入的 markdown CSS，用来跳过「算出来和现在一模一样」的重复注入。
+    const appliedMarkdownCss = useRef<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const articleBoxRef = useRef<HTMLDivElement>(null);
     const themes = useStore((s) => s.themes);
     const codeThemeId = useStore((s) => s.codeThemeId);
     const previewMode = useStore((s) => s.previewMode);
+    const typography = useStore((s) => s.typography);
+    const setRoleFontScale = useStore((s) => s.setRoleFontScale);
+    const setGlobalFontScale = useStore((s) => s.setGlobalFontScale);
+    const resetTypography = useStore((s) => s.resetTypography);
+    // 字号面板：记住「角色 + 该角色下的第几个元素」，内容重渲染后按序号重新定位，
+    // 这样用户调字号的瞬间预览不会把面板甩到别的段落上。
+    const [fontTarget, setFontTarget] = useState<{roleKey: string; index: number} | null>(null);
+    const [fontAnchorRect, setFontAnchorRect] = useState<PanelRect | null>(null);
+    const pointerStartRef = useRef<{x: number; y: number} | null>(null);
     const mode = getPreviewMode(previewMode);
     // 主题未给文章设实色背景时，预览垫白色兜底（不影响导出成品），
     // 避免透明文章直接透出预览舞台底色，与微信发布的白底不一致。
@@ -183,11 +204,26 @@ const Preview = forwardRef<PreviewHandle, Props>(
     }));
 
     // 主题层：文章主题在前，独立代码主题在后，保证所有文章主题默认共享同一套代码高亮。
-    // codeThemesVersion 变化表示全量代码主题已加载（当前选中主题可能非常驻主题），需重注入。
+    // 排版缩放（全局 + 按元素角色）在 buildMarkdownCss 里把 CSS 重写成字面 px 后注入，
+    // 预览 / 复制 / 导出共用这一份，不引入任何 CSS 变量（微信会剥根元素的 --x 定义）。
+    //
+    // codeThemesVersion 变化表示全量代码主题（256 个）加载完了，但这个时机触发的重注入
+    // **多数是多余的**：常驻列表那 8 个主题在全量列表里是逐字节相同的，而在全量列表加载前
+    // 用户也只可能选到常驻主题。真正需要换 CSS 的只有一种情况 —— 上次会话选的是非常驻主题，
+    // 加载前 getCodeThemeById 只能回退到默认主题，加载后才解析出真身。
+    //
+    // 所以判据是「算出来的字符串是否真的变了」，而不是「选中的是不是常驻主题」：
+    // 后者会漏掉上面那种情况。字符串没变却照旧 replaceStyle，会白白让浏览器
+    // 重新解析整张样式表并重算整篇样式。
     useEffect(() => {
       const css = getThemeById(themes, markdownThemeId).css;
-      replaceStyle(STYLE_IDS.markdown, buildMarkdownCss(css, codeThemeId));
-    }, [codeThemeId, codeThemesVersion, markdownThemeId, themes]);
+      const next = buildMarkdownCss(css, codeThemeId, typography);
+      if (appliedMarkdownCss.current === next) {
+        return;
+      }
+      appliedMarkdownCss.current = next;
+      replaceStyle(STYLE_IDS.markdown, next);
+    }, [codeThemeId, codeThemesVersion, markdownThemeId, themes, typography]);
 
     useEffect(() => subscribeCodeThemes(() => setCodeThemesVersion((version) => version + 1)), []);
 
@@ -205,10 +241,6 @@ const Preview = forwardRef<PreviewHandle, Props>(
         const renderedHtml = toProxyHtml(render(nextContent));
         const finalHtml = reuseRenderedMermaidCharts(renderedHtml, root);
         renderCache.current.set(nextContent, finalHtml);
-        if (renderCache.current.size > RENDER_CACHE_LIMIT) {
-          const oldestKey = renderCache.current.keys().next().value;
-          if (oldestKey !== undefined) renderCache.current.delete(oldestKey);
-        }
         setHtml(finalHtml);
         setImageOverlay(null);
         setResizingHandle(null);
@@ -519,6 +551,99 @@ const Preview = forwardRef<PreviewHandle, Props>(
       });
     }, [html]);
 
+    // 解析字号面板的锚点元素并刷新它的视口矩形。
+    // 内容重渲染、调字号引起重排、预览滚动都要重算，否则面板会飘。
+    const refreshFontAnchor = useCallback(() => {
+      const root = document.getElementById(ARTICLE_ROOT_ID);
+      if (!root || !fontTarget) {
+        setFontAnchorRect(null);
+        return;
+      }
+      const elements = elementsForRole(root, fontTarget.roleKey);
+      if (elements.length === 0) {
+        // 换了文档 / 文章里已经没有这类元素了，收起面板。
+        setFontTarget(null);
+        setFontAnchorRect(null);
+        return;
+      }
+      setFontAnchorRect(viewportRectOf(elements[Math.min(fontTarget.index, elements.length - 1)]));
+    }, [fontTarget]);
+
+    // 选中角色的描边：把「本元素」会影响到的地方全部标出来。
+    useEffect(() => {
+      const root = document.getElementById(ARTICLE_ROOT_ID);
+      if (!root) return;
+      for (const element of Array.from(root.querySelectorAll(".vs-role-outline"))) {
+        element.classList.remove("vs-role-outline");
+        // 只剩空 class 时把属性也摘掉。否则点「复制到微信」时指针按下先收起面板、
+        // 这里先一步清掉描边，等 solveHtml 再跑就找不到 .vs-role-outline 了，
+        // class="" 会一路带进粘贴到微信的成品里。
+        if (!element.getAttribute("class")) element.removeAttribute("class");
+      }
+      if (fontTarget) {
+        for (const element of elementsForRole(root, fontTarget.roleKey)) {
+          element.classList.add("vs-role-outline");
+        }
+      }
+      refreshFontAnchor();
+    }, [fontTarget, html, typography, refreshFontAnchor]);
+
+    useEffect(() => {
+      if (!fontTarget) return;
+      const scroller = scrollRef.current;
+      const handler = () => refreshFontAnchor();
+      scroller?.addEventListener("scroll", handler, {passive: true});
+      window.addEventListener("resize", handler);
+      return () => {
+        scroller?.removeEventListener("scroll", handler);
+        window.removeEventListener("resize", handler);
+      };
+    }, [fontTarget, refreshFontAnchor]);
+
+    // 点到文章与面板之外就收起面板。
+    useEffect(() => {
+      if (!fontTarget) return;
+      const handlePointerDown = (event: PointerEvent) => {
+        const target = event.target;
+        if (!(target instanceof Node)) return;
+        if (target instanceof Element && target.closest(".vs-font-size-panel")) return;
+        const root = document.getElementById(ARTICLE_ROOT_ID);
+        if (root?.contains(target)) return;
+        setFontTarget(null);
+      };
+      document.addEventListener("pointerdown", handlePointerDown, true);
+      return () => document.removeEventListener("pointerdown", handlePointerDown, true);
+    }, [fontTarget]);
+
+    function onArticlePointerDown(event: React.PointerEvent) {
+      pointerStartRef.current = {x: event.clientX, y: event.clientY};
+    }
+
+    // 点击预览元素 → 识别角色 → 打开字号面板。
+    // 拖拽（划选文字、拖图片缩放角）不算点击，否则每次选词都会弹面板。
+    function onArticleClick(event: React.MouseEvent) {
+      const start = pointerStartRef.current;
+      pointerStartRef.current = null;
+      if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 4) return;
+      if (window.getSelection()?.toString()) return;
+
+      const root = document.getElementById(ARTICLE_ROOT_ID);
+      if (!root) return;
+      const target = event.target as Element;
+      const roleKey = roleForElement(target, root);
+      if (!roleKey) {
+        // 图片、媒体卡片等：保留它们自己的交互，不动面板。
+        setFontTarget(null);
+        return;
+      }
+      const elements = elementsForRole(root, roleKey);
+      const index = Math.max(
+        elements.findIndex((element) => element === target || element.contains(target)),
+        0,
+      );
+      setFontTarget({roleKey, index});
+    }
+
     function imageResizeOverlayFor(image: HTMLImageElement): ImageResizeOverlay | null {
       const box = articleBoxRef.current;
       const index = Number(image.getAttribute("data-vs-image-index"));
@@ -779,6 +904,8 @@ const Preview = forwardRef<PreviewHandle, Props>(
           onMouseLeave={onMouseLeave}
           onContextMenu={onContextMenu}
           onKeyDown={onKeyDown}
+          onPointerDown={onArticlePointerDown}
+          onClick={onArticleClick}
         >
           {content.trim() ? (
             html ? (
@@ -807,6 +934,17 @@ const Preview = forwardRef<PreviewHandle, Props>(
             onCopy={copyImage}
             onSave={saveImage}
             onClose={closeImageMenu}
+          />
+        )}
+        {fontTarget && fontAnchorRect && (
+          <FontSizePanel
+            roleKey={fontTarget.roleKey}
+            anchorRect={fontAnchorRect}
+            typography={typography}
+            onRoleScale={setRoleFontScale}
+            onGlobalScale={setGlobalFontScale}
+            onReset={resetTypography}
+            onClose={() => setFontTarget(null)}
           />
         )}
       </div>

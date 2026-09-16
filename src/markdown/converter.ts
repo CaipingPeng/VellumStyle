@@ -190,6 +190,16 @@ export function stripPreviewArtifacts(html: string): string {
   for (const element of Array.from(doc.querySelectorAll("[data-vs-image-index]"))) {
     element.removeAttribute("data-vs-image-index");
   }
+  // 字号面板的角色描边只服务预览，不能带进微信/导出成品。
+  for (const element of Array.from(doc.querySelectorAll(".vs-role-outline"))) {
+    element.classList.remove("vs-role-outline");
+  }
+  // 空 class 属性一律清掉。不能只在上面那个循环里顺手清：点「复制到微信」时
+  // 指针按下会先收起字号面板，预览那边已经把描边摘掉了，这里就查不到
+  // .vs-role-outline，残留的 class="" 会被原样粘到微信编辑器里。
+  for (const element of Array.from(doc.querySelectorAll("[class]"))) {
+    if (!element.getAttribute("class")?.trim()) element.removeAttribute("class");
+  }
   return doc.body.innerHTML;
 }
 

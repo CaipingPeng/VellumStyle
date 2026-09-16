@@ -1,13 +1,21 @@
 import {type FormEvent, useEffect, useMemo, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import {motion} from "framer-motion";
-import {ArrowRight, Braces, Check, ChevronLeft, ChevronRight, FolderOpen, Palette, Search, Star, Trash2, Upload, X} from "lucide-react";
+import {ArrowRight, Braces, Check, ChevronLeft, ChevronRight, FolderOpen, Minus, Palette, Plus, RotateCcw, Search, Star, Trash2, Upload, X} from "lucide-react";
 import {useDialogEscape} from "../ui/useDialogEscape.ts";
 import {MOTION_DURATION_FAST, MOTION_SPRING_POP} from "../../utils/motion.ts";
 import {getThemeById, useStore} from "../../store/index.ts";
 import {CODE_THEMES, getCodeThemeById, loadAllCodeThemes, subscribeCodeThemes} from "../../markdown/codeThemes.ts";
 import {deleteUserTheme, loadAllThemes, openThemesDir, importCssTheme} from "../../themes/loader.ts";
 import type {ThemeOption} from "../../themes/index.ts";
+import {
+  canStepScale,
+  formatScale,
+  GLOBAL_MAX,
+  GLOBAL_MIN,
+  SCALE_STEP,
+  stepScale,
+} from "../../themes/typography.ts";
 import {toast} from "../Toast/toast.ts";
 import IconButton from "../ui/IconButton.tsx";
 import CodeThemeThumbnail from "./CodeThemeThumbnail.tsx";
@@ -56,6 +64,8 @@ export default function ThemePickerDialog({onClose}: Props) {
   const toggleFavoriteTheme = useStore((s) => s.toggleFavoriteTheme);
   const pinnedCodeThemeIds = useStore((s) => s.pinnedCodeThemeIds);
   const togglePinnedCodeTheme = useStore((s) => s.togglePinnedCodeTheme);
+  const typography = useStore((s) => s.typography);
+  const setGlobalFontScale = useStore((s) => s.setGlobalFontScale);
   const [activeTab, setActiveTab] = useState<ThemeTab>("markdown");
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
@@ -236,6 +246,47 @@ export default function ThemePickerDialog({onClose}: Props) {
           />
         </label>
       </div>
+
+      {!isCodeTab && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-7 pb-4">
+          <span className="text-sm2 text-text-secondary">全局字号</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="全局字号缩小"
+              disabled={!canStepScale(typography.global, -1, GLOBAL_MIN, GLOBAL_MAX)}
+              onClick={() => setGlobalFontScale(stepScale(typography.global, -1, SCALE_STEP, GLOBAL_MIN, GLOBAL_MAX))}
+              className="vs-font-size-step"
+            >
+              <Minus size={13} strokeWidth={2} aria-hidden="true" />
+            </button>
+            <span className="vs-font-size-value" aria-live="polite">
+              {formatScale(typography.global)}
+            </span>
+            <button
+              type="button"
+              aria-label="全局字号放大"
+              disabled={!canStepScale(typography.global, 1, GLOBAL_MIN, GLOBAL_MAX)}
+              onClick={() => setGlobalFontScale(stepScale(typography.global, 1, SCALE_STEP, GLOBAL_MIN, GLOBAL_MAX))}
+              className="vs-font-size-step"
+            >
+              <Plus size={13} strokeWidth={2} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label="全局字号恢复默认"
+              disabled={typography.global === 1}
+              onClick={() => setGlobalFontScale(1)}
+              className="vs-font-size-reset"
+            >
+              <RotateCcw size={12} strokeWidth={1.9} aria-hidden="true" />
+            </button>
+          </div>
+          <span className="text-xs2 text-text-muted">
+            也可以直接点右侧预览里的元素，单独调某一类元素的字号
+          </span>
+        </div>
+      )}
 
       {isCodeTab ? (
         <div className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(210px,1fr))] auto-rows-max gap-[14px] overflow-y-auto px-7 pb-[22px] pt-1">

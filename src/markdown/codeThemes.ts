@@ -1,5 +1,6 @@
 import {GENERATED_HLJS_THEMES_CORE} from "./generatedHljsThemesCore.ts";
 import {ARTICLE_ROOT_SELECTOR} from "../articleRoot.ts";
+import {DEFAULT_TYPOGRAPHY, scaleThemeCss, type TypographyState} from "../themes/typography.ts";
 
 export const DEFAULT_CODE_THEME_ID = "vs2015";
 export type CodeThemeId = string;
@@ -276,12 +277,21 @@ export function getCodeThemeById(id?: string | null): CodeTheme {
   return CODE_THEMES.find((theme) => theme.id === id) ?? CODE_THEMES.find((theme) => theme.id === DEFAULT_CODE_THEME_ID) ?? CODE_THEMES[0];
 }
 
-export function buildCodeThemeCss(codeThemeId?: string | null): string {
-  return [CODE_BLOCK_BASE_CSS, getCodeThemeById(codeThemeId).css].join("\n");
+export function buildCodeThemeCss(codeThemeId?: string | null, typography: TypographyState = DEFAULT_TYPOGRAPHY): string {
+  // 代码块基准字号（CODE_BLOCK_BASE_CSS 里的 14px）也走同一套排版缩放，
+  // 否则用户调大正文后代码块会明显偏小、和正文脱节。
+  return scaleThemeCss([CODE_BLOCK_BASE_CSS, getCodeThemeById(codeThemeId).css].join("\n"), typography);
 }
 
-export function buildMarkdownCss(markdownThemeCss: string, codeThemeId?: string | null): string {
-  return [markdownThemeCss, IMAGEFLOW_LAYOUT_BASE_CSS, FOOTNOTE_LAYOUT_BASE_CSS, buildCodeThemeCss(codeThemeId)]
-    .filter(Boolean)
-    .join("\n");
+export function buildMarkdownCss(
+  markdownThemeCss: string,
+  codeThemeId?: string | null,
+  typography: TypographyState = DEFAULT_TYPOGRAPHY,
+): string {
+  return scaleThemeCss(
+    [markdownThemeCss, IMAGEFLOW_LAYOUT_BASE_CSS, FOOTNOTE_LAYOUT_BASE_CSS, buildCodeThemeCss(codeThemeId, DEFAULT_TYPOGRAPHY)]
+      .filter(Boolean)
+      .join("\n"),
+    typography,
+  );
 }

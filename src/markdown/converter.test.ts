@@ -62,6 +62,29 @@ test("导出前剥离预览临时编辑产物但保留业务 class", () => {
   assert.equal(html, '<h1 class="title">标题</h1><img src="a.png">');
 });
 
+test("导出前摘掉字号面板的角色描边 class", () => {
+  const html = stripPreviewArtifacts(
+    '<p class="vs-role-outline">正文</p><h2 class="vs-role-outline lead">标题</h2>',
+  );
+
+  assert.equal(html, '<p>正文</p><h2 class="lead">标题</h2>');
+  assert.doesNotMatch(html, /vs-role-outline/);
+});
+
+// 点「复制到微信」时指针按下会先收起字号面板，预览那边已经把描边摘掉了，
+// 轮到 stripPreviewArtifacts 时只剩一个空的 class 属性。这条路径必须也能清干净。
+test("导出前清掉预览残留的空 class 属性（描边已被提前摘掉）", () => {
+  const html = stripPreviewArtifacts(
+    '<p class="" data-tool="vellumstyle">正文</p><h2 class="   ">标题</h2><span class="footnote-word">链接</span>',
+  );
+
+  assert.equal(
+    html,
+    '<p data-tool="vellumstyle">正文</p><h2>标题</h2><span class="footnote-word">链接</span>',
+  );
+  assert.doesNotMatch(html, /class="\s*"/);
+});
+
 test("导出前移除视频占位并从保存的 src 恢复播放 iframe", () => {
   const html = stripPreviewArtifacts(
     '<iframe class="video_iframe rich_pages" data-vs-video-hidden="true" data-vs-video-src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;vid=wxv_1" data-src="https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&amp;vid=wxv_1"></iframe><div class="vs-video-placeholder"></div>',

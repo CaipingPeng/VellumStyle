@@ -1411,6 +1411,171 @@ html.appearance-switching .vs-skel {
   flex: 0 0 auto;
 }
 
+/* 字号面板：点击预览元素后浮在元素旁边。
+   上半「本元素」调该角色（例：全部二级标题），下半「全局」整篇一起缩放。
+   与图片右键菜单同一约定（portal + fixed）。 */
+.vs-font-size-panel {
+  position: fixed;
+  z-index: 2300;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 236px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  box-shadow: var(--shadow-lg);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.vs-font-size-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.vs-font-size-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vs-font-size-close {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.vs-font-size-close:hover,
+.vs-font-size-close:focus-visible {
+  outline: none;
+  background: var(--bg-tertiary);
+  color: var(--text);
+}
+
+.vs-font-size-hint {
+  margin: 0 0 2px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.vs-font-size-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  border-top: 1px solid var(--border);
+}
+
+.vs-font-size-row-label {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.vs-font-size-step,
+.vs-font-size-reset {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
+}
+
+.vs-font-size-step {
+  width: 24px;
+  height: 24px;
+}
+
+.vs-font-size-reset {
+  width: 22px;
+  height: 22px;
+  margin-left: 1px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.vs-font-size-step:hover:not(:disabled),
+.vs-font-size-reset:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.vs-font-size-step:focus-visible,
+.vs-font-size-reset:focus-visible,
+.vs-font-size-reset-all:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.vs-font-size-step:disabled,
+.vs-font-size-reset:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+.vs-font-size-value {
+  min-width: 46px;
+  color: var(--text);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: center;
+}
+
+.vs-font-size-reset-all {
+  height: 28px;
+  margin-top: 2px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.vs-font-size-reset-all:hover {
+  border-color: var(--border-strong);
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+/* 预览里被选中的角色描边：让「本元素」到底改的是哪些地方一目了然。
+   只加在预览 DOM 上，复制/导出前由 stripPreviewArtifacts 摘掉。 */
+#article .vs-role-outline {
+  outline: 1px dashed var(--accent) !important;
+  outline-offset: 3px !important;
+  border-radius: 3px;
+}
+
 /* 素材库视频本地预览占位：隐藏真实 iframe，显示封面 + 播放按钮 + 提示。
    导出时由 stripPreviewArtifacts 移除占位并还原 iframe。 */
 iframe.video_iframe[data-vs-video-hidden="true"] {
