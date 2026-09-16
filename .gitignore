@@ -11,8 +11,9 @@ dist-unmin/
 # TypeScript cache
 *.tsbuildinfo
 
-# 测试运行时产物（node:test + esbuild 的临时 bundle 会落在源码目录）
+# 测试运行时产物（node:test + esbuild 的临时 bundle，落在仓库根的 .vs-test-runtime/）
 *.runtime-*.mjs
+.vs-test-runtime/
 
 # Tauri / Rust build outputs
 src-tauri/target/

@@ -4,8 +4,8 @@ import {act} from "react";
 import {createRoot, type Root} from "react-dom/client";
 import {build} from "esbuild";
 import {readFile, unlink, writeFile} from "node:fs/promises";
-import {join} from "node:path";
 import {pathToFileURL} from "node:url";
+import {tempRuntimePath} from "../../test/tempRuntime.ts";
 import type {DocNode} from "../../utils/documents.ts";
 
 (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
@@ -33,7 +33,7 @@ const TREE: DocNode[] = [
 
 // store 模块里 themes/index.ts 用了 Vite 的 import.meta.glob，node:test 跑不了，
 // 和 publishFlow 测试一样先用 esbuild 打一个去掉 glob 的运行时包再加载。
-const runtimeBundlePath = join(process.cwd(), "src", "components", "DocTree", `.docTree.runtime-${process.pid}.mjs`);
+const runtimeBundlePath = tempRuntimePath("docTree");
 let runtime: {DocTree: DocTreeComponent; useStore: StoreModule["useStore"]} | null = null;
 
 async function loadRuntimeModules() {

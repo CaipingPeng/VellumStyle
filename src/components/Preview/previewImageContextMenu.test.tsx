@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import {after, test} from "node:test";
 import {unlink, writeFile} from "node:fs/promises";
-import {join} from "node:path";
 import {pathToFileURL} from "node:url";
+import {tempRuntimePath} from "../../test/tempRuntime.ts";
 import {act, type ComponentType} from "react";
 import {createRoot, type Root} from "react-dom/client";
 import {build} from "esbuild";
@@ -296,13 +296,7 @@ function createPreviewRuntimeControls(): PreviewRuntimeControls {
   return controls;
 }
 
-const previewRuntimePath = join(
-  process.cwd(),
-  "src",
-  "components",
-  "Preview",
-  `.previewImageContextMenu.runtime-${process.pid}.mjs`,
-);
+const previewRuntimePath = tempRuntimePath("previewImageContextMenu");
 let previewModulePromise: Promise<{Preview: PreviewComponent}> | null = null;
 
 async function loadPreview(): Promise<PreviewComponent> {
@@ -365,9 +359,10 @@ async function loadPreview(): Promise<PreviewComponent> {
 }
 
 after(async () => {
-  await unlink(previewRuntimePath).catch((error: NodeJS.ErrnoException) => {
-    if (error.code !== "ENOENT") throw error;
-  });
+  // 这里产出的是 esbuild 的构建中间产物，清不掉不影响任何断言结论，
+  // 所以按 DocTree / publishFlow 两个同类测试的做法做尽力而为的清理，
+  // 不让「删临时文件失败」把整个测试套件染红。
+  await unlink(previewRuntimePath).catch(() => undefined);
   Reflect.deleteProperty(globalThis, "__PREVIEW_IMAGE_MENU_TEST__");
 });
 

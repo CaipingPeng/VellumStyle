@@ -4,8 +4,8 @@ import {act} from "react";
 import {createRoot, type Root} from "react-dom/client";
 import {build} from "esbuild";
 import {readFile, unlink, writeFile} from "node:fs/promises";
-import {join} from "node:path";
 import {pathToFileURL} from "node:url";
+import {tempRuntimePath} from "../../test/tempRuntime.ts";
 import {ARTICLE_BOX_ID, ARTICLE_ROOT_ID} from "../../articleRoot.ts";
 import {render as renderMarkdown} from "../../markdown/parser.ts";
 import {STYLE_IDS} from "../../utils/style.ts";
@@ -41,7 +41,7 @@ let storeModule: StoreModule | null = null;
 let PublishDialog: PublishDialogComponent | null = null;
 let initialStoreState: ReturnType<StoreModule["useStore"]["getState"]> | null = null;
 let runtimeToast: typeof import("../Toast/toast.ts").toast | null = null;
-const runtimeBundlePath = join(process.cwd(), "src", "components", "Publish", `.publishFlow.runtime-${process.pid}.mjs`);
+const runtimeBundlePath = tempRuntimePath("publishFlow");
 
 async function loadRuntimeModules() {
   if (!storeModule) {
