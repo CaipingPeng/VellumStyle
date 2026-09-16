@@ -12,13 +12,35 @@ mod themes;
 mod templates;
 mod wechat;
 mod wechat_backend;
+mod wximg_cache;
 use tauri::http::{Response, StatusCode};
-use tauri::{UriSchemeContext, UriSchemeResponder};
+use tauri::{Manager, UriSchemeContext, UriSchemeResponder};
+
+/// 组装一张图的响应。
+/// Content-Type 来自上游响应头，可能含控制字符让 builder 失败；先过滤再交给 builder，
+/// 失败时退回空体，避免一次取图把整个进程带走（历史代码这里用的是 unwrap）。
+fn image_response(content_type: String, bytes: Vec<u8>) -> Response<Vec<u8>> {
+    let safe_type: String = content_type
+        .chars()
+        .filter(|c| !c.is_control())
+        .take(128)
+        .collect();
+    let mut builder = Response::builder()
+        .status(StatusCode::OK)
+        .header("Cache-Control", "public, max-age=86400")
+        .header("Access-Control-Allow-Origin", "*");
+    if !safe_type.is_empty() {
+        builder = builder.header("Content-Type", safe_type);
+    }
+    builder
+        .body(bytes)
+        .unwrap_or_else(|_| Response::new(Vec::new()))
+}
 
 // wximg 自定义协议：预览里图片 src 改写成 wximg://localhost/?url=<编码后的原链>，
 // 这里解析出原链，带微信 Referer 拉图返回，绕过防盗链。
 fn handle_wximg<R: tauri::Runtime>(
-    _ctx: UriSchemeContext<'_, R>,
+    ctx: UriSchemeContext<'_, R>,
     request: tauri::http::Request<Vec<u8>>,
     responder: UriSchemeResponder,
 ) {
@@ -43,19 +65,32 @@ fn handle_wximg<R: tauri::Runtime>(
         return;
     };
 
+    // 磁盘缓存目录随应用数据目录走；拿不到就退化成「没有缓存」，不影响取图。
+    let cache = ctx
+        .app_handle()
+        .path()
+        .app_data_dir()
+        .ok()
+        .map(|dir| wximg_cache::WximgCache::new(dir.join("cache").join("wximg")));
+
     tauri::async_runtime::spawn(async move {
+        // 先查磁盘缓存：自定义协议的响应不会落进 WebView 的磁盘缓存，
+        // 重启应用后全靠它避免把整篇文章的图重新拉一遍。
+        if let Some(cache) = cache.as_ref() {
+            if let Some((content_type, bytes)) = cache.get(&raw_url).await {
+                responder.respond(image_response(content_type, bytes));
+                return;
+            }
+        }
+
         match wechat::fetch_proxied_image(&raw_url).await {
             Ok((content_type, bytes)) => {
+                if let Some(cache) = cache.as_ref() {
+                    cache.put(&raw_url, &content_type, &bytes).await;
+                }
                 // 成功路径不打日志：预览每张图都会触发，开发运行时避免刷屏；
                 // 失败与异常（fetch_proxied_image 内）仍保留诊断输出。
-                let resp = Response::builder()
-                    .status(StatusCode::OK)
-                    .header("Content-Type", content_type)
-                    .header("Cache-Control", "public, max-age=86400")
-                    .header("Access-Control-Allow-Origin", "*")
-                    .body(bytes)
-                    .unwrap();
-                responder.respond(resp);
+                responder.respond(image_response(content_type, bytes));
             }
             Err(msg) => {
                 eprintln!("[wximg] fail url={raw_url} err={msg}");
