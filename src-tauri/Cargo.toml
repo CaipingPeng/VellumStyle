@@ -39,3 +39,22 @@ windows = "0.61.3"
 
 [profile.dev]
 opt-level = 2
+
+# 发布档：Tauri v2 官方推荐配置（https://v2.tauri.app/concept/size/）。
+# 体积/启动时间收益主要来自 strip 与 lto；代价是 release 构建变慢，
+# macOS universal 那个 job 本来就编两份架构，注意别撞 60 分钟超时。
+#
+# 故意没开 `panic = "abort"`：它取消 unwind，panic 直接结束整个进程
+# （干净崩溃 + 重启，而不是留下静默损坏的中间状态）。
+#
+# 注意别把它和"清理 unwrap"捆在一起：生产代码的 panic 面本来就很小 ——
+# `wechat/token.rs` 4 处 `Mutex::lock().unwrap()`（只有锁被 poison 才触发），
+# `preview_image/asset.rs` 与 `preview_image/commands.rs` 各 1 处 `unreachable!()`
+# （在 `if kind == Svg { return }` 之后，只为 match 穷尽性存在，证明不可达）。
+# 其余 unwrap/expect 全在测试模块里。
+# 所以这是纯粹的崩溃语义取舍，随时可单独决定开或不开。
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
