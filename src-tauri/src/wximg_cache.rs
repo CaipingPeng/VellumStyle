@@ -15,6 +15,7 @@
 // 因此这里所有函数都不返回错误，失败即静默放弃。
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::SystemTime;
 
 /// 缓存总量上限。预览图多为几百 KB，256MB 大致能放上千张。
@@ -23,6 +24,7 @@ const MAX_CACHE_BYTES: u64 = 256 * 1024 * 1024;
 const MAX_ENTRY_BYTES: usize = 8 * 1024 * 1024;
 /// 头部标识，用于识别并兼容未来的格式变更。
 const HEADER_MAGIC: &str = "VSWXIMG1";
+static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// 与 `history.rs` 相同的固定 FNV-1a：不依赖 `DefaultHasher` 的实现细节，
 /// 应用或 Rust 工具链升级后仍能命中旧缓存。
@@ -93,7 +95,13 @@ impl WximgCache {
         }
         let payload = encode_entry(content_type, url, bytes);
         // 先写临时文件再 rename，避免进程中途退出留下半截文件被当成有效缓存。
-        let temp = self.dir.join(format!("{}.tmp", cache_key(url)));
+        // 每次写入独立临时文件，同一 URL 的并发请求不能相互截断或删除。
+        let temp = self.dir.join(format!(
+            "{}.{}-{}.tmp",
+            cache_key(url),
+            std::process::id(),
+            TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed)
+        ));
         if tokio::fs::write(&temp, &payload).await.is_err() {
             let _ = tokio::fs::remove_file(&temp).await;
             return;
@@ -102,15 +110,15 @@ impl WximgCache {
             let _ = tokio::fs::remove_file(&temp).await;
             return;
         }
-        self.evict(payload.len() as u64).await;
+        self.evict(MAX_CACHE_BYTES).await;
     }
 
     fn path_for(&self, url: &str) -> PathBuf {
         self.dir.join(format!("{}.img", cache_key(url)))
     }
 
-    /// 淘汰最旧的条目，直到「现有 + 新写入」能落进总量上限。
-    async fn evict(&self, incoming: u64) {
+    /// 写入后的目录已经包含新条目，不再重复计入本次写入大小。
+    async fn evict(&self, max_bytes: u64) {
         let Ok(mut entries) = tokio::fs::read_dir(&self.dir).await else {
             return;
         };
@@ -118,6 +126,10 @@ impl WximgCache {
         let mut total = 0_u64;
         while let Ok(Some(entry)) = entries.next_entry().await {
             let path = entry.path();
+            // 临时文件可能还在写入中，不参与容量统计和淘汰。
+            if path.extension().and_then(|ext| ext.to_str()) != Some("img") {
+                continue;
+            }
             let Ok(meta) = entry.metadata().await else {
                 continue;
             };
@@ -128,12 +140,12 @@ impl WximgCache {
             let modified = meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
             files.push((modified, path, meta.len()));
         }
-        if total <= MAX_CACHE_BYTES {
+        if total <= max_bytes {
             return;
         }
         files.sort_by_key(|(modified, _, _)| *modified);
         for (_, path, len) in files {
-            if total + incoming <= MAX_CACHE_BYTES {
+            if total <= max_bytes {
                 break;
             }
             if tokio::fs::remove_file(&path).await.is_ok() {
@@ -246,6 +258,54 @@ mod tests {
             .map(|entries| entries.count())
             .unwrap_or(0);
         assert_eq!(written, 0, "含换行的 URL 不应产生任何缓存文件");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn concurrent_writes_leave_one_complete_entry() {
+        let dir = temp_dir("concurrent");
+        let cache = WximgCache::new(dir.clone());
+        let url = "https://mmbiz.qpic.cn/concurrent.png";
+        tauri::async_runtime::block_on(async {
+            let first = vec![1_u8; 256 * 1024];
+            let second = vec![2_u8; 128 * 1024];
+            tokio::join!(
+                cache.put(url, "image/png", &first),
+                cache.put(url, "image/png", &second)
+            );
+            let (_, bytes) = cache.get(url).await.expect("并发写入后应命中");
+            assert!(
+                bytes == first || bytes == second,
+                "缓存不能混合或截断两个写入"
+            );
+        });
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn eviction_counts_new_entries_once_and_ignores_in_flight_files() {
+        let dir = temp_dir("eviction");
+        let cache = WximgCache::new(dir.clone());
+        tauri::async_runtime::block_on(async {
+            tokio::fs::create_dir_all(&dir).await.unwrap();
+            for name in ["a.img", "b.img", "c.img", "in-flight.tmp"] {
+                tokio::fs::write(dir.join(name), b"1234").await.unwrap();
+            }
+            cache.evict(8).await;
+            let images = std::fs::read_dir(&dir)
+                .unwrap()
+                .filter_map(Result::ok)
+                .filter(|entry| {
+                    entry.path().extension().and_then(|ext| ext.to_str()) == Some("img")
+                })
+                .count();
+            assert_eq!(images, 2, "只淘汰超过预算的那一条");
+            assert!(
+                dir.join("in-flight.tmp").exists(),
+                "不能删除并发写入的临时文件"
+            );
+        });
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

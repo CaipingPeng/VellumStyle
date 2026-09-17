@@ -38,7 +38,20 @@ jobs:
         run: npx tsc -b
 
       - name: Run frontend tests
-        run: npm test
+        run: npm test -- --test-force-exit
 
       - name: Build frontend
         run: npm run build
+
+  windows-backend:
+    name: Windows Rust tests
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+      - name: Run backend tests including Windows commands
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib

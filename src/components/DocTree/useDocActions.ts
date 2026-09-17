@@ -89,7 +89,9 @@ export function useDocActions() {
         await runBackgroundDocumentMutation(
           async () => {
             await flushSave();
-            return deleteEntry(path, {recursive: options.recursive});
+            const layouts = useStore.getState().documentLayouts;
+            const layoutJson = JSON.stringify(Object.fromEntries(Object.entries(layouts).filter(([key]) => key === path || key.startsWith(`${path}/`))));
+            return deleteEntry(path, {recursive: options.recursive, layoutJson});
           },
           () => cancelBackgroundDocumentTargets(path),
         );

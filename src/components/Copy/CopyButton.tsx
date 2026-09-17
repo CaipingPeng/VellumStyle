@@ -4,6 +4,7 @@ import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
 import {copyHtml} from "../../utils/clipboard.ts";
 import Button, {type ButtonState} from "../ui/Button.tsx";
 import {toast} from "../Toast/toast.ts";
+import {getArticleSource} from "../../store/index.ts";
 
 const RESET_MS = 2000;
 
@@ -17,12 +18,13 @@ export default function CopyButton() {
   };
 
   const handleCopy = async () => {
+    const source = getArticleSource();
     setState("loading");
     try {
       await waitForMathJaxIdle();
       // converter 内含 juice 链（约 560KB），按需加载，避免常驻主包。
       const {solveHtml} = await import("../../markdown/converter.ts");
-      const html = await solveHtml();
+      const html = await solveHtml(source);
       if (!html) {
         fail("没有可复制的内容");
         return;

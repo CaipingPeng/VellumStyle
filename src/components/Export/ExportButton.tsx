@@ -1,6 +1,6 @@
 import {useState} from "react";
 import {Archive, Code2, Download, FileCode, FileImage, FileText, Loader2} from "lucide-react";
-import {useStore} from "../../store/index.ts";
+import {getArticleSource, useStore} from "../../store/index.ts";
 import {exportArticle, getExportFormatMeta, type ExportFormat} from "../../utils/exportArticle.ts";
 import Button, {type ButtonVariant} from "../ui/Button.tsx";
 import Menu, {MenuItem} from "../ui/Menu.tsx";
@@ -37,9 +37,10 @@ export function useExportController(): ExportController {
     try {
       // 导出只需点击瞬间的文档快照，不订阅 store，避免工具栏随每次输入重渲染。
       const {currentDocPath, content} = useStore.getState();
+      const source = getArticleSource();
       const result = await exportArticle(format, currentDocPath, {
         readMarkdownSource: () => content,
-      });
+      }, source);
       if (result.status !== "cancelled") {
         const fileName = result.path?.split(/[\\/]/).pop() || result.fileName;
         const action = result.status === "saved" ? "已导出" : "已下载";

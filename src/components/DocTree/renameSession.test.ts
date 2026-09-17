@@ -14,6 +14,18 @@ import {
   type DocNode,
 } from "../../utils/documents.ts";
 import {remapExpandedPaths} from "./pathRemap.ts";
+import {isUnchangedRename, renameInitialValue} from "./renameSession.ts";
+
+test("重命名根据路径拆分一次扩展名，文件夹的点号不参与拆分", () => {
+  const doc = {path: "资料/周报.v2.md", isDir: false};
+  assert.equal(renameInitialValue(doc), "周报.v2");
+  assert.equal(isUnchangedRename(doc, "周报"), false);
+  assert.equal(isUnchangedRename(doc, "周报.v2"), true);
+  assert.equal(isUnchangedRename(doc, "周报.v2.md"), true);
+  const folder = {path: "资料.v2", isDir: true};
+  assert.equal(renameInitialValue(folder), "资料.v2");
+  assert.equal(isUnchangedRename(folder, "资料"), false);
+});
 
 const TREE: DocNode[] = [
   {

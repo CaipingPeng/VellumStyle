@@ -18,12 +18,13 @@ import {
 import TreeNode, {type CreatingState} from "./TreeNode.tsx";
 import DraftInput from "./DraftInput.tsx";
 import RenameDialog from "./RenameDialog.tsx";
-import {type RenameSession} from "./renameSession.ts";
+import {isUnchangedRename, renameInitialValue, type RenameSession} from "./renameSession.ts";
 import IconButton from "../ui/IconButton.tsx";
 import {remapExpandedPaths} from "./pathRemap.ts";
 import {useDocActions} from "./useDocActions.ts";
 import {isRecursiveDelete} from "./deleteConfirmation.ts";
 import DeleteConfirmDialog from "./DeleteConfirmDialog.tsx";
+import TrashDialog from "./TrashDialog.tsx";
 import ResizableSidePanel from "../Workspace/ResizableSidePanel.tsx";
 import {toast} from "../Toast/toast.ts";
 
@@ -54,6 +55,7 @@ function flattenVisible(nodes: DocNode[], expanded: Set<string>): Array<{path: s
 }
 
 function DocTree() {
+  const [trashOpen, setTrashOpen] = useState(false);
   const tree = useStore((s) => s.tree);
   const currentDocPath = useStore((s) => s.currentDocPath);
   const selectedPath = useStore((s) => s.selectedPath);
@@ -152,7 +154,7 @@ function DocTree() {
     const name = session.value.trim();
     if (!name) return "名称不能为空";
     // 名字没变（文件节点只打主名也算没变）：视为无变化，交给提交路径静默收工。
-    if (name === node.name || name === entryStem(node.name)) return null;
+    if (isUnchangedRename(node, name)) return null;
     const base = validateEntryName(name, node.name);
     if (base) return base;
     const dir = treePathAncestors(node.path).pop() ?? "";
@@ -167,7 +169,7 @@ function DocTree() {
   const startRenaming = useCallback((node: DocNode) => {
     setCreating(null);
     setSelectedPath(node.path);
-    updateRenameSession({path: node.path, value: node.name, isDir: node.isDir, error: null, pending: false});
+    updateRenameSession({path: node.path, value: renameInitialValue(node), isDir: node.isDir, error: null, pending: false});
   }, [setSelectedPath, updateRenameSession]);
 
   const renameChange = useCallback((value: string) => {
@@ -197,7 +199,7 @@ function DocTree() {
 
     const name = session.value.trim();
     // 名字没变（文件节点只打主名也算没变）：静默收工，不打扰后端。
-    if (!name || name === node.name || name === entryStem(node.name)) {
+    if (!name || isUnchangedRename(node, name)) {
       updateRenameSession(null);
       return;
     }
@@ -396,6 +398,7 @@ function DocTree() {
           <IconButton title="新建文件夹" onClick={() => startCreate("folder")}>
             <FolderPlus size={15} />
           </IconButton>
+          <button type="button" className="ml-auto text-xs text-text-secondary" onClick={() => setTrashOpen(true)}>最近删除</button>
         </div>
 
         {/* 根区域：点空白取消选中；拖拽释放到此移到根目录 */}
@@ -481,6 +484,7 @@ function DocTree() {
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => void confirmDelete()}
       />
+      {trashOpen && <TrashDialog onClose={() => setTrashOpen(false)} />}
       <RenameDialog
         node={renameTarget}
         session={renameSession}

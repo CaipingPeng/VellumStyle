@@ -1,4 +1,6 @@
 mod background;
+mod atomic_file;
+mod trash;
 mod config;
 mod documents;
 mod export_file;
@@ -15,6 +17,9 @@ mod wechat_backend;
 mod wximg_cache;
 use tauri::http::{Response, StatusCode};
 use tauri::{Manager, UriSchemeContext, UriSchemeResponder};
+
+#[tauri::command]
+fn supports_wechat_backend() -> bool { cfg!(windows) }
 
 /// 组装一张图的响应。
 /// Content-Type 来自上游响应头，可能含控制字符让 builder 失败；先过滤再交给 builder，
@@ -114,6 +119,9 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .register_asynchronous_uri_scheme_protocol("wximg", handle_wximg)
         .invoke_handler(tauri::generate_handler![
+            supports_wechat_backend,
+            trash::list_trash,
+            trash::restore_trash,
             background::copy_background_image,
             background::remove_background_image,
             preview_image::get_preview_image_asset,

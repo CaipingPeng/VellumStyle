@@ -4,6 +4,7 @@ import {waitForMathJaxIdle} from "../markdown/mathjax.ts";
 import {solveHtml} from "../markdown/converter.ts";
 import {ARTICLE_BOX_ID} from "../articleRoot.ts";
 import {isTauriRuntime} from "./tauriEnv.ts";
+import type {ArticleSource} from "./articleSnapshot.ts";
 
 export type ExportFormat = "png" | "pdf" | "pdf-images" | "html" | "markdown";
 
@@ -117,8 +118,9 @@ export async function exportArticle(
   format: ExportFormat,
   docPath: string | null,
   dependencyOverrides: Partial<ExportArticleDependencies> = {},
+  source?: ArticleSource,
 ): Promise<ExportResult> {
-  const dependencies = createExportArticleDependencies(dependencyOverrides);
+  const dependencies = createExportArticleDependencies(dependencyOverrides, source);
   const fileName = buildDefaultExportName(docPath, format);
 
   if (format === "markdown") {
@@ -180,12 +182,12 @@ export async function exportArticle(
   return dependencies.saveExportBlob(await canvasToBlob(canvas, meta.mimeType), format, fileName);
 }
 
-function createExportArticleDependencies(overrides: Partial<ExportArticleDependencies>): ExportArticleDependencies {
+function createExportArticleDependencies(overrides: Partial<ExportArticleDependencies>, source?: ArticleSource): ExportArticleDependencies {
   return {
     waitForMathJaxIdle,
     readMarkdownSource: () => "",
-    readArticleHtml: solveHtml,
-    renderArticleCanvas,
+    readArticleHtml: () => solveHtml(source),
+    renderArticleCanvas: () => renderArticleCanvas(source),
     saveExportBlob,
     pickExportPath,
     optimizePdfImages: optimizePdfArticleImages,
@@ -224,14 +226,22 @@ async function optimizePdfArticleImages(articleHtml: string): Promise<string> {
   return template.innerHTML;
 }
 
-async function renderArticleCanvas(): Promise<HTMLCanvasElement> {
-  const box = document.getElementById(ARTICLE_BOX_ID) as HTMLElement | null;
+async function renderArticleCanvas(source?: ArticleSource): Promise<HTMLCanvasElement> {
+  const snapshot = source ? await (await import("./articleSnapshot.ts")).renderArticleSnapshot(source) : null;
+  const box = snapshot?.box ?? document.getElementById(ARTICLE_BOX_ID) as HTMLElement | null;
   if (!box) {
     throw new Error("没有找到预览区域");
   }
 
   const {default: html2canvas} = await import("html2canvas");
   const target = createA4ExportRenderTarget(box);
+  if (source) {
+    const style = document.createElement("style");
+    // 截图容器使用独立 Shadow DOM，避免异步截图期间被当前文章主题影响。
+    style.textContent = source.css;
+    const contents = Array.from(target.element.childNodes);
+    target.element.attachShadow({mode: "open"}).append(style, ...contents);
+  }
   try {
     return await html2canvas(target.element, {
       backgroundColor: "#ffffff",
@@ -244,6 +254,7 @@ async function renderArticleCanvas(): Promise<HTMLCanvasElement> {
     });
   } finally {
     target.cleanup();
+    snapshot?.cleanup();
   }
 }
 

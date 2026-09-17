@@ -81,10 +81,10 @@ export default function DeleteConfirmDialog({open, node, onCancel, onConfirm}: P
                 {recursive ? (
                   <>
                     该文件夹包含 <span className="font-semibold text-danger">{childCount} 个子项</span>
-                    ，确认后会同时删除其中的子文件夹和子文件。此操作不可撤销。
+                    ，确认后会同时删除其中的子文件夹和子文件。可在“最近删除”中恢复，本机保留 30 天。
                   </>
                 ) : (
-                  <>确认删除后，该{targetKind}会从文件树中移除。此操作不可撤销。</>
+                  <>确认删除后，该{targetKind}会从文件树中移除。可在“最近删除”中恢复，本机保留 30 天。</>
                 )}
               </div>
             </div>

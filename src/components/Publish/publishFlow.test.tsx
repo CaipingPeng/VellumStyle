@@ -79,7 +79,10 @@ async function loadRuntimeModules() {
             loader: "js",
           }));
           pluginBuild.onLoad({filter: /src[\\/]markdown[\\/]mathjax\.ts$/}, () => ({
-            contents: "export function waitForMathJaxIdle() { return globalThis.__PUBLISH_TEST_MATHJAX_IDLE__ ?? Promise.resolve(); }",
+            contents: [
+              "export function waitForMathJaxIdle() { return globalThis.__PUBLISH_TEST_MATHJAX_IDLE__ ?? Promise.resolve(); }",
+              "export function typesetMath() { return Promise.resolve(); }",
+            ].join("\n"),
             loader: "ts",
           }));
           // juice 在 solveDraftHtml 里被动态 import（懒加载优化后），
@@ -767,7 +770,7 @@ test("successful confirmation closes at 900ms and reopening requires a fresh sca
   await harness.publish();
   await harness.continuePublish();
   assert.equal(harness.closeCount(), 0);
-  assert.ok(buttonWithText("已发布"));
+  assert.ok(buttonWithText("草稿已保存"));
   assert.equal(
     harness.toastMessages().some(({message}) => message.includes("已发到公众号草稿箱")),
     false,
@@ -812,7 +815,7 @@ test("success state blocks duplicate submission until its 900ms callback", async
   const harness = await createHarness(INLINE_IMAGE_FIXTURE);
   await harness.publish();
 
-  const successButton = buttonWithText("已发布");
+  const successButton = buttonWithText("草稿已保存");
   assert.equal(successButton.disabled, true);
   await act(async () => {
     successButton.click();
@@ -842,11 +845,11 @@ test("an old failure reset timer cannot erase an immediate retry success", async
     await retriedDraft.promise;
     await flushPromises();
   });
-  assert.ok(buttonWithText("已发布"));
+  assert.ok(buttonWithText("草稿已保存"));
   assert.equal(harness.draftCalls().length, 2);
 
   await harness.runTimer(2000);
-  assert.ok(buttonWithText("已发布"), "the first attempt's timer must not reset the newer success state");
+  assert.ok(buttonWithText("草稿已保存"), "the first attempt's timer must not reset the newer success state");
 });
 
 test("failed confirmation shows an error, resets after 2000ms, and retry rescans", async () => {
@@ -912,16 +915,14 @@ test("author and comment settings are persisted and passed to addDraft", async (
   });
 });
 
-test("publishing waits for MathJax idle before solving HTML and calling addDraft", async () => {
+test("publishing waits for MathJax idle and keeps the source captured at publish time", async () => {
   const harness = await createHarness(INLINE_IMAGE_FIXTURE);
   const mathGate = deferred<void>();
   Object.defineProperty(globalThis, "__PUBLISH_TEST_MATHJAX_IDLE__", {configurable: true, value: mathGate.promise});
 
   await harness.publish();
   assert.equal(harness.draftCalls().length, 0);
-  const root = harness.articleBox.querySelector(`#${ARTICLE_ROOT_ID}`);
-  assert.ok(root);
-  root.insertAdjacentHTML("beforeend", '<p id="after-math-idle">idle boundary</p>');
+  await harness.setContent(`${INLINE_IMAGE_FIXTURE}\n\nchanged after publish`);
 
   await act(async () => {
     mathGate.resolve();
@@ -929,5 +930,5 @@ test("publishing waits for MathJax idle before solving HTML and calling addDraft
     await flushPromises();
   });
   assert.equal(harness.draftCalls().length, 1);
-  assert.match(String(harness.draftCalls()[0]?.args?.content), /idle boundary/);
+  assert.doesNotMatch(String(harness.draftCalls()[0]?.args?.content), /changed after publish/);
 });

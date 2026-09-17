@@ -149,8 +149,7 @@ function TreeNode({
         }}
         onDoubleClick={(e) => {
           e.stopPropagation();
-          // Windows 习惯：文件与文件夹都以双击进入重命名；文件夹的展开/收起由单击负责，
-          // 双击时两次单击相互抵消，展开态回到原样。
+          // 文件和文件夹均使用双击进入重命名；文件夹展开/收起仍由单击负责。
           if (renaming) return;
           onStartRename(node);
         }}
@@ -331,9 +330,6 @@ function TreeNode({
   );
 }
 
-// memo：仅当节点自身 props 变化时重渲染。回调由 DocTree 侧 useCallback 稳定化，
-// 聚焦、面板宽度调整、App 无关重渲染不再整树重建。
-// 重命名会话在树上只命中一条路径：其余节点的 rename 恒为 null，不会因输入抖动整树重渲染。
 // memo：仅当节点自身 props 变化时重渲染。回调由 DocTree 侧 useCallback 稳定化，
 // 聚焦、面板宽度调整、App 无关重渲染不再整树重建。
 // 注意：会话必须以 {path, session} 形式下发给**所有**节点。若只在命中节点上挂 rename，

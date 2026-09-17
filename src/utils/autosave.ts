@@ -33,6 +33,9 @@ export function createDebouncedSaver(
         await save(text);
         events.onFlushSuccess?.(text);
       } catch (error) {
+        // 保留失败草稿；保存期间的新输入优先，不能被旧快照覆盖。
+        if (pending === null) pending = text;
+        flushRequested = false;
         events.onFlushError?.(error);
         throw error;
       }

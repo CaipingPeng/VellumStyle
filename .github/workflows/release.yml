@@ -35,7 +35,7 @@ jobs:
         run: npm ci
 
       - name: Run frontend tests
-        run: npm test
+        run: npm test -- --test-force-exit
 
       - name: Install Linux system dependencies for Rust tests
         run: |

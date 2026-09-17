@@ -16,7 +16,7 @@ export function htmlByteSize(html: string): number {
 export interface RenderCacheLimits {
   /** 最多缓存多少条。 */
   maxEntries: number;
-  /** 缓存 HTML 的总字节上限（按 UTF-16 计）。 */
+  /** Markdown 键与 HTML 值的总字节上限（按 UTF-16 计）。 */
   maxBytes: number;
 }
 
@@ -42,7 +42,7 @@ export function createRenderCache(limits: RenderCacheLimits): RenderCache {
       }
       const evicted = entries.get(oldestKey);
       entries.delete(oldestKey);
-      bytes -= htmlByteSize(evicted ?? "");
+      bytes -= htmlByteSize(oldestKey) + htmlByteSize(evicted ?? "");
     }
   }
 
@@ -52,10 +52,11 @@ export function createRenderCache(limits: RenderCacheLimits): RenderCache {
       // 同一个 key 再次写入时要先扣掉旧值，否则字节数会越算越多。
       const previous = entries.get(key);
       if (previous !== undefined) {
-        bytes -= htmlByteSize(previous);
+        bytes -= htmlByteSize(key) + htmlByteSize(previous);
+        entries.delete(key);
       }
       entries.set(key, html);
-      bytes += htmlByteSize(html);
+      bytes += htmlByteSize(key) + htmlByteSize(html);
       evict();
     },
     get size() {

@@ -79,16 +79,16 @@ test("面板渲染角色名、说明与两档倍率", () => {
   const el = panel();
   assert.ok(el, "应渲染面板");
   assert.match(el.textContent ?? "", /二级标题/);
-  assert.match(el.textContent ?? "", /本元素/);
-  assert.match(el.textContent ?? "", /全局/);
+  assert.match(el.textContent ?? "", /全部二级标题/);
+  assert.match(el.textContent ?? "", /当前文章/);
   assert.equal(document.querySelectorAll(".vs-font-size-value").length, 2);
   assert.equal(document.querySelectorAll(".vs-font-size-value")[0].textContent, "100%");
 });
 
-test("点「本元素」加减把角色倍率交给 store", () => {
+test("点「全部二级标题」加减把角色倍率交给 store", () => {
   const {handlers} = mount();
-  click(button("本元素放大"));
-  click(button("本元素缩小"));
+  click(button("全部二级标题放大"));
+  click(button("全部二级标题缩小"));
   assert.deepEqual(handlers.onRoleScale, [
     ["h2", 1.05],
     ["h2", 0.95],
@@ -97,33 +97,33 @@ test("点「本元素」加减把角色倍率交给 store", () => {
   assert.deepEqual(handlers.onGlobalScale, []);
 });
 
-test("点「全局」加减把全局倍率交给 store", () => {
+test("点「当前文章」加减把全局倍率交给 store", () => {
   const {handlers} = mount();
-  click(button("全局放大"));
+  click(button("当前文章放大"));
   assert.deepEqual(handlers.onGlobalScale, [1.05]);
   assert.deepEqual(handlers.onRoleScale, []);
 });
 
 test("当前倍率等于默认值时「复位」按钮禁用", () => {
   mount();
-  assert.equal(button("本元素恢复默认")?.disabled, true);
-  assert.equal(button("全局恢复默认")?.disabled, true);
-  assert.equal(button("本元素缩小")?.disabled, false);
-  assert.equal(button("本元素放大")?.disabled, false);
+  assert.equal(button("全部二级标题恢复默认")?.disabled, true);
+  assert.equal(button("当前文章恢复默认")?.disabled, true);
+  assert.equal(button("全部二级标题缩小")?.disabled, false);
+  assert.equal(button("全部二级标题放大")?.disabled, false);
 });
 
 test("倍率到区间边界后对应按钮禁用", () => {
   mount({typography: {global: 1.5, roles: {h2: 2}}});
-  assert.equal(button("全局放大")?.disabled, true);
-  assert.equal(button("本元素放大")?.disabled, true);
-  assert.equal(button("全局缩小")?.disabled, false);
-  assert.equal(button("本元素恢复默认")?.disabled, false);
+  assert.equal(button("当前文章放大")?.disabled, true);
+  assert.equal(button("全部二级标题放大")?.disabled, true);
+  assert.equal(button("当前文章缩小")?.disabled, false);
+  assert.equal(button("全部二级标题恢复默认")?.disabled, false);
 });
 
 test("非默认倍率下点复位交回默认值", () => {
   const {handlers} = mount({typography: {global: 1.25, roles: {h2: 1.5}}});
-  click(button("本元素恢复默认"));
-  click(button("全局恢复默认"));
+  click(button("全部二级标题恢复默认"));
+  click(button("当前文章恢复默认"));
   assert.deepEqual(handlers.onRoleScale, [["h2", 1]]);
   assert.deepEqual(handlers.onGlobalScale, [1]);
 });
@@ -132,7 +132,7 @@ test("「全文」角色只显示全局控制", () => {
   mount({roleKey: ROOT_ROLE});
   assert.match(document.querySelector(".vs-font-size-panel")?.textContent ?? "", /全文排版/);
   assert.equal(document.querySelectorAll(".vs-font-size-value").length, 1);
-  assert.equal(button("本元素放大"), null);
+  assert.equal(button("全部二级标题放大"), null);
 });
 
 test("关闭按钮与 Escape 都能收起面板", () => {

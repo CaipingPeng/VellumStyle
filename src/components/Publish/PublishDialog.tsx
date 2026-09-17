@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from "react";
-import {useStore} from "../../store/index.ts";
+import {getArticleSource, useStore} from "../../store/index.ts";
 import {markdownTitle} from "../../utils/path.ts";
 import {hasNonVideoContent, solveDraftHtml} from "../../markdown/converter.ts";
 import {waitForMathJaxIdle} from "../../markdown/mathjax.ts";
@@ -321,12 +321,13 @@ export default function PublishDialog({open = true, onClose, onNeedSettings}: Pr
       isCurrentSession() && nextOperationIdRef.current === operation.id;
     setBusy(true);
     setPubResult("none");
+    const source = getArticleSource();
     try {
       await waitForMathJaxIdle();
       if (!isCurrentSession()) return;
       stopLocalMediaPlayback();
 
-      const html = await solveDraftHtml();
+      const html = await solveDraftHtml(source);
       if (!html.trim()) {
         toast.show("正文为空，无法发布", "error");
         return;
@@ -445,7 +446,7 @@ export default function PublishDialog({open = true, onClose, onNeedSettings}: Pr
               state={publishState}
               disabled={pubResult === "ok" || !thumbId || thumbUploading}
               loadingText="发布中…"
-              successText="已发布"
+              successText="草稿已保存"
               errorText="发布失败"
               onClick={requestPublish}
             >

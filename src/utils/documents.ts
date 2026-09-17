@@ -50,6 +50,26 @@ const WEB_SAMPLE_CONTENT = `# 文澜排版
 
 let webFiles = new Map<string, string>([[WEB_SAMPLE_PATH, WEB_SAMPLE_CONTENT]]);
 let webDirs = new Set<string>();
+export interface TrashEntry {id: string; path: string; deletedAt: number; isDir: boolean; layoutJson?: string | null}
+const webTrash = new Map<string, {entry: TrashEntry; files: Array<[string, string]>; dirs: string[]}>();
+
+export async function listTrash(): Promise<TrashEntry[]> {
+  if (isTauriRuntime()) return invoke("list_trash");
+  for (const [id, item] of webTrash) if (Date.now() - item.entry.deletedAt > 30 * 86400000) webTrash.delete(id);
+  return [...webTrash.values()].map((item) => item.entry).sort((a, b) => b.deletedAt - a.deletedAt);
+}
+export async function restoreTrash(id: string): Promise<TrashEntry> {
+  if (isTauriRuntime()) return invoke("restore_trash", {id});
+  const item = webTrash.get(id);
+  if (!item) throw new Error("回收记录不存在");
+  const path = uniquePath(item.entry.path, pathExists);
+  const remap = (value: string) => path + value.slice(item.entry.path.length);
+  for (const [name, text] of item.files) webFiles.set(remap(name), text);
+  for (const name of item.dirs) webDirs.add(remap(name));
+  for (const parent of ancestorDirsForPath(path)) webDirs.add(parent);
+  webTrash.delete(id);
+  return {...item.entry, path};
+}
 
 function ensureMdName(name: string): string {
   return /\.md$/i.test(name) ? name : `${name}.md`;
@@ -200,7 +220,7 @@ export function renameEntry(path: string, newName: string): Promise<string> {
   return invoke<string>("rename_entry", {path, newName});
 }
 
-export function deleteEntry(path: string, options: {recursive?: boolean} = {}): Promise<void> {
+export function deleteEntry(path: string, options: {recursive?: boolean; layoutJson?: string} = {}): Promise<void> {
   if (!isTauriRuntime()) {
     if (!path.trim()) {
       return Promise.reject(new Error("不能删除文档根目录"));
@@ -218,12 +238,16 @@ export function deleteEntry(path: string, options: {recursive?: boolean} = {}): 
       return Promise.reject(new Error("文件夹非空，请确认后递归删除"));
     }
 
+    const id = `${Date.now()}-${webTrash.size}`;
+    webTrash.set(id, {entry: {id, path, deletedAt: Date.now(), isDir, layoutJson: options.layoutJson},
+      files: [...webFiles].filter(([name]) => name === path || name.startsWith(prefix)),
+      dirs: [...webDirs].filter((name) => name === path || name.startsWith(prefix))});
     webFiles.delete(path);
     webDirs = new Set(Array.from(webDirs).filter((dirPath) => dirPath !== path && !dirPath.startsWith(prefix)));
     webFiles = new Map(Array.from(webFiles).filter(([filePath]) => !filePath.startsWith(prefix)));
     return Promise.resolve();
   }
-  return invoke("delete_entry", {path, recursive: Boolean(options.recursive)});
+  return invoke("delete_entry", {path, recursive: Boolean(options.recursive), ...(options.layoutJson ? {layoutJson: options.layoutJson} : {})});
 }
 
 export function moveEntry(src: string, destDir: string): Promise<string> {

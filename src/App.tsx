@@ -1,3 +1,6 @@
+import WechatFeatureGate from "./components/Upload/WechatFeatureGate.tsx";
+import LayoutToolbar from "./components/Preview/LayoutToolbar.tsx";
+import SaveBeforeClose from "./components/Workspace/SaveBeforeClose.tsx";
 import {lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {AnimatePresence, motion, useReducedMotion} from "framer-motion";
 import MarkdownEditor, {type MarkdownEditorHandle} from "./components/Editor/MarkdownEditor.tsx";
@@ -30,7 +33,7 @@ const TableEditorDialog = lazy(() => import("./components/Editor/TableEditorDial
 const FormulaEditorDialog = lazy(() => import("./components/Editor/FormulaEditorDialog.tsx"));
 const TemplateLibraryDialog = lazy(() => import("./components/Templates/TemplateLibraryDialog.tsx"));
 const DocumentHistoryDialog = lazy(() => import("./components/History/DocumentHistoryDialog.tsx"));
-import {useStore, getThemeById, flushDocumentThemeWrite, flushSave} from "./store/index.ts";
+import {useStore, getThemeById, flushSave} from "./store/index.ts";
 import {getCodeThemeById, loadAllCodeThemes, subscribeCodeThemes} from "./markdown/codeThemes.ts";
 import {formatHtmlImage, replaceMarkdownImageSizeByIndex} from "./markdown/imageMarkdown.ts";
 import {
@@ -729,30 +732,6 @@ export default function App() {
     };
   }, []);
 
-  // 关窗前把当前文档落盘，防丢最后 800ms 编辑。
-  useEffect(() => {
-    if (!isTauriRuntime()) {
-      return;
-    }
-    const win = getCurrentWindow();
-    const unlisten = win.onCloseRequested(async (event) => {
-      event.preventDefault();
-      // 保存失败也必须放行关闭，否则窗口永远关不掉。
-      try {
-        await flushBackgroundDocumentOperations();
-        await flushSave();
-        await flushDocumentThemeWrite();
-      } catch (err) {
-        console.error("关窗前保存失败：", err);
-      } finally {
-        await win.destroy();
-      }
-    });
-    return () => {
-      void unlisten.then((f) => f());
-    };
-  }, []);
-
   useEffect(() => {
     const handleManualSync = (event: KeyboardEvent) => {
       if (!isManualSyncShortcut(event)) return;
@@ -917,9 +896,10 @@ export default function App() {
                 data-workspace-panel="preview"
                 tabIndex={-1}
                 onPointerDown={(event) => event.currentTarget.focus({preventScroll: true})}
-                className="workspace-panel workspace-preview-panel flex min-h-0 min-w-0 flex-1 overflow-hidden outline-none"
+                className="workspace-panel workspace-preview-panel flex flex-col min-h-0 min-w-0 flex-1 overflow-hidden outline-none"
               >
-                <div className="min-w-0 flex-1">
+                <LayoutToolbar />
+                <div className="min-h-0 min-w-0 flex-1">
                   <Preview
                     ref={previewRef}
                     content={content}
@@ -1075,37 +1055,46 @@ export default function App() {
           />
         )}
         {phoneUploadOpen && (
+          <WechatFeatureGate onClose={() => setPhoneUploadOpen(false)} onSettings={() => setSettingsOpen(true)}>
           <PhoneUploadDialog
             canInsert={Boolean(currentDocPath)}
             onClose={() => setPhoneUploadOpen(false)}
             onPick={handlePickEmoji}
             onNeedSettings={handleNeedSettings}
           />
+          </WechatFeatureGate>
         )}
         {aiImageOpen && (
+          <WechatFeatureGate onClose={() => setAiImageOpen(false)} onSettings={() => setSettingsOpen(true)}>
           <AiImageDialog
             canInsert={Boolean(currentDocPath)}
             onClose={() => setAiImageOpen(false)}
             onPick={handlePickEmoji}
             onNeedSettings={handleNeedSettings}
           />
+          </WechatFeatureGate>
         )}
         {musicPickerOpen && (
+          <WechatFeatureGate onClose={() => setMusicPickerOpen(false)} onSettings={() => setSettingsOpen(true)}>
           <MusicPickerDialog
             onClose={() => setMusicPickerOpen(false)}
             onPick={handlePickEmoji}
             onNeedSettings={handleNeedSettings}
           />
+          </WechatFeatureGate>
         )}
         {videoChannelOpen && (
+          <WechatFeatureGate onClose={() => setVideoChannelOpen(false)} onSettings={() => setSettingsOpen(true)}>
           <VideoChannelDialog
             onClose={() => setVideoChannelOpen(false)}
             onPick={handlePickEmoji}
             onNeedSettings={handleNeedSettings}
           />
+          </WechatFeatureGate>
         )}
       </Suspense>
       <Toaster />
+      <SaveBeforeClose />
     </div>
   );
 }

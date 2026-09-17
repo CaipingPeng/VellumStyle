@@ -13,7 +13,7 @@ pub struct DocNode {
     pub children: Vec<DocNode>,
 }
 
-fn documents_dir(app: &AppHandle) -> Result<PathBuf, String> {
+pub(crate) fn documents_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let dir = app
         .path()
         .app_data_dir()
@@ -66,7 +66,7 @@ fn is_windows_reserved_name(stem: &str) -> bool {
 
 // 把相对路径解析为 documents/ 下的绝对路径，校验不逃逸。
 // 用逐段拼接（不依赖文件存在，create 场景目标尚不存在），拒绝 .. 与绝对段。
-fn resolve_in_documents(app: &AppHandle, rel: &str) -> Result<PathBuf, String> {
+pub(crate) fn resolve_in_documents(app: &AppHandle, rel: &str) -> Result<PathBuf, String> {
     let base = documents_dir(app)?;
     let mut full = base.clone();
     for seg in rel.split(['/', '\\']) {
@@ -158,7 +158,7 @@ pub fn read_document(app: AppHandle, path: String) -> Result<String, String> {
 pub fn write_document(app: AppHandle, path: String, text: String) -> Result<(), String> {
     let full = resolve_in_documents(&app, &path)?;
     let before = std::fs::read_to_string(&full).unwrap_or_default();
-    std::fs::write(&full, &text).map_err(|e| format!("写入文档失败：{e}"))?;
+    crate::atomic_file::write(&full, text.as_bytes()).map_err(|e| format!("写入文档失败：{e}"))?;
     if let Err(error) = crate::history::record_document_transition(&app, &path, &before, &text) {
         // 历史是写盘后的附加保障；其失败不应把已成功的正文保存伪装成失败。
         eprintln!("[history] record failed path={path} err={error}");
@@ -244,7 +244,7 @@ fn same_file(a: &Path, b: &Path) -> bool {
 }
 
 #[tauri::command]
-pub fn delete_entry(app: AppHandle, path: String, recursive: Option<bool>) -> Result<(), String> {
+pub fn delete_entry(app: AppHandle, path: String, recursive: Option<bool>, layout_json: Option<String>) -> Result<crate::trash::TrashEntry, String> {
     if path.trim().is_empty() {
         return Err("不能删除文档根目录".into());
     }
@@ -266,14 +266,8 @@ pub fn delete_entry(app: AppHandle, path: String, recursive: Option<bool>) -> Re
         if !empty && !recursive.unwrap_or(false) {
             return Err("文件夹非空，请确认后递归删除".into());
         }
-        if empty {
-            std::fs::remove_dir(&full).map_err(|e| format!("删除失败：{e}"))
-        } else {
-            std::fs::remove_dir_all(&full).map_err(|e| format!("删除失败：{e}"))
-        }
-    } else {
-        std::fs::remove_file(&full).map_err(|e| format!("删除失败：{e}"))
     }
+    crate::trash::move_to_trash(&app, &full, &path, layout_json)
 }
 
 /// 移动文件/文件夹到目标目录。src/dest_dir 为相对 documents/ 的路径（dest_dir 空串=根）。

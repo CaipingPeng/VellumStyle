@@ -24,6 +24,52 @@ import {
 
 const BUILTIN_DIR = join(process.cwd(), "src", "themes", "builtin");
 
+test("全局缩放不重复放大未分类后代的相对字号", () => {
+  const out = scaleThemeCss('#article, #article mark { font-size: 1em; } #article ruby rt { font-size: .6em; }', {global: 1.5, roles: {}});
+  assert.match(out, /#article \{ font-size: 1\.5em; \}/);
+  assert.match(out, /#article mark \{ font-size: 1em; \}/);
+  assert.match(out, /#article ruby rt \{ font-size: 0\.6em; \}/);
+});
+
+test("行内代码兜底规则的每个选择器都限制在文章内", () => {
+  const out = scaleThemeCss("#article { font-size: 16px; }", {global: 1, roles: {inlineCode: 1.2}});
+  assert.match(out, /#article p code, #article li code \{ font-size: 1\.2em; \}/);
+});
+
+test("标题装饰与表格行内代码继承角色倍率，不再叠乘", () => {
+  const out = scaleThemeCss('#article h1 .prefix::before { font-size: .9em; } #article h1 { font-size: 30px; } #article table { font-size: 16px; } #article table td code { font-size: .95em; }', {global: 1, roles: {h1: 1.5, table: 1.5}});
+  assert.match(out, /font-size: 45px/);
+  assert.match(out, /font-size: 0\.9em/);
+  assert.match(out, /font-size: 24px/);
+  assert.match(out, /font-size: 0\.95em/);
+});
+
+test("CSS 注释和内容字符串中的标点不破坏字号重写", () => {
+  const out = scaleThemeCss('/* h1 { , */ @media screen { #article p { content: "}; font-size: 9rem;"; /* ; */ font-size: 16px; } }', {global: 1.5, roles: {p: 1.2}});
+  assert.match(out, /@media screen/);
+  assert.match(out, /content: "}; font-size: 9rem;"/);
+  assert.match(out, /font-size: 28\.8px/);
+});
+
+test("rem 折算支持省略整数部分且不改写内容字符串", () => {
+  assert.equal(normalizeRemToPx('#article { margin: -.5rem .5rem; content: "1rem"; }'), '#article { margin: -8px 8px; content: "1rem"; }');
+});
+
+test("引用的装饰字号不阻止正文兜底，通用段落绝对字号也能随引用调整", () => {
+  const state = {global: 1, roles: {blockquote: 1.5}};
+  const decoration = scaleThemeCss('#article blockquote::before { font-size: 18px; }', state);
+  assert.match(decoration, /#article blockquote \{ font-size: 1\.5em; \}/);
+  assert.match(decoration, /#article blockquote blockquote \{ font-size: inherit; \}/);
+  const paragraph = scaleThemeCss('#article p { font-size: 17px; color: red; } #article blockquote { font-size: 16px; }', state);
+  assert.match(paragraph, /#article blockquote p \{[^}]*font-size: 25\.5px/);
+  assert.doesNotMatch(paragraph, /#article blockquote p \{[^}]*color/);
+});
+
+test("条件规则内的祖先字号不影响条件外的相对字号", () => {
+  const out = scaleThemeCss('@media print { #article h1 { font-size: 20px; } } #article h1 .content { font-size: 1em; }', {global: 1, roles: {h1: 1.5}});
+  assert.match(out, /#article h1 \.content \{ font-size: 1\.5em; \}/);
+});
+
 // ---------------------------------------------------------------- rem 折算
 
 test("normalizeRemToPx 按 16px 基准折算", () => {

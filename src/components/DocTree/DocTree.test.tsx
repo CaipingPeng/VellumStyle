@@ -172,7 +172,7 @@ test("选中文件后按 F2 打开改名弹层", async () => {
     assert.equal(dialog(), null);
     pressF2On(panel());
     assert.ok(dialog(), "应打开改名弹层");
-    assert.equal(dialogInput()?.value, "草稿.md");
+    assert.equal(dialogInput()?.value, "草稿");
     assert.match(dialogText(), /重命名文档/);
     // 扩展名以并排后缀显示（不再是说明文案），避免用户以为扩展名丢了
     assert.equal(dialog()?.querySelector("span.text-sm2")?.textContent, ".md");
@@ -246,7 +246,7 @@ test("F2 进入改名弹层后 Esc 退出，重新按 F2 拿到的是原始名�
     assert.equal(confirmDiscardVisible(), false);
 
     pressF2On(panel());
-    assert.equal(dialogInput()?.value, "草稿.md", "重开应回到节点原名");
+    assert.equal(dialogInput()?.value, "草稿", "重开应回到节点原名");
   } finally {
     cleanup();
     useStore.setState({tree: [], selectedPath: null});
@@ -301,7 +301,7 @@ test("弹层输入时鼠标点到遮罩不会丢掉已输入内容", async () =>
     await settleDialogExit();
     assert.equal(useStore.getState().selectedPath, "草稿.md");
     pressF2On(panel());
-    assert.equal(dialogInput()?.value, "草稿.md", "放弃后重开应回到原名");
+    assert.equal(dialogInput()?.value, "草稿", "放弃后重开应回到原名");
   } finally {
     cleanup();
     useStore.setState({tree: [], selectedPath: null});
@@ -366,7 +366,7 @@ test("同级重名在弹层里被拦下，弹层保持打开", async () => {
     await settleDialogExit();
     assert.equal(useStore.getState().selectedPath, "草稿.md");
     pressF2On(panel());
-    assert.equal(dialogInput()?.value, "草稿.md");
+    assert.equal(dialogInput()?.value, "草稿");
   } finally {
     cleanup();
     useStore.setState({tree: [], selectedPath: null});
@@ -385,6 +385,30 @@ test("输入框只选中主文件名，扩展名留在原地", async () => {
   } finally {
     cleanup();
     useStore.setState({tree: [], selectedPath: null});
+  }
+});
+
+test("带点号的桌面文档名完整显示和选中，删掉点号后缀也算修改", async () => {
+  const {DocTree, useStore} = await loadRuntimeModules();
+  for (const name of ["周报.v2.终稿", "周报.v2.终稿.md"]) {
+    const path = "周报.v2.终稿.md";
+    useStore.setState({tree: [{name, path, isDir: false, children: []}], selectedPath: path, currentDocPath: null});
+    const {panel, cleanup} = renderDocTree(DocTree);
+    try {
+      pressF2On(panel());
+      const input = dialogInput()!;
+      assert.equal(input.value, "周报.v2.终稿");
+      assert.equal(input.selectionStart, 0);
+      assert.equal(input.selectionEnd, input.value.length);
+      assert.equal(dialog()?.querySelector("span.text-sm2")?.textContent, ".md");
+      setInputValue(input, "周报.v2");
+      const submit = Array.from(dialog()!.querySelectorAll("button")).find((button) => button.textContent?.trim() === "重命名");
+      assert.ok(submit);
+      assert.equal(submit.disabled, false, "删除主名里的后缀不能被当作没改名");
+    } finally {
+      cleanup();
+      useStore.setState({tree: [], selectedPath: null});
+    }
   }
 });
 
@@ -410,7 +434,7 @@ test("嵌套文档双击也能打开改名弹层（祖先节点被 memo 短路�
     });
 
     assert.ok(dialog(), "嵌套文档双击后必须打开改名弹层");
-    assert.equal(dialogInput()?.value, "深.md");
+    assert.equal(dialogInput()?.value, "深");
   } finally {
     cleanup();
     useStore.setState({tree: [], selectedPath: null});

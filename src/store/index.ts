@@ -18,11 +18,13 @@ import {
   type DocumentThemeMap,
 } from "../utils/documentThemes.ts";
 import {createDebouncedSaver} from "../utils/autosave.ts";
+import {createLatestRequest} from "../utils/latestRequest.ts";
+import {LAYOUT_FILE, sanitizeLayout, sanitizeLayouts, remapLayouts, type ArticleLayout, type DocumentLayouts} from "../utils/documentLayouts.ts";
 import {runCloudSync, type CloudSyncStatusValue} from "../utils/cloudSync.ts";
 import {createDebouncedLocalStorage} from "../utils/storage.ts";
 import {toast} from "../components/Toast/toast.ts";
 import type {PreviewModeId} from "../components/Preview/previewModes.ts";
-import {DEFAULT_CODE_THEME_ID, DEFAULT_PINNED_CODE_THEME_IDS, type CodeThemeId} from "../markdown/codeThemes.ts";
+import {buildMarkdownCss, DEFAULT_CODE_THEME_ID, DEFAULT_PINNED_CODE_THEME_IDS, type CodeThemeId} from "../markdown/codeThemes.ts";
 import {
   DEFAULT_WORKSPACE_SPLIT_RATIO,
   sanitizeWorkspaceSplitRatio,
@@ -55,6 +57,15 @@ import {
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export interface EditorState {
+  documentLayouts: DocumentLayouts;
+  defaultLayout: ArticleLayout;
+  layoutUndo: ArticleLayout[];
+  layoutRedo: ArticleLayout[];
+  layoutMode: boolean;
+  setLayoutMode: (enabled: boolean) => void;
+  undoLayout: () => void;
+  redoLayout: () => void;
+  saveLayoutAsDefault: () => void;
   content: string;
   markdownThemeId: string;
   documentThemeIds: DocumentThemeMap;
@@ -112,6 +123,49 @@ export interface EditorState {
 }
 
 const AUTOSAVE_DELAY_MS = 1200;
+const beginDocumentOpen = createLatestRequest();
+let openedDocumentPath: string | null = null;
+let layoutWritePromise: Promise<void> = Promise.resolve();
+
+function currentLayout(): ArticleLayout {
+  const s = useStore.getState();
+  return sanitizeLayout({markdownThemeId: s.documentThemeIds[s.currentDocPath ?? ""] ?? s.markdownThemeId, codeThemeId: s.codeThemeId, typography: s.typography});
+}
+function persistLayouts() {
+  const {documentLayouts, defaultLayout} = useStore.getState();
+  const text = JSON.stringify({version: 1, defaults: defaultLayout, documents: documentLayouts});
+  layoutWritePromise = layoutWritePromise.catch(() => undefined).then(() => writeDocument(LAYOUT_FILE, text));
+  void layoutWritePromise.then(() => scheduleCloudSync()).catch(reportDocumentThemeWriteError);
+}
+function applyLayout(layout: ArticleLayout, remember = true) {
+  const state = useStore.getState();
+  const previous = currentLayout();
+  if (JSON.stringify(previous) === JSON.stringify(layout)) return;
+  const path = state.currentDocPath;
+  useStore.setState({
+    ...layout,
+    markdownThemeId: resolveAvailableThemeId(state.themes, layout.markdownThemeId, defaultMarkdownTheme.id),
+    documentLayouts: path ? {...state.documentLayouts, [path]: layout} : state.documentLayouts,
+    documentThemeIds: path ? {...state.documentThemeIds, [path]: layout.markdownThemeId} : state.documentThemeIds,
+    ...(remember ? {layoutUndo: [...state.layoutUndo.slice(-29), previous], layoutRedo: []} : {}),
+  });
+  if (path) { persistLayouts(); void queueDocumentThemeWrite(useStore.getState().documentThemeIds).catch(reportDocumentThemeWriteError); }
+}
+async function loadLayouts() {
+  await layoutWritePromise;
+  let text: string;
+  try { text = await readDocument(LAYOUT_FILE); } catch { return; }
+  const raw = JSON.parse(text);
+  const documentLayouts = sanitizeLayouts(raw.documents);
+  const defaultLayout = sanitizeLayout(raw.defaults);
+  const state = useStore.getState();
+  const layout = state.currentDocPath ? documentLayouts[state.currentDocPath] : undefined;
+  useStore.setState({documentLayouts, defaultLayout, ...(layout ? {
+    codeThemeId: layout.codeThemeId, typography: layout.typography,
+    markdownThemeId: resolveAvailableThemeId(state.themes, layout.markdownThemeId, defaultMarkdownTheme.id),
+    documentThemeIds: {...state.documentThemeIds, [state.currentDocPath!]: layout.markdownThemeId},
+  } : {})});
+}
 export const CLOUD_SYNC_DELAY_MS = 3 * 60 * 1000;
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
 let syncDrainPromise: Promise<void> | null = null;
@@ -131,8 +185,8 @@ function queueDocumentThemeWrite(map: DocumentThemeMap): Promise<void> {
   return next;
 }
 
-export function flushDocumentThemeWrite(): Promise<void> {
-  return documentThemeWritePromise;
+export async function flushDocumentThemeWrite(): Promise<void> {
+  await Promise.all([documentThemeWritePromise, layoutWritePromise]);
 }
 
 function reportDocumentThemeWriteError(error: unknown): void {
@@ -284,6 +338,21 @@ export const useStore = create<EditorState>()(
   persist(
     (set) => ({
       content: "",
+      documentLayouts: {},
+      defaultLayout: sanitizeLayout(undefined),
+      layoutUndo: [], layoutRedo: [], layoutMode: false,
+      setLayoutMode: (layoutMode) => set({layoutMode}),
+      undoLayout: () => {
+        const s = useStore.getState(); const previous = s.layoutUndo[s.layoutUndo.length - 1]; if (!previous) return;
+        const current = currentLayout(); applyLayout(previous, false);
+        set({layoutUndo: s.layoutUndo.slice(0, -1), layoutRedo: [...s.layoutRedo, current]});
+      },
+      redoLayout: () => {
+        const s = useStore.getState(); const next = s.layoutRedo[s.layoutRedo.length - 1]; if (!next) return;
+        const current = currentLayout(); applyLayout(next, false);
+        set({layoutRedo: s.layoutRedo.slice(0, -1), layoutUndo: [...s.layoutUndo, current]});
+      },
+      saveLayoutAsDefault: () => { set({defaultLayout: currentLayout()}); persistLayouts(); },
       markdownThemeId: defaultMarkdownTheme.id,
       documentThemeIds: {},
       themeMapMigrationThemeId: null,
@@ -316,6 +385,7 @@ export const useStore = create<EditorState>()(
         scheduleSave(content);
       },
       setMarkdownTheme: (markdownThemeId) => {
+        applyLayout({...currentLayout(), markdownThemeId});
         let nextMap: DocumentThemeMap | null = null;
         let hasDocument = false;
         set((s) => {
@@ -342,9 +412,10 @@ export const useStore = create<EditorState>()(
         // 等待本地刚发起的写入完成，再读取，避免旧磁盘快照覆盖新状态。
         await flushDocumentThemeWrite().catch(() => undefined);
         const result = await readDocumentThemeMap();
+        await loadLayouts();
         const state = useStore.getState();
         if (result.exists) {
-          const map = sanitizeDocumentThemeMap(result.map);
+          const map = {...sanitizeDocumentThemeMap(result.map), ...Object.fromEntries(Object.entries(useStore.getState().documentLayouts).map(([path, layout]) => [path, layout.markdownThemeId]))};
           set({
             documentThemeIds: map,
             documentThemeMapExists: true,
@@ -377,6 +448,8 @@ export const useStore = create<EditorState>()(
         }
       },
       remapDocumentThemePaths: (fromPath, toPath) => {
+        set((s) => ({documentLayouts: remapLayouts(s.documentLayouts, fromPath, toPath)}));
+        persistLayouts();
         const state = useStore.getState();
         const nextMap = remapDocumentThemes(state.documentThemeIds, fromPath, toPath);
         if (documentThemeMapsEqual(state.documentThemeIds, nextMap)) return;
@@ -385,6 +458,8 @@ export const useStore = create<EditorState>()(
         scheduleCloudSync();
       },
       removeDocumentThemePaths: (path) => {
+        set((s) => ({documentLayouts: Object.fromEntries(Object.entries(s.documentLayouts).filter(([key]) => key !== path && !key.startsWith(`${path}/`)))}));
+        persistLayouts();
         const state = useStore.getState();
         const nextMap = removeDocumentThemes(state.documentThemeIds, path);
         if (documentThemeMapsEqual(state.documentThemeIds, nextMap)) return;
@@ -392,7 +467,7 @@ export const useStore = create<EditorState>()(
         void queueDocumentThemeWrite(nextMap).catch(reportDocumentThemeWriteError);
         scheduleCloudSync();
       },
-      setCodeTheme: (codeThemeId) => set({codeThemeId}),
+      setCodeTheme: (codeThemeId) => applyLayout({...currentLayout(), codeThemeId}),
       setThemes: (themes) =>
         set((state) => ({
           themes,
@@ -430,17 +505,18 @@ export const useStore = create<EditorState>()(
             : [...s.pinnedCodeThemeIds, id],
         })),
       setGlobalFontScale: (scale) =>
-        set((s) => ({typography: {...s.typography, global: clampGlobal(scale)}})),
+        applyLayout({...currentLayout(), typography: {...currentLayout().typography, global: clampGlobal(scale)}}),
       setRoleFontScale: (roleKey, scale) =>
-        set((s) => {
+        (() => {
+          const s = useStore.getState();
           const next = clampRole(scale);
           const roles = {...s.typography.roles};
           // 倍率回到 1 等于没设置，从状态里摘掉，避免无意义的覆盖规则。
           if (next === 1) delete roles[roleKey];
           else roles[roleKey] = next;
-          return {typography: {...s.typography, roles}};
-        }),
-      resetTypography: () => set({typography: {...DEFAULT_TYPOGRAPHY, roles: {}}}),
+          applyLayout({...currentLayout(), typography: {...s.typography, roles}});
+        })(),
+      resetTypography: () => applyLayout({...currentLayout(), typography: {...DEFAULT_TYPOGRAPHY, roles: {}}}),
       toggleSidebar: () => set((s) => ({sidebarOpen: !s.sidebarOpen})),
       toggleOutline: () => set((s) => ({outlineOpen: !s.outlineOpen})),
       loadTree: async () => {
@@ -448,10 +524,20 @@ export const useStore = create<EditorState>()(
         set({tree});
       },
       openDocument: async (path) => {
+        const isLatest = beginDocumentOpen();
+        if (path === openedDocumentPath && path === useStore.getState().currentDocPath) return;
         // 先把当前篇落盘（必须 await，否则旧文档未保存编辑会丢）。
         await flushSave();
         await flushDocumentThemeWrite().catch(() => undefined);
         const text = await readDocument(path);
+        if (!isLatest()) return;
+        // 读盘期间用户可能继续编辑旧文章，提交新文档前保存到最后一次输入。
+        let previousContent: string;
+        do {
+          previousContent = useStore.getState().content;
+          await flushSave();
+          if (!isLatest()) return;
+        } while (useStore.getState().content !== previousContent);
         const state = useStore.getState();
         let map = state.documentThemeIds;
         let migrationThemeId = state.themeMapMigrationThemeId;
@@ -470,8 +556,11 @@ export const useStore = create<EditorState>()(
           }
           scheduleCloudSync();
         }
-        storedThemeId ??= defaultMarkdownTheme.id;
+        const layout = state.documentLayouts[path] ?? {...state.defaultLayout, markdownThemeId: storedThemeId ?? state.defaultLayout.markdownThemeId};
+        storedThemeId = layout.markdownThemeId;
+        openedDocumentPath = path;
         set({
+          codeThemeId: layout.codeThemeId, typography: layout.typography, layoutUndo: [], layoutRedo: [],
           currentDocPath: path,
           selectedPath: path,
           content: text,
@@ -517,6 +606,7 @@ export const useStore = create<EditorState>()(
         favoriteThemeIds: s.favoriteThemeIds,
         pinnedCodeThemeIds: s.pinnedCodeThemeIds,
         typography: s.typography,
+        documentLayouts: s.documentLayouts, defaultLayout: s.defaultLayout,
       }),
       merge: (persisted, current) => {
         const saved = persisted as (Partial<EditorState> & {themeMapMigrationPending?: boolean}) | undefined;
@@ -561,6 +651,10 @@ export const useStore = create<EditorState>()(
           backgroundBlur: sanitizeBackgroundBlur(saved?.backgroundBlur),
           statusBarOpacity: sanitizeStatusBarOpacity(saved?.statusBarOpacity),
           typography: sanitizeTypography(saved?.typography),
+          defaultLayout: sanitizeLayout(saved?.defaultLayout),
+          documentLayouts: saved?.documentLayouts ? sanitizeLayouts(saved.documentLayouts) : saved?.currentDocPath ? {
+            [saved.currentDocPath]: sanitizeLayout({markdownThemeId: saved.markdownThemeId, codeThemeId: saved.codeThemeId, typography: saved.typography}),
+          } : {},
         };
       },
     },
@@ -570,4 +664,17 @@ export const useStore = create<EditorState>()(
 // 按 id 取当前主题（含用户主题），找不到回退默认。
 export function getThemeById(themes: ThemeOption[], id: string): ThemeOption {
   return themes.find((t) => t.id === id) ?? defaultMarkdownTheme;
+}
+
+export function getArticleSource() {
+  const state = useStore.getState();
+  return {content: state.content, css: buildMarkdownCss(getThemeById(state.themes, state.markdownThemeId).css, state.codeThemeId, state.typography)};
+}
+
+export function restoreDocumentLayouts(raw: unknown, from: string, to: string) {
+  const restored = remapLayouts(sanitizeLayouts(raw), from, to);
+  useStore.setState((state) => ({documentLayouts: {...state.documentLayouts, ...restored},
+    documentThemeIds: {...state.documentThemeIds, ...Object.fromEntries(Object.entries(restored).map(([path, layout]) => [path, layout.markdownThemeId]))}}));
+  persistLayouts();
+  void queueDocumentThemeWrite(useStore.getState().documentThemeIds).catch(reportDocumentThemeWriteError);
 }

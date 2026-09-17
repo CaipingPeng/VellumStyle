@@ -1,3 +1,4 @@
+import WechatFeatureGate from "../Upload/WechatFeatureGate.tsx";
 import {lazy, Suspense, useState} from "react";
 import {Send} from "lucide-react";
 import Button from "../ui/Button.tsx";
@@ -15,11 +16,11 @@ export default function PublishButton({onNeedSettings}: Props) {
     <>
       <Button variant="primary" onClick={() => setOpen(true)}>
         <Send size={14} />
-        发布
+        发送到草稿箱
       </Button>
       {open && (
         <Suspense fallback={null}>
-          <PublishDialog onClose={() => setOpen(false)} onNeedSettings={onNeedSettings} />
+          <WechatFeatureGate feature="api" onClose={() => setOpen(false)} onSettings={onNeedSettings}><PublishDialog onClose={() => setOpen(false)} onNeedSettings={onNeedSettings} /></WechatFeatureGate>
         </Suspense>
       )}
     </>

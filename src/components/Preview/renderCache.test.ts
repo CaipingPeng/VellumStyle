@@ -16,7 +16,7 @@ test("未超限时全部保留，且 get 能取回原值", () => {
   assert.equal(cache.get("a"), "<p>甲</p>");
   assert.equal(cache.get("b"), "<p>乙</p>");
   assert.equal(cache.get("missing"), undefined);
-  assert.equal(cache.byteSize, htmlByteSize("<p>甲</p>") + htmlByteSize("<p>乙</p>"));
+  assert.equal(cache.byteSize, htmlByteSize("a<p>甲</p>") + htmlByteSize("b<p>乙</p>"));
 });
 
 test("超过条数上限时淘汰最旧的（FIFO）", () => {
@@ -31,12 +31,12 @@ test("超过条数上限时淘汰最旧的（FIFO）", () => {
 });
 
 test("超过字节预算时按最旧的淘汰，直到回到预算内", () => {
-  // 预算 20 字节 = 10 个字符。两条 10 字符的 HTML 就超了。
-  const cache = createRenderCache({maxEntries: 100, maxBytes: 20});
+  // 预算 22 字节，包含单字符键与 10 字符 HTML。
+  const cache = createRenderCache({maxEntries: 100, maxBytes: 22});
   cache.set("a", "0123456789");
-  assert.equal(cache.byteSize, 20);
+  assert.equal(cache.byteSize, 22);
   cache.set("b", "abcdefghij");
-  assert.equal(cache.byteSize, 20, "总字节数必须回落到预算内");
+  assert.equal(cache.byteSize, 22, "总字节数必须回落到预算内");
   assert.equal(cache.size, 1);
   assert.equal(cache.get("a"), undefined);
   assert.equal(cache.get("b"), "abcdefghij");
@@ -57,9 +57,9 @@ test("单条就超过字节预算时仍保留它，避免大文档永远命不�
 test("同一个 key 重复写入不会把字节数越算越多", () => {
   const cache = createRenderCache({maxEntries: 100, maxBytes: 1000});
   cache.set("k", "abcd");
-  assert.equal(cache.byteSize, 8);
+  assert.equal(cache.byteSize, 10);
   cache.set("k", "abcdefgh");
-  assert.equal(cache.byteSize, 16, "旧值要先扣掉");
+  assert.equal(cache.byteSize, 18, "旧值要先扣掉");
   assert.equal(cache.size, 1);
   assert.equal(cache.get("k"), "abcdefgh");
 });
@@ -72,6 +72,19 @@ test("clear 清空条目与字节计数", () => {
   assert.equal(cache.size, 0);
   assert.equal(cache.byteSize, 0);
   assert.equal(cache.get("a"), undefined);
+});
+
+test("源码键也占用预算，更新旧条目后保留最近写入的结果", () => {
+  const cache = createRenderCache({maxEntries: 10, maxBytes: 30});
+  cache.set("a".repeat(10), "x");
+  cache.set("b".repeat(10), "y");
+  assert.equal(cache.size, 1);
+  assert.equal(cache.byteSize, 22);
+  cache.set("c", "z");
+  cache.set("b".repeat(10), "longer");
+  assert.equal(cache.get("c"), undefined);
+  assert.equal(cache.get("b".repeat(10)), "longer");
+  assert.equal(cache.byteSize, 32);
 });
 
 test("条数与字节两条约束同时生效时取更严的那条", () => {

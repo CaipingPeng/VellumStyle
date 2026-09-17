@@ -183,7 +183,7 @@ function ToolbarMeasure({measureRef}: {measureRef: RefObject<HTMLDivElement>}) {
         <Button variant="secondary" className="w-[92px]"><Download size={14} />导出</Button>
       </div>
       <div data-measure="publish">
-        <Button variant="primary"><Send size={14} />发布</Button>
+        <Button variant="primary"><Send size={14} />发送到草稿箱</Button>
       </div>
       <div data-measure="copy">
         <Button variant="primary"><CopyIcon size={14} />复制到微信</Button>

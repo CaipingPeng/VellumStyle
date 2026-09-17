@@ -407,6 +407,7 @@ fn scan_local_dir(
 }
 
 fn is_theme_metadata_file(name: &str) -> bool {
+    if name == ".vellumstyle-layout-map.json" || (name.starts_with(".vellumstyle-layout-map (坚果云冲突 ") && name.ends_with(".json")) { return true; }
     name == format!("{THEME_METADATA_PREFIX}.json")
         || (name.starts_with(&format!("{THEME_METADATA_PREFIX} (坚果云冲突 "))
             && name.ends_with(".json"))

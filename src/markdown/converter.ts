@@ -2,6 +2,7 @@ import {ARTICLE_BOX_ID} from "../articleRoot.ts";
 import {STYLE_IDS} from "../utils/style.ts";
 import {fromProxyHtml} from "../utils/imageProxy.ts";
 import {inlineMermaidSvgElementStylesForWechat} from "./mermaidExport.ts";
+import type {ArticleSource} from "../utils/articleSnapshot.ts";
 
 // juice（含 cheerio/parse5 等约 560KB）只在复制/发布/导出时才需要，
 // 改为按需加载，避免整条链常驻主包。type-only 导入无运行时开销。
@@ -336,8 +337,10 @@ function elementAtPath(root: Element, path: number[]): Element | null {
 // 1. 给预览区每个顶层子元素加 data-tool 水印
 // 2. MathJax 节点后处理（行内/块级公式转换、防吞空格）
 // 3. juice 把所有 CSS 内联进 style 属性（微信只认 inline style）
-export async function solveHtml(): Promise<string> {
-  const box = document.getElementById(ARTICLE_BOX_ID);
+export async function solveHtml(source?: ArticleSource): Promise<string> {
+  const snapshot = source ? await (await import("../utils/articleSnapshot.ts")).renderArticleSnapshot(source) : null;
+  try {
+  const box = snapshot?.box ?? document.getElementById(ARTICLE_BOX_ID);
   if (!box) {
     return "";
   }
@@ -366,7 +369,7 @@ export async function solveHtml(): Promise<string> {
   html = normalizeMathJaxForWechat(html);
 
   // 复制使用预览同一份样式：文章主题 + 当前代码主题已在预览层合并注入。
-  const allCss = readStyle(STYLE_IDS.markdown);
+  const allCss = snapshot?.css ?? readStyle(STYLE_IDS.markdown);
 
   try {
     const inlined = (await loadJuice()).inlineContent(html, allCss, {
@@ -378,10 +381,11 @@ export async function solveHtml(): Promise<string> {
     console.error("CSS 内联失败，请检查 CSS 是否正确", e);
     return "";
   }
+  } finally { snapshot?.cleanup(); }
 }
 
-export async function solveDraftHtml(): Promise<string> {
-  return normalizeDraftLists(await solveHtml());
+export async function solveDraftHtml(source?: ArticleSource): Promise<string> {
+  return normalizeDraftLists(await solveHtml(source));
 }
 
 export function normalizeDraftLists(html: string): string {

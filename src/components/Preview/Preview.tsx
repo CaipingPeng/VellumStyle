@@ -156,6 +156,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
     const codeThemeId = useStore((s) => s.codeThemeId);
     const previewMode = useStore((s) => s.previewMode);
     const typography = useStore((s) => s.typography);
+    const layoutMode = useStore((s) => s.layoutMode);
     const setRoleFontScale = useStore((s) => s.setRoleFontScale);
     const setGlobalFontScale = useStore((s) => s.setGlobalFontScale);
     const resetTypography = useStore((s) => s.resetTypography);
@@ -164,6 +165,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
     const [fontTarget, setFontTarget] = useState<{roleKey: string; index: number} | null>(null);
     const [fontAnchorRect, setFontAnchorRect] = useState<PanelRect | null>(null);
     const pointerStartRef = useRef<{x: number; y: number} | null>(null);
+    useEffect(() => { if (!layoutMode) setFontTarget(null); }, [layoutMode]);
     const mode = getPreviewMode(previewMode);
     // 主题未给文章设实色背景时，预览垫白色兜底（不影响导出成品），
     // 避免透明文章直接透出预览舞台底色，与微信发布的白底不一致。
@@ -622,6 +624,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
     // 点击预览元素 → 识别角色 → 打开字号面板。
     // 拖拽（划选文字、拖图片缩放角）不算点击，否则每次选词都会弹面板。
     function onArticleClick(event: React.MouseEvent) {
+      if (!layoutMode) return;
       const start = pointerStartRef.current;
       pointerStartRef.current = null;
       if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 4) return;

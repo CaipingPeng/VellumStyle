@@ -3,10 +3,10 @@ import {useCallback, useEffect, useRef, useState} from "react";
 import {motion} from "framer-motion";
 import {FileText, Folder, Pencil} from "lucide-react";
 import {MOTION_DURATION_FAST, MOTION_SPRING_POP} from "../../utils/motion.ts";
-import {entryExtension, entryStem} from "../../utils/documents.ts";
+import {entryBasename, entryExtension} from "../../utils/documents.ts";
 import Button from "../ui/Button.tsx";
 import {useDialogEscape} from "../ui/useDialogEscape.ts";
-import type {RenameSession} from "./renameSession.ts";
+import {isUnchangedRename, type RenameSession} from "./renameSession.ts";
 
 interface Props {
   node: {name: string; path: string; isDir: boolean} | null;
@@ -29,7 +29,7 @@ export default function RenameDialog({node, session, onChange, onCommit, onCance
   const draft = session?.value ?? "";
   const trimmed = draft.trim();
   // 与目标节点当前名一致（文件只打主名也算没改）→ 视为"没有改动"。
-  const dirty = node !== null && trimmed !== "" && trimmed !== node.name && trimmed !== entryStem(node.name);
+  const dirty = node !== null && trimmed !== "" && !isUnchangedRename(node, trimmed);
   const canSubmit = open && !session?.pending && !session?.error && dirty;
 
   // useDialogEscape 的 effect 依赖 onClose：回调必须引用稳定，
@@ -83,11 +83,7 @@ export default function RenameDialog({node, session, onChange, onCommit, onCance
     const input = inputRef.current;
     if (!input) return;
     input.focus();
-    const value = session?.value ?? "";
-    const extension = node?.isDir ? "" : entryExtension(value);
-    const end = value.length - extension.length;
-    if (end > 0 && value.endsWith(extension)) input.setSelectionRange(0, end);
-    else input.select();
+    input.select();
     // 仅依赖 open：后续输入不应重置选区。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -168,7 +164,7 @@ export default function RenameDialog({node, session, onChange, onCommit, onCance
                   }`}
                 />
                 {!node.isDir && (
-                  <span className="shrink-0 text-sm2 text-text-muted">{entryExtension(node.name) || ".md"}</span>
+                  <span className="shrink-0 text-sm2 text-text-muted">{entryExtension(entryBasename(node.path)) || ".md"}</span>
                 )}
               </div>
               {/* 只在出错或需要"放弃修改"确认时占位，平时保持紧凑 */}

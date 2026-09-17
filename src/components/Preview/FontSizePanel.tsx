@@ -168,7 +168,7 @@ export default function FontSizePanel({
 
       {!isRoot && (
         <ScaleRow
-          label="本元素"
+          label={`全部${role?.label ?? "同类文字"}`}
           value={current}
           min={ROLE_MIN}
           max={ROLE_MAX}
@@ -177,7 +177,7 @@ export default function FontSizePanel({
       )}
 
       <ScaleRow
-        label="全局"
+        label="当前文章"
         value={typography.global}
         min={GLOBAL_MIN}
         max={GLOBAL_MAX}

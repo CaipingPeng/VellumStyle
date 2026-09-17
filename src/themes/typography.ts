@@ -192,10 +192,18 @@ export function canStepScale(scale: number, direction: 1 | -1, min: number, max:
 // 把字号控制权交还给文章。
 export const REM_BASE_PX = 16;
 
+// 保持索引不变，扫描分隔符时跳过注释和字符串中的 CSS 标点。
+function maskCssLiterals(css: string): string {
+  return css.replace(/\/\*[\s\S]*?\*\/|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'/g,
+    (literal) => " ".repeat(literal.length));
+}
+
 export function normalizeRemToPx(css: string, basePx = REM_BASE_PX): string {
-  if (!css.includes("rem")) return css;
-  return css.replace(/\b(\d*\.?\d+)rem\b/g, (_match, raw: string) => {
-    const value = raw === "" || raw === "." ? 0 : Number(raw);
+  if (!/rem/i.test(css)) return css;
+  const masked = maskCssLiterals(css);
+  return css.replace(/(?<![\w.-])(-?(?:\d*\.)?\d+)rem\b/gi, (_match, raw: string, offset: number) => {
+    if (masked.slice(offset, offset + _match.length) !== _match) return _match;
+    const value = Number(raw);
     if (!Number.isFinite(value)) return _match;
     return `${round2(value * basePx)}px`;
   });
@@ -248,9 +256,9 @@ export function classifySelector(selector: string): string {
 
 // ---------------------------------------------------------------- 声明缩放
 
-const PX_VALUE = /^(\d+(?:\.\d+)?)px$/i;
-const EM_VALUE = /^(\d+(?:\.\d+)?)em$/i;
-const PERCENT_VALUE = /^(\d+(?:\.\d+)?)%$/;
+const PX_VALUE = /^((?:\d*\.)?\d+)px$/i;
+const EM_VALUE = /^((?:\d*\.)?\d+)em$/i;
+const PERCENT_VALUE = /^((?:\d*\.)?\d+)%$/;
 
 /**
  * 缩放单条 font-size 值。返回 null 表示不是可缩放的数值（关键字 / calc() / 变量等），原样保留。
@@ -275,14 +283,18 @@ export function scaleFontSizeValue(value: string, factorPx: number, factorRel: n
 }
 
 // 逐条声明扫描：只动 font-size，其余原样保留（含缩进与顺序）。
-function scaleDeclarations(body: string, factorPx: number, factorRel: number): {css: string; touched: boolean} {
+function scaleDeclarations(body: string, factorPx: number, factorRel: number, onlyFontSize = false): {css: string; touched: boolean} {
   let touched = false;
-  const parts = body.split(";").map((part) => {
-    const colon = part.indexOf(":");
-    if (colon === -1) return part;
-    if (part.slice(0, colon).trim().toLowerCase() !== "font-size") return part;
+  const masked = maskCssLiterals(body);
+  let start = 0;
+  const parts = masked.split(";").map((maskedPart) => {
+    const part = body.slice(start, start + maskedPart.length);
+    start += maskedPart.length + 1;
+    const colon = maskedPart.indexOf(":");
+    if (colon === -1) return onlyFontSize ? "" : part;
+    if (maskedPart.slice(0, colon).trim().toLowerCase() !== "font-size") return onlyFontSize ? "" : part;
     const scaled = scaleFontSizeValue(part.slice(colon + 1), factorPx, factorRel);
-    if (scaled === null) return part;
+    if (scaled === null) return onlyFontSize ? "" : part;
     touched = true;
     return `${part.slice(0, colon + 1)} ${scaled}`;
   });
@@ -303,39 +315,57 @@ function matchBrace(str: string, openIdx: number): number {
   return str.length - 1;
 }
 
-function transformRule(selectorList: string, body: string, state: TypographyState, declared: Set<string>): string {
+function transformRule(selectorList: string, body: string, state: TypographyState, declared: Set<string>, fontSelectors: string[]): string {
+  const inheritsScaledRole = (selector: string, roleKey: string) => roleKey !== ROOT_ROLE
+    && roleScale(state, roleKey) !== 1
+    && fontSelectors.some((ancestor) => selector.startsWith(`${ancestor} `)
+      && !/^[+~]/.test(selector.slice(ancestor.length).trim())
+      && classifySelector(ancestor) === roleKey);
   // 同一条规则里的多个选择器可能属于不同角色，必须按角色拆开分别缩放。
   const groups = new Map<string, string[]>();
   for (const raw of selectorList.split(",")) {
     const selector = raw.trim();
     if (!selector) continue;
     const roleKey = classifySelector(selector);
-    const list = groups.get(roleKey);
+    const inheritsRole = inheritsScaledRole(selector, roleKey);
+    const groupKey = `${roleKey}:${stripArticleRoot(selector) === ""}:${inheritsRole}`;
+    const list = groups.get(groupKey);
     if (list) list.push(selector);
-    else groups.set(roleKey, [selector]);
+    else groups.set(groupKey, [selector]);
   }
 
   let out = "";
-  for (const [roleKey, selectors] of groups) {
+  for (const selectors of groups.values()) {
+    const roleKey = classifySelector(selectors[0]);
     const isRoot = roleKey === ROOT_ROLE;
     // 根元素之上没有任何已缩放的内容，所以它的 em 也要吃全局倍率。
     const factorPx = state.global * (isRoot ? 1 : roleScale(state, roleKey));
-    const factorRel = isRoot ? state.global : roleScale(state, roleKey);
+    // 未分类的后代（mark / ruby rt 等）也会归到 ROOT_ROLE，但它们已经
+    // 继承了文章字号，只有真正的文章根才能再次乘全局倍率。
+    const inheritsRole = inheritsScaledRole(selectors[0], roleKey);
+    const factorRel = isRoot
+      ? (selectors.every((selector) => stripArticleRoot(selector) === "") ? state.global : 1)
+      : (inheritsRole ? 1 : roleScale(state, roleKey));
     const {css, touched} = scaleDeclarations(body, factorPx, factorRel);
-    if (touched) declared.add(roleKey);
+    // 引号等伪元素的字号不能代表引用正文已有字号，否则会阻止正文兜底。
+    if (touched && selectors.some((selector) => !/::|:(?:before|after)\b/.test(selector))) declared.add(roleKey);
     out += `${selectors.join(", ")} {${css}}\n`;
   }
   return out;
 }
 
-function walkRules(css: string, state: TypographyState, declared: Set<string>): string {
+function walkRules(css: string, transform: (selector: string, body: string, context: string[]) => string, context: string[] = []): string {
+  const masked = maskCssLiterals(css);
   let out = "";
   let i = 0;
   while (i < css.length) {
-    const open = css.indexOf("{", i);
-    if (open === -1) break;
-    const prelude = css.slice(i, open).trim();
-    const close = matchBrace(css, open);
+    const open = masked.indexOf("{", i);
+    if (open === -1) {
+      out += css.slice(i);
+      break;
+    }
+    const prelude = css.slice(i, open).replace(/\/\*[\s\S]*?\*\//g, " ").trim();
+    const close = matchBrace(masked, open);
     const inner = css.slice(open + 1, close);
 
     if (prelude.startsWith("@")) {
@@ -343,13 +373,13 @@ function walkRules(css: string, state: TypographyState, declared: Set<string>): 
       // @media / @supports 内部是嵌套规则，递归；其余（@font-face / @keyframes）
       // 内部是声明而非规则，整块透传，避免被误当规则解析。
       out += atName === "media" || atName === "supports"
-        ? `${prelude} { ${walkRules(inner, state, declared)} }\n`
+        ? `${prelude} { ${walkRules(inner, transform, [...context, prelude])} }\n`
         : `${prelude} {${inner}}\n`;
       i = close + 1;
       continue;
     }
 
-    if (prelude) out += transformRule(prelude, inner, state, declared);
+    if (prelude) out += transform(prelude, inner, context);
     i = close + 1;
   }
   return out;
@@ -363,7 +393,11 @@ function buildFallbackCss(state: TypographyState, declared: Set<string>): string
   for (const role of FONT_ROLES) {
     const scale = roleScale(state, role.key);
     if (scale === 1 || declared.has(role.key)) continue;
-    out += `#article ${role.target} { font-size: ${round2(scale)}em; }\n`;
+    const selectors = role.target.split(",").map((selector) => `#article ${selector.trim()}`).join(", ");
+    out += `${selectors} { font-size: ${round2(scale)}em; }\n`;
+    if (role.key === "blockquote") {
+      out += "#article blockquote blockquote { font-size: inherit; }\n";
+    }
   }
   return out;
 }
@@ -378,7 +412,32 @@ export function scaleThemeCss(css: string, state: TypographyState = DEFAULT_TYPO
   if (isDefaultTypography(state)) return normalized;
 
   const declared = new Set<string>();
-  const scaled = walkRules(normalized, state, declared);
+  // 同一角色内的相对字号已经继承祖先的倍率，例如 h1 与 h1 .prefix。
+  // 先收集字号声明，避免声明顺序影响是否重复缩放。
+  const fontSelectors: Array<{selector: string; context: string[]}> = [];
+  walkRules(normalized, (selectors, body, context) => {
+    if (scaleDeclarations(body, 1, 1).touched) {
+      fontSelectors.push(...selectors.split(",").map((selector) => ({selector: selector.trim(), context})));
+    }
+    return "";
+  });
+  const scaled = walkRules(normalized, (selectors, body, context) => {
+    const ancestors = fontSelectors.filter((entry) => entry.context.every((condition, index) => context[index] === condition))
+      .map((entry) => entry.selector);
+    let out = transformRule(selectors, body, state, declared, ancestors);
+    // 通用 p 的绝对字号会盖过引用/列表等容器的继承字号。
+    // 在原规则的位置补足上下文，仅复制字号，保持后面的专用主题规则优先。
+    if (selectors.split(",").some((selector) => selector.trim() === "#article p")) {
+      const fonts = scaleDeclarations(body, 1, 1, true);
+      if (fonts.touched) {
+        for (const [role, scope] of [["blockquote", "blockquote"], ["li", "li"], ["footnotes", ".footnotes"], ["toc", ".table-of-contents"], ["table", "table"]]) {
+          if (roleScale(state, role) === 1 && roleScale(state, "p") === 1) continue;
+          out += transformRule(`#article ${scope} p`, fonts.css, state, declared, ancestors);
+        }
+      }
+    }
+    return out;
+  });
   const fallback = buildFallbackCss(state, declared);
   return fallback ? `${scaled}\n${fallback}` : scaled;
 }

@@ -249,11 +249,11 @@ export default function ThemePickerDialog({onClose}: Props) {
 
       {!isCodeTab && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-7 pb-4">
-          <span className="text-sm2 text-text-secondary">全局字号</span>
+          <span className="text-sm2 text-text-secondary">本篇字号</span>
           <div className="flex items-center gap-1">
             <button
               type="button"
-              aria-label="全局字号缩小"
+              aria-label="本篇字号缩小"
               disabled={!canStepScale(typography.global, -1, GLOBAL_MIN, GLOBAL_MAX)}
               onClick={() => setGlobalFontScale(stepScale(typography.global, -1, SCALE_STEP, GLOBAL_MIN, GLOBAL_MAX))}
               className="vs-font-size-step"
@@ -265,7 +265,7 @@ export default function ThemePickerDialog({onClose}: Props) {
             </span>
             <button
               type="button"
-              aria-label="全局字号放大"
+              aria-label="本篇字号放大"
               disabled={!canStepScale(typography.global, 1, GLOBAL_MIN, GLOBAL_MAX)}
               onClick={() => setGlobalFontScale(stepScale(typography.global, 1, SCALE_STEP, GLOBAL_MIN, GLOBAL_MAX))}
               className="vs-font-size-step"
@@ -274,7 +274,7 @@ export default function ThemePickerDialog({onClose}: Props) {
             </button>
             <button
               type="button"
-              aria-label="全局字号恢复默认"
+              aria-label="本篇字号恢复默认"
               disabled={typography.global === 1}
               onClick={() => setGlobalFontScale(1)}
               className="vs-font-size-reset"
@@ -283,7 +283,7 @@ export default function ThemePickerDialog({onClose}: Props) {
             </button>
           </div>
           <span className="text-xs2 text-text-muted">
-            也可以直接点右侧预览里的元素，单独调某一类元素的字号
+            在预览区开启“调整排版”后，点击文字调整同类字号
           </span>
         </div>
       )}
