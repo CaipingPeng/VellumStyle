@@ -5,6 +5,12 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      windows_only:
+        description: "只重新构建 Windows 资产"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -99,7 +105,7 @@ jobs:
       matrix:
         include:
           - name: Windows x64
-            platform: windows-latest
+            platform: windows-2022
             rust_targets: x86_64-pc-windows-msvc
             tauri_args: --target x86_64-pc-windows-msvc --bundles msi,nsis
             include_updater_json: true
@@ -158,11 +164,42 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Prepare Windows updater signing key
+        if: matrix.name == 'Windows x64'
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY_INPUT: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY_INPUT)) {
+            throw 'TAURI_SIGNING_PRIVATE_KEY is empty'
+          }
+          $keyPath = Join-Path $env:RUNNER_TEMP 'tauri-signing-private.key'
+          [System.IO.File]::WriteAllText(
+            $keyPath,
+            $env:TAURI_SIGNING_PRIVATE_KEY_INPUT,
+            [System.Text.UTF8Encoding]::new($false)
+          )
+          "TAURI_SIGNING_PRIVATE_KEY_PATH=$keyPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Prepare Unix updater signing key
+        if: matrix.name != 'Windows x64'
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY_INPUT: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [[ -z "${TAURI_SIGNING_PRIVATE_KEY_INPUT//[[:space:]]/}" ]]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY is empty" >&2
+            exit 1
+          fi
+          key_path="$RUNNER_TEMP/tauri-signing-private.key"
+          printf '%s' "$TAURI_SIGNING_PRIVATE_KEY_INPUT" > "$key_path"
+          printf 'TAURI_SIGNING_PRIVATE_KEY_PATH=%s\n' "$key_path" >> "$GITHUB_ENV"
+
       - name: Build and publish Tauri app
-        uses: tauri-apps/tauri-action@v0.6.2
+        if: github.event_name != 'workflow_dispatch' || !inputs.windows_only || matrix.name == 'Windows x64'
+        uses: tauri-apps/tauri-action@1ddc7b49b13c3038297360482fcb3e058764d7c9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
@@ -171,7 +208,6 @@ jobs:
           generateReleaseNotes: true
           releaseDraft: false
           prerelease: false
-          uploadWorkflowArtifacts: true
           includeUpdaterJson: ${{ matrix.include_updater_json }}
           updaterJsonPreferNsis: true
           tauriScript: npx tauri
