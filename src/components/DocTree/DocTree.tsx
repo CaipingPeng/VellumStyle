@@ -398,7 +398,7 @@ function DocTree() {
           <IconButton title="新建文件夹" onClick={() => startCreate("folder")}>
             <FolderPlus size={15} />
           </IconButton>
-          <button type="button" className="ml-auto text-xs text-text-secondary" onClick={() => setTrashOpen(true)}>最近删除</button>
+          <button type="button" className="ml-auto rounded-sm border-0 bg-transparent px-2 py-1 text-xs text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]" onClick={() => setTrashOpen(true)}>最近删除</button>
         </div>
 
         {/* 根区域：点空白取消选中；拖拽释放到此移到根目录 */}

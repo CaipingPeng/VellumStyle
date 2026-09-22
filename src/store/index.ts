@@ -58,14 +58,10 @@ export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export interface EditorState {
   documentLayouts: DocumentLayouts;
-  defaultLayout: ArticleLayout;
   layoutUndo: ArticleLayout[];
   layoutRedo: ArticleLayout[];
-  layoutMode: boolean;
-  setLayoutMode: (enabled: boolean) => void;
   undoLayout: () => void;
   redoLayout: () => void;
-  saveLayoutAsDefault: () => void;
   content: string;
   markdownThemeId: string;
   documentThemeIds: DocumentThemeMap;
@@ -132,8 +128,8 @@ function currentLayout(): ArticleLayout {
   return sanitizeLayout({markdownThemeId: s.documentThemeIds[s.currentDocPath ?? ""] ?? s.markdownThemeId, codeThemeId: s.codeThemeId, typography: s.typography});
 }
 function persistLayouts() {
-  const {documentLayouts, defaultLayout} = useStore.getState();
-  const text = JSON.stringify({version: 1, defaults: defaultLayout, documents: documentLayouts});
+  const {documentLayouts} = useStore.getState();
+  const text = JSON.stringify({version: 1, documents: documentLayouts});
   layoutWritePromise = layoutWritePromise.catch(() => undefined).then(() => writeDocument(LAYOUT_FILE, text));
   void layoutWritePromise.then(() => scheduleCloudSync()).catch(reportDocumentThemeWriteError);
 }
@@ -157,10 +153,9 @@ async function loadLayouts() {
   try { text = await readDocument(LAYOUT_FILE); } catch { return; }
   const raw = JSON.parse(text);
   const documentLayouts = sanitizeLayouts(raw.documents);
-  const defaultLayout = sanitizeLayout(raw.defaults);
   const state = useStore.getState();
   const layout = state.currentDocPath ? documentLayouts[state.currentDocPath] : undefined;
-  useStore.setState({documentLayouts, defaultLayout, ...(layout ? {
+  useStore.setState({documentLayouts, ...(layout ? {
     codeThemeId: layout.codeThemeId, typography: layout.typography,
     markdownThemeId: resolveAvailableThemeId(state.themes, layout.markdownThemeId, defaultMarkdownTheme.id),
     documentThemeIds: {...state.documentThemeIds, [state.currentDocPath!]: layout.markdownThemeId},
@@ -339,9 +334,7 @@ export const useStore = create<EditorState>()(
     (set) => ({
       content: "",
       documentLayouts: {},
-      defaultLayout: sanitizeLayout(undefined),
-      layoutUndo: [], layoutRedo: [], layoutMode: false,
-      setLayoutMode: (layoutMode) => set({layoutMode}),
+      layoutUndo: [], layoutRedo: [],
       undoLayout: () => {
         const s = useStore.getState(); const previous = s.layoutUndo[s.layoutUndo.length - 1]; if (!previous) return;
         const current = currentLayout(); applyLayout(previous, false);
@@ -352,7 +345,6 @@ export const useStore = create<EditorState>()(
         const current = currentLayout(); applyLayout(next, false);
         set({layoutRedo: s.layoutRedo.slice(0, -1), layoutUndo: [...s.layoutUndo, current]});
       },
-      saveLayoutAsDefault: () => { set({defaultLayout: currentLayout()}); persistLayouts(); },
       markdownThemeId: defaultMarkdownTheme.id,
       documentThemeIds: {},
       themeMapMigrationThemeId: null,
@@ -556,7 +548,8 @@ export const useStore = create<EditorState>()(
           }
           scheduleCloudSync();
         }
-        const layout = state.documentLayouts[path] ?? {...state.defaultLayout, markdownThemeId: storedThemeId ?? state.defaultLayout.markdownThemeId};
+        // 旧版可能存有跨文章默认排版；新文章始终从内置排版开始。
+        const layout = state.documentLayouts[path] ?? sanitizeLayout({markdownThemeId: storedThemeId});
         storedThemeId = layout.markdownThemeId;
         openedDocumentPath = path;
         set({
@@ -606,7 +599,7 @@ export const useStore = create<EditorState>()(
         favoriteThemeIds: s.favoriteThemeIds,
         pinnedCodeThemeIds: s.pinnedCodeThemeIds,
         typography: s.typography,
-        documentLayouts: s.documentLayouts, defaultLayout: s.defaultLayout,
+        documentLayouts: s.documentLayouts,
       }),
       merge: (persisted, current) => {
         const saved = persisted as (Partial<EditorState> & {themeMapMigrationPending?: boolean}) | undefined;
@@ -651,7 +644,6 @@ export const useStore = create<EditorState>()(
           backgroundBlur: sanitizeBackgroundBlur(saved?.backgroundBlur),
           statusBarOpacity: sanitizeStatusBarOpacity(saved?.statusBarOpacity),
           typography: sanitizeTypography(saved?.typography),
-          defaultLayout: sanitizeLayout(saved?.defaultLayout),
           documentLayouts: saved?.documentLayouts ? sanitizeLayouts(saved.documentLayouts) : saved?.currentDocPath ? {
             [saved.currentDocPath]: sanitizeLayout({markdownThemeId: saved.markdownThemeId, codeThemeId: saved.codeThemeId, typography: saved.typography}),
           } : {},

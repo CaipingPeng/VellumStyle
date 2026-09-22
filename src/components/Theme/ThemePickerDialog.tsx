@@ -283,7 +283,7 @@ export default function ThemePickerDialog({onClose}: Props) {
             </button>
           </div>
           <span className="text-xs2 text-text-muted">
-            在预览区开启“调整排版”后，点击文字调整同类字号
+            点击预览区文字可调整同类字号，仅作用于当前文章
           </span>
         </div>
       )}
