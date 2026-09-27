@@ -5,13 +5,12 @@ import {test} from "node:test";
 test("点击预览即可调整排版，无需切换模式或保存全局默认", async () => {
   const [preview, toolbar, themePicker] = await Promise.all([
     readFile(new URL("../components/Preview/Preview.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../components/Preview/LayoutToolbar.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../App.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/Theme/ThemePickerDialog.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(preview, /onClick=\{onArticleClick\}/);
   assert.doesNotMatch(preview, /layoutMode/);
-  assert.doesNotMatch(toolbar, /调整排版|完成排版|设为新文章默认/);
-  assert.match(toolbar, /仅当前文章/);
+  assert.doesNotMatch(toolbar, /LayoutToolbar|点击预览调整同类文字/);
   assert.doesNotMatch(themePicker, /开启“调整排版”/);
 });
 

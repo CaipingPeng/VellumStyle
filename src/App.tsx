@@ -1,5 +1,4 @@
 import WechatFeatureGate from "./components/Upload/WechatFeatureGate.tsx";
-import LayoutToolbar from "./components/Preview/LayoutToolbar.tsx";
 import SaveBeforeClose from "./components/Workspace/SaveBeforeClose.tsx";
 import {lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {AnimatePresence, motion, useReducedMotion} from "framer-motion";
@@ -898,7 +897,6 @@ export default function App() {
                 onPointerDown={(event) => event.currentTarget.focus({preventScroll: true})}
                 className="workspace-panel workspace-preview-panel flex flex-col min-h-0 min-w-0 flex-1 overflow-hidden outline-none"
               >
-                <LayoutToolbar />
                 <div className="min-h-0 min-w-0 flex-1">
                   <Preview
                     ref={previewRef}

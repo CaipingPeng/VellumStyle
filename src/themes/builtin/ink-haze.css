@@ -40,24 +40,13 @@
   width: auto;
   height: auto;
   font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.9;
   letter-spacing: 0.01em;
   color: #38342c;
   overflow-wrap: break-word;
   word-break: break-word;
   text-align: left;
-}
-
-/* 文章底部 ✦ ✦ ✦ 收尾 */
-#article::after {
-  content: "✦ ✦ ✦";
-  display: block;
-  text-align: center;
-  margin-top: 34px;
-  color: #a87b3f;
-  font-size: 14px;
-  letter-spacing: 0.6em;
 }
 
 /* ---------- 1. 段落 ---------- */
@@ -67,7 +56,7 @@
   color: #38342c;
 }
 
-/* ---------- 2. 标题：衬线 + 装饰 ---------- */
+/* ---------- 2. 标题：衬线 + 左侧色带 ---------- */
 #article h1 .content,
 #article h2 .content,
 #article h3 .content,
@@ -80,7 +69,7 @@
 
 /* h1：居中刊头式——顶部 ✦ 装饰 + 渐变字 + 底部居中短横（重新设计） */
 #article h1 .content {
-  font-size: 31px;
+  font-size: 24px;
   font-weight: 700;
   color: #26241f;
   background: linear-gradient(120deg, #26241f 25%, #3f5d7a 65%, #a87b3f);
@@ -104,22 +93,17 @@
   line-height: 1;
 }
 
-/* h2：自动 ❖ 装饰 + 可选编号徽章 + 底部渐隐细线 */
+/* h2：蓝色实线色带 + 可选编号徽章 */
 #article h2 .content {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
-  color: #26241f;
-}
-#article h2 .content::before {
-  content: "❖ ";
   color: #3f5d7a;
-  font-size: 18px;
+  line-height: 1.8em;
+  padding: 0 0 0 10px;
+  border-left: 3px solid #3f5d7a;
 }
 #article h2 {
   margin: 26px 0 12px;
-  padding-bottom: 8px;
-  position: relative;
-  border-bottom: 0;
 }
 /* 注意：渲染插件会给每个 h2 自动加空的 .prefix/.suffix span，
    徽章选择器必须限定在 .content 内，否则会出现"幻影短条"。 */
@@ -142,27 +126,44 @@
   margin-left: 6px;
 }
 
-/* h3：自动 ✦ 装饰（前置装饰只保留一个，去掉左侧竖条） */
+/* h3：赭金实线色带 */
 #article h3 .content {
-  font-size: 19px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   color: #26241f;
-}
-#article h3 .content::before {
-  content: "✦ ";
-  color: #a87b3f;
+  line-height: 1.8em;
+  padding: 0 0 0 10px;
+  border-left: 2px solid #a87b3f;
 }
 #article h3 {
   margin: 26px 0 12px;
 }
 
-/* h4~h6：小标题，自动装饰符 */
-#article h4 .content { font-size: 17px; color: #3f5d7a; font-weight: 700; }
-#article h4 .content::before { content: "◆ "; color: #3f5d7a; }
-#article h5 .content { font-size: 16px; color: #26241f; font-weight: 700; }
-#article h5 .content::before { content: "▪ "; color: #a87b3f; }
-#article h6 .content { font-size: 15px; color: #a87b3f; font-weight: 700; }
-#article h6 .content::before { content: "· "; color: #5c7a6b; }
+/* h4~h6：不同线型的层级色带 */
+#article h4 .content {
+  font-size: 16px;
+  color: #26241f;
+  font-weight: 700;
+  line-height: 1.8em;
+  padding: 0 0 0 10px;
+  border-left: 2px dashed #3f5d7a;
+}
+#article h5 .content {
+  font-size: 16px;
+  color: #26241f;
+  font-weight: 700;
+  line-height: 1.8em;
+  padding: 0 0 0 10px;
+  border-left: 1px dashed #a87b3f;
+}
+#article h6 .content {
+  font-size: 14px;
+  color: #26241f;
+  font-weight: 700;
+  line-height: 1.8em;
+  padding: 0 0 0 10px;
+  border-left: 1px dotted #5c7a6b;
+}
 #article h4,
 #article h5,
 #article h6 { margin: 20px 0 10px; }
@@ -350,8 +351,6 @@
   text-align: center;
   letter-spacing: 0.05em;
 }
-#article figure figcaption::before { content: "— "; color: #a87b3f; }
-#article figure figcaption::after { content: " —"; color: #a87b3f; }
 /* 行内小图（表情等）保持行内 */
 #article p img { display: inline-block; vertical-align: middle; max-width: 100%; }
 /* 轮播图组：与独立图一致的浮空卡片 */
@@ -393,19 +392,23 @@
   padding-top: 16px;
   position: relative;
   color: #7d7668;
-  font-size: 14px;
+  font-size: 10px;
   line-height: 1.8;
 }
 #article .footnotes::before {
-  content: "· ✦ ·";
+  content: "参考文献";
   display: block;
-  text-align: center;
+  text-align: left;
   color: #a87b3f;
-  padding: 0 10px;
-  letter-spacing: 0.4em;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
   line-height: 1;
   margin-bottom: 10px;
 }
+#article .footnotes p,
+#article .footnotes .footnote-item { font-size: 10px; }
 #article .footnote-item { color: inherit; }
 #article .footnote-num { color: #3f5d7a; font-weight: 700; }
 

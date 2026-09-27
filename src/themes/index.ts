@@ -14,7 +14,6 @@ export interface ThemeOption {
 const BUILTIN_NAMES: Record<string, string> = {
   default: "默认",
   "ink-haze": "墨岚",
-  "ink-haze-night": "墨岚·星空",
   happysimple: "清欢",
   "morandi-garden": "雾屿",
   "see-yue": "望月",
