@@ -1,7 +1,7 @@
 // 图片上传：调 Tauri command 代理到微信官方图床。
 // 粘贴走 bytes 上传；上传按钮走本地路径上传，避免浏览器文件选择框位置不可控。
 
-import {invoke} from "@tauri-apps/api/core";
+import {invokeWechat as invoke} from "./wechatAccounts.ts";
 import {
   imageUploadTasks,
   type ImageUploadTask,

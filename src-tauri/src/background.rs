@@ -7,7 +7,7 @@ use tauri::AppHandle;
 const IMAGE_EXTS: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg"];
 
 fn backgrounds_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = crate::users::data_path(app, "backgrounds")?;
+    let dir = crate::storage::data_path(app, "backgrounds")?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("创建背景图目录失败：{e}"))?;
     Ok(dir)
 }

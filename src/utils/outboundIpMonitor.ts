@@ -1,4 +1,4 @@
-import {profileStorage} from "./profileStorage.ts";
+import {accountStorage} from "./accountStorage.ts";
 
 const LAST_OUTBOUND_IP_KEY = "vellumstyle.wechat.lastOutboundIp";
 const STARTUP_OUTBOUND_IP_CHECKED_KEY = "vellumstyle.wechat.startupOutboundIpChecked";
@@ -30,7 +30,7 @@ function safeSet(storage: StorageLike, key: string, value: string): void {
   }
 }
 
-export function rememberOutboundIp(ip: string, storage: StorageLike = profileStorage()): void {
+export function rememberOutboundIp(ip: string, storage: StorageLike = accountStorage()): void {
   const currentIp = normalizeOutboundIp(ip);
   if (!currentIp) return;
   safeSet(storage, LAST_OUTBOUND_IP_KEY, currentIp);
@@ -38,7 +38,7 @@ export function rememberOutboundIp(ip: string, storage: StorageLike = profileSto
 
 export async function checkStartupOutboundIp(
   fetchOutboundIp: () => Promise<string>,
-  storage: StorageLike = profileStorage(),
+  storage: StorageLike = accountStorage(),
 ): Promise<StartupOutboundIpCheckResult> {
   const previousIp = normalizeOutboundIp(safeGet(storage, LAST_OUTBOUND_IP_KEY) ?? "");
   const currentIp = normalizeOutboundIp(await fetchOutboundIp());
@@ -56,7 +56,7 @@ export async function checkStartupOutboundIp(
   return {status: "changed", previousIp, currentIp};
 }
 
-export function shouldRunStartupOutboundIpCheck(storage: StorageLike = profileStorage(window.sessionStorage)): boolean {
+export function shouldRunStartupOutboundIpCheck(storage: StorageLike = accountStorage(window.sessionStorage)): boolean {
   if (safeGet(storage, STARTUP_OUTBOUND_IP_CHECKED_KEY) === "1") {
     return false;
   }

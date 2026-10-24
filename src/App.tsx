@@ -1,3 +1,5 @@
+import WechatAccountSwitcher from "./components/Accounts/WechatAccountSwitcher.tsx";
+import {holdWechatAccount} from "./utils/wechatAccounts.ts";
 import WechatFeatureGate from "./components/Upload/WechatFeatureGate.tsx";
 import SaveBeforeClose from "./components/Workspace/SaveBeforeClose.tsx";
 import {lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState} from "react";
@@ -251,6 +253,13 @@ export default function App() {
   const [musicPickerOpen, setMusicPickerOpen] = useState(false);
   const [videoChannelOpen, setVideoChannelOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  // Keep multi-step pickers tied to one account until their dialogs close.
+  useEffect(() => {
+    if (imageMaterialPickerOpen || emojiPickerOpen || phoneUploadOpen || aiImageOpen || musicPickerOpen || videoChannelOpen) {
+      return holdWechatAccount();
+    }
+  }, [imageMaterialPickerOpen, emojiPickerOpen, phoneUploadOpen, aiImageOpen, musicPickerOpen, videoChannelOpen]);
+
   const [tableEditorOpen, setTableEditorOpen] = useState(false);
   const [formulaEditorOpen, setFormulaEditorOpen] = useState(false);
   const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
@@ -807,6 +816,7 @@ export default function App() {
             <Images size={16} />
           </IconButton>
         </div>
+        <WechatAccountSwitcher onSettings={openSettings} disabled={settingsOpen} />
         <MainToolbar
           onOpenSettings={openSettings}
           onNeedSettings={openSettings}

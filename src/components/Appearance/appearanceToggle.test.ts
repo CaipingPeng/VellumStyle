@@ -8,7 +8,7 @@ const mainSource = readFile(new URL("../../main.tsx", import.meta.url), "utf8");
 
 test("入口在 React 挂载前预应用持久化外观", async () => {
   const source = await mainSource;
-  assert.match(source, /readPersistedAppearanceMode\(profileStorage\(\)\)/);
+  assert.match(source, /readPersistedAppearanceMode\(window\.localStorage\)/);
   assert.match(source, /applyAppearanceMode\([^,]+, document\.documentElement\)/);
   assert.ok(source.indexOf("applyAppearanceMode(") < source.indexOf("createRoot("));
 });

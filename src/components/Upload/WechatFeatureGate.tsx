@@ -1,3 +1,4 @@
+import {holdWechatAccount} from "../../utils/wechatAccounts.ts";
 import {useEffect, useState, type ReactNode} from "react";
 import {capabilityReason, readCapabilities, type WechatFeature} from "../../utils/featureCapabilities.ts";
 import {backendWindowUrl, openWechatBackend} from "../../utils/publish.ts";
@@ -8,6 +9,7 @@ import Button from "../ui/Button.tsx";
 export default function WechatFeatureGate({feature = "backend", onClose, onSettings, children}: {
   feature?: WechatFeature; onClose: () => void; onSettings?: () => void; children: ReactNode;
 }) {
+  useEffect(() => holdWechatAccount(), []);
   const [ready, setReady] = useState(false);
   const [reason, setReason] = useState("正在检查功能可用性…");
   const [canLogin, setCanLogin] = useState(false);

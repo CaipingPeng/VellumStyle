@@ -218,7 +218,7 @@ pub async fn list_image_materials(
     offset: u32,
     count: u32,
 ) -> Result<MaterialImagePage, String> {
-    let cfg = load_wechat_config(&app);
+    let cfg = load_wechat_config(&app)?;
     if !cfg.is_configured() {
         return Err("NOT_CONFIGURED".into());
     }
@@ -247,7 +247,7 @@ pub async fn list_video_materials(
     offset: u32,
     count: u32,
 ) -> Result<MaterialVideoPage, String> {
-    let cfg = load_wechat_config(&app);
+    let cfg = load_wechat_config(&app)?;
     if !cfg.is_configured() {
         return Err("NOT_CONFIGURED".into());
     }
@@ -276,7 +276,7 @@ pub async fn list_voice_materials(
     offset: u32,
     count: u32,
 ) -> Result<MaterialVoicePage, String> {
-    let cfg = load_wechat_config(&app);
+    let cfg = load_wechat_config(&app)?;
     if !cfg.is_configured() {
         return Err("NOT_CONFIGURED".into());
     }
@@ -303,7 +303,7 @@ pub async fn list_voice_materials(
 /// mp4 地址带签名时效，每次播放前应重新获取。
 #[tauri::command]
 pub async fn get_video_play_url(app: AppHandle, media_id: String) -> Result<String, String> {
-    let cfg = load_wechat_config(&app);
+    let cfg = load_wechat_config(&app)?;
     if !cfg.is_configured() {
         return Err("NOT_CONFIGURED".into());
     }
@@ -409,7 +409,7 @@ pub async fn delete_image_material(app: AppHandle, media_id: String) -> Result<(
         return Err("素材 ID 不能为空".into());
     }
 
-    let cfg = load_wechat_config(&app);
+    let cfg = load_wechat_config(&app)?;
     if !cfg.is_configured() {
         return Err("NOT_CONFIGURED".into());
     }

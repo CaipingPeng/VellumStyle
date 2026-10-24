@@ -2,8 +2,6 @@
 // 编辑器输入时该写盘会阻塞主线程。这里把写操作合并为 400ms 尾防抖
 // （连续输入期间最多 2s 一次强制落盘），并在页面隐藏/退出前 flush 兜底。
 
-import {profileStorage} from "./profileStorage.ts";
-
 const DEBOUNCE_MS = 400;
 const MAX_WAIT_MS = 2000;
 
@@ -13,7 +11,7 @@ interface PendingWrite {
 }
 
 export function createDebouncedLocalStorage(): Storage {
-  const raw = profileStorage();
+  const raw = window.localStorage;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let maxTimer: ReturnType<typeof setTimeout> | null = null;
   let pending: PendingWrite | null = null;

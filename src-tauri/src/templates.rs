@@ -16,7 +16,7 @@ pub struct ArticleTemplate {
 }
 
 fn templates_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = crate::users::data_path(app, "templates")?;
+    let dir = crate::storage::data_path(app, "templates")?;
     std::fs::create_dir_all(&dir).map_err(|error| format!("创建模板目录失败：{error}"))?;
     Ok(dir)
 }

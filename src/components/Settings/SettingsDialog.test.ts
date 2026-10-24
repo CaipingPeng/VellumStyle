@@ -486,3 +486,72 @@ function setRangeValue(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new window.Event("input", {bubbles: true}));
 }
 
+test("multiple public accounts retain edits while selecting and save the selected active account", async () => {
+  (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+  const accounts = [
+    {name: "工作号", app_id: "wxA", app_secret: "secret-a"},
+    {name: "个人号", app_id: "wxB", app_secret: "secret-b"},
+  ];
+  let saved: Record<string, unknown> | undefined;
+  const win = window as typeof window & {__TAURI_INTERNALS__?: {invoke: (command: string, args?: Record<string, unknown>) => Promise<unknown>; transformCallback: () => number}};
+  win.__TAURI_INTERNALS__ = {
+    transformCallback: () => 0,
+    invoke: async (command, args) => {
+      if (command === "get_config") return {wechat: accounts[0], wechat_accounts: accounts, active_wechat_app_id: "wxA", sync: {username: "cloud", password: "cloud-password", remote_dir: "Shared"}};
+      if (command === "save_config") {
+        saved = args;
+        return {accounts: (args?.wechatAccounts as typeof accounts).map(({name, app_id}) => ({name, app_id})), active_app_id: args?.activeWechatAppId};
+      }
+      return undefined;
+    },
+  };
+  const {cleanup} = renderSettingsDialog();
+  const button = (label: string) => Array.from(document.querySelectorAll("button")).find((item) => item.textContent?.trim() === label)!;
+  const input = (id: string) => document.getElementById(id) as HTMLInputElement;
+  const select = (index: number) => {
+    const field = document.getElementById("settings-wechat-account") as HTMLSelectElement;
+    field.value = String(index);
+    field.dispatchEvent(new window.Event("change", {bubbles: true}));
+  };
+  try {
+    await act(async () => { await Promise.resolve(); });
+    assert.doesNotMatch(document.body.textContent || "", /本机账户|登录本机|创建账户/);
+    act(() => setRangeValue(input("settings-wechat-name"), "工作号改名"));
+    act(() => select(1));
+    assert.equal(input("settings-wechat-app-secret").value, "secret-b");
+    act(() => button("设为当前").click());
+    act(() => button("添加").click());
+    act(() => setRangeValue(input("settings-wechat-name"), "临时号"));
+    act(() => setRangeValue(input("settings-wechat-app-id"), "wxTemp"));
+    act(() => setRangeValue(input("settings-wechat-app-secret"), "temp-secret"));
+    act(() => button("移除").click());
+    assert.equal(input("settings-wechat-name").value, "工作号改名", "editing another account must retain unsaved edits");
+    await act(async () => { button("保存").click(); await Promise.resolve(); });
+    assert.ok(saved);
+    assert.deepEqual(saved.wechatAccounts, [{...accounts[0], name: "工作号改名"}, accounts[1]]);
+    assert.equal(saved.activeWechatAppId, "wxB");
+    assert.equal(saved.appId, "wxB");
+    assert.equal(saved.appSecret, "secret-b");
+    assert.equal(saved.syncRemoteDir, "Shared");
+    assert.equal(saved.syncUsername, "cloud");
+  } finally {
+    cleanup();
+    delete win.__TAURI_INTERNALS__;
+  }
+});
+
+test("failed configuration load disables saving to protect existing account credentials", async () => {
+  const win = window as typeof window & {__TAURI_INTERNALS__?: {invoke: () => Promise<unknown>; transformCallback: () => number}};
+  win.__TAURI_INTERNALS__ = {invoke: () => Promise.reject("配置文件不可读"), transformCallback: () => 0};
+  const {cleanup} = renderSettingsDialog();
+  try {
+    await act(async () => { await Promise.resolve(); });
+    assert.match(document.querySelector('[role="alert"]')?.textContent || "", /配置文件不可读/);
+    const save = Array.from(document.querySelectorAll("button")).find((item) => item.textContent?.trim() === "保存");
+    assert.equal(save?.disabled, true);
+  } finally {
+    cleanup();
+    delete win.__TAURI_INTERNALS__;
+  }
+});
+

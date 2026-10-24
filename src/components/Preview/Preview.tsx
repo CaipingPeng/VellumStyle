@@ -1,4 +1,5 @@
-import {forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState} from "react";
+import {getWechatAccounts, subscribeWechatAccounts} from "../../utils/wechatAccounts.ts";
+import {forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useSyncExternalStore} from "react";
 import {FileText} from "lucide-react";
 import {render} from "../../markdown/parser.ts";
 import {useStore, getThemeById} from "../../store/index.ts";
@@ -15,7 +16,7 @@ import {resolvePreviewImage, type PreviewImageMenuTarget} from "./previewImageCo
 import {copyPreviewImage, savePreviewImageAs} from "../../utils/previewImageActions.ts";
 import {toast} from "../Toast/toast.ts";
 import {loadVideoMediaId} from "../../utils/publish.ts";
-import {playPreviewVideo, toggleVoicePlayback} from "./previewPlayback.ts";
+import {playPreviewVideo, toggleVoicePlayback, stopLocalMediaPlayback} from "./previewPlayback.ts";
 import {createRenderCache} from "./renderCache.ts";
 import {createDebouncedMaxWaitScheduler} from "../../utils/debouncedMaxWait.ts";
 import FontSizePanel from "./FontSizePanel.tsx";
@@ -138,6 +139,8 @@ function activeHeadingLine(scroller: HTMLElement): number | null {
 // 点击预览元素 → 识别 model id → 打开样式面板。
 const Preview = forwardRef<PreviewHandle, Props>(
   ({content, markdownThemeId, onResizeImage}, ref) => {
+    const activeWechatAppId = useSyncExternalStore(subscribeWechatAccounts, getWechatAccounts).active_app_id;
+    useEffect(() => { stopLocalMediaPlayback(); }, [activeWechatAppId]);
     const [html, setHtml] = useState("");
     const [codeThemesVersion, setCodeThemesVersion] = useState(0);
     const [imageOverlay, setImageOverlay] = useState<ImageResizeOverlay | null>(null);
@@ -295,7 +298,8 @@ const Preview = forwardRef<PreviewHandle, Props>(
       const root = document.getElementById(ARTICLE_ROOT_ID);
       if (!root) return;
       for (const iframe of Array.from(root.querySelectorAll<HTMLIFrameElement>("iframe.video_iframe"))) {
-        if (iframe.dataset.vsVideoHidden === "true") continue;
+        // Rebuild bindings when switching AppID even if article HTML is unchanged.
+        if (iframe.nextElementSibling?.classList.contains("vs-video-placeholder")) iframe.nextElementSibling.remove();
         iframe.dataset.vsVideoHidden = "true";
         const playerSrc = iframe.getAttribute("src") ?? "";
         if (playerSrc) {
@@ -340,7 +344,7 @@ const Preview = forwardRef<PreviewHandle, Props>(
         }
         iframe.insertAdjacentElement("afterend", placeholder);
       }
-    }, [html]);
+    }, [html, activeWechatAppId]);
 
     // 素材库音频在本地预览不播放：自定义音频元素在 WebView 里渲染为空，
     // 改为标题 + 时长 + 播放按钮样式的占位卡片；节点保留在 DOM，导出时由

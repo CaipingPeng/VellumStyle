@@ -15,7 +15,7 @@ pub struct TrashEntry {
 }
 fn now() -> u64 { SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64 }
 fn root(app: &AppHandle) -> Result<PathBuf, String> {
-    Ok(crate::users::data_path(app, "trash")?)
+    Ok(crate::storage::data_path(app, "trash")?)
 }
 fn entry_dir(root: &Path, id: &str) -> Result<PathBuf, String> {
     if id.is_empty() || !id.bytes().all(|c| c.is_ascii_digit() || c == b'-') { return Err("非法回收记录".into()); }

@@ -17,7 +17,7 @@ pub struct UserTheme {
 }
 
 fn themes_dir(app: &AppHandle) -> Option<PathBuf> {
-    crate::users::data_path(app, "themes").ok()
+    crate::storage::data_path(app, "themes").ok()
 }
 
 /// 生成安全主题 id/文件名：保留字母数字与 `-`/`_`/`.`。

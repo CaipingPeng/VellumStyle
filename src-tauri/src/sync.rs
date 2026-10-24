@@ -207,8 +207,7 @@ pub async fn sync_documents(app: AppHandle) -> Result<SyncRunSummary, String> {
         .get_or_init(|| tokio::sync::Mutex::new(()))
         .lock()
         .await;
-    crate::users::current(&app)?;
-    let cfg = load_sync_config(&app);
+    let cfg = load_sync_config(&app)?;
     if !cfg.enabled {
         return Ok(SyncRunSummary::disabled("同步未启用"));
     }
@@ -446,13 +445,12 @@ async fn apply_download(
 
 #[tauri::command]
 pub async fn test_sync_connection(
-    app: AppHandle,
+    _app: AppHandle,
     provider: String,
     username: String,
     password: String,
     remote_dir: String,
 ) -> Result<SyncConnectionTestResult, String> {
-    crate::users::current(&app)?;
     let cfg = SyncConfig {
         enabled: true,
         provider: provider.trim().to_string(),
@@ -484,11 +482,11 @@ pub async fn test_sync_connection(
 }
 
 fn documents_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    Ok(crate::users::data_path(app, "documents")?)
+    Ok(crate::storage::data_path(app, "documents")?)
 }
 
 fn sync_state_path(app: &AppHandle) -> Result<PathBuf, String> {
-    crate::users::data_path(app, LOCAL_STATE_NAME)
+    crate::storage::data_path(app, LOCAL_STATE_NAME)
 }
 
 fn load_local_index(path: &Path, scope: &str) -> SyncIndex {

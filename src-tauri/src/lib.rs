@@ -1,5 +1,5 @@
 mod background;
-mod users;
+mod storage;
 mod safe_path;
 mod atomic_file;
 mod trash;
@@ -73,7 +73,7 @@ fn handle_wximg<R: tauri::Runtime>(
     };
 
     // 磁盘缓存目录随应用数据目录走；拿不到就退化成「没有缓存」，不影响取图。
-    let cache = users::data_path(ctx.app_handle(), "cache/wximg")
+    let cache = storage::data_path(ctx.app_handle(), "cache/wximg")
         .ok()
         .map(wximg_cache::WximgCache::new);
 
@@ -112,7 +112,6 @@ fn handle_wximg<R: tauri::Runtime>(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .manage(users::UserSession::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_process::init())
@@ -120,11 +119,6 @@ pub fn run() {
         .register_asynchronous_uri_scheme_protocol("wximg", handle_wximg)
         .invoke_handler(tauri::generate_handler![
             supports_wechat_backend,
-            users::list_local_users,
-            users::get_current_user,
-            users::get_user_data_dir,
-            users::create_local_user,
-            users::login_local_user,
             trash::list_trash,
             trash::restore_trash,
             background::copy_background_image,
@@ -178,6 +172,8 @@ pub fn run() {
             import::read_markdown_file,
             import::resolve_import_media,
             config::get_config,
+            config::list_wechat_accounts,
+            config::switch_wechat_account,
             config::save_config,
             sync::sync_documents,
             sync::test_sync_connection,

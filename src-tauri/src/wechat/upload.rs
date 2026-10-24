@@ -550,7 +550,7 @@ pub(crate) async fn upload_image_bytes(
     mime: String,
     task_id: Option<String>,
 ) -> Result<String, String> {
-    let cfg = load_wechat_config(&app);
+    let cfg = load_wechat_config(&app)?;
     if !cfg.is_configured() {
         return Err("NOT_CONFIGURED".into());
     }

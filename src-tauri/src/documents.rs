@@ -14,7 +14,7 @@ pub struct DocNode {
 }
 
 pub(crate) fn documents_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = crate::users::data_path(app, "documents")?;
+    let dir = crate::storage::data_path(app, "documents")?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("创建文档目录失败：{e}"))?;
     Ok(dir)
 }

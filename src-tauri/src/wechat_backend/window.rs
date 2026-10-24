@@ -28,7 +28,7 @@ pub async fn show_wechat_backend(app: AppHandle) -> Result<(), String> {
 }
 
 pub(crate) async fn open_wechat_backend_impl(app: &AppHandle, visible: bool) -> Result<(), String> {
-    let profile = crate::users::data_path(app, "wechat-webview")?;
+    let profile = crate::config::wechat_session_dir(app)?;
     if let Some(window) = app.get_webview_window(BACKEND_WINDOW_LABEL) {
         if visible {
             let _ = window.show();

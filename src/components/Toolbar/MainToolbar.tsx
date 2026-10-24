@@ -44,7 +44,7 @@ function MainToolbar({onOpenSettings, onNeedSettings, hasUpdateNotification = fa
       paddingLeft: parsePx(headerStyle.paddingLeft),
       paddingRight: parsePx(headerStyle.paddingRight),
       gap: parsePx(headerStyle.columnGap || headerStyle.gap),
-      leftMinWidth: MIN_LEFT_TOOLBAR_WIDTH,
+      leftMinWidth: MIN_LEFT_TOOLBAR_WIDTH + (header.querySelector<HTMLElement>("[data-account-switcher]")?.getBoundingClientRect().width ?? 0) + parsePx(headerStyle.columnGap || headerStyle.gap),
     });
     const secondaryWidths = SECONDARY_ACTIONS.map((id) => widthOf(id));
     const publishWidth = widthOf("publish");

@@ -1,5 +1,4 @@
 import {invoke} from "@tauri-apps/api/core";
-import {profileStorage} from "./profileStorage.ts";
 import {isTauriRuntime} from "./tauriEnv.ts";
 
 export interface ArticleTemplate {
@@ -17,7 +16,7 @@ let memoryTemplates: ArticleTemplate[] = [];
 function readWebTemplates(): ArticleTemplate[] {
   if (typeof localStorage === "undefined") return memoryTemplates;
   try {
-    const parsed = JSON.parse(profileStorage(localStorage).getItem(STORAGE_KEY) ?? "[]") as unknown;
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]") as unknown;
     return Array.isArray(parsed) ? parsed.filter(isTemplate) : [];
   } catch {
     return [];
@@ -28,7 +27,7 @@ function writeWebTemplates(templates: ArticleTemplate[]): void {
   memoryTemplates = templates;
   if (typeof localStorage !== "undefined") {
     try {
-      profileStorage(localStorage).setItem(STORAGE_KEY, JSON.stringify(templates));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
     } catch {
       // 无痕模式或禁用站点存储时仍保留当前会话中的模板。
     }

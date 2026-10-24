@@ -86,7 +86,7 @@ pub(crate) async fn upload_thumb_bytes(
     mime: String,
     task_id: Option<String>,
 ) -> Result<String, String> {
-    let cfg = load_wechat_config(&app);
+    let cfg = load_wechat_config(&app)?;
     if !cfg.is_configured() {
         return Err("NOT_CONFIGURED".into());
     }
@@ -220,7 +220,7 @@ pub async fn add_draft(
     need_open_comment: u8,
     only_fans_can_comment: u8,
 ) -> Result<String, String> {
-    let cfg = load_wechat_config(&app);
+    let cfg = load_wechat_config(&app)?;
     if !cfg.is_configured() {
         return Err("NOT_CONFIGURED".into());
     }

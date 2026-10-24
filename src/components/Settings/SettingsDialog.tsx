@@ -13,8 +13,7 @@ import {testSyncConnection} from "../../utils/cloudSync.ts";
 import {isTauriRuntime} from "../../utils/tauriEnv.ts";
 import ReleaseNotesView from "../Update/ReleaseNotesView.tsx";
 import {buildWechatWhitelistUrl} from "../../utils/wechatWhitelist.ts";
-import AccountPanel from "../Accounts/AccountPanel.tsx";
-import {getActiveUser} from "../../utils/profileStorage.ts";
+import {saveWechatConfiguration, type WechatAccount} from "../../utils/wechatAccounts.ts";
 
 interface Props {
   open?: boolean;
@@ -33,6 +32,8 @@ interface Props {
 }
 
 interface AppConfig {
+  wechat_accounts?: WechatAccount[];
+  active_wechat_app_id?: string;
   wechat: {
     app_id: string;
     app_secret: string;
@@ -58,7 +59,7 @@ const wechatDeveloperConsoleUrl = "https://developers.weixin.qq.com/console/memb
 
 type IpStatus = "idle" | "loading" | "ok" | "error";
 type CopyStatus = "idle" | "ok" | "fail";
-type SettingsSection = "account" | "wechat" | "sync" | "network" | "appearance" | "about";
+type SettingsSection = "wechat" | "sync" | "network" | "appearance" | "about";
 
 export interface SettingsUpdateState {
   status: "idle" | "checking" | "available" | "none" | "installing" | "error" | "unsupported";
@@ -89,8 +90,16 @@ export default function SettingsDialog({
   onStatusBarOpacityChange,
 }: Props) {
   const [activeSection, setActiveSection] = useState<SettingsSection>("wechat");
-  const [appId, setAppId] = useState("");
-  const [appSecret, setAppSecret] = useState("");
+  const [accounts, setAccounts] = useState<WechatAccount[]>([]);
+  const [editingIndex, setEditingIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [loadError, setLoadError] = useState("");
+  const editing = accounts[editingIndex] ?? {name: "", app_id: "", app_secret: ""};
+  const appId = editing.app_id;
+  const appSecret = editing.app_secret;
+  const updateAccount = (patch: Partial<WechatAccount>) => setAccounts((current) => current.map((account, index) => index === editingIndex ? {...account, ...patch} : account));
+  const setAppId = (app_id: string) => updateAccount({app_id});
+  const setAppSecret = (app_secret: string) => updateAccount({app_secret});
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
@@ -107,6 +116,8 @@ export default function SettingsDialog({
   useEffect(() => {
     if (!open) return;
     setLoaded(false);
+    setLoadError("");
+    let disposed = false;
     setActiveSection(updateState?.status === "available" ? "about" : "wechat");
     setShowSecret(false);
     setShowSyncPassword(false);
@@ -114,22 +125,32 @@ export default function SettingsDialog({
     setCopyStatus("idle");
     invoke<AppConfig>("get_config")
       .then((cfg) => {
-        setAppId(cfg.wechat?.app_id || "");
-        setAppSecret(cfg.wechat?.app_secret || "");
+        if (disposed) return;
+        const saved = cfg.wechat_accounts?.length ? cfg.wechat_accounts : [{name: "默认公众号", app_id: cfg.wechat?.app_id || "", app_secret: cfg.wechat?.app_secret || ""}];
+        setAccounts(saved);
+        const active = Math.max(0, saved.findIndex((account) => account.app_id === cfg.active_wechat_app_id));
+        setEditingIndex(active);
+        setActiveIndex(active);
         setSyncUsername(cfg.sync?.username || "");
         setSyncPassword(cfg.sync?.password || "");
         setSyncRemoteDir(cfg.sync?.remote_dir || "VellumStyle");
       })
-      .catch(() => {})
-      .finally(() => setLoaded(true));
+      .catch((error) => { if (!disposed) setLoadError(`读取配置失败：${String(error)}`); })
+      .finally(() => { if (!disposed) setLoaded(true); });
+    return () => { disposed = true; };
   }, [open]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await invoke("save_config", {
-        appId: appId.trim(),
-        appSecret: appSecret.trim(),
+      const savedAccounts = accounts.filter((account) => account.app_id.trim() || account.app_secret.trim());
+      const active = accounts[activeIndex];
+      const activeId = active && savedAccounts.includes(active) ? active.app_id.trim() : savedAccounts[0]?.app_id.trim() || "";
+      await saveWechatConfiguration({
+        appId: activeId,
+        appSecret: savedAccounts.find((account) => account.app_id.trim() === activeId)?.app_secret.trim() || "",
+        wechatAccounts: savedAccounts,
+        activeWechatAppId: activeId,
         syncEnabled: syncConfigured,
         syncProvider: "nutstore",
         syncUsername: syncUsername.trim(),
@@ -282,7 +303,7 @@ export default function SettingsDialog({
             state={saving ? "loading" : "idle"}
             loadingText="保存中…"
             onClick={handleSave}
-            disabled={!loaded}
+            disabled={!loaded || Boolean(loadError) || saving}
             className="min-w-[86px] gap-2"
           >
             <Save size={14} />
@@ -294,7 +315,6 @@ export default function SettingsDialog({
       <div className="grid h-[min(540px,68vh)] grid-cols-[180px_minmax(0,1fr)] overflow-hidden rounded border border-border bg-bg-secondary">
         <nav className="flex flex-col gap-1 overflow-y-auto border-r border-border bg-bg-tertiary p-2" aria-label="设置分类">
           {[
-            {id: "account" as const, label: "本机账户", icon: UserRound},
             {id: "wechat" as const, label: "微信配置", icon: ShieldCheck},
             {id: "sync" as const, label: "文件同步", icon: Cloud},
             {id: "network" as const, label: "网络辅助", icon: Network},
@@ -326,7 +346,7 @@ export default function SettingsDialog({
         </nav>
 
         <section className="min-w-0 overflow-y-auto bg-bg p-5">
-          {activeSection === "account" && <AccountPanel />}
+          {loadError && <p role="alert" className="text-sm text-danger">{loadError}</p>}
           {activeSection === "wechat" && (
             <div className="mx-auto flex max-w-[520px] flex-col gap-5">
               <div className="flex items-start gap-3">
@@ -335,18 +355,49 @@ export default function SettingsDialog({
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="m-0 text-[16px] font-semibold leading-6 text-text">微信素材上传凭证</h2>
+                    <h2 className="m-0 text-[16px] font-semibold leading-6 text-text">公众号配置</h2>
                     <span className="rounded-sm bg-bg-secondary px-2 py-0.5 text-xs2 font-medium text-text-muted">
                       {loaded ? "本机配置" : "读取中"}
                     </span>
                   </div>
                   <p className="m-0 mt-1 text-xs leading-5 text-text-secondary">
-                    用于上传图片到公众号素材库，凭证仅保存在本机配置文件。可前往微信开发者平台扫码登录后，在公众号详情页查看 AppID / AppSecret。
+                    可保存多套公众号凭证，在顶部切换使用。文章和文件同步共用，素材绑定与微信登录分别保存。凭证仅保存在本机。可前往微信开发者平台扫码登录后，在公众号详情页查看 AppID / AppSecret。
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-col gap-4">
+                <div>
+                  <label htmlFor="settings-wechat-account" className={labelClass}>公众号列表</label>
+                  <div className="flex gap-2">
+                    <select id="settings-wechat-account" className="h-10 min-w-0 flex-1 rounded border border-border bg-bg px-2 text-sm text-text" value={editingIndex} disabled={!loaded || saving || Boolean(loadError)} onChange={(event) => {setEditingIndex(Number(event.target.value)); setShowSecret(false);}}>
+                      {accounts.map((account, index) => <option key={index} value={index}>{index === activeIndex ? "当前 · " : ""}{account.name || account.app_id || "新公众号"}</option>)}
+                    </select>
+                    <Button variant="secondary" disabled={!loaded || saving || Boolean(loadError)} onClick={() => {
+                      setAccounts([...accounts, {name: "", app_id: "", app_secret: ""}]);
+                      setEditingIndex(accounts.length);
+                      setShowSecret(false);
+                    }}>添加</Button>
+                    <Button variant="secondary" disabled={!loaded || saving || Boolean(loadError)} onClick={() => {
+                      const remaining = accounts.filter((_, index) => index !== editingIndex);
+                      setAccounts(remaining.length ? remaining : [{name: "", app_id: "", app_secret: ""}]);
+                      setActiveIndex(activeIndex === editingIndex ? 0 : activeIndex > editingIndex ? activeIndex - 1 : activeIndex);
+                      setEditingIndex(0);
+                      setShowSecret(false);
+                    }}>移除</Button>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-2 text-xs text-text-secondary">
+                    <span>{editingIndex === activeIndex ? "当前使用的公众号" : "正在编辑另一套配置"}</span>
+                    {editingIndex !== activeIndex && <Button variant="secondary" onClick={() => setActiveIndex(editingIndex)}>设为当前</Button>}
+                  </div>
+                  <p className="mt-2 text-xs text-text-muted">添加、移除和切换在点击「保存」后生效。</p>
+                </div>
+                <div>
+                  <label htmlFor="settings-wechat-name" className={labelClass}>公众号名称</label>
+                  <div className={inputShellClass}>
+                    <input id="settings-wechat-name" className={inputClass} value={editing.name} placeholder="便于识别，例如：工作号" disabled={!loaded || saving || Boolean(loadError)} onChange={(event) => updateAccount({name: event.target.value})} />
+                  </div>
+                </div>
                 <div>
                   <label htmlFor="settings-wechat-app-id" className={labelClass}>
                     AppID
@@ -358,7 +409,7 @@ export default function SettingsDialog({
                       value={appId}
                       onChange={(e) => setAppId(e.target.value)}
                       placeholder="wx 开头的公众号 AppID"
-                      disabled={!loaded}
+                      disabled={!loaded || Boolean(loadError) || saving}
                       className={inputClass}
                     />
                   </div>
@@ -376,13 +427,13 @@ export default function SettingsDialog({
                       onChange={(e) => setAppSecret(e.target.value)}
                       placeholder="公众号 AppSecret"
                       type={showSecret ? "text" : "password"}
-                      disabled={!loaded}
+                      disabled={!loaded || Boolean(loadError) || saving}
                       className={inputClass}
                     />
                     <button
                       type="button"
                       onClick={() => setShowSecret((v) => !v)}
-                      disabled={!loaded}
+                      disabled={!loaded || Boolean(loadError) || saving}
                       title={showSecret ? "隐藏 AppSecret" : "显示 AppSecret"}
                       aria-label={showSecret ? "隐藏 AppSecret" : "显示 AppSecret"}
                       className="inline-flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-sm border-0 bg-transparent text-text-muted transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-50"
@@ -436,7 +487,7 @@ export default function SettingsDialog({
                       value={syncUsername}
                       onChange={(e) => setSyncUsername(e.target.value)}
                       placeholder="坚果云登录邮箱"
-                      disabled={!loaded}
+                      disabled={!loaded || Boolean(loadError) || saving}
                       autoComplete="username"
                       className={inputClass}
                     />
@@ -455,14 +506,14 @@ export default function SettingsDialog({
                       onChange={(e) => setSyncPassword(e.target.value)}
                       placeholder="坚果云第三方应用授权密码"
                       type={showSyncPassword ? "text" : "password"}
-                      disabled={!loaded}
+                      disabled={!loaded || Boolean(loadError) || saving}
                       autoComplete="current-password"
                       className={inputClass}
                     />
                     <button
                       type="button"
                       onClick={() => setShowSyncPassword((v) => !v)}
-                      disabled={!loaded}
+                      disabled={!loaded || Boolean(loadError) || saving}
                       title={showSyncPassword ? "隐藏应用密码" : "显示应用密码"}
                       aria-label={showSyncPassword ? "隐藏应用密码" : "显示应用密码"}
                       className="inline-flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-sm border-0 bg-transparent text-text-muted transition-colors duration-fast hover:bg-bg-tertiary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:cursor-default disabled:opacity-50"
@@ -483,11 +534,10 @@ export default function SettingsDialog({
                       value={syncRemoteDir}
                       onChange={(e) => setSyncRemoteDir(e.target.value)}
                       placeholder="VellumStyle"
-                      disabled={!loaded}
+                      disabled={!loaded || Boolean(loadError) || saving}
                       className={inputClass}
                     />
                   </div>
-                  {getActiveUser() && !getActiveUser()!.ownsLegacyData && <p className="mt-2 text-xs text-text-muted">云端数据自动存入此目录下的独立账户子目录，避免与其他本机账户混用。</p>}
                 </div>
               </div>
 
@@ -495,7 +545,7 @@ export default function SettingsDialog({
                 type="button"
                 variant="secondary"
                 onClick={() => void handleTestSyncConnection()}
-                disabled={!loaded}
+                disabled={!loaded || Boolean(loadError) || saving}
                 className="gap-2 self-center"
               >
                 测试连接
