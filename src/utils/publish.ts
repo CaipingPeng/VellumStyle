@@ -1,5 +1,6 @@
 // 发布草稿箱：上传封面拿 media_id + add_draft；发布前校验正文无未上传外链图。
 import {invoke} from "@tauri-apps/api/core";
+import {profileStorage} from "./profileStorage.ts";
 import {MAX_IMAGE_SOURCE_SIZE} from "./upload.ts";
 import {imageUploadTasks, type ImageUploadTaskContext} from "./imageUploadTasks.ts";
 import type {MediaRef, MediaSourceType, MediaSyntax} from "./markdownMediaScanner.ts";
@@ -393,10 +394,10 @@ const VIDEO_MEDIA_KEY = "vs-video-media-ids";
 // 微信会剥离未知 data 属性导致视频被删）。
 export function saveVideoMediaId(vid: string, mediaId: string): void {
   try {
-    const raw = localStorage.getItem(VIDEO_MEDIA_KEY);
+    const raw = profileStorage(localStorage).getItem(VIDEO_MEDIA_KEY);
     const map: Record<string, string> = raw ? JSON.parse(raw) : {};
     map[vid] = mediaId;
-    localStorage.setItem(VIDEO_MEDIA_KEY, JSON.stringify(map));
+    profileStorage(localStorage).setItem(VIDEO_MEDIA_KEY, JSON.stringify(map));
   } catch {
     // 存储失败不阻断插入
   }
@@ -404,7 +405,7 @@ export function saveVideoMediaId(vid: string, mediaId: string): void {
 
 export function loadVideoMediaId(vid: string): string | null {
   try {
-    const raw = localStorage.getItem(VIDEO_MEDIA_KEY);
+    const raw = profileStorage(localStorage).getItem(VIDEO_MEDIA_KEY);
     if (!raw) return null;
     const map: Record<string, string> = JSON.parse(raw);
     return map[vid] ?? null;
@@ -417,7 +418,7 @@ const VOICE_BINDING_KEY = "vs-audio-bindings";
 
 function readVoiceBindings(): Record<string, VoiceCodeInfo> {
   try {
-    const raw = localStorage.getItem(VOICE_BINDING_KEY);
+    const raw = profileStorage(localStorage).getItem(VOICE_BINDING_KEY);
     if (!raw) return {};
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
@@ -435,7 +436,7 @@ export function saveVoiceBinding(mediaId: string, info: VoiceCodeInfo): void {
   const bindings = readVoiceBindings();
   bindings[mediaId] = info;
   try {
-    localStorage.setItem(VOICE_BINDING_KEY, JSON.stringify(bindings));
+    profileStorage(localStorage).setItem(VOICE_BINDING_KEY, JSON.stringify(bindings));
   } catch {
     // 存储失败不阻断插入，本次仍可用粘贴代码插入。
   }

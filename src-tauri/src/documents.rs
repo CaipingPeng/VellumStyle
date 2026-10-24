@@ -3,7 +3,7 @@
 
 use serde::Serialize;
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct DocNode {
@@ -14,11 +14,7 @@ pub struct DocNode {
 }
 
 pub(crate) fn documents_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("无法定位数据目录：{e}"))?
-        .join("documents");
+    let dir = crate::users::data_path(app, "documents")?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("创建文档目录失败：{e}"))?;
     Ok(dir)
 }
@@ -68,24 +64,7 @@ fn is_windows_reserved_name(stem: &str) -> bool {
 // 用逐段拼接（不依赖文件存在，create 场景目标尚不存在），拒绝 .. 与绝对段。
 pub(crate) fn resolve_in_documents(app: &AppHandle, rel: &str) -> Result<PathBuf, String> {
     let base = documents_dir(app)?;
-    let mut full = base.clone();
-    for seg in rel.split(['/', '\\']) {
-        if seg.is_empty() {
-            continue;
-        }
-        if seg == ".." || seg == "." {
-            return Err("非法路径".into());
-        }
-        full.push(seg);
-    }
-    // 二次保险：规范化后仍须在 base 内（base 已存在可 canonicalize）。
-    let canon_base = std::fs::canonicalize(&base).map_err(|e| format!("{e}"))?;
-    if let Ok(canon_full) = std::fs::canonicalize(&full) {
-        if !canon_full.starts_with(&canon_base) {
-            return Err("非法路径".into());
-        }
-    }
-    Ok(full)
+    crate::safe_path::resolve(&base, rel)
 }
 
 fn rel_path(base: &Path, full: &Path) -> String {
@@ -102,6 +81,7 @@ fn scan(dir: &Path, base: &Path) -> Vec<DocNode> {
     let mut dirs: Vec<DocNode> = Vec::new();
     let mut files: Vec<DocNode> = Vec::new();
     for entry in entries.flatten() {
+        if entry.file_type().map(|t| t.is_symlink()).unwrap_or(true) { continue; }
         let path = entry.path();
         if path.is_dir() {
             let name = path
@@ -176,10 +156,10 @@ pub fn create_document(app: AppHandle, dir: String, name: String) -> Result<Stri
     let parent = resolve_in_documents(&app, &dir)?;
     std::fs::create_dir_all(&parent).map_err(|e| format!("{e}"))?;
     let full = parent.join(format!("{name}.md"));
-    if full.exists() {
-        return Err("已存在同名文档".into());
-    }
-    std::fs::write(&full, "").map_err(|e| format!("创建文档失败：{e}"))?;
+    std::fs::OpenOptions::new().write(true).create_new(true).open(&full).map_err(|e| {
+        if e.kind() == std::io::ErrorKind::AlreadyExists { "已存在同名文档".to_string() }
+        else { format!("创建文档失败：{e}") }
+    })?;
     Ok(rel_path(&base, &full))
 }
 
@@ -192,10 +172,14 @@ pub fn create_folder(app: AppHandle, dir: String, name: String) -> Result<String
     let base = documents_dir(&app)?;
     let parent = resolve_in_documents(&app, &dir)?;
     let full = parent.join(name);
-    if full.exists() {
-        return Err("已存在同名文件夹".into());
-    }
-    std::fs::create_dir_all(&full).map_err(|e| format!("创建文件夹失败：{e}"))?;
+    std::fs::create_dir_all(&parent).map_err(|e| format!("创建父目录失败：{e}"))?;
+    std::fs::create_dir(&full).map_err(|e| {
+        if e.kind() == std::io::ErrorKind::AlreadyExists {
+            if full.is_dir() { "已存在同名文件夹".to_string() }
+            else { "该名称已被文件占用，请更换名称".to_string() }
+        }
+        else { format!("创建文件夹失败：{e}") }
+    })?;
     Ok(rel_path(&base, &full))
 }
 

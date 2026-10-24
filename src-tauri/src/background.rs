@@ -2,16 +2,12 @@
 // 前端只保存软件内部路径，不引用原位置，避免原文件被移动/删除后失效。
 
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 const IMAGE_EXTS: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg"];
 
 fn backgrounds_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("无法定位数据目录：{e}"))?
-        .join("backgrounds");
+    let dir = crate::users::data_path(app, "backgrounds")?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("创建背景图目录失败：{e}"))?;
     Ok(dir)
 }

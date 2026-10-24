@@ -64,6 +64,7 @@ function DocTree() {
   const actions = useDocActions();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState<CreatingState | null>(null);
+  const createInFlight = useRef(false);
   const [dragSrc, setDragSrc] = useState<string | null>(null);
   const [dragOverPath, setDragOverPath] = useState<string | null>(null);
   const [rootDragOver, setRootDragOver] = useState(false);
@@ -138,6 +139,7 @@ function DocTree() {
 
   // 在指定目录开始新建：展开该目录（非根才需要），显示占位输入行。
   const startCreateIn = useCallback((dir: string, mode: "doc" | "folder") => {
+    if (createInFlight.current) return;
     setRenameSession(null); // 新建与重命名互斥，避免两个 inline 输入框同时占位
     if (dir) setExpandedPaths([dir]);
     setCreating({mode, dir, value: "", error: null, pending: false});
@@ -316,7 +318,7 @@ function DocTree() {
   };
 
   const commitCreate = useCallback(async () => {
-    if (!creating) return;
+    if (!creating || creating.pending || createInFlight.current) return;
     const {mode, dir, value} = creating;
     const name = value.trim();
     if (!name) {
@@ -329,11 +331,17 @@ function DocTree() {
       setCreating((current) => (current ? {...current, error: invalid} : current));
       return;
     }
+    // Disabling the focused input can itself emit blur before React renders.
+    createInFlight.current = true;
     setCreating((current) => (current ? {...current, pending: true, error: null} : current));
     rememberScroll();
-    if (mode === "doc") await actions.newDocument(dir, name);
-    else await actions.newFolder(dir, name);
-    setCreating(null);
+    try {
+      const result = mode === "doc" ? await actions.newDocument(dir, name) : await actions.newFolder(dir, name);
+      if (result.ok) setCreating(null);
+      else setCreating((current) => current ? {...current, pending: false, error: result.error} : current);
+    } finally {
+      createInFlight.current = false;
+    }
   }, [actions, creating, rememberScroll]);
 
   const draftChange = useCallback((v: string) => {
@@ -342,7 +350,7 @@ function DocTree() {
 
   const handleDelete = useCallback((node: DocNode) => setPendingDelete(node), []);
 
-  const cancelCreate = useCallback(() => setCreating(null), []);
+  const cancelCreate = useCallback(() => { if (!createInFlight.current) setCreating(null); }, []);
 
   const confirmDelete = async () => {
     const node = pendingDelete;
@@ -385,6 +393,7 @@ function DocTree() {
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onPointerDown={(e) => {
+            if ((e.target as HTMLElement).closest("input, button, select, textarea")) return;
             // 树行本身不可聚焦，点击任意位置都让面板拿到焦点，F2 才能落到面板。
             e.currentTarget.focus({preventScroll: true});
           }}

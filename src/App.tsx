@@ -589,7 +589,10 @@ export default function App() {
   }, [setThemes]);
 
   // 启动：加载文档树和主题元数据；迁移旧 localStorage 草稿；决定打开哪篇。
+  const workspaceInitialized = useRef(false);
   useEffect(() => {
+    if (workspaceInitialized.current) return;
+    workspaceInitialized.current = true;
     (async () => {
       await loadTree();
       await loadDocumentThemes();

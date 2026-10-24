@@ -44,8 +44,9 @@ export default function DraftInput({
           onClick={(e) => e.stopPropagation()}
           onBlur={onCommit}
           onKeyDown={(e) => {
-            if (e.key === "Enter") onCommit();
-            if (e.key === "Escape") onCancel();
+            if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+            if (e.key === "Enter") { e.preventDefault(); onCommit(); }
+            if (e.key === "Escape") { e.preventDefault(); onCancel(); }
           }}
           className={`flex-1 min-w-0 px-1 text-sm2 border rounded-sm bg-transparent outline-none focus:ring-2 focus:ring-[color:var(--ring)] disabled:opacity-60 ${
             error ? "border-danger" : "border-border focus:border-accent"

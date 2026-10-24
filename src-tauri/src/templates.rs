@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -16,11 +16,7 @@ pub struct ArticleTemplate {
 }
 
 fn templates_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("无法定位数据目录：{error}"))?
-        .join("templates");
+    let dir = crate::users::data_path(app, "templates")?;
     std::fs::create_dir_all(&dir).map_err(|error| format!("创建模板目录失败：{error}"))?;
     Ok(dir)
 }

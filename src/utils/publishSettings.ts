@@ -1,3 +1,5 @@
+import {profileStorage} from "./profileStorage.ts";
+
 export type CommentFlag = 0 | 1;
 
 export interface PublishSettings {
@@ -18,7 +20,7 @@ export const DEFAULT_PUBLISH_SETTINGS: PublishSettings = {
 
 function getBrowserStorage(): StorageLike | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage;
+  return profileStorage();
 }
 
 function isCommentFlag(value: unknown): value is CommentFlag {

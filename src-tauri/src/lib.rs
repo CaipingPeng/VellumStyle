@@ -1,4 +1,6 @@
 mod background;
+mod users;
+mod safe_path;
 mod atomic_file;
 mod trash;
 mod config;
@@ -16,7 +18,7 @@ mod wechat;
 mod wechat_backend;
 mod wximg_cache;
 use tauri::http::{Response, StatusCode};
-use tauri::{Manager, UriSchemeContext, UriSchemeResponder};
+use tauri::{UriSchemeContext, UriSchemeResponder};
 
 #[tauri::command]
 fn supports_wechat_backend() -> bool { cfg!(windows) }
@@ -71,12 +73,9 @@ fn handle_wximg<R: tauri::Runtime>(
     };
 
     // 磁盘缓存目录随应用数据目录走；拿不到就退化成「没有缓存」，不影响取图。
-    let cache = ctx
-        .app_handle()
-        .path()
-        .app_data_dir()
+    let cache = users::data_path(ctx.app_handle(), "cache/wximg")
         .ok()
-        .map(|dir| wximg_cache::WximgCache::new(dir.join("cache").join("wximg")));
+        .map(wximg_cache::WximgCache::new);
 
     tauri::async_runtime::spawn(async move {
         // 先查磁盘缓存：自定义协议的响应不会落进 WebView 的磁盘缓存，
@@ -113,6 +112,7 @@ fn handle_wximg<R: tauri::Runtime>(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(users::UserSession::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_process::init())
@@ -120,6 +120,11 @@ pub fn run() {
         .register_asynchronous_uri_scheme_protocol("wximg", handle_wximg)
         .invoke_handler(tauri::generate_handler![
             supports_wechat_backend,
+            users::list_local_users,
+            users::get_current_user,
+            users::get_user_data_dir,
+            users::create_local_user,
+            users::login_local_user,
             trash::list_trash,
             trash::restore_trash,
             background::copy_background_image,

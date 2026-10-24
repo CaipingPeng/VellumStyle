@@ -4,7 +4,7 @@
 
 use serde::Serialize;
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 const ARTICLE_ROOT_SELECTOR: &str = "#article";
 const LEGACY_ARTICLE_ROOT_SELECTORS: &[&str] = &["#nice", "#wechat-article"];
@@ -17,7 +17,7 @@ pub struct UserTheme {
 }
 
 fn themes_dir(app: &AppHandle) -> Option<PathBuf> {
-    app.path().app_data_dir().ok().map(|d| d.join("themes"))
+    crate::users::data_path(app, "themes").ok()
 }
 
 /// 生成安全主题 id/文件名：保留字母数字与 `-`/`_`/`.`。

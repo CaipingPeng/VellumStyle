@@ -28,6 +28,7 @@ pub async fn show_wechat_backend(app: AppHandle) -> Result<(), String> {
 }
 
 pub(crate) async fn open_wechat_backend_impl(app: &AppHandle, visible: bool) -> Result<(), String> {
+    let profile = crate::users::data_path(app, "wechat-webview")?;
     if let Some(window) = app.get_webview_window(BACKEND_WINDOW_LABEL) {
         if visible {
             let _ = window.show();
@@ -44,6 +45,14 @@ pub(crate) async fn open_wechat_backend_impl(app: &AppHandle, visible: bool) -> 
     let mut builder = WebviewWindowBuilder::new(app, BACKEND_WINDOW_LABEL, url)
         .title("微信公众平台登录")
         .inner_size(960.0, 720.0);
+    #[cfg(not(target_os = "macos"))]
+    { builder = builder.data_directory(profile); }
+    #[cfg(target_os = "macos")]
+    {
+        // The feature is Windows-only today; use an ephemeral WebKit session on macOS.
+        let _ = profile;
+        builder = builder.incognito(true);
+    }
     if !visible {
         builder = builder.visible(false);
     }

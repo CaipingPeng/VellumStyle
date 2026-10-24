@@ -42,8 +42,10 @@ export function useDocActions() {
         await loadTree();
         await openDocument(path);
         scheduleCloudSync();
+        return {ok: true as const};
       } catch (e) {
         toast.show(String(e), "error");
+        return {ok: false as const, error: String(e)};
       }
     },
     async newFolder(dir: string, name: string) {
@@ -51,8 +53,10 @@ export function useDocActions() {
         await createFolder(dir, name);
         await loadTree();
         scheduleCloudSync();
+        return {ok: true as const};
       } catch (e) {
         toast.show(String(e), "error");
+        return {ok: false as const, error: String(e)};
       }
     },
     async rename(path: string, newName: string): Promise<RenameOutcome> {

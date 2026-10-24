@@ -4,8 +4,8 @@
 // 缺文件/缺字段时返回空凭证，由 upload 层返回 NOT_CONFIGURED，前端弹设置引导。
 
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Manager};
+use std::path::Path;
+use tauri::AppHandle;
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct WechatConfig {
@@ -66,12 +66,12 @@ impl WechatConfig {
 }
 
 fn load_config(app: &AppHandle) -> AppConfig {
-    let dir = match app.path().app_data_dir() {
+    let dir = match crate::users::data_dir(app) {
         Ok(d) => d,
         Err(_) => return AppConfig::default(),
     };
     for name in ["config.local.yaml", "config.yaml"] {
-        let path: PathBuf = dir.join(name);
+        let Ok(path) = crate::safe_path::resolve(&dir, name) else { continue; };
         if let Ok(text) = std::fs::read_to_string(&path) {
             if let Ok(raw) = serde_yaml::from_str::<AppConfig>(&text) {
                 return raw;
@@ -112,7 +112,15 @@ pub fn load_wechat_config(app: &AppHandle) -> WechatConfig {
 
 /// 读取文件同步配置。未启用或缺字段时由同步命令返回 disabled。
 pub fn load_sync_config(app: &AppHandle) -> SyncConfig {
-    load_config(app).sync
+    let mut cfg = load_config(app).sync;
+    if let Ok(user) = crate::users::current(app) {
+        // The first account keeps the old cloud directory. New accounts cannot
+        // accidentally share it, even when the same WebDAV credentials are entered.
+        if !user.owns_legacy_data {
+            cfg.remote_dir = format!("{}/.vellumstyle-users/{}", crate::sync::normalize_remote_dir(&cfg.remote_dir), user.id);
+        }
+    }
+    cfg
 }
 
 /// 设置页回显当前配置（含 secret，供用户确认/修改）。无配置返回空串。
@@ -133,10 +141,7 @@ pub fn save_config(
     sync_password: Option<String>,
     sync_remote_dir: Option<String>,
 ) -> Result<(), String> {
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("无法定位数据目录：{e}"))?;
+    let dir = crate::users::data_dir(&app)?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("创建数据目录失败：{e}"))?;
 
     let raw = AppConfig {
@@ -159,7 +164,7 @@ pub fn save_config(
         },
     };
     let yaml = serde_yaml::to_string(&raw).map_err(|e| format!("序列化配置失败：{e}"))?;
-    write_private_file(&dir.join("config.local.yaml"), &yaml)?;
+    write_private_file(&crate::safe_path::resolve(&dir, "config.local.yaml")?, &yaml)?;
 
     // 微信凭证可能变了，旧 access_token 作废，清缓存下次重取。
     crate::wechat::clear_token_blocking();

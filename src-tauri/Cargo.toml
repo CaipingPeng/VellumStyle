@@ -13,6 +13,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+argon2 = { version = "0.5", features = ["std"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
 tauri = { version = "2", features = ["protocol-asset", "image-png"] }
 tauri-plugin-dialog = "2"
 base64 = "0.22.1"

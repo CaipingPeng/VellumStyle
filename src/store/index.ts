@@ -121,6 +121,7 @@ export interface EditorState {
 const AUTOSAVE_DELAY_MS = 1200;
 const beginDocumentOpen = createLatestRequest();
 let openedDocumentPath: string | null = null;
+let contentRevision = 0;
 let layoutWritePromise: Promise<void> = Promise.resolve();
 
 function currentLayout(): ArticleLayout {
@@ -151,7 +152,13 @@ async function loadLayouts() {
   await layoutWritePromise;
   let text: string;
   try { text = await readDocument(LAYOUT_FILE); } catch { return; }
-  const raw = JSON.parse(text);
+  if (!text.trim()) return;
+  let raw;
+  try { raw = JSON.parse(text); } catch {
+    console.warn("文章排版元数据损坏，保留当前排版设置");
+    return;
+  }
+  if (!raw || typeof raw !== "object") return;
   const documentLayouts = sanitizeLayouts(raw.documents);
   const state = useStore.getState();
   const layout = state.currentDocPath ? documentLayouts[state.currentDocPath] : undefined;
@@ -165,6 +172,7 @@ export const CLOUD_SYNC_DELAY_MS = 3 * 60 * 1000;
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
 let syncDrainPromise: Promise<void> | null = null;
 let syncQueued = false;
+let syncSuspended = false;
 let documentThemeWritePromise: Promise<void> = Promise.resolve();
 
 // 主题映射文件很小，但切换/重命名可能连续发生，因此串行写入，避免旧快照覆盖新快照。
@@ -258,7 +266,9 @@ async function runCloudSyncOnce(): Promise<void> {
   useStore.setState({syncStatus: "syncing", syncMessage: ""});
   try {
     // 主题映射和 Markdown 内容都必须在同步前落盘，避免云端看到旧快照。
+    await flushSave();
     await flushDocumentThemeWrite();
+    const snapshot = {path: useStore.getState().currentDocPath, revision: contentRevision};
     const summary = await runCloudSync();
     if (!summary.enabled) {
       // 即使未启用云同步，也把旧版迁移结果落成隐藏元数据文件，
@@ -273,6 +283,23 @@ async function runCloudSyncOnce(): Promise<void> {
     // 远端可能刚下载/删除了主题映射；同步完成后重新读取文件，
     // 这样切换到远端文章时即可使用另一台设备的主题选择。
     await useStore.getState().loadDocumentThemes({persistMissing: true});
+    if (summary.downloaded > 0 || summary.deletedLocal > 0) {
+      await useStore.getState().loadTree();
+      const path = snapshot.path;
+      // A network operation must not replace text entered while it was running.
+      if (path && useStore.getState().currentDocPath === path && contentRevision === snapshot.revision) {
+        const contains = (nodes: DocNode[]): boolean => nodes.some((node) => node.path === path || contains(node.children));
+        if (!contains(useStore.getState().tree)) {
+          openedDocumentPath = null;
+          useStore.setState({currentDocPath: null, selectedPath: null, content: "", saveStatus: "saved"});
+        } else {
+          const content = await readDocument(path);
+          if (useStore.getState().currentDocPath === path && contentRevision === snapshot.revision) {
+            useStore.setState({content, saveStatus: "saved", lastSavedAt: Date.now()});
+          }
+        }
+      }
+    }
     const hasPendingSync = syncTimer !== null || syncQueued;
     const hasConflicts = summary.conflicts > 0;
     useStore.setState({
@@ -301,6 +328,7 @@ function startCloudSyncDrain(): Promise<void> {
 }
 
 export function scheduleCloudSync(delayMs = CLOUD_SYNC_DELAY_MS): void {
+  if (syncSuspended) return;
   if (syncTimer) {
     clearTimeout(syncTimer);
   }
@@ -318,7 +346,17 @@ export function scheduleCloudSync(delayMs = CLOUD_SYNC_DELAY_MS): void {
   }, delayMs);
 }
 
+export async function suspendCloudSync(): Promise<void> {
+  syncSuspended = true;
+  if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
+  syncQueued = false;
+  await syncDrainPromise;
+}
+
+export function resumeCloudSync(): void { syncSuspended = false; }
+
 export function flushCloudSync(): Promise<void> {
+  if (syncSuspended) return Promise.resolve();
   if (syncTimer) {
     clearTimeout(syncTimer);
     syncTimer = null;
@@ -373,6 +411,7 @@ export const useStore = create<EditorState>()(
       pinnedCodeThemeIds: [...DEFAULT_PINNED_CODE_THEME_IDS],
       typography: {...DEFAULT_TYPOGRAPHY, roles: {}},
       setContent: (content) => {
+        contentRevision++;
         set({content, saveStatus: "idle"});
         scheduleSave(content);
       },

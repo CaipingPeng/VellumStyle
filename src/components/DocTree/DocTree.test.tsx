@@ -34,7 +34,7 @@ const TREE: DocNode[] = [
 // store 模块里 themes/index.ts 用了 Vite 的 import.meta.glob，node:test 跑不了，
 // 和 publishFlow 测试一样先用 esbuild 打一个去掉 glob 的运行时包再加载。
 const runtimeBundlePath = tempRuntimePath("docTree");
-let runtime: {DocTree: DocTreeComponent; useStore: StoreModule["useStore"]} | null = null;
+let runtime: {DocTree: DocTreeComponent; useStore: StoreModule["useStore"]; suspendCloudSync: StoreModule["suspendCloudSync"]; resumeCloudSync: StoreModule["resumeCloudSync"]} | null = null;
 
 async function loadRuntimeModules() {
   if (!runtime) {
@@ -42,7 +42,7 @@ async function loadRuntimeModules() {
       stdin: {
         contents: [
           'export {default as DocTree} from "./src/components/DocTree/DocTree.tsx";',
-          'export {useStore} from "./src/store/index.ts";',
+          'export {useStore, suspendCloudSync, resumeCloudSync} from "./src/store/index.ts";',
         ].join("\n"),
         resolveDir: process.cwd(),
         loader: "ts",
@@ -78,7 +78,7 @@ async function loadRuntimeModules() {
       DocTree: DocTreeComponent;
       useStore: StoreModule["useStore"];
     };
-    runtime = {DocTree: loaded.DocTree, useStore: loaded.useStore};
+    runtime = loaded as NonNullable<typeof runtime>;
   }
   return runtime;
 }
@@ -462,6 +462,49 @@ test("新建名字非法时保留草稿行并给出行内原因", async () => {
     assert.equal(container.querySelector('input[aria-label="新建文档名"]'), input);
   } finally {
     cleanup();
+    useStore.setState({tree: [], selectedPath: null});
+  }
+});
+
+test("新建文件夹回车、失焦和重复回车只发送一次创建请求", async () => {
+  const {DocTree, useStore, suspendCloudSync, resumeCloudSync} = await loadRuntimeModules();
+  useStore.setState({tree: [], selectedPath: null, currentDocPath: null});
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "__TAURI_INTERNALS__");
+  const previousWindow = Object.getOwnPropertyDescriptor(window, "__TAURI_INTERNALS__");
+  let creates = 0;
+  let finish!: (path: string) => void;
+  Object.defineProperty(globalThis, "__TAURI_INTERNALS__", {configurable: true, value: {
+    invoke(command: string) {
+      if (command === "create_folder") { creates++; return new Promise<string>((resolve) => { finish = resolve; }); }
+      if (command === "list_documents") return Promise.resolve([{name: "新目录", path: "新目录", is_dir: true, children: []}]);
+      return Promise.reject("not found");
+    },
+  }});
+  Object.defineProperty(window, "__TAURI_INTERNALS__", {configurable: true, value: (globalThis as any).__TAURI_INTERNALS__});
+  const {container, cleanup} = renderDocTree(DocTree);
+  try {
+    const button = container.querySelector<HTMLButtonElement>('button[title="新建文件夹"]')!;
+    act(() => button.dispatchEvent(new window.MouseEvent("click", {bubbles: true})));
+    const input = container.querySelector<HTMLInputElement>('input[aria-label="新建文件夹名"]')!;
+    setInputValue(input, "新目录");
+    act(() => {
+      input.dispatchEvent(new window.KeyboardEvent("keydown", {key: "Enter", bubbles: true}));
+      input.dispatchEvent(new window.FocusEvent("focusout", {bubbles: true}));
+      input.dispatchEvent(new window.KeyboardEvent("keydown", {key: "Enter", bubbles: true}));
+    });
+    assert.equal(creates, 1);
+    assert.equal(input.disabled, true);
+    await act(async () => { finish("新目录"); });
+    assert.equal(creates, 1);
+    assert.equal(container.querySelector('input[aria-label="新建文件夹名"]'), null);
+    assert.match(container.textContent ?? "", /新目录/);
+  } finally {
+    await suspendCloudSync(); resumeCloudSync();
+    cleanup();
+    if (previous) Object.defineProperty(globalThis, "__TAURI_INTERNALS__", previous);
+    else Reflect.deleteProperty(globalThis, "__TAURI_INTERNALS__");
+    if (previousWindow) Object.defineProperty(window, "__TAURI_INTERNALS__", previousWindow);
+    else Reflect.deleteProperty(window, "__TAURI_INTERNALS__");
     useStore.setState({tree: [], selectedPath: null});
   }
 });

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 const MAX_SNAPSHOTS: usize = 30;
 const COALESCE_MS: u64 = 30_000;
@@ -35,11 +35,7 @@ fn document_key(path: &str) -> String {
 }
 
 fn history_root(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("无法定位数据目录：{error}"))?
-        .join("history");
+    let dir = crate::users::data_path(app, "history")?;
     std::fs::create_dir_all(&dir).map_err(|error| format!("创建历史目录失败：{error}"))?;
     Ok(dir)
 }

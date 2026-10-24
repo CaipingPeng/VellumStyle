@@ -13,6 +13,8 @@ import {testSyncConnection} from "../../utils/cloudSync.ts";
 import {isTauriRuntime} from "../../utils/tauriEnv.ts";
 import ReleaseNotesView from "../Update/ReleaseNotesView.tsx";
 import {buildWechatWhitelistUrl} from "../../utils/wechatWhitelist.ts";
+import AccountPanel from "../Accounts/AccountPanel.tsx";
+import {getActiveUser} from "../../utils/profileStorage.ts";
 
 interface Props {
   open?: boolean;
@@ -56,7 +58,7 @@ const wechatDeveloperConsoleUrl = "https://developers.weixin.qq.com/console/memb
 
 type IpStatus = "idle" | "loading" | "ok" | "error";
 type CopyStatus = "idle" | "ok" | "fail";
-type SettingsSection = "wechat" | "sync" | "network" | "appearance" | "about";
+type SettingsSection = "account" | "wechat" | "sync" | "network" | "appearance" | "about";
 
 export interface SettingsUpdateState {
   status: "idle" | "checking" | "available" | "none" | "installing" | "error" | "unsupported";
@@ -292,6 +294,7 @@ export default function SettingsDialog({
       <div className="grid h-[min(540px,68vh)] grid-cols-[180px_minmax(0,1fr)] overflow-hidden rounded border border-border bg-bg-secondary">
         <nav className="flex flex-col gap-1 overflow-y-auto border-r border-border bg-bg-tertiary p-2" aria-label="设置分类">
           {[
+            {id: "account" as const, label: "本机账户", icon: UserRound},
             {id: "wechat" as const, label: "微信配置", icon: ShieldCheck},
             {id: "sync" as const, label: "文件同步", icon: Cloud},
             {id: "network" as const, label: "网络辅助", icon: Network},
@@ -323,6 +326,7 @@ export default function SettingsDialog({
         </nav>
 
         <section className="min-w-0 overflow-y-auto bg-bg p-5">
+          {activeSection === "account" && <AccountPanel />}
           {activeSection === "wechat" && (
             <div className="mx-auto flex max-w-[520px] flex-col gap-5">
               <div className="flex items-start gap-3">
@@ -483,6 +487,7 @@ export default function SettingsDialog({
                       className={inputClass}
                     />
                   </div>
+                  {getActiveUser() && !getActiveUser()!.ownsLegacyData && <p className="mt-2 text-xs text-text-muted">云端数据自动存入此目录下的独立账户子目录，避免与其他本机账户混用。</p>}
                 </div>
               </div>
 
