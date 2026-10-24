@@ -11,6 +11,23 @@ const listeners = new Set<() => void>();
 let operations = 0;
 let changing = false;
 
+export interface AccountSwitchHandlers {
+  beforeSwitch?: () => Promise<void>;
+  afterSwitch?: () => Promise<void>;
+}
+
+let switchHandlers: AccountSwitchHandlers | null = null;
+
+export function registerAccountSwitchHandlers(handlers: AccountSwitchHandlers): () => void {
+  switchHandlers = handlers;
+  return () => {
+    if (switchHandlers === handlers) {
+      switchHandlers = null;
+    }
+  };
+}
+
+
 export const getWechatAccounts = () => snapshot;
 export function subscribeWechatAccounts(listener: () => void): () => void {
   listeners.add(listener);
@@ -54,13 +71,28 @@ async function updateAccounts(action: () => Promise<void>): Promise<void> {
 export function switchWechatAccount(appId: string): Promise<void> {
   if (snapshot.active_app_id === appId) return Promise.resolve();
   return updateAccounts(async () => {
+    const prevId = snapshot.active_app_id;
+    if (switchHandlers?.beforeSwitch) {
+      await switchHandlers.beforeSwitch();
+    }
     const next = await invoke<WechatAccounts>("switch_wechat_account", {appId});
     acceptAccounts(next);
+    if (prevId !== next.active_app_id && switchHandlers?.afterSwitch) {
+      await switchHandlers.afterSwitch();
+    }
   });
 }
 
 export function saveWechatConfiguration(args: Record<string, unknown>): Promise<void> {
   return updateAccounts(async () => {
-    acceptAccounts(await invoke<WechatAccounts>("save_config", args));
+    const prevId = snapshot.active_app_id;
+    if (switchHandlers?.beforeSwitch) {
+      await switchHandlers.beforeSwitch();
+    }
+    const next = await invoke<WechatAccounts>("save_config", args);
+    acceptAccounts(next);
+    if (prevId !== next.active_app_id && switchHandlers?.afterSwitch) {
+      await switchHandlers.afterSwitch();
+    }
   });
 }

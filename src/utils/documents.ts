@@ -8,6 +8,24 @@ import {
 } from "./documentThemes.ts";
 import {recordWebDocumentTransition} from "./documentHistory.ts";
 
+
+export function flattenFirst(nodes: DocNode[]): string | null {
+  for (const n of nodes) {
+    if (!n.isDir) return n.path;
+    const c = flattenFirst(n.children);
+    if (c) return c;
+  }
+  return null;
+}
+
+export function existsInTree(nodes: DocNode[], path: string): boolean {
+  for (const n of nodes) {
+    if (!n.isDir && n.path === path) return true;
+    if (n.isDir && existsInTree(n.children, path)) return true;
+  }
+  return false;
+}
+
 export interface DocNode {
   name: string;
   path: string; // 相对 documents/ 的路径

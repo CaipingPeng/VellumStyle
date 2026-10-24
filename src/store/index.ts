@@ -1,4 +1,7 @@
 import {create} from "zustand";
+import {registerAccountSwitchHandlers} from "../utils/wechatAccounts.ts";
+import {accountStorage} from "../utils/accountStorage.ts";
+import {existsInTree, flattenFirst} from "../utils/documents.ts";
 import {createJSONStorage, persist} from "zustand/middleware";
 import {builtinThemes, defaultMarkdownTheme, type ThemeOption} from "../themes/index.ts";
 import {
@@ -709,3 +712,57 @@ export function restoreDocumentLayouts(raw: unknown, from: string, to: string) {
   persistLayouts();
   void queueDocumentThemeWrite(useStore.getState().documentThemeIds).catch(reportDocumentThemeWriteError);
 }
+
+
+registerAccountSwitchHandlers({
+  beforeSwitch: async () => {
+    await flushSave();
+    await flushDocumentThemeWrite().catch(() => undefined);
+    const path = useStore.getState().currentDocPath;
+    if (path) {
+      try {
+        accountStorage().setItem("last-doc-path", path);
+      } catch {
+        // ignore
+      }
+    }
+  },
+  afterSwitch: async () => {
+    if (syncTimer) {
+      clearTimeout(syncTimer);
+      syncTimer = null;
+    }
+    openedDocumentPath = null;
+    useStore.setState({
+      currentDocPath: null,
+      selectedPath: null,
+      content: "",
+      saveStatus: "saved",
+      tree: [],
+      documentLayouts: {},
+      documentThemeIds: {},
+      layoutUndo: [],
+      layoutRedo: [],
+    });
+
+    await useStore.getState().loadTree();
+    await useStore.getState().loadDocumentThemes();
+    const tree = useStore.getState().tree;
+    let targetPath: string | null = null;
+    try {
+      const remembered = accountStorage().getItem("last-doc-path");
+      if (remembered && existsInTree(tree, remembered)) {
+        targetPath = remembered;
+      }
+    } catch {
+      // ignore
+    }
+    if (!targetPath) {
+      targetPath = flattenFirst(tree);
+    }
+    if (targetPath) {
+      await useStore.getState().openDocument(targetPath);
+    }
+    void useStore.getState().runSyncNow().catch(() => undefined);
+  },
+});

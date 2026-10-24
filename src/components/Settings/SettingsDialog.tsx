@@ -361,7 +361,7 @@ export default function SettingsDialog({
                     </span>
                   </div>
                   <p className="m-0 mt-1 text-xs leading-5 text-text-secondary">
-                    可保存多套公众号凭证，在顶部切换使用。文章和文件同步共用，素材绑定与微信登录分别保存。凭证仅保存在本机。可前往微信开发者平台扫码登录后，在公众号详情页查看 AppID / AppSecret。
+                    可保存多套公众号凭证，在顶部切换使用。各公众号的文章、素材绑定与微信登录分别保存。凭证仅保存在本机。可前往微信开发者平台扫码登录后，在公众号详情页查看 AppID / AppSecret。
                   </p>
                 </div>
               </div>
@@ -370,27 +370,53 @@ export default function SettingsDialog({
                 <div>
                   <label htmlFor="settings-wechat-account" className={labelClass}>公众号列表</label>
                   <div className="flex gap-2">
-                    <select id="settings-wechat-account" className="h-10 min-w-0 flex-1 rounded border border-border bg-bg px-2 text-sm text-text" value={editingIndex} disabled={!loaded || saving || Boolean(loadError)} onChange={(event) => {setEditingIndex(Number(event.target.value)); setShowSecret(false);}}>
-                      {accounts.map((account, index) => <option key={index} value={index}>{index === activeIndex ? "当前 · " : ""}{account.name || account.app_id || "新公众号"}</option>)}
+                    <select
+                      id="settings-wechat-account"
+                      className="h-10 min-w-0 flex-1 rounded border border-border bg-bg px-2 text-sm text-text"
+                      value={editingIndex}
+                      disabled={!loaded || saving || Boolean(loadError)}
+                      onChange={(event) => {
+                        const nextIndex = Number(event.target.value);
+                        setEditingIndex(nextIndex);
+                        setActiveIndex(nextIndex);
+                        setShowSecret(false);
+                      }}
+                    >
+                      {accounts.map((account, index) => (
+                        <option key={index} value={index}>
+                          {account.name || account.app_id || "新公众号"}
+                        </option>
+                      ))}
                     </select>
-                    <Button variant="secondary" disabled={!loaded || saving || Boolean(loadError)} onClick={() => {
-                      setAccounts([...accounts, {name: "", app_id: "", app_secret: ""}]);
-                      setEditingIndex(accounts.length);
-                      setShowSecret(false);
-                    }}>添加</Button>
-                    <Button variant="secondary" disabled={!loaded || saving || Boolean(loadError)} onClick={() => {
-                      const remaining = accounts.filter((_, index) => index !== editingIndex);
-                      setAccounts(remaining.length ? remaining : [{name: "", app_id: "", app_secret: ""}]);
-                      setActiveIndex(activeIndex === editingIndex ? 0 : activeIndex > editingIndex ? activeIndex - 1 : activeIndex);
-                      setEditingIndex(0);
-                      setShowSecret(false);
-                    }}>移除</Button>
+                    <Button
+                      variant="secondary"
+                      disabled={!loaded || saving || Boolean(loadError)}
+                      onClick={() => {
+                        const nextAccounts = [...accounts, {name: "", app_id: "", app_secret: ""}];
+                        setAccounts(nextAccounts);
+                        setEditingIndex(nextAccounts.length - 1);
+                        setActiveIndex(nextAccounts.length - 1);
+                        setShowSecret(false);
+                      }}
+                    >
+                      添加
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={!loaded || saving || Boolean(loadError)}
+                      onClick={() => {
+                        const remaining = accounts.filter((_, index) => index !== editingIndex);
+                        const nextAccounts = remaining.length ? remaining : [{name: "", app_id: "", app_secret: ""}];
+                        const nextIndex = Math.max(0, Math.min(editingIndex, remaining.length - 1));
+                        setAccounts(nextAccounts);
+                        setEditingIndex(nextIndex);
+                        setActiveIndex(nextIndex);
+                        setShowSecret(false);
+                      }}
+                    >
+                      移除
+                    </Button>
                   </div>
-                  <div className="mt-2 flex items-center justify-between gap-2 text-xs text-text-secondary">
-                    <span>{editingIndex === activeIndex ? "当前使用的公众号" : "正在编辑另一套配置"}</span>
-                    {editingIndex !== activeIndex && <Button variant="secondary" onClick={() => setActiveIndex(editingIndex)}>设为当前</Button>}
-                  </div>
-                  <p className="mt-2 text-xs text-text-muted">添加、移除和切换在点击「保存」后生效。</p>
                 </div>
                 <div>
                   <label htmlFor="settings-wechat-name" className={labelClass}>公众号名称</label>

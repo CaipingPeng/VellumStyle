@@ -60,6 +60,56 @@ pub fn data_dir<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String
 pub fn data_path<R: tauri::Runtime>(app: &AppHandle<R>, relative: &str) -> Result<PathBuf, String> {
     crate::safe_path::resolve(&data_dir(app)?, relative)
 }
+pub fn resolve_account_dir(
+    root: &Path,
+    config: &crate::config::AppConfig,
+) -> Result<PathBuf, String> {
+    let id = config.active_wechat_app_id.trim();
+    if id.is_empty() {
+        return Ok(root.to_path_buf());
+    }
+    if !id
+        .bytes()
+        .all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
+    {
+        return Err("AppID 无效".into());
+    }
+    let dir = crate::safe_path::resolve(root, &format!("wechat-accounts/{id}"))?;
+
+    let is_first = config
+        .wechat_accounts
+        .first()
+        .map(|a| a.app_id == id)
+        .unwrap_or(false);
+    let target_docs = dir.join("documents");
+    let root_docs = root.join("documents");
+    if is_first && !target_docs.exists() && root_docs.exists() {
+        std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        for name in ["documents", "history", "trash", "sync-state.json"] {
+            let src = root.join(name);
+            let dst = dir.join(name);
+            if src.exists() && !dst.exists() {
+                let _ = std::fs::rename(&src, &dst);
+            }
+        }
+    }
+
+    std::fs::create_dir_all(&dir).map_err(|e| format!("创建账号数据目录失败：{e}"))?;
+    Ok(dir)
+}
+
+pub fn account_dir<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {
+    let root = data_dir(app)?;
+    let config = crate::config::load_config(app)?;
+    resolve_account_dir(&root, &config)
+}
+
+pub fn account_data_path<R: tauri::Runtime>(
+    app: &AppHandle<R>,
+    relative: &str,
+) -> Result<PathBuf, String> {
+    crate::safe_path::resolve(&account_dir(app)?, relative)
+}
 
 #[cfg(test)]
 mod tests {
@@ -86,6 +136,57 @@ mod tests {
             "shared"
         );
         assert!(root.join("profiles/old/config.local.yaml").exists());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn account_dir_isolates_workspaces_and_migrates_legacy_for_first_account() {
+        let root = std::env::temp_dir().join(format!("vs-account-storage-{}", std::process::id()));
+        std::fs::create_dir_all(root.join("documents")).unwrap();
+        std::fs::write(root.join("documents/legacy.md"), "legacy article").unwrap();
+
+        let mut config = crate::config::AppConfig::default();
+        config.wechat_accounts = vec![
+            crate::config::WechatAccount {
+                name: "Account 1".into(),
+                app_id: "wx1".into(),
+                app_secret: "sec1".into(),
+            },
+            crate::config::WechatAccount {
+                name: "Account 2".into(),
+                app_id: "wx2".into(),
+                app_secret: "sec2".into(),
+            },
+        ];
+
+        // 1. First account inherits root documents
+        config.active_wechat_app_id = "wx1".into();
+        let dir1 = super::resolve_account_dir(&root, &config).unwrap();
+        assert_eq!(dir1, root.join("wechat-accounts/wx1"));
+        assert_eq!(
+            std::fs::read_to_string(dir1.join("documents/legacy.md")).unwrap(),
+            "legacy article"
+        );
+
+        // 2. Second account gets an isolated empty workspace
+        config.active_wechat_app_id = "wx2".into();
+        let dir2 = super::resolve_account_dir(&root, &config).unwrap();
+        assert_eq!(dir2, root.join("wechat-accounts/wx2"));
+        assert!(!dir2.join("documents/legacy.md").exists());
+
+        // Create an article in Account 2
+        std::fs::create_dir_all(dir2.join("documents")).unwrap();
+        std::fs::write(dir2.join("documents/account2.md"), "account 2 article").unwrap();
+
+        // 3. Switch back to Account 1: only has Account 1's article
+        config.active_wechat_app_id = "wx1".into();
+        let dir1_again = super::resolve_account_dir(&root, &config).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(dir1_again.join("documents/legacy.md")).unwrap(),
+            "legacy article"
+        );
+        assert!(!dir1_again.join("documents/account2.md").exists());
+
         std::fs::remove_dir_all(root).unwrap();
     }
 }

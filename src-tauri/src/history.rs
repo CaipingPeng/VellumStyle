@@ -35,7 +35,7 @@ fn document_key(path: &str) -> String {
 }
 
 fn history_root(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = crate::storage::data_path(app, "history")?;
+    let dir = crate::storage::account_data_path(app, "history")?;
     std::fs::create_dir_all(&dir).map_err(|error| format!("创建历史目录失败：{error}"))?;
     Ok(dir)
 }

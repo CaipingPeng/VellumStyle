@@ -482,11 +482,11 @@ pub async fn test_sync_connection(
 }
 
 fn documents_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    Ok(crate::storage::data_path(app, "documents")?)
+    Ok(crate::storage::account_data_path(app, "documents")?)
 }
 
 fn sync_state_path(app: &AppHandle) -> Result<PathBuf, String> {
-    crate::storage::data_path(app, LOCAL_STATE_NAME)
+    crate::storage::account_data_path(app, LOCAL_STATE_NAME)
 }
 
 fn load_local_index(path: &Path, scope: &str) -> SyncIndex {

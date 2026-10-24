@@ -54,7 +54,7 @@ import {
   type ImageUploadTask,
 } from "./utils/imageUploadTasks.ts";
 import {createScrollSync} from "./utils/syncScroll.ts";
-import {createDocument, readDocument, writeDocument, type DocNode} from "./utils/documents.ts";
+import {createDocument, existsInTree, flattenFirst, readDocument, writeDocument} from "./utils/documents.ts";
 import {
   createBackgroundDocumentTarget,
   flushBackgroundDocumentOperations,
@@ -88,24 +88,6 @@ import {applyBackgroundImage} from "./appearance/backgroundImage.ts";
 import {isManualSyncShortcut} from "./utils/manualSyncShortcut.ts";
 import {buildCommandRegistry, isCommandPaletteShortcut} from "./commands/registry.ts";
 import {MOTION_DURATION_DRAWER, MOTION_EASE_OUT} from "./utils/motion.ts";
-
-// 取树里第一篇文档路径（深度优先）。
-function flattenFirst(nodes: DocNode[]): string | null {
-  for (const n of nodes) {
-    if (!n.isDir) return n.path;
-    const c = flattenFirst(n.children);
-    if (c) return c;
-  }
-  return null;
-}
-
-function existsInTree(nodes: DocNode[], path: string): boolean {
-  for (const n of nodes) {
-    if (!n.isDir && n.path === path) return true;
-    if (n.isDir && existsInTree(n.children, path)) return true;
-  }
-  return false;
-}
 
 function formatSaveStatus(status: "idle" | "saving" | "saved" | "error", lastSavedAt: number | null): string {
   if (status === "saving") return "保存中";
@@ -816,7 +798,7 @@ export default function App() {
             <Images size={16} />
           </IconButton>
         </div>
-        <WechatAccountSwitcher onSettings={openSettings} disabled={settingsOpen} />
+        <WechatAccountSwitcher disabled={settingsOpen} />
         <MainToolbar
           onOpenSettings={openSettings}
           onNeedSettings={openSettings}

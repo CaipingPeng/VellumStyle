@@ -516,16 +516,18 @@ test("multiple public accounts retain edits while selecting and save the selecte
   try {
     await act(async () => { await Promise.resolve(); });
     assert.doesNotMatch(document.body.textContent || "", /本机账户|登录本机|创建账户/);
+    assert.doesNotMatch(document.body.textContent || "", /当前使用的公众号|添加、移除和切换在点击「保存」后生效/);
     act(() => setRangeValue(input("settings-wechat-name"), "工作号改名"));
     act(() => select(1));
     assert.equal(input("settings-wechat-app-secret").value, "secret-b");
-    act(() => button("设为当前").click());
     act(() => button("添加").click());
     act(() => setRangeValue(input("settings-wechat-name"), "临时号"));
     act(() => setRangeValue(input("settings-wechat-app-id"), "wxTemp"));
     act(() => setRangeValue(input("settings-wechat-app-secret"), "temp-secret"));
     act(() => button("移除").click());
+    act(() => select(0));
     assert.equal(input("settings-wechat-name").value, "工作号改名", "editing another account must retain unsaved edits");
+    act(() => select(1));
     await act(async () => { button("保存").click(); await Promise.resolve(); });
     assert.ok(saved);
     assert.deepEqual(saved.wechatAccounts, [{...accounts[0], name: "工作号改名"}, accounts[1]]);

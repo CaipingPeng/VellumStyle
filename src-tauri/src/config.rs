@@ -180,7 +180,7 @@ fn read_config(dir: &Path) -> Result<AppConfig, String> {
     Ok(AppConfig::default())
 }
 
-fn load_config(app: &AppHandle) -> Result<AppConfig, String> {
+pub(crate) fn load_config<R: tauri::Runtime>(app: &AppHandle<R>) -> Result<AppConfig, String> {
     read_config(&crate::storage::data_dir(app)?)
 }
 
@@ -276,7 +276,24 @@ pub fn load_wechat_config(app: &AppHandle) -> Result<WechatConfig, String> {
 
 /// 读取文件同步配置。未启用或缺字段时由同步命令返回 disabled。
 pub fn load_sync_config(app: &AppHandle) -> Result<SyncConfig, String> {
-    Ok(load_config(app)?.sync)
+    let config = load_config(app)?;
+    let mut cfg = config.sync;
+    let id = config.active_wechat_app_id.trim();
+    if !id.is_empty() {
+        let is_first = config
+            .wechat_accounts
+            .first()
+            .map(|a| a.app_id == id)
+            .unwrap_or(false);
+        if !is_first {
+            cfg.remote_dir = format!(
+                "{}/.vellumstyle-accounts/{}",
+                crate::sync::normalize_remote_dir(&cfg.remote_dir),
+                id
+            );
+        }
+    }
+    Ok(cfg)
 }
 
 /// 设置页回显当前配置（含 secret，供用户确认/修改）。无配置返回空串。

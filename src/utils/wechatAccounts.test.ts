@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {getWechatAccounts, holdWechatAccount, initializeWechatAccounts, invokeWechat, saveWechatConfiguration, switchWechatAccount} from "./wechatAccounts.ts";
+import {getWechatAccounts, holdWechatAccount, initializeWechatAccounts, invokeWechat, registerAccountSwitchHandlers, saveWechatConfiguration, switchWechatAccount} from "./wechatAccounts.ts";
 
 test("switch commits account state only on success and blocks changes during account operations", async () => {
   const calls: string[] = [];
@@ -40,8 +40,17 @@ test("switch commits account state only on success and blocks changes during acc
     await assert.rejects(switchWechatAccount("wxB"), /disk full/);
     assert.equal(getWechatAccounts().active_app_id, "wxA");
     fail = false;
+    let beforeCalled = 0;
+    let afterCalled = 0;
+    const unregister = registerAccountSwitchHandlers({
+      beforeSwitch: async () => { beforeCalled++; },
+      afterSwitch: async () => { afterCalled++; },
+    });
     await switchWechatAccount("wxB");
     assert.equal(getWechatAccounts().active_app_id, "wxB");
+    assert.equal(beforeCalled, 1);
+    assert.equal(afterCalled, 1);
+    unregister();
   } finally {
     delete target.__TAURI_INTERNALS__;
     delete win.__TAURI_INTERNALS__;
